@@ -1,0 +1,1 @@
+export type EventView = "calendar" | "list"

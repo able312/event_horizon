@@ -1,0 +1,44 @@
+.window-drag-bar {
+  -webkit-app-region: drag !important;
+  app-region: drag !important;
+  user-select: none;
+}
+.window-drag-bar button, .window-drag-bar input, .window-drag-bar a {
+  -webkit-app-region: no-drag !important;
+  app-region: no-drag !important;
+  user-select: none;
+}
+
+
+/* ─── Print page setup ─────────────────────────── */
+@page {
+  size: letter portrait;
+  margin: 0.75in;
+}
+
+@media print {
+  /* Kill the grey stage; let the paper card fill the page */
+  body, html {
+    background: white !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  /* Force black text everywhere — avoids light-grey muted colours vanishing */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    color-adjust: exact;
+  }
+
+  /* Remove Electron/browser scrollbars during print */
+  html, body {
+    overflow: visible !important;
+  }
+
+  .preview-container,
+  [class*="min-h-screen"][class*="flex-col"] {
+    background: white !important;
+  }
+}
+

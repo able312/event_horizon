@@ -1,0 +1,22 @@
+{
+    "appId": "com.latenightcreation.event-horizon",
+    "productName": "Event Horizon",
+    "copyright": "Copyright © 2026",
+    "files": ["dist-electron", "dist-react"],
+    "icon": "./src/assets/eventHorizon.icns",
+    "mac": {
+        "target": [
+            { "target": "dmg", "arch": ["arm64", "x64"] }
+        ],
+        "category": "public.app-category.productivity",
+        "hardenedRuntime": true,
+        "gatekeeperAssess": false
+    },
+    "dmg": {
+        "contents": [
+            { "x": 130, "y": 220 },
+            { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+        ]
+    },
+    "publish": null
+}

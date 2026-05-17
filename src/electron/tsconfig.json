@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "strict": true,
+        "target": "ESNext",
+        "module": "NodeNext",
+        "rootDir": "..",
+        // tell TypeScript where to put generated JS
+        "outDir": "../../dist-electron",
+        //ignore errors from dependancies
+        "skipLibCheck": true,
+        "paths": {
+            "~/*": ["../*"]
+        },
+        "types": ["node"]
+    },
+    "exclude": ["**/*.test.ts"]
+}

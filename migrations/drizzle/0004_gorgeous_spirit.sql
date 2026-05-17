@@ -1,0 +1,1 @@
+ALTER TABLE `timeblocks` ADD `assigned_to` text;

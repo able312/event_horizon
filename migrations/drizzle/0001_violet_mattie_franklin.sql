@@ -1,0 +1,1 @@
+ALTER TABLE `vendor_items` DROP COLUMN `name`;

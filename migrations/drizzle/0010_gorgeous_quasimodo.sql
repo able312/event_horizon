@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX `cart_details_event_id_unique` ON `cart_details` (`event_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `tournament_details_event_id_unique` ON `tournament_details` (`event_id`);
