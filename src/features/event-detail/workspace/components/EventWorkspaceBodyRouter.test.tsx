@@ -4,8 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import EventWorkspaceBodyRouter from "./EventWorkspaceBodyRouter"
 import { SECTION_TYPE } from "~/definitions/timeblocks/timeblock-constants"
 
-const foodSectionMock = vi.fn(() => <div data-testid="food-section" />)
-const beverageSectionMock = vi.fn(() => <div data-testid="beverage-section" />)
+const foodWorkspaceSectionMock = vi.fn(() => <div data-testid="food-workspace-section" />)
+const beverageWorkspaceSectionMock = vi.fn(() => <div data-testid="beverage-workspace-section" />)
 const vendorsSectionMock = vi.fn(() => <div data-testid="vendors-section" />)
 const setupInstructionsSectionMock = vi.fn(() => <div data-testid="setup-section" />)
 const notesSectionMock = vi.fn(() => <div data-testid="notes-section" />)
@@ -13,12 +13,12 @@ const tournamentDetailsSectionMock = vi.fn(() => <div data-testid="tournament-de
 const golfCartsSectionMock = vi.fn(() => <div data-testid="golf-carts-section" />)
 const financialWorkspaceSectionMock = vi.fn(() => <div data-testid="financial-workspace-section" />)
 
-vi.mock("~/components/event-detail/detail-sections/sections/FoodSection", () => ({
-  default: () => foodSectionMock(),
+vi.mock("~/features/event-detail/sections/planning-workspace/FoodWorkspaceSection", () => ({
+  default: () => foodWorkspaceSectionMock(),
 }))
 
-vi.mock("~/components/event-detail/detail-sections/sections/BeverageSection", () => ({
-  default: () => beverageSectionMock(),
+vi.mock("~/features/event-detail/sections/planning-workspace/BeverageWorkspaceSection", () => ({
+  default: () => beverageWorkspaceSectionMock(),
 }))
 
 vi.mock("~/components/event-detail/detail-sections/sections/VendorsSection", () => ({
@@ -114,10 +114,10 @@ describe("EventWorkspaceBodyRouter", () => {
       sourceRef: { kind: "category", categoryId: "food" },
     })
 
-    expect(screen.getByTestId("food-section")).toBeTruthy()
-    expect(screen.getByTestId("food-section").parentElement?.className).toContain("h-full")
-    expect(screen.getByTestId("food-section").parentElement?.className).toContain("min-h-0")
-    expect(screen.getByTestId("food-section").parentElement?.className).toContain("overflow-y-auto")
+    expect(screen.getByTestId("food-workspace-section")).toBeTruthy()
+    expect(screen.getByTestId("food-workspace-section").parentElement?.className).toContain("h-full")
+    expect(screen.getByTestId("food-workspace-section").parentElement?.className).toContain("min-h-0")
+    expect(screen.getByTestId("food-workspace-section").parentElement?.className).toContain("overflow-y-auto")
   })
 
   it("renders tournament category content inside the shared scroll container contract", () => {
@@ -180,7 +180,21 @@ describe("EventWorkspaceBodyRouter", () => {
       sourceRef: { kind: "timeblock", timeblockId: "tb-2" },
     })
 
-    expect(screen.getByTestId("food-section")).toBeTruthy()
+    expect(screen.getByTestId("food-workspace-section")).toBeTruthy()
+  })
+
+  it("renders beverage nodes using the beverage workspace content", () => {
+    renderRouter({
+      id: "timeblock:tb-4",
+      label: "Bar Service",
+      subLabel: "Beverage",
+      nodeType: "timeblock",
+      time: "13:00",
+      sectionType: SECTION_TYPE.BEVERAGE,
+      sourceRef: { kind: "timeblock", timeblockId: "tb-4" },
+    })
+
+    expect(screen.getByTestId("beverage-workspace-section")).toBeTruthy()
   })
 
   it("renders a fallback for unsupported timeblock categories", () => {

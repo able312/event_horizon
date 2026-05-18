@@ -1,11 +1,11 @@
-import FoodSection from "~/components/event-detail/detail-sections/sections/FoodSection"
-import BeverageSection from "~/components/event-detail/detail-sections/sections/BeverageSection"
 import VendorsSection from "~/components/event-detail/detail-sections/sections/VendorsSection"
 import SetupInstructionsSection from "~/components/event-detail/detail-sections/sections/SetupInstructionsSection"
 import NotesSection from "~/components/event-detail/detail-sections/sections/NotesSection"
 import TournamentDetailsSection from "~/components/event-detail/detail-sections/sections/TournamentDetailsSection"
 import GolfCartsSection from "~/components/event-detail/detail-sections/sections/GolfCartsSection"
 import FinancialWorkspaceSection from "./FinancialWorkspaceSection"
+import FoodWorkspaceSection from "~/features/event-detail/sections/planning-workspace/FoodWorkspaceSection"
+import BeverageWorkspaceSection from "~/features/event-detail/sections/planning-workspace/BeverageWorkspaceSection"
 
 import type { EventResource } from "~/features/event-detail/types"
 import { getWorkspaceCategoryIdForSectionType } from "../lib/getWorkspaceCategoryIdForSectionType"
@@ -26,9 +26,9 @@ function renderCategoryWorkspace(
 ) {
   switch (categoryId) {
     case "food":
-      return <div className={`${scrollContainerClassName} p-4`}><FoodSection /></div>
+      return <div className={`${scrollContainerClassName} p-4`}><FoodWorkspaceSection /></div>
     case "beverage":
-      return <div className={`${scrollContainerClassName} p-4`}><BeverageSection /></div>
+      return <div className={`${scrollContainerClassName} p-4`}><BeverageWorkspaceSection /></div>
     case "logistics":
       return <div className={`${scrollContainerClassName} p-4`}><VendorsSection /></div>
     case "setup":

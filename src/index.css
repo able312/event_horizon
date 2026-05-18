@@ -145,5 +145,20 @@
   input[type="number"] {
     -moz-appearance: textfield; /* Firefox */
   }
+
+  input[type="time"] {
+    appearance: textfield !important;
+    -webkit-appearance: textfield !important;
+  }
+
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+  }
 }
 

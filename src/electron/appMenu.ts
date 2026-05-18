@@ -105,6 +105,7 @@ export function rebuildAppMenu(targetWindowId?: number) {
           }
         },
       },
+      { role: "reload"}
     ],
   },
   
@@ -114,6 +115,10 @@ export function rebuildAppMenu(targetWindowId?: number) {
       { role: "copy"},
       { role: "cut"},
       { role: "paste"},
+      { role: "selectAll"},
+      { type: "separator" },
+      { role: "undo"},
+      { role: "redo"},
     ]
   },
   ...(canGenerate
