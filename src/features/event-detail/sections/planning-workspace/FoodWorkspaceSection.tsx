@@ -3,7 +3,7 @@ import React from "react"
 import type { FoodItem } from "~/definitions/database"
 import { ITER_FOOD_SERVICE_STYLE } from "~/definitions/sections/section-constants"
 import { useFoodSection } from "~/hooks/useFoodSection"
-import PlanningWorkspaceTimeblockList from "./PlanningWorkspaceTimeblockList"
+import PlanningWorkspaceTimeblockList from "./PlanningWorkspaceTimeblocks/PlanningWorkspaceTimeblockList"
 
 const FoodWorkspaceSection: React.FC = () => {
   const {

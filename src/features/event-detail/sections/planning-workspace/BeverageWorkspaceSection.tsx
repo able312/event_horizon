@@ -3,7 +3,7 @@ import React from "react"
 import type { BeverageItem } from "~/definitions/database"
 import { ITER_BEVERAGE_SERVICE_STYLE } from "~/definitions/sections/section-constants"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
-import PlanningWorkspaceTimeblockList from "./PlanningWorkspaceTimeblockList"
+import PlanningWorkspaceTimeblockList from "./PlanningWorkspaceTimeblocks/PlanningWorkspaceTimeblockList"
 
 const BeverageWorkspaceSection: React.FC = () => {
   const {
@@ -24,7 +24,7 @@ const BeverageWorkspaceSection: React.FC = () => {
       emptyItemsCopy="No beverage items have been added to this timeblock."
       addTimeblockLabel="Add Timeblock"
       addItemLabel="Add Item"
-      titlePlaceholder="e.g. Cocktail Hour, Wine Service"
+      titlePlaceholder="e.g. Cocktail Hour, Toast"
       serviceStyleOptions={ITER_BEVERAGE_SERVICE_STYLE}
       timeblocks={timeblocks}
       isLoading={isLoading}

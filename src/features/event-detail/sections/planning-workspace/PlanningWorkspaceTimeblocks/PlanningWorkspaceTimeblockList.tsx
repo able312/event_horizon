@@ -1,4 +1,4 @@
-import { CornerDownRight, Plus, Trash2 } from "lucide-react"
+import { Info, Plus, Trash2 } from "lucide-react"
 
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import type { UpdateTimeblock } from "~/definitions/database"
@@ -18,8 +18,10 @@ import {
   dollarsToCents,
   toCurrency,
 } from "~/features/event-detail/workspace/lib/financial"
+import PlanningTimeBlockHeader from "./PlanningTimeblockHeader"
+import { PlanningTimeblockItemNoteRow } from "./PlanningTimeblockItemNoteRow"
 
-type WorkspaceItemBase = {
+export type WorkspaceItemBase = {
   id: string
   name: string
   quantity: number | null
@@ -87,13 +89,19 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
   if (timeblocks.length === 0) {
     return (
       <div className="space-y-3">
-        <div className="rounded-xs border border-dashed border-border bg-muted/10 px-4 py-4">
-          <p className="text-sm text-muted-foreground">{noTimeblocksCopy}</p>
+         <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold tracking-wide">{sectionTitle}</h3>
+          <p className="text-xs text-muted-foreground">Grouped by timeblock with inline planning and pricing edits.</p>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={addTimeblock}>
           <Plus />
           {addTimeblockLabel}
         </Button>
+      </div>
+        <div className="rounded-xs border border-dashed border-border bg-orange-50 px-4 py-4">
+          <p className="text-sm text-muted-foreground">{noTimeblocksCopy}</p>
+        </div>
       </div>
     )
   }
@@ -117,57 +125,20 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
 
         return (
           <section key={timeblock.id} className="rounded-xs border border-border bg-background">
-            <div className="border-b border-border/70 bg-muted/15 px-3 pt-1 pb-2">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="grid gap-6 md:grid-cols-[60px_minmax(0,1fr)_minmax(0,1fr)] items-center">
-                  {/* Time */}
-                  <label className="space-y-1 w-full flex justify-center items-center w-full">
-                    <div className={`rounded-sm w-content text-white px-2 ${timeblock.time ? "bg-stone-600" : "bg-orange-500"}`}>
-                      <input
-                        type="time"
-                        defaultValue={timeblock.time ?? ""}
-                        onBlur={(e) => updateTimeblock({ id: timeblock.id, updates: { time: e.target.value } })}
-                        aria-label={`${sectionTitle} time`}
-                        className="h-7 bg-transparent text-sm font-bold outline-none w-full text-center"
-                      />
-                    </div>
-                  </label>
 
-                  {/* Title */}
-                  <label className="space-y-1 border-r-1 border-stone-300 pr-6">
-                    <input
-                      type="text"
-                      defaultValue={timeblock.title ?? ""}
-                      onBlur={(e) => updateTimeblock({ id: timeblock.id, updates: { title: e.target.value } })}
-                      placeholder={titlePlaceholder}
-                      aria-label={`${sectionTitle} title`}
-                      className="h-9 w-full rounded-xs border-b border-border bg-background px-2.5 text-md font-bold outline-none transition-colors focus:border-primary"
-                    />
-                  </label>
-              
-                  <label className="space-y-1 flex items-center">
-                    <span className="text-[11px] font-medium uppercase text-muted-foreground w-1/2 m-0">Assigned To</span>
-                    <input
-                      type="text"
-                      defaultValue={timeblock.assignedTo ?? ""}
-                      onBlur={(e) => updateTimeblock({ id: timeblock.id, updates: { assignedTo: e.target.value } })}
-                      placeholder="Assign to..."
-                      aria-label="Assigned To"
-                      className="h-9 w-full rounded-xs border-b border-border bg-background px-2.5 text-sm outline-none transition-colors focus:border-primary"
-                    />
-                  </label>
-                </div>
+            <PlanningTimeBlockHeader 
+              timeblockID = { timeblock.id }
+              title={ timeblock.title ?? "" }
+              titlePlaceholder={ titlePlaceholder }
+              sectionTitle={ sectionTitle }
+              time={ timeblock.time ?? "" }
+              assignedTo={ timeblock.assignedTo ?? ""}
+              updateTimeblock={ updateTimeblock }
+              removeTimeblock={ removeTimeblock }
+            />
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeTimeblock(timeblock.id)}
-                  className="justify-start text-muted-foreground hover:text-destructive lg:justify-center"
-                >
-                  <Trash2 />
-                </Button>
-              </div>
+            <div className="flex py-2 px-6 justify-end text-orange-400">
+              <Info size={ 16 } />
             </div>
 
             {items.length === 0 ? (
@@ -271,17 +242,12 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
                         </tr>
                         <tr className={SECTION_TABLE_BODY_ROW_CLASS}>
                           <td colSpan={6} className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-[240px] align-top`}>
-                            <div className="flex items-center">
-                            <CornerDownRight size={12} />
-                            <textarea
-                              defaultValue={item.includes ?? ""}
-                              onBlur={(e) => updateItem({ timeblockId: timeblock.id, itemId: item.id, updates: patchItem("includes", e.target.value) })}
-                              aria-label="Includes / Notes"
-                              placeholder="Notes..."
-                              rows={1}
-                              className="min-h-8 w-full rounded-xs border border-transparent bg-transparent px-1.5 py-1 text-sm text-muted-foreground outline-none transition-colors focus:border-border focus:bg-background focus:text-foreground"
+                            <PlanningTimeblockItemNoteRow 
+                              timeblockID={ timeblock.id }
+                              itemID={ item.id }
+                              note={ item.includes ?? "" }
+                              updateItem={ updateItem }
                             />
-                            </div>
                           </td>
                         </tr>
                         </>
