@@ -56,10 +56,11 @@ describe("FoodWorkspaceSection", () => {
     expect(screen.getByRole("table")).toBeTruthy()
     expect(screen.getByDisplayValue("Prime Rib")).toBeTruthy()
     expect(screen.getByText("$2,800.00")).toBeTruthy()
-    expect(screen.getByText("Subtotal: $2,800.00")).toBeTruthy()
+    expect(screen.queryByText("Subtotal: $2,800.00")).toBeNull()
+    expect(screen.getByText("Horseradish")).toBeTruthy()
   })
 
-  it("updates food workspace fields and routes actions through the hook mutations", () => {
+  it("updates food workspace fields and routes actions through the hook mutations", async () => {
     const addTimeblock = vi.fn()
     const updateTimeblock = vi.fn()
     const removeTimeblock = vi.fn()
@@ -150,7 +151,8 @@ describe("FoodWorkspaceSection", () => {
     fireEvent.click(screen.getByRole("button", { name: /Add Item/i }))
     expect(addItem).toHaveBeenCalledWith({ timeblockId: "tb-1" })
 
-    fireEvent.click(screen.getByRole("button", { name: /Remove Timeblock/i }))
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Calendar ID actions" }))
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Delete Timeblock" }))
     expect(removeTimeblock).toHaveBeenCalledWith("tb-1")
 
     fireEvent.click(firstRemoveItem)

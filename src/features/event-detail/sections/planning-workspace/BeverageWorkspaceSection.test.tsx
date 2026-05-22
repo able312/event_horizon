@@ -56,10 +56,11 @@ describe("BeverageWorkspaceSection", () => {
     expect(screen.getByRole("table")).toBeTruthy()
     expect(screen.getByDisplayValue("House Red")).toBeTruthy()
     expect(screen.getByText("$264.00")).toBeTruthy()
-    expect(screen.getByText("Subtotal: $264.00")).toBeTruthy()
+    expect(screen.queryByText("Subtotal: $264.00")).toBeNull()
+    expect(screen.getByText("Cabernet")).toBeTruthy()
   })
 
-  it("wires beverage mutations through the workspace list actions", () => {
+  it("wires beverage mutations through the workspace list actions", async () => {
     const addTimeblock = vi.fn()
     const updateTimeblock = vi.fn()
     const removeTimeblock = vi.fn()
@@ -126,8 +127,11 @@ describe("BeverageWorkspaceSection", () => {
       updates: { serviceStyle: "Open Bar" },
     })
 
-    fireEvent.change(screen.getByLabelText("Includes / Notes"), { target: { value: "Chilled bottles" } })
-    fireEvent.blur(screen.getByLabelText("Includes / Notes"))
+    expect(screen.getByText("Notes...")).toBeTruthy()
+    fireEvent.click(screen.getByText("Notes..."))
+    const notesField = screen.getByLabelText("Includes / Notes")
+    fireEvent.change(notesField, { target: { value: "Chilled bottles" } })
+    fireEvent.blur(notesField)
     expect(updateItem).toHaveBeenCalledWith({
       timeblockId: "tb-1",
       itemId: "bev-1",
@@ -156,7 +160,8 @@ describe("BeverageWorkspaceSection", () => {
     fireEvent.click(screen.getByRole("button", { name: "Remove Item" }))
     expect(removeItem).toHaveBeenCalledWith({ timeblockId: "tb-1", itemId: "bev-1" })
 
-    fireEvent.click(screen.getByRole("button", { name: /Remove Timeblock/i }))
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Calendar ID actions" }))
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Delete Timeblock" }))
     expect(removeTimeblock).toHaveBeenCalledWith("tb-1")
 
     fireEvent.click(screen.getByRole("button", { name: /^Add Timeblock$/i }))

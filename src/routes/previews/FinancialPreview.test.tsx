@@ -1,6 +1,14 @@
 import { cleanup, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+vi.mock("~/assets/Westlinks-SM-RGB.png", () => ({
+  default: "/test-westlinks-logo.png",
+}))
+
+vi.mock("~/assets/SILO-SM-RGB.png", () => ({
+  default: "/test-silo-logo.png",
+}))
+
 import FinancialPreview from "./FinancialPreview"
 
 const hooksMock = vi.hoisted(() => ({
@@ -66,6 +74,8 @@ describe("FinancialPreview", () => {
 
     render(<FinancialPreview />)
 
+    expect(screen.getByText("Event Estimate")).toBeTruthy()
+    expect(screen.getByText("The Club at Westlinks")).toBeTruthy()
     expect(screen.getAllByText("$145.00").length).toBeGreaterThan(0)
     expect(screen.getByText("$18.85")).toBeTruthy()
     expect(screen.getAllByText("$163.85").length).toBeGreaterThan(0)
