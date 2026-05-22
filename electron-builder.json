@@ -10,7 +10,8 @@
         ],
         "category": "public.app-category.productivity",
         "hardenedRuntime": true,
-        "gatekeeperAssess": false
+        "gatekeeperAssess": false,
+        "identity": "-"
     },
     "dmg": {
         "contents": [
