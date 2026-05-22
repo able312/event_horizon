@@ -1,7 +1,9 @@
-import { Clock3, Trash2, Grid2X2Plus } from 'lucide-react'
+import { Clock3, Plus, ChevronDown } from 'lucide-react'
 
 import { Button } from '~/components/ui/button'
 import type { UpdateTimeblock } from '~/definitions/database'
+
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '~/components/ui/dropdown-menu'
 
 interface PlanningTimeBlockHeaderProps {
     timeblockID: string,
@@ -10,8 +12,10 @@ interface PlanningTimeBlockHeaderProps {
     sectionTitle: string,
     time: string,
     assignedTo: string,
+    addItemLabel: string,
     updateTimeblock: (payload: {id: string, updates: UpdateTimeblock}) => void,
-    removeTimeblock: (id: string) => void
+    removeTimeblock: (id: string) => void,
+    addItem: (payload: { timeblockId: string }) => void
 
     
 }
@@ -23,8 +27,10 @@ const PlanningTimeBlockHeader: React.FC<PlanningTimeBlockHeaderProps> = ({
     sectionTitle,
     time,
     assignedTo,
+    addItemLabel,
     updateTimeblock,
-    removeTimeblock
+    removeTimeblock,
+    addItem
 }) => {
 
     return (
@@ -71,26 +77,30 @@ const PlanningTimeBlockHeader: React.FC<PlanningTimeBlockHeaderProps> = ({
             </div>
 
             <div className="flex">
-                <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => console.log("Create Set Up instructions for: " + timeblockID)}
-                className="justify-start text-muted-foreground hover:text-destructive lg:justify-center"
-                >
-                    <Grid2X2Plus />
-                    Create Setup
+
+                <Button type="button" variant="outline" size="sm" className="rounded-r-none" onClick={() => addItem({ timeblockId: timeblockID })}>
+                    <Plus />
+                    {addItemLabel}
                 </Button>
 
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeTimeblock(timeblockID)}
-                    className="justify-start text-muted-foreground hover:text-destructive lg:justify-center"
-                >
-                    <Trash2 />
-                </Button>
+                <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger asChild>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        aria-label="Calendar ID actions"
+                        className="rounded-l-none border-l px-2"
+                    >
+                        <ChevronDown className="h-4 w-4" />
+                    </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => console.log("Create Set Up Instructions")}>Create Setup Instructions</DropdownMenuItem>
+                    <DropdownMenuItem variant="destructive" onClick={ () => removeTimeblock(timeblockID) }>
+                        Delete Timeblock
+                    </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
             </div>
         </div>

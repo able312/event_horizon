@@ -1,4 +1,4 @@
-import { Info, Plus, Trash2 } from "lucide-react"
+import { Plus, Trash2 } from "lucide-react"
 
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import type { UpdateTimeblock } from "~/definitions/database"
@@ -55,10 +55,6 @@ function parseQuantity(value: string): number {
 
 function parsePrice(value: string): number {
   return Math.max(0, dollarsToCents(value))
-}
-
-function computeTimeblockSubtotal<TItem extends WorkspaceItemBase>(items: TItem[]): number {
-  return items.reduce((sum, item) => sum + computeBillableLineTotalCents(item), 0)
 }
 
 function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
@@ -121,7 +117,6 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
 
       {timeblocks.map((timeblock) => {
         const items = getItems(timeblock)
-        const subtotalCents = computeTimeblockSubtotal(items)
 
         return (
           <section key={timeblock.id} className="rounded-xs border border-border bg-background">
@@ -133,25 +128,16 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
               sectionTitle={ sectionTitle }
               time={ timeblock.time ?? "" }
               assignedTo={ timeblock.assignedTo ?? ""}
+              addItemLabel={ addItemLabel }
               updateTimeblock={ updateTimeblock }
               removeTimeblock={ removeTimeblock }
+              addItem={ addItem }
             />
-
-            <div className="flex py-2 px-6 justify-end text-orange-400">
-              <Info size={ 16 } />
-            </div>
 
             {items.length === 0 ? (
               <div className="space-y-3 px-3 py-4">
                 <div className="rounded-xs border border-dashed border-border bg-orange-50 px-3 py-4 text-sm text-muted-foreground">
                   {emptyItemsCopy}
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <Button type="button" variant="outline" size="sm" onClick={() => addItem({ timeblockId: timeblock.id })}>
-                    <Plus />
-                    {addItemLabel}
-                  </Button>
-                  <p className="text-xs font-medium text-muted-foreground">Subtotal: {toCurrency(subtotalCents)}</p>
                 </div>
               </div>
             ) : (
@@ -254,14 +240,6 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
                       ))}
                     </tbody>
                   </table>
-                </div>
-
-                <div className="flex items-center justify-between gap-3">
-                  <Button type="button" variant="outline" size="sm" onClick={() => addItem({ timeblockId: timeblock.id })}>
-                    <Plus />
-                    {addItemLabel}
-                  </Button>
-                  <p className="text-xs font-medium text-muted-foreground">Subtotal: {toCurrency(subtotalCents)}</p>
                 </div>
               </div>
             )}

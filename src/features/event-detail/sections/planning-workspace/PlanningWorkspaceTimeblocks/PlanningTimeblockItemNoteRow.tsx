@@ -20,8 +20,8 @@ export function PlanningTimeblockItemNoteRow<TItem extends WorkspaceItemBase> ({
 
     const [isEditing, setIsEditing] = useState<boolean>(false)
     const shortNote = useMemo(() => {
-        const trimNote = note.replaceAll("\n\n", " | ")
-        return trimNote.replaceAll("\n", ", ")
+        const trimNote = note.split("\n\n").join(" | ")
+        return trimNote.split("\n").join(", ")
     }, [note])
 
     const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -45,11 +45,9 @@ export function PlanningTimeblockItemNoteRow<TItem extends WorkspaceItemBase> ({
 
     const patchItem = (field: keyof WorkspaceItemBase, value: WorkspaceItemBase[keyof WorkspaceItemBase]) =>
     ({ [field]: value }) as Partial<TItem>
-
-    console.log(inputRef)
     
     return (
-        <div className={`flex items-start`}>
+        <div className={`flex items-start py-1`}>
             <Button
                 variant="ghost"
                 className="size-6 text-stone-400 hover:text-orange-500"
@@ -67,11 +65,11 @@ export function PlanningTimeblockItemNoteRow<TItem extends WorkspaceItemBase> ({
                     ref={ inputRef }
                     aria-label="Includes / Notes"
                     placeholder="Notes..."
-                    rows={note.split("\n").length + 1}
-                    className="min-h-8 w-full rounded-xs border border-transparent bg-transparent px-1.5 py-1 text-sm text-stone-500 outline-none transition-colors focus:border-border focus:bg-background focus:text-foreground"
+                    // rows={note.split("\n").length + 1}
+                    className="min-h-8 w-full rounded-xs border border-transparent bg-transparent px-1.5 py-1 text-sm text-stone-500 outline-none transition-colors focus:border-border focus:bg-background focus:text-foreground field-sizing-content"
                 />
                 :
-                <div className={`${shortNote.length <= 0 ? "text-stone-400" : "text-stone-500"} px-2 py-1 w-full`} onClick={ handleStartEdit }>{ shortNote.length <= 0 ? "Notes..." : shortNote }</div>
+                <div className={`${shortNote.length <= 0 ? "text-stone-400" : "text-stone-500"} m-0.25 px-1.5 py-1 min-h-7.5 w-full`} onClick={ handleStartEdit }>{ shortNote.length <= 0 ? "Notes..." : shortNote }</div>
             }
         </div>
     )
