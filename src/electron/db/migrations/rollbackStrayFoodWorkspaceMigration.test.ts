@@ -41,24 +41,13 @@ async function createStrayMigrationStateFolder() {
 
   const journalPath = join(tempMigrationsFolder, "meta/_journal.json")
   const journal: Journal = JSON.parse(await readFile(journalPath, "utf8"))
-  const repairEntry = journal.entries.find((entry) => entry.tag === "0012_neat_reconciliation")
-  if (!repairEntry) {
-    throw new Error("Expected tracked repair migration entry")
-  }
-
-  journal.entries = journal.entries.filter((entry) => entry.tag !== "0012_neat_reconciliation")
-  journal.entries.push({
-    idx: repairEntry.idx,
-    version: "6",
-    when: 1779050905293,
-    tag: "0012_spicy_horizon",
-    breakpoints: true,
-  })
+  journal.entries = journal.entries.filter((entry) => entry.idx < 12)
 
   await writeFile(journalPath, JSON.stringify(journal, null, 2))
   await rm(join(tempMigrationsFolder, "0012_neat_reconciliation.sql"), { force: true })
+  await rm(join(tempMigrationsFolder, "0013_blue_lagoon.sql"), { force: true })
   await rm(join(tempMigrationsFolder, "meta", "0012_snapshot.json"), { force: true })
-  await writeFile(join(tempMigrationsFolder, "0012_spicy_horizon.sql"), STRAY_SQL)
+  await rm(join(tempMigrationsFolder, "meta", "0013_snapshot.json"), { force: true })
 
   return {
     cleanup: async () => {
@@ -73,6 +62,22 @@ function columnNames(sqlite: TestDb["sqlite"], tableName: string): string[] {
     const typedColumn = column as { name: string }
     return typedColumn.name
   })
+}
+
+function foreignKeyTables(sqlite: TestDb["sqlite"], tableName: string): string[] {
+  return sqlite.prepare(`PRAGMA foreign_key_list(${tableName})`).all().map((foreignKey) => {
+    const typedForeignKey = foreignKey as { table: string }
+    return typedForeignKey.table
+  })
+}
+
+function runStatementBatch(sqlite: TestDb["sqlite"], batch: string): void {
+  for (const statement of batch
+    .split("--> statement-breakpoint")
+    .map((part) => part.trim())
+    .filter(Boolean)) {
+    sqlite.exec(statement)
+  }
 }
 
 describe("rollback stray food workspace migration", () => {
@@ -90,6 +95,7 @@ describe("rollback stray food workspace migration", () => {
 
     try {
       testDb = await createTestDb({ migrationsFolder: strayState.tempMigrationsFolder })
+      runStatementBatch(testDb.sqlite, STRAY_SQL)
 
       testDb.sqlite.prepare(`
         INSERT INTO events (id, title, created_at)
@@ -129,6 +135,11 @@ describe("rollback stray food workspace migration", () => {
         "unit_price_cents",
       ])
 
+      expect(foreignKeyTables(testDb.sqlite, "beverage_items")).toEqual(["timeblocks"])
+      expect(foreignKeyTables(testDb.sqlite, "vendor_items")).toEqual(["timeblocks"])
+      expect(foreignKeyTables(testDb.sqlite, "setup_instructions")).toEqual(["timeblocks"])
+      expect(foreignKeyTables(testDb.sqlite, "notes")).toEqual(["timeblocks"])
+
       const repairedTimeblock = testDb.sqlite.prepare(`
         SELECT id, event_id, title, time, section_type, assigned_to, created_at, updated_at
         FROM timeblocks
@@ -161,17 +172,16 @@ describe("rollback stray food workspace migration", () => {
         includes: "Chafer",
         unit_price_cents: 2500,
       })
+
     } finally {
       await strayState.cleanup()
     }
   })
 
   it("runs safely on databases that already match the current schema", async () => {
-    const strayState = await createStrayMigrationStateFolder()
+    testDb = await createTestDb()
 
     try {
-      testDb = await createTestDb({ migrationsFolder: strayState.tempMigrationsFolder })
-
       testDb.sqlite.prepare(`
         INSERT INTO events (id, title, created_at)
         VALUES ('event-2', 'Clean Event', 'created')
@@ -188,14 +198,38 @@ describe("rollback stray food workspace migration", () => {
       `).run()
 
       testDb.sqlite.prepare(`
-        DELETE FROM __drizzle_migrations
-        WHERE hash = '9a08a7c377b88887c8733b1863f086b1404e43241d225b0740d117ae43530bab'
+        INSERT INTO timeblocks (id, event_id, title, time, section_type, assigned_to, created_at, updated_at)
+        VALUES
+          ('tb-bev-2', 'event-2', 'Bar', '17:00', 'beverage', 'Bar Team', 'created', NULL),
+          ('tb-vendor-2', 'event-2', 'Band', '15:30', 'vendor', 'Planner', 'created', NULL),
+          ('tb-setup-2', 'event-2', 'Flip', '16:00', 'setup_instruction', 'Ops', 'created', NULL),
+          ('tb-note-2', 'event-2', 'Reminder', '14:00', 'note', 'Lead', 'created', NULL)
       `).run()
 
-      testDb.sqlite.prepare(`ALTER TABLE timeblocks DROP COLUMN notes`).run()
-      testDb.sqlite.prepare(`ALTER TABLE timeblocks DROP COLUMN default_service_style`).run()
-      testDb.sqlite.prepare(`ALTER TABLE food_items DROP COLUMN components`).run()
-      testDb.sqlite.prepare(`ALTER TABLE food_items DROP COLUMN setup_notes`).run()
+      testDb.sqlite.prepare(`
+        INSERT INTO beverage_items (id, timeblock_id, name, quantity, type, service_style, includes, unit_price_cents)
+        VALUES ('bev-2', 'tb-bev-2', 'Negroni', 3, 'Cocktail', 'Open Bar', 'Orange peel', 1800)
+      `).run()
+
+      testDb.sqlite.prepare(`
+        INSERT INTO vendor_items (id, timeblock_id, contact_name, contact_phone, contact_email, notes)
+        VALUES ('vendor-2', 'tb-vendor-2', 'Band Lead', '555-2000', 'band@example.com', 'Need stage power')
+      `).run()
+
+      testDb.sqlite.prepare(`
+        INSERT INTO setup_instructions (id, timeblock_id, instruction, created_at)
+        VALUES ('setup-2', 'tb-setup-2', 'Place linens.', 'created')
+      `).run()
+
+      testDb.sqlite.prepare(`
+        INSERT INTO notes (id, timeblock_id, content, created_at)
+        VALUES ('note-2', 'tb-note-2', 'Check candles.', 'created')
+      `).run()
+
+      testDb.sqlite.prepare(`
+        DELETE FROM __drizzle_migrations
+        WHERE rowid = (SELECT MAX(rowid) FROM __drizzle_migrations)
+      `).run()
 
       runMigrations(testDb.db, migrationsFolder)
 
@@ -219,6 +253,11 @@ describe("rollback stray food workspace migration", () => {
         "includes",
         "unit_price_cents",
       ])
+
+      expect(foreignKeyTables(testDb.sqlite, "beverage_items")).toEqual(["timeblocks"])
+      expect(foreignKeyTables(testDb.sqlite, "vendor_items")).toEqual(["timeblocks"])
+      expect(foreignKeyTables(testDb.sqlite, "setup_instructions")).toEqual(["timeblocks"])
+      expect(foreignKeyTables(testDb.sqlite, "notes")).toEqual(["timeblocks"])
 
       const timeblockRow = testDb.sqlite.prepare(`
         SELECT id, event_id, title, time, section_type, assigned_to, created_at, updated_at
@@ -252,8 +291,60 @@ describe("rollback stray food workspace migration", () => {
         includes: "Dressing",
         unit_price_cents: 1800,
       })
+
+      expect(testDb.sqlite.prepare(`
+        SELECT id, timeblock_id, name, quantity, type, service_style, includes, unit_price_cents
+        FROM beverage_items
+        WHERE id = 'bev-2'
+      `).get()).toEqual({
+        id: "bev-2",
+        timeblock_id: "tb-bev-2",
+        name: "Negroni",
+        quantity: 3,
+        type: "Cocktail",
+        service_style: "Open Bar",
+        includes: "Orange peel",
+        unit_price_cents: 1800,
+      })
+
+      expect(testDb.sqlite.prepare(`
+        SELECT id, timeblock_id, contact_name, contact_phone, contact_email, notes
+        FROM vendor_items
+        WHERE id = 'vendor-2'
+      `).get()).toEqual({
+        id: "vendor-2",
+        timeblock_id: "tb-vendor-2",
+        contact_name: "Band Lead",
+        contact_phone: "555-2000",
+        contact_email: "band@example.com",
+        notes: "Need stage power",
+      })
+
+      expect(testDb.sqlite.prepare(`
+        SELECT id, timeblock_id, instruction, created_at, updated_at
+        FROM setup_instructions
+        WHERE id = 'setup-2'
+      `).get()).toEqual({
+        id: "setup-2",
+        timeblock_id: "tb-setup-2",
+        instruction: "Place linens.",
+        created_at: "created",
+        updated_at: null,
+      })
+
+      expect(testDb.sqlite.prepare(`
+        SELECT id, timeblock_id, content, created_at, updated_at
+        FROM notes
+        WHERE id = 'note-2'
+      `).get()).toEqual({
+        id: "note-2",
+        timeblock_id: "tb-note-2",
+        content: "Check candles.",
+        created_at: "created",
+        updated_at: null,
+      })
     } finally {
-      await strayState.cleanup()
+      // no-op
     }
   })
 })

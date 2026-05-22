@@ -36,7 +36,7 @@ const PlanningTimeBlockHeader: React.FC<PlanningTimeBlockHeaderProps> = ({
     return (
         <div className="border-b border-border/70 bg-muted/15 px-3 pt-1 pb-2">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="grid gap-6 md:grid-cols-[80px_minmax(0,1fr)_minmax(0,1fr)] items-center">
+            <div className="grid gap-6 md:grid-cols-[80px_1fr_1fr] items-center">
                 {/* Time */}
                 <label className="space-y-1 w-full flex justify-center items-center w-full">
                 <div className={`rounded-sm flex items-center gap-2 w-content text-white px-2 ${time ? "bg-stone-600" : "bg-orange-500"}`}>
@@ -59,7 +59,7 @@ const PlanningTimeBlockHeader: React.FC<PlanningTimeBlockHeaderProps> = ({
                     onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { title: e.target.value } })}
                     placeholder={titlePlaceholder}
                     aria-label={`${sectionTitle} title`}
-                    className="h-9 w-full rounded-xs border-b border-border bg-background px-2.5 text-md font-bold outline-none transition-colors focus:border-primary"
+                    className="h-9 w-full border-b border-border bg-background px-2.5 text-md font-bold outline-none transition-colors focus:border-primary"
                 />
                 </label>
             
@@ -71,7 +71,7 @@ const PlanningTimeBlockHeader: React.FC<PlanningTimeBlockHeaderProps> = ({
                     onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { assignedTo: e.target.value } })}
                     placeholder="Assign to..."
                     aria-label="Assigned To"
-                    className="h-9 w-full rounded-xs border-b border-border bg-background px-2.5 text-sm outline-none transition-colors focus:border-primary"
+                    className="h-9 w-full border-b border-border bg-background px-2.5 text-sm outline-none transition-colors focus:border-primary"
                 />
                 </label>
             </div>

@@ -119,7 +119,7 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
         const items = getItems(timeblock)
 
         return (
-          <section key={timeblock.id} className="rounded-xs border border-border bg-background">
+          <section key={timeblock.id} className="rounded-xs border border-border border-stone-200 bg-background shadow-sm">
 
             <PlanningTimeBlockHeader 
               timeblockID = { timeblock.id }
@@ -210,7 +210,7 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
                               className="ml-auto h-8 w-20 rounded-xs border border-transparent bg-transparent px-1.5 text-right text-sm text-muted-foreground outline-none transition-colors focus:border-border focus:bg-background focus:text-foreground"
                             />
                           </td>
-                          <td className={`${SECTION_TABLE_BODY_CELL_CLASS} w-[104px] align-top text-right text-sm font-medium text-foreground`}>
+                          <td className={`${SECTION_TABLE_BODY_CELL_CLASS} w-[104px] align-center text-right text-sm font-medium text-foreground`}>
                             {toCurrency(computeBillableLineTotalCents(item))}
                           </td>
                           <td className={`${SECTION_TABLE_BODY_CELL_CLASS} w-[72px] align-top text-right`}>
