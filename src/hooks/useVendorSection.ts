@@ -48,6 +48,7 @@ export function useVendorSection() {
         eventId: eventId!,
         title: "",
         time: "",
+        details: null,
         sectionType: "vendor",
         assignedTo: null,
         vendorItem: {

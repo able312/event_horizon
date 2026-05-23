@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { tmpdir } from "node:os"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { eq } from "drizzle-orm"
 import { v4 as uuidv4 } from "uuid"
 import { cartDetails, events, timeblocks, tournamentDetails } from "../schema.js"
 import { createTestDb, type TestDb } from "../test/testDb.js"
@@ -187,6 +188,177 @@ describe("timeblocks.getAllTimelineBlocks", () => {
     ])
     expect(systemRows.every((row) => row.timelineMeta.isEditable === false)).toBe(true)
     expect(systemRows.every((row) => row.timelineMeta.isSystem === true)).toBe(true)
+    expect(systemRows.find((row) => row.timelineMeta.source === "tournament_start")?.details).toContain("120 Players")
+  })
+
+  it("creates and updates note details on root timeblocks", () => {
+    if (!testDb || !repo) throw new Error("Expected test DB to be initialized")
+
+    const eventId = uuidv4()
+    testDb.db.insert(events).values({
+      id: eventId,
+      title: "Details Event",
+      createdAt: new Date().toISOString(),
+    }).run()
+
+    const created = repo.insert({
+      eventId,
+      title: "Reminder",
+      sectionType: "note",
+      details: "",
+      time: "",
+    })
+
+    expect(created.details).toBe("")
+
+    const updated = repo.update(created.id, { details: "Updated note body" })
+    expect(updated.details).toBe("Updated note body")
+
+    const persisted = testDb.db.select().from(timeblocks).where(eq(timeblocks.id, created.id)).get()
+    expect(persisted?.details).toBe("Updated note body")
+  })
+
+  it("creates blank setup instructions by default", () => {
+    if (!testDb || !repo) throw new Error("Expected test DB to be initialized")
+
+    const eventId = uuidv4()
+    testDb.db.insert(events).values({
+      id: eventId,
+      title: "Setup Event",
+      createdAt: new Date().toISOString(),
+    }).run()
+
+    const created = repo.insert({
+      eventId,
+      sectionType: "setup_instruction",
+    })
+
+    expect(created.title).toBe("")
+    expect(created.details).toBe("")
+  })
+
+  it("creates setup instructions from section defaults when explicitly requested", () => {
+    if (!testDb || !repo) throw new Error("Expected test DB to be initialized")
+
+    const eventId = uuidv4()
+    testDb.db.insert(events).values({
+      id: eventId,
+      title: "Prefill Setup Event",
+      createdAt: new Date().toISOString(),
+    }).run()
+
+    const created = repo.insert({
+      eventId,
+      sectionType: "setup_instruction",
+      prefill: {
+        mode: "section_default",
+        sectionType: "setup_instruction",
+      },
+    })
+
+    expect(created.title).toBe("Setup")
+    expect(created.details).toBe("Describe what needs to be done...")
+  })
+
+  it("applies explicit setup prefill overrides ahead of section defaults", () => {
+    if (!testDb || !repo) throw new Error("Expected test DB to be initialized")
+
+    const eventId = uuidv4()
+    testDb.db.insert(events).values({
+      id: eventId,
+      title: "Override Setup Event",
+      createdAt: new Date().toISOString(),
+    }).run()
+
+    const created = repo.insert({
+      eventId,
+      sectionType: "setup_instruction",
+      prefill: {
+        mode: "section_default",
+        sectionType: "setup_instruction",
+        overrides: {
+          title: "Room Flip",
+          details: "Move chairs and reset linens.",
+        },
+      },
+    })
+
+    expect(created.title).toBe("Room Flip")
+    expect(created.details).toBe("Move chairs and reset linens.")
+  })
+
+  it("keeps other sections on blank fallback unless explicit values are provided", () => {
+    if (!testDb || !repo) throw new Error("Expected test DB to be initialized")
+
+    const eventId = uuidv4()
+    testDb.db.insert(events).values({
+      id: eventId,
+      title: "Other Section Event",
+      createdAt: new Date().toISOString(),
+    }).run()
+
+    const blankVendor = repo.insert({
+      eventId,
+      sectionType: "vendor",
+      prefill: {
+        mode: "section_default",
+        sectionType: "vendor",
+      },
+    })
+
+    const explicitVendor = repo.insert({
+      eventId,
+      sectionType: "vendor",
+      title: "Stage Vendor",
+      details: "Check power access.",
+      prefill: {
+        mode: "section_default",
+        sectionType: "vendor",
+      },
+    })
+
+    expect(blankVendor.title).toBe("")
+    expect(blankVendor.details).toBeNull()
+    expect(explicitVendor.title).toBe("Stage Vendor")
+    expect(explicitVendor.details).toBe("Check power access.")
+  })
+
+  it("gets timeblocks by event and section type without note/setup satellites", async () => {
+    if (!testDb || !repo) throw new Error("Expected test DB to be initialized")
+
+    const eventId = uuidv4()
+    testDb.db.insert(events).values({
+      id: eventId,
+      title: "Section Query Event",
+      createdAt: new Date().toISOString(),
+    }).run()
+
+    testDb.db.insert(timeblocks).values([
+      {
+        id: "tb-note-1",
+        eventId,
+        title: "Note A",
+        time: "",
+        details: "Body A",
+        sectionType: "note",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: "tb-setup-1",
+        eventId,
+        title: "Setup A",
+        time: "",
+        details: "Setup body",
+        sectionType: "setup_instruction",
+        createdAt: new Date().toISOString(),
+      },
+    ]).run()
+
+    const result = await repo.getByEventIdAndSectionType(eventId, "note")
+
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe("tb-note-1")
+    expect(result[0].details).toBe("Body A")
   })
 
   it("throws when eventId is missing", async () => {

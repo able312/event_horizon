@@ -5,8 +5,7 @@ import DetailsTimeblock from "~/components/ui/DetailsTimeblock"
 import type { UpdateTimeblock } from "~/definitions/database"
 
 const NotesSection: React.FC = () => {
-  // TODO: useSetupInstructionsSection hook
-  const { data: notes, addNote, updateNote, updateTimeblock, removeTimeblock } = useNoteSection()
+  const { data: notes, addNote, updateTimeblock, removeTimeblock } = useNoteSection()
 
   const handleUpdateTimeblock = (id: string, updates: UpdateTimeblock) => {
     updateTimeblock({id, updates})
@@ -35,11 +34,11 @@ const NotesSection: React.FC = () => {
                 <div className="mt-4">
                   <label className="text-xs text-muted-foreground">Note</label>
                   <textarea
-                    defaultValue={timeblock.note?.content || ""}
+                    defaultValue={timeblock.details ?? ""}
                     placeholder="Describe what needs to be done..."
                     className="w-full px-2 py-1 text-sm border rounded bg-white mt-1 resize-y"
-                    onBlur={(e) => updateNote({id: timeblock.note!.id, updates: {content: e.target.value}})}
-                    rows={timeblock.note?.content?.split("\n").length ?? 2}
+                    onBlur={(e) => updateTimeblock({id: timeblock.id, updates: { details: e.target.value }})}
+                    rows={timeblock.details?.split("\n").length ?? 2}
                   />
                 </div>
               </DetailsTimeblock>

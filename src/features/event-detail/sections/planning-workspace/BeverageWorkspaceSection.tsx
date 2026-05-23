@@ -29,7 +29,7 @@ const BeverageWorkspaceSection: React.FC = () => {
       timeblocks={timeblocks}
       isLoading={isLoading}
       getItems={(timeblock) => timeblock.beverageItems ?? []}
-      addTimeblock={() => addTimeblock()}
+      addTimeblock={() => addTimeblock({ title: "" })}
       updateTimeblock={updateTimeblock}
       removeTimeblock={removeTimeblock}
       addItem={({ timeblockId }) => addItem({ timeblockId, newItem: { name: "" } })}

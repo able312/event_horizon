@@ -166,6 +166,7 @@ export const timeblocks = sqliteTable("timeblocks", {
   eventId: text("event_id").references(() => events.id, { onDelete: "cascade" }).notNull(),
   title: text("title").notNull(),
   time: text("time"), // HH:mm format - if set, appears on timeline
+  details: text("details"),
   sectionType: text("section_type", { enum: ["food", "beverage", "setup_instruction", "vendor", "note", "tournament_detail", "cart_detail"] }).notNull(),
   assignedTo: text("assigned_to"),
   createdAt: text("created_at").notNull(),
@@ -180,8 +181,6 @@ export const timeblocksRelations = relations(timeblocks, ({ many, one }) => ({
   foodItems: many(foodItems),
   beverageItems: many(beverageItems),
   vendorItem: one(vendorItems),
-  setupInstruction: one(setupInstructions),
-  note: one(notes),
 }));
 
 // ============================================================================
@@ -236,36 +235,6 @@ export const vendorItems = sqliteTable("vendor_items", {
 export const vendorItemsRelations = relations(vendorItems, ({ one }) => ({
   timeblock: one(timeblocks, {
     fields: [vendorItems.timeblockId],
-    references: [timeblocks.id],
-  }),
-}));
-
-// Set up instructions
-export const setupInstructions = sqliteTable("setup_instructions", {
-  id: text("id").primaryKey(),
-  timeblockId: text("timeblock_id").references(() => timeblocks.id, { onDelete: "cascade" }).notNull(),
-  instruction: text("instruction").notNull(),
-  createdAt: text("created_at").notNull(),
-  updatedAt: text("updated_at"),
-});
-export const setupInstructionsRelations = relations(setupInstructions, ({ one }) => ({
-  timeblock: one(timeblocks, {
-    fields: [setupInstructions.timeblockId],
-    references: [timeblocks.id],
-  }),
-}));
-
-// Notes
-export const notes = sqliteTable("notes", {
-  id: text("id").primaryKey(),
-  timeblockId: text("timeblock_id").references(() => timeblocks.id, { onDelete: "cascade" }).notNull(),
-  content: text("content").notNull(),
-  createdAt: text("created_at").notNull(),
-  updatedAt: text("updated_at"),
-});
-export const notesRelations = relations(notes, ({ one }) => ({
-  timeblock: one(timeblocks, {
-    fields: [notes.timeblockId],
     references: [timeblocks.id],
   }),
 }));

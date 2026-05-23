@@ -1,6 +1,7 @@
 import './App.css'
 import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router'
+import { Toaster } from './components/ui/sonner'
 
 // Pages
 import EventsRoute from '~/routes/Events'
@@ -39,6 +40,7 @@ function App() {
 
   return (
     <>
+
       <Routes>
         <Route path="/" element={<EventsRoute />} />
         <Route path="/events" element={<EventsRoute />} />
@@ -95,6 +97,7 @@ function App() {
           }
         />
       </Routes>
+      <Toaster richColors />
     </>
   )
 }
