@@ -129,6 +129,7 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
               time={ timeblock.time ?? "" }
               assignedTo={ timeblock.assignedTo ?? ""}
               addItemLabel={ addItemLabel }
+              timeblockItems={ items }
               updateTimeblock={ updateTimeblock }
               removeTimeblock={ removeTimeblock }
               addItem={ addItem }

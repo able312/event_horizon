@@ -150,8 +150,12 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType }: UseTim
     },
   })
 
+  const addTimeblock = (input?: AddTimeblockInput) => {
+    addTimeblockMutation.mutate(input)
+  }
+
   return {
-    addTimeblock: addTimeblockMutation.mutate,
+    addTimeblock,
     updateTimeblock: updateTimeblockMutation.mutate,
     removeTimeblock: deleteTimeblockMutation.mutate,
   }

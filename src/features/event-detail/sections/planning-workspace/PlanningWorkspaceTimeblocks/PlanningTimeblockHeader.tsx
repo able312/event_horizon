@@ -6,8 +6,9 @@ import type { UpdateTimeblock } from '~/definitions/database'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '~/components/ui/dropdown-menu'
 import { useSetupInstructionSection } from '~/hooks/useSetupInstrucionSection'
 import { toast } from 'sonner'
+import type { WorkspaceItemBase } from './PlanningWorkspaceTimeblockList'
 
-interface PlanningTimeBlockHeaderProps {
+interface PlanningTimeBlockHeaderProps<TItem extends WorkspaceItemBase> {
     timeblockID: string,
     title: string,
     titlePlaceholder: string,
@@ -15,12 +16,13 @@ interface PlanningTimeBlockHeaderProps {
     time: string,
     assignedTo: string,
     addItemLabel: string,
+    timeblockItems: TItem[],
     updateTimeblock: (payload: {id: string, updates: UpdateTimeblock}) => void,
     removeTimeblock: (id: string) => void,
     addItem: (payload: { timeblockId: string }) => void
 }
 
-const PlanningTimeBlockHeader: React.FC<PlanningTimeBlockHeaderProps> = ({
+function PlanningTimeBlockHeader<TItem extends WorkspaceItemBase> ({
     timeblockID,
     title,
     titlePlaceholder,
@@ -28,19 +30,23 @@ const PlanningTimeBlockHeader: React.FC<PlanningTimeBlockHeaderProps> = ({
     time,
     assignedTo,
     addItemLabel,
+    timeblockItems,
     updateTimeblock,
     removeTimeblock,
     addItem
-}) => {
+}: PlanningTimeBlockHeaderProps<TItem>) {
 
     const { addSetupInstruction } = useSetupInstructionSection()
 
     const handlePortToSetup = async () => {
         try {
+            const body = timeblockItems
+                .map((item) => `## ${item.name}\n# ${item.serviceStyle}\n${item.includes}\n\n`)
+                .join('')
 
             addSetupInstruction({
                 title: title + " Setup",
-                details: "New Details"
+                details: body
             })
             
             toast.success("Created " + title + " Setup")
