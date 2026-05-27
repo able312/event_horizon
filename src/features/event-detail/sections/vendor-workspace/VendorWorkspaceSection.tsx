@@ -16,7 +16,7 @@ const VendorWorkspaceSection = () => {
             <div className="flex items-center justify-between gap-3">
                 <div>
                     <h3 className="text-sm font-semibold tracking-wide">Vendors</h3>
-                    <p className="text-xs text-muted-foreground">Grouped by timeblock with inline planning and pricing edits.</p>
+                    <p className="text-xs text-muted-foreground">One entry for each vendor with delivery times, contact information and </p>
                 </div>
                 <Button type="button" variant="outline" size="sm" onClick={ () => addVendor() }>
                     <Plus />
@@ -24,28 +24,32 @@ const VendorWorkspaceSection = () => {
                 </Button>
             </div>
 
-            {/* Mock Timeblock Card */}
-            {vendorItems?.length && vendorItems.length < 1 ? (
-                <div>No Timeblocks</div>
-            ) : (    
-                vendorItems.map((item) => (
-                    <VendorWorkspaceTimeblock 
-                        key={item.id + "_" +item?.vendorItem?.id}
-                        timeblockID={ item.id }
-                        vendorItemID={ item?.vendorItem?.id ?? "" }
-                        title={ item.title }
-                        time={ item.time ?? "" }
-                        assignedTo={ item.assignedTo ?? "" }
-                        contactName={ item.vendorItem?.contactName ?? "" }
-                        contactPhone={ item.vendorItem?.contactPhone ?? "" }
-                        contactEmail={ item.vendorItem?.contactEmail ?? "" }
-                        notes={ item.details ?? ""}
-                        updateTimeblock={ updateTimeblock }
-                        deleteTimeblock={ () => removeTimeblock( item.id ) }
-                        updateVendor={ updateVendor }
-                    />
-                ))
-            )}
+            {/* Timeblock Cards */}
+            <div className="flex flex-col gap-12">
+                { !vendorItems?.length || vendorItems.length < 1 ? (
+                    <div className="rounded-xs border border-dashed border-border bg-orange-50 px-4 py-4">
+                        <p className="text-sm text-muted-foreground">No Vendor Timeblocks. Create one in the top right corner to get started.</p>
+                    </div>
+                ) : (    
+                    vendorItems.map((item) => (
+                        <VendorWorkspaceTimeblock 
+                            key={item.id + "_" +item?.vendorItem?.id}
+                            timeblockID={ item.id }
+                            vendorItemID={ item?.vendorItem?.id ?? "" }
+                            title={ item.title }
+                            time={ item.time ?? "" }
+                            assignedTo={ item.assignedTo ?? "" }
+                            contactName={ item.vendorItem?.contactName ?? "" }
+                            contactPhone={ item.vendorItem?.contactPhone ?? "" }
+                            contactEmail={ item.vendorItem?.contactEmail ?? "" }
+                            notes={ item.details ?? ""}
+                            updateTimeblock={ updateTimeblock }
+                            deleteTimeblock={ () => removeTimeblock( item.id ) }
+                            updateVendor={ updateVendor }
+                        />
+                    ))
+                )}
+            </div>
         </div>
     )
 }

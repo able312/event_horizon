@@ -37,7 +37,9 @@ const VendorWorkspaceTimeblock:React.FC<VendorWorkspaceTimeblockProps> = ({
 }) => {
     
     if (!timeblockID) return(
-        <div>ERR</div>
+         <div className="rounded-xs border border-dashed border-border bg-red-50 px-4 py-4">
+          <p className="text-sm text-muted-foreground">An error occured loading this timeblock.</p>
+        </div>
     )
 
     return (
@@ -87,7 +89,7 @@ const VendorWorkspaceTimeblock:React.FC<VendorWorkspaceTimeblockProps> = ({
                         <Input
                             type="text"
                             defaultValue={ contactPhone }
-                            onBlur={(e) => console.log(e.target.value)}
+                            onBlur={(e) => updateVendor({id: vendorItemID, updates: {contactPhone: e.target.value} })}
                             placeholder="Contact's phone number"
                             aria-label="Vendor contact's phone number"
                             className="w-full px-2 py-1 text-sm border rounded bg-white"
@@ -99,7 +101,7 @@ const VendorWorkspaceTimeblock:React.FC<VendorWorkspaceTimeblockProps> = ({
                         <Input
                             type="text"
                             defaultValue={ contactEmail }
-                            onBlur={(e) => console.log(e.target.value)}
+                            onBlur={(e) => updateVendor({id: vendorItemID, updates: {contactEmail: e.target.value} })}
                             placeholder="Contact's email"
                             aria-label="Vendor contact's email"
                             className="w-full px-2 py-1 text-sm border rounded bg-white"
@@ -112,10 +114,12 @@ const VendorWorkspaceTimeblock:React.FC<VendorWorkspaceTimeblockProps> = ({
                     className="max-h-[252px]"
                     placeholderText="What else do we need to know about the vendor?"
                     content={ notes }
-                    updateContentSource={ (content: string) => updateTimeblock({id: timeblockID, updates: { details: content}}) }
+                    updateContentSource={ (content: string) => updateTimeblock({id: timeblockID, updates: { details: content }}) }
                 />
             </div>) : (
-                <div className="p-4">Error: No matching vendor contact found for this timeblock.</div>
+                <div className="rounded-xs border border-dashed border-border bg-red-50 px-4 py-4">
+                    <p className="text-sm text-muted-foreground">Error: Could not find a matching entry in the database for this timeblock.</p>
+                </div>
             )}
         </div>
     )

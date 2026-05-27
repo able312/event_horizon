@@ -29,7 +29,7 @@ const inputVariants = cva(
     variants: {
       variant: {
         default:
-          "border-1 border-stone-300",
+          "border-1 border-stone-300 text-stone-800",
         ghost: 
           "bg-transparent px-1.5 py-1 rounded-sm text-md font-bold outline-none transition-colors focus:border-orange-500 focus:bg-stone-600 group-hover:bg-stone-600 hover:ring hover:ring-stone-300",
         darkSecondary:
