@@ -1,4 +1,4 @@
-import { Clock3, Plus, ChevronDown } from 'lucide-react'
+import { Clock3, Plus, ChevronDown, UserPen } from 'lucide-react'
 
 import { Button } from '~/components/ui/button'
 import type { UpdateTimeblock } from '~/definitions/database'
@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { useSetupInstructionSection } from '~/hooks/useSetupInstrucionSection'
 import { toast } from 'sonner'
 import type { WorkspaceItemBase } from './PlanningWorkspaceTimeblockList'
+import { Input } from '~/components/ui/input'
 
 interface PlanningTimeBlockHeaderProps<TItem extends WorkspaceItemBase> {
     timeblockID: string,
@@ -59,51 +60,52 @@ function PlanningTimeBlockHeader<TItem extends WorkspaceItemBase> ({
     }
 
     return (
-        <div className="border-b border-border/70 border-b-stone-300/75 px-3 pt-1 pb-2  bg-[#f7f6f3]">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="grid gap-6 md:grid-cols-[80px_1fr_1fr] items-center">
+        <div className="bg-stone-800 rounded-t-sm border-b border-border/70">
+            <div className="flex gap-3 flex-row items-start justify-between">
+                <div className="flex gap-6 justify-start items-center text-white max-w-7/8 group">
                     {/* Time */}
-                    <label className="space-y-1 w-full flex justify-center items-center w-full">
-                    <div className={`rounded-sm flex items-center gap-2 w-content text-white px-2 ${time ? "bg-stone-600" : "bg-orange-500"}`}>
-                        <Clock3 size={ 16 } />
-                        <input
-                        type="time"
-                        defaultValue={time}
-                        onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { time: e.target.value } })}
-                        aria-label={`${sectionTitle} time`}
-                        className="h-7 bg-transparent text-sm font-bold outline-none w-full text-center"
-                        />
-                    </div>
+                    <label className="space-y-1 self-stretch max-w-22 border-r-1 border-stone-300">
+                        <div className={`flex items-center h-full gap-2 px-2 rounded-tl-sm ${time ? "bg-stone-700 hover:bg-stone-600" : "bg-orange-500 hover:bg-orange-400"}`}>
+                            <Clock3 size={ 16 } />
+                            <input
+                                type="time"
+                                defaultValue={time}
+                                onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { time: e.target.value } })}
+                                aria-label={`${sectionTitle} time`}
+                                className="bg-transparent text-sm font-bold outline-none w-full text-center"
+                            />
+                        </div>
                     </label>
 
                     {/* Title */}
-                    <label className="space-y-1 border-r-1 border-stone-300 pr-6">
-                    <input
-                        type="text"
-                        defaultValue={ title }
-                        onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { title: e.target.value } })}
-                        placeholder={titlePlaceholder}
-                        aria-label={`${sectionTitle} title`}
-                        className="h-9 w-full border-b border-stone-300 bg-transparent px-1.5 text-md font-bold outline-none transition-colors focus:border-primary"
-                    />
+                    <label className="space-y-1 border-r-1 border-stone-300 pr-6 py-1.5 min-w-68">
+                        <Input
+                            type="text"
+                            variant="ghost"
+                            defaultValue={ title }
+                            onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { title: e.target.value } })}
+                            placeholder={titlePlaceholder}
+                            aria-label={`${sectionTitle} title`}
+                        />
                     </label>
                 
-                    <label className="space-y-1 flex items-center">
-                    <span className="text-[11px] font-medium uppercase text-muted-foreground w-1/2 m-0">Assigned To</span>
-                    <input
-                        type="text"
-                        defaultValue={ assignedTo }
-                        onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { assignedTo: e.target.value } })}
-                        placeholder="Assign to..."
-                        aria-label="Assigned To"
-                        className="h-9 w-full border-b border-stone-300 bg-transparent px-2.5 text-sm outline-none transition-colors focus:border-primary"
-                    />
+                    <label className="space-y-1 flex items-center gap-2 py-1.5">
+                        <span className="text-[11px] font-medium text-xs uppercase text-stone-200 w-6 m-0"><UserPen size={20} /></span>
+                        <Input
+                            type="text"
+                            variant="darkSecondary"
+                            defaultValue={ assignedTo }
+                            onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { assignedTo: e.target.value } })}
+                            placeholder="Assign staff"
+                            aria-label="Assigned To"
+                            className={""}
+                        />
                     </label>
                 </div>
 
-                <div className="flex">
+                <div className="flex self-stretch text-white">
 
-                    <Button type="button" variant="outline" size="sm" className="rounded-r-none" onClick={() => addItem({ timeblockId: timeblockID })}>
+                    <Button type="button" variant="ghost" size="sm" className="rounded-none border-x border-stone-700 h-full m-0 hover:bg-stone-600 hover:text-orange-500" onClick={() => addItem({ timeblockId: timeblockID })}>
                         <Plus />
                         {addItemLabel}
                     </Button>
@@ -111,10 +113,9 @@ function PlanningTimeBlockHeader<TItem extends WorkspaceItemBase> ({
                     <DropdownMenu modal={false}>
                         <DropdownMenuTrigger asChild>
                         <Button
-                            variant="outline"
-                            size="sm"
+                            variant="ghost"
                             aria-label="Calendar ID actions"
-                            className="rounded-l-none border-l px-2"
+                            className=" rounded-none rounded-tr-sm h-full m-0 hover:bg-stone-600 hover:text-orange-500"
                         >
                             <ChevronDown className="h-4 w-4" />
                         </Button>

@@ -1,3 +1,4 @@
+import React from "react"
 import { Plus, Trash2 } from "lucide-react"
 
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
@@ -119,9 +120,10 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
         const items = getItems(timeblock)
 
         return (
-          <section key={timeblock.id} className="rounded-xs border border-border border-stone-200 bg-background shadow-sm">
+          <section key={timeblock.id} className="rounded-sm border border-border border-stone-200 bg-background shadow-sm">
 
-            <PlanningTimeBlockHeader 
+            <PlanningTimeBlockHeader
+              key={timeblock.id + "_header"}
               timeblockID = { timeblock.id }
               title={ timeblock.title ?? "" }
               titlePlaceholder={ titlePlaceholder }
@@ -142,12 +144,12 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
                 </div>
               </div>
             ) : (
-              <div className="space-y-3 px-3 py-3">
+              <div className="space-y-3 px-3 py-3 bg-stone-50 rounded-b-sm">
                 <div className={SECTION_TABLE_CONTAINER_CLASS}>
                   <table className={`${SECTION_TABLE_CLASS} min-w-[980px]`}>
                     <thead>
                       <tr className={SECTION_TABLE_HEAD_ROW_CLASS}>
-                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Item</th>
+                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT + " pl-4"}>Item</th>
                         <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Service Style</th>
                         <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Qty</th>
                         <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Unit Price</th>
@@ -157,8 +159,8 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
                     </thead>
                     <tbody>
                       {items.map((item) => (
-                        <>
-                        <tr key={item.id}>
+                        <React.Fragment key={item.id}>
+                        <tr>
                           <td className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-[220px] align-top`}>
                             <input
                               type="text"
@@ -229,7 +231,8 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
                         </tr>
                         <tr className={SECTION_TABLE_BODY_ROW_CLASS}>
                           <td colSpan={6} className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-[240px] align-top`}>
-                            <PlanningTimeblockItemNoteRow 
+                            <PlanningTimeblockItemNoteRow
+                              key={timeblock.id + "_" + item.id + "_notesRow"}
                               timeblockID={ timeblock.id }
                               itemID={ item.id }
                               note={ item.includes ?? "" }
@@ -237,7 +240,7 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
                             />
                           </td>
                         </tr>
-                        </>
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>
