@@ -1,15 +1,15 @@
-import VendorsSection from "~/components/event-detail/detail-sections/sections/VendorsSection"
 import SetupInstructionsSection from "~/components/event-detail/detail-sections/sections/SetupInstructionsSection"
 import NotesSection from "~/components/event-detail/detail-sections/sections/NotesSection"
 import TournamentDetailsSection from "~/components/event-detail/detail-sections/sections/TournamentDetailsSection"
 import GolfCartsSection from "~/components/event-detail/detail-sections/sections/GolfCartsSection"
 import FinancialWorkspaceSection from "./FinancialWorkspaceSection"
-import FoodWorkspaceSection from "~/features/event-detail/sections/planning-workspace/FoodWorkspaceSection"
-import BeverageWorkspaceSection from "~/features/event-detail/sections/planning-workspace/BeverageWorkspaceSection"
+import FoodWorkspaceSection from "~/features/event-detail/sections/food-beverage-workspaces/FoodWorkspaceSection"
+import BeverageWorkspaceSection from "~/features/event-detail/sections/food-beverage-workspaces/BeverageWorkspaceSection"
 
 import type { EventResource } from "~/features/event-detail/types"
 import { getWorkspaceCategoryIdForSectionType } from "../lib/getWorkspaceCategoryIdForSectionType"
 import type { WorkspaceCategoryId, WorkspaceNavNode } from "../types"
+import VendorWorkspaceSection from "../../sections/vendor-workspace/VendorWorkspaceSection"
 
 interface EventWorkspaceBodyRouterProps {
   eventResource: EventResource
@@ -30,7 +30,7 @@ function renderCategoryWorkspace(
     case "beverage":
       return <div className={`${scrollContainerClassName} p-4`}><BeverageWorkspaceSection /></div>
     case "logistics":
-      return <div className={`${scrollContainerClassName} p-4`}><VendorsSection /></div>
+      return <div className={`${scrollContainerClassName} p-4`}><VendorWorkspaceSection /></div>
     case "setup":
       return <div className={`${scrollContainerClassName} p-4`}><SetupInstructionsSection /></div>
     case "notes":

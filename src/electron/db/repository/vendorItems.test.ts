@@ -97,4 +97,42 @@ describe("vendorItems.create", () => {
     expect(createdVendors).toHaveLength(0)
     expect(vendorTimeblocks).toHaveLength(0)
   })
+
+  it("fetches vendor timeblocks with nested vendorItem", async () => {
+    if (!testDb) throw new Error("Expected test DB to be initialized")
+
+    const repo = createVendorItemsRepository(testDb.db)
+    const created = repo.create(eventId)
+
+    const fetched = await repo.getByEventId(eventId)
+
+    expect(fetched).toHaveLength(1)
+    expect(fetched[0]?.id).toBe(created.timeblock.id)
+    expect(fetched[0]?.vendorItem).toEqual(
+      expect.objectContaining({
+        id: created.vendor.id,
+        timeblockId: created.timeblock.id,
+        contactName: "",
+        contactPhone: "",
+        contactEmail: "",
+      }),
+    )
+  })
+
+  it("enforces a one-to-one vendor row per timeblock", () => {
+    if (!testDb) throw new Error("Expected test DB to be initialized")
+
+    const repo = createVendorItemsRepository(testDb.db)
+    const created = repo.create(eventId)
+
+    expect(() => {
+      testDb!.db.insert(vendorItems).values({
+        id: uuidv4(),
+        timeblockId: created.timeblock.id,
+        contactName: "Duplicate",
+        contactPhone: "",
+        contactEmail: "",
+      }).run()
+    }).toThrow(/UNIQUE constraint failed: vendor_items\.timeblock_id/)
+  })
 })

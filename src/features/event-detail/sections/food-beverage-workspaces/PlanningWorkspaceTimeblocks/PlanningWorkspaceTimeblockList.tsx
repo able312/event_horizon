@@ -121,7 +121,7 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
         const items = getItems(timeblock)
 
         return (
-          <section key={timeblock.id} className="rounded-xs border border-border border-stone-200 bg-background shadow-sm mb-12">
+          <section key={timeblock.id} className="rounded-xs border border-border border-stone-200 bg-background shadow-sm mb-8">
 
             <PlanningTimeBlockHeader
               timeblockID = { timeblock.id }

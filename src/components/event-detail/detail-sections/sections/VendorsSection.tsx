@@ -78,8 +78,8 @@ const VendorsSection: React.FC = () => {
                           <label className="text-xs text-muted-foreground">Notes</label>
                           <Input
                             type="text"
-                            defaultValue={timeblock.vendorItem?.notes || ""}
-                            onBlur={(e) => updateVendor({ id: timeblock.vendorItem!.id, updates: { notes: e.target.value } })}
+                            defaultValue={timeblock.details || ""}
+                            onBlur={(e) => updateTimeblock({ id: timeblock.id, updates: { details: e.target.value } })}
                             placeholder="Setup notes, what they need from us..."
                             className="w-full px-2 py-1 text-sm border rounded bg-white"
                           />

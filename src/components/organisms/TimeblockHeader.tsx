@@ -4,7 +4,7 @@ import type { UpdateTimeblock } from '~/definitions/database'
 
 import { Input } from '~/components/atoms/input'
 
-interface PlanningTimeBlockHeaderProps {
+interface TimeBlockHeaderProps {
     timeblockID: string,
     title: string,
     titlePlaceholder: string,
@@ -15,7 +15,7 @@ interface PlanningTimeBlockHeaderProps {
     updateTimeblock: (payload: {id: string, updates: UpdateTimeblock}) => void,
 }
 
-const PlanningTimeBlockHeader:React.FC<PlanningTimeBlockHeaderProps> = ({
+const TimeBlockHeader:React.FC<TimeBlockHeaderProps> = ({
     timeblockID,
     title,
     titlePlaceholder,
@@ -45,7 +45,7 @@ const PlanningTimeBlockHeader:React.FC<PlanningTimeBlockHeaderProps> = ({
                     </label>
 
                     {/* Title */}
-                    <label className="space-y-1 border-r-1 border-stone-300 pr-6 py-1.5 min-w-68">
+                    <label className="space-y-1 border-r-1 border-stone-300 pr-6 py-1.5 min-w-85">
                         <Input
                             type="text"
                             variant="ghost"
@@ -80,4 +80,4 @@ const PlanningTimeBlockHeader:React.FC<PlanningTimeBlockHeaderProps> = ({
     )
 }
 
-export default PlanningTimeBlockHeader
+export default TimeBlockHeader

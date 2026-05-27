@@ -40,7 +40,7 @@ const createTimeblockArg = {
   sectionType: "note",
 } as Parameters<typeof timeblocksIpc.createTimeblock>[0]
 const updateTimeblockArg = { details: "Updated details" } as Parameters<typeof timeblocksIpc.updateTimeblock>[1]
-const updateVendorArg = { notes: "Updated vendor notes" } as Parameters<typeof vendorItemsIpc.updateVendor>[1]
+const updateVendorArg = { contactEmail: "updated-vendor@example.com" } as Parameters<typeof vendorItemsIpc.updateVendor>[1]
 const updateCartDetailsArg = { notes: "Updated cart notes" } as Parameters<typeof cartDetailsIpc.updateCartDetails>[1]
 const updateTournamentDetailsArg = { notes: "Updated tournament notes" } as Parameters<
   typeof tournamentDetailsIpc.updateTournamentDetails

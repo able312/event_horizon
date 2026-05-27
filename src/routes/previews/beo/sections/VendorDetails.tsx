@@ -37,10 +37,10 @@ export const VendorDetails = () => {
                     </dl>  
                 </div>
 
-                {vendor.vendorItem?.notes && (
+                {vendor.details && (
                     <div className="text-sm pb-4">
                         <p className="text-muted-foreground mb-1">Notes</p>
-                        <pre className="font-sans whitespace-pre-wrap">{vendor.vendorItem.notes}</pre>
+                        <pre className="font-sans whitespace-pre-wrap">{vendor.details}</pre>
                     </div>
                 )}    
 

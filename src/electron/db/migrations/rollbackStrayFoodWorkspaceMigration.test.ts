@@ -212,8 +212,8 @@ describe("rollback stray food workspace migration", () => {
       `).run()
 
       testDb.sqlite.prepare(`
-        INSERT INTO vendor_items (id, timeblock_id, contact_name, contact_phone, contact_email, notes)
-        VALUES ('vendor-2', 'tb-vendor-2', 'Band Lead', '555-2000', 'band@example.com', 'Need stage power')
+        INSERT INTO vendor_items (id, timeblock_id, contact_name, contact_phone, contact_email)
+        VALUES ('vendor-2', 'tb-vendor-2', 'Band Lead', '555-2000', 'band@example.com')
       `).run()
 
       expect(columnNames(testDb.sqlite, "timeblocks")).toEqual([
@@ -291,7 +291,7 @@ describe("rollback stray food workspace migration", () => {
       })
 
       expect(testDb.sqlite.prepare(`
-        SELECT id, timeblock_id, contact_name, contact_phone, contact_email, notes
+        SELECT id, timeblock_id, contact_name, contact_phone, contact_email
         FROM vendor_items
         WHERE id = 'vendor-2'
       `).get()).toEqual({
@@ -300,7 +300,6 @@ describe("rollback stray food workspace migration", () => {
         contact_name: "Band Lead",
         contact_phone: "555-2000",
         contact_email: "band@example.com",
-        notes: "Need stage power",
       })
 
       expect(testDb.sqlite.prepare(`

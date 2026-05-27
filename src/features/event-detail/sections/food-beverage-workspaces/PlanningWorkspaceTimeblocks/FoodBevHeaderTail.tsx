@@ -56,7 +56,7 @@ function FoodBevHeaderTail<TItem extends WorkspaceItemBase> ({
                 <DropdownMenuTrigger asChild>
                 <Button
                     variant="darkSecondary"
-                    aria-label="Calendar ID actions"
+                    aria-label="Timeblock header actions"
                     className=" rounded-none rounded-tr-xs h-full m-0 hover:bg-stone-600 hover:text-orange-500"
                     >
                     <ChevronDown className="h-4 w-4" />

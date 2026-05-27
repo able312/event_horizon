@@ -230,8 +230,9 @@ export const vendorItems = sqliteTable("vendor_items", {
   contactName: text("contact_name"),
   contactPhone: text("contact_phone"),
   contactEmail: text("contact_email"),
-  notes: text("notes"),
-});
+}, (table) => ({
+  timeblockIdUnique: uniqueIndex("vendor_items_timeblock_id_unique").on(table.timeblockId),
+}));
 export const vendorItemsRelations = relations(vendorItems, ({ one }) => ({
   timeblock: one(timeblocks, {
     fields: [vendorItems.timeblockId],

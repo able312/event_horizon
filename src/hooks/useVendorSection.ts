@@ -57,7 +57,6 @@ export function useVendorSection() {
           contactName: "",
           contactPhone: "",
           contactEmail: "",
-          notes: null,
         },
         createdAt: now,
         updatedAt: null,

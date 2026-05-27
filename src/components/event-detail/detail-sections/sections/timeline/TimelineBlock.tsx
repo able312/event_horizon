@@ -48,7 +48,7 @@ const TimelineBlock: React.FC<TimelineBlocksProps> = ({ timeblock, updateTimeblo
         <GenericDetailsBlock 
           blockHeader={ timeblock.vendorItem?.contactName }
           blockSubtitle={ timeblock.vendorItem?.contactPhone + " | " + timeblock.vendorItem?.contactEmail  }
-          blockNotes={ timeblock.vendorItem?.notes } 
+          blockNotes={ timeblock.details } 
           borderColor='purple'
         />
       }
