@@ -18,7 +18,7 @@ type CalendarMockProps = {
 
 let latestCalendarProps: CalendarMockProps | null = null
 
-vi.mock("~/components/ui/calendar", () => ({
+vi.mock("~/components/atoms/calendar", () => ({
   CalendarDayButton: (args: {
     children?: ReactNode
     day?: unknown

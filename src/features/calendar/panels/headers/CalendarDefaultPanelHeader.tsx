@@ -1,4 +1,4 @@
-import { Button } from "~/components/ui/button"
+import { Button } from "~/components/atoms/button"
 import { CalendarX2, Plus, Search } from 'lucide-react'
 
 

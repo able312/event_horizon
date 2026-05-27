@@ -1,5 +1,5 @@
 
-import GolfDetailsTimeblock from "~/components/ui/GolfDetailsTimeblock"
+import GolfDetailsTimeblock from "~/components/atoms/GolfDetailsTimeblock"
 import type { PlayFormat, StartFormat, UpdateTournamentDetails } from "~/definitions/database";
 import { ITER_GOLF_PLAY_FORMAT } from "~/definitions/sections/section-constants";
 import { useTournamentDetailsSection } from "~/hooks/useTournamentDetailsSection";

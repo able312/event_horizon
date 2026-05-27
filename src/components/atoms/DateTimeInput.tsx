@@ -14,7 +14,7 @@
  */
 
 import React from "react"
-import { DatePicker } from "~/components/ui/date-picker"
+import { DatePicker } from "~/components/atoms/date-picker"
 import { cn } from "~/lib/utils"
 
 interface DateTimeInputProps {

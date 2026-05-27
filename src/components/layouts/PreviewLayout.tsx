@@ -2,7 +2,7 @@ import { ErrorBoundary } from "react-error-boundary"
 import { Outlet, useLocation, useNavigate } from "react-router"
 import { Printer, Save, ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
-import { Button } from "~/components/ui/button"
+import { Button } from "~/components/atoms/button"
 import { callSavePDF } from "~/lib/ipc/savePDF"
 
 export default function PreviewLayout() {

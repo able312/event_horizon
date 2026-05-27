@@ -5,8 +5,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "~/components/ui/dialog"
-import { Button } from "~/components/ui/button"
+} from "~/components/atoms/dialog"
+import { Button } from "~/components/atoms/button"
 
 interface EventDeleteConfirmDialogProps {
   open: boolean

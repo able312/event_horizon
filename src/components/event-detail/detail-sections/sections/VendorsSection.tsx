@@ -1,8 +1,8 @@
 import React from "react"
 import { Plus } from "lucide-react"
 import { useVendorSection } from "~/hooks/useVendorSection"
-import { Input } from "~/components/ui/input"
-import DetailsTimeblock from "~/components/ui/DetailsTimeblock"
+import { Input } from "~/components/atoms/input"
+import DetailsTimeblock from "~/components/atoms/DetailsTimeblock"
 import type { UpdateTimeblock } from "~/definitions/database"
 
 const VendorsSection: React.FC = () => {

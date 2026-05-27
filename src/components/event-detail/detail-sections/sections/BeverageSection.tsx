@@ -2,9 +2,9 @@ import React from "react"
 import { Plus } from "lucide-react"
 import { type BeverageItem, type UpdateTimeblock } from "~/definitions/database"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
-import GenericItemCard from "~/components/ui/GenericItemCard"
+import GenericItemCard from "~/components/atoms/GenericItemCard"
 import { ITER_BEVERAGE_SERVICE_STYLE } from "~/definitions/sections/section-constants"
-import DetailsTimeblock from "~/components/ui/DetailsTimeblock"
+import DetailsTimeblock from "~/components/atoms/DetailsTimeblock"
 
 const BeverageSection: React.FC = () => {
   const {

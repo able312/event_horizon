@@ -1,4 +1,4 @@
-import { Button } from "~/components/ui/button";
+import { Button } from "~/components/atoms/button";
 import { X } from "lucide-react";
 import { cn } from "~/lib/utils";
 import React from "react";

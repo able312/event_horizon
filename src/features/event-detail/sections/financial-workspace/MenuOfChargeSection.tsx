@@ -25,7 +25,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu"
+} from "~/components/atoms/dropdown-menu"
 import {
   SECTION_TABLE_BODY_CELL_CLASS,
   SECTION_TABLE_BODY_ROW_CLASS,

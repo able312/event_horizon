@@ -3,7 +3,7 @@ import { Plus, Trash2 } from "lucide-react"
 
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import type { UpdateTimeblock } from "~/definitions/database"
-import { Button } from "~/components/ui/button"
+import { Button } from "~/components/atoms/button"
 import {
   SECTION_TABLE_BODY_CELL_CLASS,
   SECTION_TABLE_BODY_ROW_CLASS,
@@ -19,8 +19,9 @@ import {
   dollarsToCents,
   toCurrency,
 } from "~/features/event-detail/workspace/lib/financial"
-import PlanningTimeBlockHeader from "./PlanningTimeblockHeader"
+import PlanningTimeBlockHeader from "../../../../../components/organisms/TimeblockHeader"
 import { PlanningTimeblockItemNoteRow } from "./PlanningTimeblockItemNoteRow"
+import FoodBevHeaderTail from "./FoodBevHeaderTail"
 
 export type WorkspaceItemBase = {
   id: string
@@ -120,21 +121,26 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
         const items = getItems(timeblock)
 
         return (
-          <section key={timeblock.id} className="rounded-sm border border-border border-stone-200 bg-background shadow-sm">
+          <section key={timeblock.id} className="rounded-xs border border-border border-stone-200 bg-background shadow-sm mb-12">
 
             <PlanningTimeBlockHeader
-              key={timeblock.id + "_header"}
               timeblockID = { timeblock.id }
               title={ timeblock.title ?? "" }
               titlePlaceholder={ titlePlaceholder }
               sectionTitle={ sectionTitle }
               time={ timeblock.time ?? "" }
               assignedTo={ timeblock.assignedTo ?? ""}
-              addItemLabel={ addItemLabel }
-              timeblockItems={ items }
+              tail={
+                <FoodBevHeaderTail 
+                  title={ timeblock.title ?? "Untitled" }
+                  timeblockItems={ items }
+                  addItemLabel={ addItemLabel }
+                  deleteTimeblock={ () => removeTimeblock(timeblock.id) }
+                  addItem={ () => addItem({timeblockId: timeblock.id}) }
+                
+                />
+              }
               updateTimeblock={ updateTimeblock }
-              removeTimeblock={ removeTimeblock }
-              addItem={ addItem }
             />
 
             {items.length === 0 ? (
@@ -144,7 +150,7 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
                 </div>
               </div>
             ) : (
-              <div className="space-y-3 px-3 py-3 bg-stone-50 rounded-b-sm">
+              <div className="space-y-3 px-3 py-3 bg-stone-50 rounded-b-xs">
                 <div className={SECTION_TABLE_CONTAINER_CLASS}>
                   <table className={`${SECTION_TABLE_CLASS} min-w-[980px]`}>
                     <thead>

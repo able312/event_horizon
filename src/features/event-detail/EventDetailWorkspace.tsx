@@ -1,7 +1,7 @@
 import { SplitLayout } from "~/components/layouts/SplitLayout"
 import { useCallback } from "react"
 
-import RouteBlockingError from "~/components/ui/route-blocking-error"
+import RouteBlockingError from "~/components/atoms/route-blocking-error"
 
 import EventDetailPanelOrchestrator from "./panels/EventDetailPanelOrchestrator"
 import EventDetailBodyOrchestrator from "./pages/EventDetailBodyOrchestrator"

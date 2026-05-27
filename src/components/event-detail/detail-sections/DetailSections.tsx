@@ -7,7 +7,7 @@ import FoodSection from "~/components/event-detail/detail-sections/sections/Food
 import BeverageSection from "~/components/event-detail/detail-sections/sections/BeverageSection"
 // import DocumentsSection from "~/components/event-detail/detail-sections/sections/DocumentsSection"
 import PaymentsSection from "~/features/event-detail/sections/financial-workspace/PaymentsSection"
-import ExpandableSection from "~/components/ui/expandable-section"
+import ExpandableSection from "~/components/atoms/expandable-section"
 import SetupInstructionsSection from './sections/SetupInstructionsSection';
 
 import EventTimeline from "~/components/event-detail/detail-sections/sections/timeline/EventTimeline"

@@ -1,7 +1,7 @@
 // routes/events.tsx
 import { ErrorBoundary } from "react-error-boundary";
 import CalendarWorkspace from "~/features/calendar/CalendarWorkspace";
-import RouteBlockingError from "~/components/ui/route-blocking-error";
+import RouteBlockingError from "~/components/atoms/route-blocking-error";
 
 export default function EventsRoute() {
   return (

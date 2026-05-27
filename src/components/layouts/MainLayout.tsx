@@ -2,8 +2,8 @@ import { ErrorBoundary } from "react-error-boundary";
 
 import { Home, Calendar } from "lucide-react";
 import { Link, Outlet } from "react-router";
-import { Sidebar, SidebarContent, SidebarGroup, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarTrigger, SidebarFooter } from "~/components/ui/sidebar";
-import { Toaster } from "~/components/ui/sonner";
+import { Sidebar, SidebarContent, SidebarGroup, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarTrigger, SidebarFooter } from "~/components/atoms/sidebar";
+import { Toaster } from "~/components/atoms/sonner";
 
 export default function MainLayout() {
 

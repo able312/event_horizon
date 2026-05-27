@@ -2,9 +2,9 @@ import React from "react"
 import { Plus } from "lucide-react"
 import type { FoodItem, UpdateTimeblock } from "~/definitions/database"
 import { useFoodSection } from "~/hooks/useFoodSection"
-import GenericItemCard from "~/components/ui/GenericItemCard"
+import GenericItemCard from "~/components/atoms/GenericItemCard"
 import { ITER_FOOD_SERVICE_STYLE } from "~/definitions/sections/section-constants"
-import DetailsTimeblock from "~/components/ui/DetailsTimeblock"
+import DetailsTimeblock from "~/components/atoms/DetailsTimeblock"
 
 const FoodSection: React.FC = () => {
   const { data: timeblocks, isLoading, addTimeblock, updateTimeblock, removeTimeblock, addItem, updateItem, removeItem } = useFoodSection()

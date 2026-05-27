@@ -2,7 +2,7 @@ import React from "react"
 import { Plus } from "lucide-react"
 import type { UpdateTimeblock } from "~/definitions/database"
 import { useSetupInstructionSection } from "~/hooks/useSetupInstrucionSection"
-import DetailsTimeblock from "~/components/ui/DetailsTimeblock"
+import DetailsTimeblock from "~/components/atoms/DetailsTimeblock"
 
 const SetupInstructionsSection: React.FC = () => {
   const { data: setupInstructions, addSetupInstruction, updateTimeblock, removeTimeblock } = useSetupInstructionSection()

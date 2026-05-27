@@ -55,7 +55,7 @@ vi.mock("./components/EventDeleteConfirmDialog", () => ({
     return <div data-testid="delete-review-dialog" />
   },
 }))
-vi.mock("~/components/ui/route-blocking-error", () => ({
+vi.mock("~/components/atoms/route-blocking-error", () => ({
   default: (props: {
     title: string
     description: string

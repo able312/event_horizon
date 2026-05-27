@@ -20,7 +20,7 @@ import { AlertTriangle } from "lucide-react"
 import { EVENT_TYPE_COLORS } from "~/definitions/events/ui"
 import type { Event } from "~/definitions/database"
 import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
-import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover"
+import { Popover, PopoverContent, PopoverTrigger } from "~/components/atoms/popover"
 import EventItemContextMenu from "../interactions/EventItemContextMenu"
 
 const MAX_VISIBLE_DAY_EVENTS = 3

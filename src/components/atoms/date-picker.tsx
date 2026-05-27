@@ -1,14 +1,14 @@
 import * as React from "react"
 import { CalendarIcon } from "lucide-react"
-import { Button } from "~/components/ui/button"
-import { Calendar } from "~/components/ui/calendar"
-import { Input } from "~/components/ui/input"
+import { Button } from "~/components/atoms/button"
+import { Calendar } from "~/components/atoms/calendar"
+import { Input } from "~/components/atoms/input"
 import { cn } from "~/lib/utils"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "~/components/ui/popover"
+} from "~/components/atoms/popover"
 
 
 function formatDate(date: Date | undefined) {

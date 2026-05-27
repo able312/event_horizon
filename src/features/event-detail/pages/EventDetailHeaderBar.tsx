@@ -3,15 +3,15 @@ import { Link, useLocation } from "react-router"
 import { ArrowLeft, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 
-import { Button } from "~/components/ui/button"
+import { Button } from "~/components/atoms/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu"
-import { Input } from "~/components/ui/input"
-import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip"
+} from "~/components/atoms/dropdown-menu"
+import { Input } from "~/components/atoms/input"
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/atoms/tooltip"
 import type { UpdateEvent } from "~/definitions/database"
 import {
   buildGoogleCalendarCreateUrl,

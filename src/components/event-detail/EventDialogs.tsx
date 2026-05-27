@@ -20,9 +20,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "~/components/ui/dialog"
-import { Button } from "~/components/ui/button"
-import DateTimeInput from "~/components/ui/DateTimeInput"
+} from "~/components/atoms/dialog"
+import { Button } from "~/components/atoms/button"
+import DateTimeInput from "~/components/atoms/DateTimeInput"
 import { EVENT_TYPE_OPTIONS } from "~/definitions/events/ui"
 
 // ============================================================================

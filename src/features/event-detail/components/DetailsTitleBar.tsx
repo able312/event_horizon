@@ -10,7 +10,7 @@ import {
 } from "~/definitions/events/ui"
 import { ITER_EVENT_STATUSES } from "~/definitions/events/event-constants"
 
-import { EntityKebabMenu } from "~/components/ui/entity-kebab-menu"
+import { EntityKebabMenu } from "~/components/atoms/entity-kebab-menu"
 import {
   DateTimeDialog,
   EditEventDialog,

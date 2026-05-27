@@ -12,7 +12,7 @@ import EventDeleteConfirmDialog from "./components/EventDeleteConfirmDialog"
 import CalendarPanelOrchastrator from "./panels/CalendarPanelOrchestrator"
 import CalendarPageOrchastrator from "./pages/CalendarPageOrchestrator"
 import { CalendarPanelStateProvider } from "./state/CalendarSidePanelProvider"
-import RouteBlockingError from "~/components/ui/route-blocking-error"
+import RouteBlockingError from "~/components/atoms/route-blocking-error"
 
 const CalendarWorkspace: React.FC = () => {
 

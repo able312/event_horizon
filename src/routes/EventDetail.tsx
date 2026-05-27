@@ -1,6 +1,6 @@
 import { ErrorBoundary } from "react-error-boundary"
 
-import RouteBlockingError from "~/components/ui/route-blocking-error"
+import RouteBlockingError from "~/components/atoms/route-blocking-error"
 import EventDetailWorkspace from "~/features/event-detail/EventDetailWorkspace"
 
 export default function EventDetailRoute() {

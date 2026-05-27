@@ -1,7 +1,7 @@
 import React from "react"
 import { Plus } from "lucide-react"
 import { useNoteSection } from "~/hooks/useNoteSection"
-import DetailsTimeblock from "~/components/ui/DetailsTimeblock"
+import DetailsTimeblock from "~/components/atoms/DetailsTimeblock"
 import type { UpdateTimeblock } from "~/definitions/database"
 
 const NotesSection: React.FC = () => {

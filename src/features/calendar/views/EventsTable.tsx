@@ -18,7 +18,7 @@ import React from "react"
 import { Link, useLocation } from "react-router"
 import { EVENT_TYPE_LABELS, EVENT_TYPE_COLORS, EVENT_STATUS_LABELS, EVENT_STATUS_COLORS } from "~/definitions/events/ui"
 import { formatDate } from "~/lib/formatters"
-import { EntityKebabMenu } from "~/components/ui/entity-kebab-menu"
+import { EntityKebabMenu } from "~/components/atoms/entity-kebab-menu"
 import type { Event } from "~/definitions/database"
 
 interface EventsTableProps {

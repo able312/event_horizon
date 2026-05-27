@@ -1,5 +1,5 @@
 // Components
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "~/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "~/components/atoms/dialog";
 import type { Dispatch, SetStateAction } from "react";
 
 type EntityDialogProps = {

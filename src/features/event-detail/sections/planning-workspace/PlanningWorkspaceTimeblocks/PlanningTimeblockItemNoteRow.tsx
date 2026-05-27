@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react"
 import { CornerDownRight } from "lucide-react"
 import type { WorkspaceItemBase } from "./PlanningWorkspaceTimeblockList"
-import { Button } from "~/components/ui/button"
+import { Button } from "~/components/atoms/button"
 
 
 interface PlanningTimeblockItemNoteRowProps <TItem extends WorkspaceItemBase> {
