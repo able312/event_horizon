@@ -1,5 +1,4 @@
 
-import NotesSection from "~/components/event-detail/detail-sections/sections/NotesSection"
 import TournamentDetailsSection from "~/components/event-detail/detail-sections/sections/TournamentDetailsSection"
 import GolfCartsSection from "~/components/event-detail/detail-sections/sections/GolfCartsSection"
 import FinancialWorkspaceSection from "./FinancialWorkspaceSection"
@@ -11,6 +10,7 @@ import { getWorkspaceCategoryIdForSectionType } from "../lib/getWorkspaceCategor
 import type { WorkspaceCategoryId, WorkspaceNavNode } from "../types"
 import VendorWorkspaceSection from "../../sections/vendor-workspace/VendorWorkspaceSection"
 import SetupWorkspaceSection from "../../sections/setup-notes-workspaces/SetupWorkspaceSection"
+import NoteWorkspaceSection from "../../sections/setup-notes-workspaces/NotesWorkspaceSection"
 
 interface EventWorkspaceBodyRouterProps {
   eventResource: EventResource
@@ -35,7 +35,7 @@ function renderCategoryWorkspace(
     case "setup":
       return <div className={`${scrollContainerClassName} p-4`}><SetupWorkspaceSection /></div>
     case "notes":
-      return <div className={`${scrollContainerClassName} p-4`}><NotesSection /></div>
+      return <div className={`${scrollContainerClassName} p-4`}><NoteWorkspaceSection /></div>
     case "tournament":
       return (
         <div className={`${scrollContainerClassName} p-4 space-y-6`}>

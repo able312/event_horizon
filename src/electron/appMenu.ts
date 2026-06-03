@@ -141,6 +141,13 @@ export function rebuildAppMenu(targetWindowId?: number) {
               },
             },
             {
+              label: "Generate Food BEO",
+              click: (_menuItem, browserWindow) => {
+                if (!browserWindow || !(browserWindow instanceof BrowserWindow)) return
+                navigateToPreview(browserWindow, "/preview/beo-food")
+              },
+            },
+            {
               label: "Generate Financial Report",
               click: (_menuItem, browserWindow) => {
                 if (!browserWindow || !(browserWindow instanceof BrowserWindow)) return

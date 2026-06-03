@@ -1,12 +1,20 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { renderWithProviders } from "~/test/renderWithProviders"
 
 import BeverageWorkspaceSection from "./BeverageWorkspaceSection"
 
 const useBeverageSectionMock = vi.fn()
+const addSetupInstructionMock = vi.fn()
 
 vi.mock("~/hooks/useBeverageSection", () => ({
   useBeverageSection: () => useBeverageSectionMock(),
+}))
+
+vi.mock("~/hooks/useSetupInstrucionSection", () => ({
+  useSetupInstructionSection: () => ({
+    addSetupInstruction: addSetupInstructionMock,
+  }),
 }))
 
 describe("BeverageWorkspaceSection", () => {
@@ -50,7 +58,7 @@ describe("BeverageWorkspaceSection", () => {
       removeItem: vi.fn(),
     })
 
-    render(<BeverageWorkspaceSection />)
+    renderWithProviders(<BeverageWorkspaceSection />)
 
     expect(screen.getByText("Beverage Planning")).toBeTruthy()
     expect(screen.getByRole("table")).toBeTruthy()
@@ -102,7 +110,7 @@ describe("BeverageWorkspaceSection", () => {
       removeItem,
     })
 
-    render(<BeverageWorkspaceSection />)
+    renderWithProviders(<BeverageWorkspaceSection />)
 
     fireEvent.change(screen.getByLabelText("Assigned To"), { target: { value: "Lead Bartender" } })
     fireEvent.blur(screen.getByLabelText("Assigned To"))
@@ -160,7 +168,7 @@ describe("BeverageWorkspaceSection", () => {
     fireEvent.click(screen.getByRole("button", { name: "Remove Item" }))
     expect(removeItem).toHaveBeenCalledWith({ timeblockId: "tb-1", itemId: "bev-1" })
 
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Calendar ID actions" }))
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Timeblock header actions" }))
     fireEvent.click(await screen.findByRole("menuitem", { name: "Delete Timeblock" }))
     expect(removeTimeblock).toHaveBeenCalledWith("tb-1")
 

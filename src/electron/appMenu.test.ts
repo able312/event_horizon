@@ -171,19 +171,22 @@ describe("appMenu Generate visibility", () => {
 
     const timelineItem = submenu.find((item) => item.label === "Generate Timeline")
     const beoItem = submenu.find((item) => item.label === "Generate BEO")
+    const foodBeoItem = submenu.find((item) => item.label === "Generate Food BEO")
     const financialItem = submenu.find((item) => item.label === "Generate Financial Report")
 
-    if (!timelineItem?.click || !beoItem?.click || !financialItem?.click) {
+    if (!timelineItem?.click || !beoItem?.click || !foodBeoItem?.click || !financialItem?.click) {
       throw new Error("One or more Generate submenu items not found")
     }
 
     timelineItem.click({} as never, win as never, {} as never)
     beoItem.click({} as never, win as never, {} as never)
+    foodBeoItem.click({} as never, win as never, {} as never)
     financialItem.click({} as never, win as never, {} as never)
 
     expect(win.webContents.send).toHaveBeenNthCalledWith(1, "navigate", "/preview/timeline/evt_1")
     expect(win.webContents.send).toHaveBeenNthCalledWith(2, "navigate", "/preview/beo/evt_1")
-    expect(win.webContents.send).toHaveBeenNthCalledWith(3, "navigate", "/preview/financial-report/evt_1")
+    expect(win.webContents.send).toHaveBeenNthCalledWith(3, "navigate", "/preview/beo-food/evt_1")
+    expect(win.webContents.send).toHaveBeenNthCalledWith(4, "navigate", "/preview/financial-report/evt_1")
   })
 
   it("keeps Generate when focused window is null but last active window is event-details", async () => {

@@ -1,12 +1,20 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { renderWithProviders } from "~/test/renderWithProviders"
 
 import FoodWorkspaceSection from "./FoodWorkspaceSection"
 
 const useFoodSectionMock = vi.fn()
+const addSetupInstructionMock = vi.fn()
 
 vi.mock("~/hooks/useFoodSection", () => ({
   useFoodSection: () => useFoodSectionMock(),
+}))
+
+vi.mock("~/hooks/useSetupInstrucionSection", () => ({
+  useSetupInstructionSection: () => ({
+    addSetupInstruction: addSetupInstructionMock,
+  }),
 }))
 
 describe("FoodWorkspaceSection", () => {
@@ -49,7 +57,7 @@ describe("FoodWorkspaceSection", () => {
       removeItem: vi.fn(),
     })
 
-    render(<FoodWorkspaceSection />)
+    renderWithProviders(<FoodWorkspaceSection />)
 
     expect(screen.getByText("Food Planning")).toBeTruthy()
     expect(screen.getByLabelText("Assigned To")).toBeTruthy()
@@ -110,7 +118,7 @@ describe("FoodWorkspaceSection", () => {
       removeItem,
     })
 
-    render(<FoodWorkspaceSection />)
+    renderWithProviders(<FoodWorkspaceSection />)
 
     fireEvent.change(screen.getByLabelText("Assigned To"), { target: { value: "Kitchen Team" } })
     fireEvent.blur(screen.getByLabelText("Assigned To"))
@@ -151,7 +159,7 @@ describe("FoodWorkspaceSection", () => {
     fireEvent.click(screen.getByRole("button", { name: /Add Item/i }))
     expect(addItem).toHaveBeenCalledWith({ timeblockId: "tb-1" })
 
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Calendar ID actions" }))
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Timeblock header actions" }))
     fireEvent.click(await screen.findByRole("menuitem", { name: "Delete Timeblock" }))
     expect(removeTimeblock).toHaveBeenCalledWith("tb-1")
 

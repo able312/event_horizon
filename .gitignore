@@ -15,12 +15,7 @@ dist-ssr
 *.local
 
 # Agents and Internal Documentation
-AGENTS.md
-/docs
-/docs/*
 
-/src/assets/Westlinks-SM-RGB.png
-/src/assets/SILO-SM-RGB.png
 
 # Editor directories and files
 .vscode/*

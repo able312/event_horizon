@@ -18,6 +18,11 @@ const EventOverviewPreview = lazy(() =>
     default: module.EventOverviewPreview,
   })),
 )
+const FoodOnlyPreview = lazy(() =>
+  import('./routes/previews/beo/FoodOnlyPreview').then((module) => ({
+    default: module.FoodOnlyPreview,
+  })),
+)
 const FinancialPreview = lazy(() => import('./routes/previews/FinancialPreview'))
 const NotFound = lazy(() =>
   import('./routes/NotFound').then((module) => ({
@@ -75,6 +80,14 @@ function App() {
             element={
               <Suspense fallback={<RouteFallback />}>
                 <EventOverviewPreview />
+              </Suspense>
+            }
+          />
+          <Route
+            path="beo-food/:id"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <FoodOnlyPreview />
               </Suspense>
             }
           />

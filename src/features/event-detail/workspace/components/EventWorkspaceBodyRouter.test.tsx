@@ -13,23 +13,23 @@ const tournamentDetailsSectionMock = vi.fn(() => <div data-testid="tournament-de
 const golfCartsSectionMock = vi.fn(() => <div data-testid="golf-carts-section" />)
 const financialWorkspaceSectionMock = vi.fn(() => <div data-testid="financial-workspace-section" />)
 
-vi.mock("~/features/event-detail/sections/planning-workspace/FoodWorkspaceSection", () => ({
+vi.mock("~/features/event-detail/sections/food-beverage-workspaces/FoodWorkspaceSection", () => ({
   default: () => foodWorkspaceSectionMock(),
 }))
 
-vi.mock("~/features/event-detail/sections/planning-workspace/BeverageWorkspaceSection", () => ({
+vi.mock("~/features/event-detail/sections/food-beverage-workspaces/BeverageWorkspaceSection", () => ({
   default: () => beverageWorkspaceSectionMock(),
 }))
 
-vi.mock("~/components/event-detail/detail-sections/sections/VendorsSection", () => ({
+vi.mock("~/features/event-detail/sections/vendor-workspace/VendorWorkspaceSection", () => ({
   default: () => vendorsSectionMock(),
 }))
 
-vi.mock("~/components/event-detail/detail-sections/sections/SetupInstructionsSection", () => ({
+vi.mock("~/features/event-detail/sections/setup-notes-workspaces/SetupWorkspaceSection", () => ({
   default: () => setupInstructionsSectionMock(),
 }))
 
-vi.mock("~/components/event-detail/detail-sections/sections/NotesSection", () => ({
+vi.mock("~/features/event-detail/sections/setup-notes-workspaces/NotesWorkspaceSection", () => ({
   default: () => notesSectionMock(),
 }))
 
