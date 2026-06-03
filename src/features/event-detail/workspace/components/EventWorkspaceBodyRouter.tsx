@@ -1,4 +1,4 @@
-import SetupInstructionsSection from "~/components/event-detail/detail-sections/sections/SetupInstructionsSection"
+
 import NotesSection from "~/components/event-detail/detail-sections/sections/NotesSection"
 import TournamentDetailsSection from "~/components/event-detail/detail-sections/sections/TournamentDetailsSection"
 import GolfCartsSection from "~/components/event-detail/detail-sections/sections/GolfCartsSection"
@@ -10,6 +10,7 @@ import type { EventResource } from "~/features/event-detail/types"
 import { getWorkspaceCategoryIdForSectionType } from "../lib/getWorkspaceCategoryIdForSectionType"
 import type { WorkspaceCategoryId, WorkspaceNavNode } from "../types"
 import VendorWorkspaceSection from "../../sections/vendor-workspace/VendorWorkspaceSection"
+import SetupWorkspaceSection from "../../sections/setup-notes-workspaces/SetupWorkspaceSection"
 
 interface EventWorkspaceBodyRouterProps {
   eventResource: EventResource
@@ -17,7 +18,7 @@ interface EventWorkspaceBodyRouterProps {
   onSelectNode: (nodeId: string) => void
 }
 
-const scrollContainerClassName = "h-full min-h-0 overflow-y-auto"
+const scrollContainerClassName = "h-full min-h-0 overflow-y-auto bg-[##F5F5F4]"
 
 function renderCategoryWorkspace(
   categoryId: WorkspaceCategoryId,
@@ -32,7 +33,7 @@ function renderCategoryWorkspace(
     case "logistics":
       return <div className={`${scrollContainerClassName} p-4`}><VendorWorkspaceSection /></div>
     case "setup":
-      return <div className={`${scrollContainerClassName} p-4`}><SetupInstructionsSection /></div>
+      return <div className={`${scrollContainerClassName} p-4`}><SetupWorkspaceSection /></div>
     case "notes":
       return <div className={`${scrollContainerClassName} p-4`}><NotesSection /></div>
     case "tournament":
