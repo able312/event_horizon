@@ -3,12 +3,43 @@ import { toast } from "sonner"
 import type { UpdateTimeblock } from "~/definitions/database"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import type { TimeblockType } from "~/definitions/timeblocks/timeblocks-types"
+import type { CreateTimeblockInput, TimeblockPrefillRequest } from "~/definitions/timeblocks/timeblock-create"
+import { getSectionDefaultPrefill } from "~/definitions/timeblocks/setupInstructionPrefill"
 import * as timeblocksIpc from "~/lib/ipc/timeblocks"
 
 interface UseTimeblockMutationsOptions {
   queryKey: readonly [string, string | undefined]
   eventId: string
   sectionType: TimeblockType
+}
+
+export interface AddTimeblockInput {
+  title?: string
+  time?: string | null
+  details?: string | null
+  prefill?: TimeblockPrefillRequest
+}
+
+function getBlankDetailsFallback(sectionType: TimeblockType): string | null {
+  return sectionType === "note" || sectionType === "setup_instruction" ? "" : null
+}
+
+function resolveOptimisticValues(sectionType: TimeblockType, input?: AddTimeblockInput) {
+  const defaultValues =
+    input?.prefill?.mode === "section_default" && input.prefill.sectionType === sectionType
+      ? getSectionDefaultPrefill(sectionType)
+      : null
+
+  const overrides =
+    input?.prefill?.mode === "section_default" && input.prefill.sectionType === sectionType
+      ? input.prefill.overrides
+      : null
+
+  return {
+    title: input?.title ?? overrides?.title ?? defaultValues?.title ?? "",
+    details: input?.details ?? overrides?.details ?? defaultValues?.details ?? getBlankDetailsFallback(sectionType),
+    time: input?.time ?? "",
+  }
 }
 
 export function useTimeblockMutations({ queryKey, eventId, sectionType }: UseTimeblockMutationsOptions) {
@@ -21,22 +52,30 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType }: UseTim
   }
 
   const addTimeblockMutation = useMutation({
-    mutationFn: () =>
-      timeblocksIpc.createTimeblock({
+    mutationFn: (input?: AddTimeblockInput) => {
+      const payload: CreateTimeblockInput = {
         eventId,
-        title: "",
-        time: "",
         sectionType,
-      }),
-    onMutate: async () => {
+      }
+
+      if (input?.title !== undefined) payload.title = input.title
+      if (input?.time !== undefined) payload.time = input.time
+      if (input?.details !== undefined) payload.details = input.details
+      if (input?.prefill !== undefined) payload.prefill = input.prefill
+
+      return timeblocksIpc.createTimeblock(payload)
+    },
+    onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey })
       const previousData = queryClient.getQueryData<TimeblockWithItems[]>(queryKey)
+      const optimisticValues = resolveOptimisticValues(sectionType, input)
 
       const tempId = `temp_${Date.now()}`
       const optimisticTimeblock: TimeblockWithItems = {
         id: tempId,
-        title: "",
-        time: "",
+        title: optimisticValues.title,
+        time: optimisticValues.time,
+        details: optimisticValues.details,
         assignedTo: null,
         sectionType,
         eventId,
@@ -111,8 +150,12 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType }: UseTim
     },
   })
 
+  const addTimeblock = (input?: AddTimeblockInput) => {
+    addTimeblockMutation.mutate(input)
+  }
+
   return {
-    addTimeblock: addTimeblockMutation.mutate,
+    addTimeblock,
     updateTimeblock: updateTimeblockMutation.mutate,
     removeTimeblock: deleteTimeblockMutation.mutate,
   }

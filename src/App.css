@@ -19,7 +19,7 @@
 @media print {
   /* Kill the grey stage; let the paper card fill the page */
   body, html {
-    background: white !important;
+    background: #F7F6F3 !important;
     min-height: 0 !important;
     height: auto !important;
   }

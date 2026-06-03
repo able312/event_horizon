@@ -20,7 +20,7 @@ import React, { useState, useEffect } from "react"
 import type { Event, EventStatus, UpdateEvent } from "~/definitions/database"
 import { ITER_EVENT_STATUSES } from "~/definitions/events/event-constants"
 import { EVENT_TYPE_OPTIONS, EVENT_TYPE_LABELS, EVENT_STATUS_LABELS } from "~/definitions/events/ui"
-import DateTimeInput from "~/components/ui/DateTimeInput"
+import DateTimeInput from "~/components/atoms/DateTimeInput"
 
 interface EditEventModalProps {
   /** Whether the modal is currently open */

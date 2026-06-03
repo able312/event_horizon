@@ -4,9 +4,7 @@ import {
     foodItems, 
     beverageItems, 
     vendorItems, 
-    setupInstructions, 
     payments, 
-    notes, 
     tournamentDetails,
     menuOfChargeItems,
     cartDetails 
@@ -90,17 +88,3 @@ export type UpdateBeverageItem = Partial<Omit<BeverageItem, "id">>
 
 export type VendorItem = InferSelectModel<typeof vendorItems>
 export type UpdateVendorItem = Partial<Omit<VendorItem, "id" | "createdAt" | "updatedAt">>
-
-// ============================================================================
-// Setup Instructions
-// ============================================================================
-
-export type SetupInstruction = InferSelectModel<typeof setupInstructions>
-export type UpdateSetupInstruction = Partial<Omit<SetupInstruction, "id" | "createdAt" | "updatedAt">>
-
-// ============================================================================
-// Setup Instructions
-// ============================================================================
-
-export type Note = InferSelectModel<typeof notes>
-export type UpdateNote = Partial<Omit<Note, "id" | "createdAt" | "updatedAt">>

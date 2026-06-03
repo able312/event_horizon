@@ -1,14 +1,12 @@
 // Query return type
 
 import { timeblocks } from '~/electron/db/schema'
-import type { Timeblock, FoodItem, BeverageItem, VendorItem, SetupInstruction, Note, CartDetails } from '../database';
+import type { Timeblock, FoodItem, BeverageItem, VendorItem, CartDetails } from '../database';
 
 export type TimeblockWithItems = Timeblock & {
     foodItems?: FoodItem[],
     beverageItems?: BeverageItem[],
     vendorItem?: VendorItem,
-    setupInstruction?: SetupInstruction
-    note?: Note
     cartDetails?: Pick<CartDetails, "whatGoesOnCarts" | "customGrid">
 }
 
@@ -32,4 +30,3 @@ export type TimelineTimeblock = TimeblockWithItems & {
   time: string
   timelineMeta: TimelineMeta
 }
-

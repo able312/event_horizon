@@ -1,4 +1,4 @@
-import { Skeleton } from "~/components/ui/skeleton"
+import { Skeleton } from "~/components/atoms/skeleton"
 import getGlassUI from "~/styles/GlassStyles"
 
 export const DetailsTitleBarSkeleton: React.FC = () => {

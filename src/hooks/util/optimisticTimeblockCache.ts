@@ -1,7 +1,7 @@
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 
 type ListFieldKey = "foodItems" | "beverageItems"
-type NestedFieldKey = "vendorItem" | "setupInstruction" | "note"
+type NestedFieldKey = "vendorItem"
 
 export function appendListItem<K extends ListFieldKey>(
   cache: TimeblockWithItems[] | undefined,

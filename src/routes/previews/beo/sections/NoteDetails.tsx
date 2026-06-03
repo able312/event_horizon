@@ -22,9 +22,9 @@ export const NoteDetails = () => {
                     <dd className="font-medium">{timeblock?.assignedTo}</dd>
                 </dl>}
 
-                {timeblock?.note?.content && (
+                {timeblock.details && (
                     <div className="mt-3 pt-3 border-t text-sm">
-                        <pre className="font-sans whitespace-pre-wrap">{timeblock.note.content}</pre>
+                        <pre className="font-sans whitespace-pre-wrap">{timeblock.details}</pre>
                     </div>
                 )}
             </div>

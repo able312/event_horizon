@@ -1,6 +1,7 @@
 import './App.css'
 import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router'
+import { Toaster } from './components/atoms/sonner'
 
 // Pages
 import EventsRoute from '~/routes/Events'
@@ -15,6 +16,11 @@ const TimelinePreview = lazy(() => import('./routes/previews/TimelinePreview'))
 const EventOverviewPreview = lazy(() =>
   import('./routes/previews/beo/EventOverviewPreview').then((module) => ({
     default: module.EventOverviewPreview,
+  })),
+)
+const FoodOnlyPreview = lazy(() =>
+  import('./routes/previews/beo/FoodOnlyPreview').then((module) => ({
+    default: module.FoodOnlyPreview,
   })),
 )
 const FinancialPreview = lazy(() => import('./routes/previews/FinancialPreview'))
@@ -39,6 +45,7 @@ function App() {
 
   return (
     <>
+
       <Routes>
         <Route path="/" element={<EventsRoute />} />
         <Route path="/events" element={<EventsRoute />} />
@@ -77,6 +84,14 @@ function App() {
             }
           />
           <Route
+            path="beo-food/:id"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <FoodOnlyPreview />
+              </Suspense>
+            }
+          />
+          <Route
             path="financial-report/:id"
             element={
               <Suspense fallback={<RouteFallback />}>
@@ -95,6 +110,7 @@ function App() {
           }
         />
       </Routes>
+      <Toaster richColors />
     </>
   )
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import GolfDetailsTimeblock from '~/components/ui/GolfDetailsTimeblock';
+import GolfDetailsTimeblock from '~/components/atoms/GolfDetailsTimeblock';
 import type { UpdateCartDetails } from '~/definitions/database';
 import { useCartDetailsSection } from '~/hooks/useCartDetailsSection';
 

@@ -2,11 +2,10 @@ import React from "react"
 import { Plus } from "lucide-react"
 import type { UpdateTimeblock } from "~/definitions/database"
 import { useSetupInstructionSection } from "~/hooks/useSetupInstrucionSection"
-import DetailsTimeblock from "~/components/ui/DetailsTimeblock"
+import DetailsTimeblock from "~/components/atoms/DetailsTimeblock"
 
 const SetupInstructionsSection: React.FC = () => {
-  // TODO: useSetupInstructionsSection hook
-  const { data: setupInstructions, addSetupInstruction, updateSetupInstruction, updateTimeblock, removeTimeblock } = useSetupInstructionSection()
+  const { data: setupInstructions, addSetupInstruction, updateTimeblock, removeTimeblock } = useSetupInstructionSection()
 
   const handleUpdateTimeblock = (id: string, updates: UpdateTimeblock) => {
     updateTimeblock({id, updates})
@@ -35,11 +34,11 @@ const SetupInstructionsSection: React.FC = () => {
                 <div className="mt-4">
                   <label className="text-xs text-muted-foreground">Instructions</label>
                   <textarea
-                    defaultValue={timeblock.setupInstruction?.instruction || ""}
+                    defaultValue={timeblock.details ?? ""}
                     placeholder="Describe what needs to be done..."
                     className="w-full px-2 py-1 text-sm border rounded bg-white mt-1 resize-none"
-                    onBlur={(e) => updateSetupInstruction({id: timeblock.setupInstruction!.id, updates: {instruction: e.target.value}})}
-                    rows={timeblock.setupInstruction?.instruction?.split("\n").length ?? 2}
+                    onBlur={(e) => updateTimeblock({id: timeblock.id, updates: { details: e.target.value }})}
+                    rows={timeblock.details?.split("\n").length ?? 2}
                   />
                 </div>
               </DetailsTimeblock>

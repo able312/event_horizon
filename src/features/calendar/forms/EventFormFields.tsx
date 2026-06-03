@@ -2,7 +2,7 @@ import React from "react"
 import type { EventStatus, EventType } from "~/definitions/database"
 import { ITER_EVENT_STATUSES } from "~/definitions/events/event-constants"
 import { EVENT_STATUS_LABELS, EVENT_TYPE_LABELS, EVENT_TYPE_OPTIONS } from "~/definitions/events/ui"
-import DateTimeInput from "~/components/ui/DateTimeInput"
+import DateTimeInput from "~/components/atoms/DateTimeInput"
 
 export interface EventFormValues {
   title: string

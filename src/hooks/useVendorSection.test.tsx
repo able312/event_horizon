@@ -44,6 +44,7 @@ function makeVendorTimeblock(overrides: Partial<TimeblockWithItems> = {}): Timeb
     eventId: "event-1",
     title: "Vendor",
     time: null,
+    details: null,
     sectionType: "vendor",
     assignedTo: null,
     createdAt: "created",
@@ -54,7 +55,6 @@ function makeVendorTimeblock(overrides: Partial<TimeblockWithItems> = {}): Timeb
       contactName: "Old Name",
       contactPhone: "111",
       contactEmail: "old@example.com",
-      notes: "Old note",
     },
     ...overrides,
   }
@@ -75,6 +75,7 @@ describe("useVendorSection optimistic cache", () => {
         eventId: "event-1",
         title: "",
         time: "",
+        details: null,
         sectionType: "vendor" as const,
         assignedTo: null,
         createdAt: "created",
@@ -86,7 +87,6 @@ describe("useVendorSection optimistic cache", () => {
         contactName: "",
         contactPhone: "",
         contactEmail: "",
-        notes: null,
       },
     }
 
@@ -145,7 +145,6 @@ describe("useVendorSection optimistic cache", () => {
           contactName: "New Name",
           contactPhone: "222",
           contactEmail: "new@example.com",
-          notes: "New note",
         },
       })
     })
@@ -156,7 +155,6 @@ describe("useVendorSection optimistic cache", () => {
       expect(vendorItem?.contactName).toBe("New Name")
       expect(vendorItem?.contactPhone).toBe("222")
       expect(vendorItem?.contactEmail).toBe("new@example.com")
-      expect(vendorItem?.notes).toBe("New note")
     })
 
     deferredUpdate.resolve({
@@ -165,7 +163,6 @@ describe("useVendorSection optimistic cache", () => {
       contactName: "New Name",
       contactPhone: "222",
       contactEmail: "new@example.com",
-      notes: "New note",
     })
   })
 

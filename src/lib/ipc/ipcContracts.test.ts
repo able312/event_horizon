@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import * as cartDetailsIpc from "./cartDetails"
 import * as eventsIpc from "./ipcEventsQueries"
-import * as notesIpc from "./notes"
-import * as setupInstructionsIpc from "./setupInstructions"
+import * as timeblocksIpc from "./timeblocks"
 import * as tournamentDetailsIpc from "./tournamentDetails"
 import * as vendorItemsIpc from "./vendorItems"
 
@@ -33,11 +32,15 @@ const searchEventsArg = {
   page: 0,
   pageSize: 50,
 } as Parameters<typeof eventsIpc.searchEvents>[0]
-const updateNoteArg = { content: "Updated note" } as Parameters<typeof notesIpc.updateNote>[1]
-const updateSetupInstructionArg = { instruction: "Updated instruction" } as Parameters<
-  typeof setupInstructionsIpc.updateSetupInstruction
->[1]
-const updateVendorArg = { notes: "Updated vendor notes" } as Parameters<typeof vendorItemsIpc.updateVendor>[1]
+const createTimeblockArg = {
+  eventId,
+  title: "",
+  time: "",
+  details: "",
+  sectionType: "note",
+} as Parameters<typeof timeblocksIpc.createTimeblock>[0]
+const updateTimeblockArg = { details: "Updated details" } as Parameters<typeof timeblocksIpc.updateTimeblock>[1]
+const updateVendorArg = { contactEmail: "updated-vendor@example.com" } as Parameters<typeof vendorItemsIpc.updateVendor>[1]
 const updateCartDetailsArg = { notes: "Updated cart notes" } as Parameters<typeof cartDetailsIpc.updateCartDetails>[1]
 const updateTournamentDetailsArg = { notes: "Updated tournament notes" } as Parameters<
   typeof tournamentDetailsIpc.updateTournamentDetails
@@ -99,52 +102,34 @@ const wrapperCases: WrapperCase[] = [
     invokeWrapper: eventsIpc.commitIcsImport as unknown as (...args: unknown[]) => Promise<unknown>,
   },
   {
-    name: "notes.getNotesByEvent",
-    channel: "notes:get-by-event",
+    name: "timeblocks.getTimeblocksByEventAndSection",
+    channel: "timeblocks:get-by-event-and-section",
+    args: [eventId, "note"],
+    invokeWrapper: timeblocksIpc.getTimeblocksByEventAndSection as unknown as (...args: unknown[]) => Promise<unknown>,
+  },
+  {
+    name: "timeblocks.getAllTimelineBlocks",
+    channel: "timeblocks:get-all-timeline-blocks",
     args: [eventId],
-    invokeWrapper: notesIpc.getNotesByEvent as unknown as (...args: unknown[]) => Promise<unknown>,
+    invokeWrapper: timeblocksIpc.getAllTimelineBlocks as unknown as (...args: unknown[]) => Promise<unknown>,
   },
   {
-    name: "notes.createNote",
-    channel: "notes:post",
-    args: [eventId],
-    invokeWrapper: notesIpc.createNote as unknown as (...args: unknown[]) => Promise<unknown>,
+    name: "timeblocks.createTimeblock",
+    channel: "timeblocks:post",
+    args: [createTimeblockArg],
+    invokeWrapper: timeblocksIpc.createTimeblock as unknown as (...args: unknown[]) => Promise<unknown>,
   },
   {
-    name: "notes.updateNote",
-    channel: "notes:patch",
-    args: [recordId, updateNoteArg],
-    invokeWrapper: notesIpc.updateNote as unknown as (...args: unknown[]) => Promise<unknown>,
+    name: "timeblocks.updateTimeblock",
+    channel: "timeblocks:patch",
+    args: [recordId, updateTimeblockArg],
+    invokeWrapper: timeblocksIpc.updateTimeblock as unknown as (...args: unknown[]) => Promise<unknown>,
   },
   {
-    name: "notes.deleteNote",
-    channel: "notes:delete",
-    args: [timeblockId],
-    invokeWrapper: notesIpc.deleteNote as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "setupInstructions.getSetupInstructionsByEvent",
-    channel: "setup-instructions:get-by-event",
-    args: [eventId],
-    invokeWrapper: setupInstructionsIpc.getSetupInstructionsByEvent as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "setupInstructions.createSetupInstruction",
-    channel: "setup-instructions:post",
-    args: [eventId],
-    invokeWrapper: setupInstructionsIpc.createSetupInstruction as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "setupInstructions.updateSetupInstruction",
-    channel: "setup-instructions:patch",
-    args: [recordId, updateSetupInstructionArg],
-    invokeWrapper: setupInstructionsIpc.updateSetupInstruction as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "setupInstructions.deleteSetupInstruction",
-    channel: "setup-instructions:delete",
-    args: [timeblockId],
-    invokeWrapper: setupInstructionsIpc.deleteSetupInstruction as unknown as (...args: unknown[]) => Promise<unknown>,
+    name: "timeblocks.deleteTimeblock",
+    channel: "timeblocks:delete",
+    args: [recordId],
+    invokeWrapper: timeblocksIpc.deleteTimeblock as unknown as (...args: unknown[]) => Promise<unknown>,
   },
   {
     name: "vendorItems.getVendorsByEvent",

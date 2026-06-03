@@ -48,6 +48,7 @@ export function useVendorSection() {
         eventId: eventId!,
         title: "",
         time: "",
+        details: null,
         sectionType: "vendor",
         assignedTo: null,
         vendorItem: {
@@ -56,7 +57,6 @@ export function useVendorSection() {
           contactName: "",
           contactPhone: "",
           contactEmail: "",
-          notes: null,
         },
         createdAt: now,
         updatedAt: null,

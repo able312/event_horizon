@@ -4,7 +4,7 @@ export const FoodDetails = () => {
     
     const { data: foodTimeblocks } = useFoodSection()
 
-    const sortedTimeblocks = foodTimeblocks?.sort((a, b) => {
+    const sortedTimeblocks = foodTimeblocks?.slice().sort((a, b) => {
         const timeA = a.time ?? ""
         const timeB = b.time ?? ""
         return timeA.localeCompare(timeB)

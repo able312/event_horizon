@@ -7,9 +7,7 @@ import { registerTimeblocksIpcHandlers } from "./timeblocksHandler.js"
 import { registerFoodItemsIpcHandlers } from "./foodItemsHandler.js"
 import { registerBeverageItemsIpcHandlers } from "./beverageItemsHandler.js"
 import { registerVendorItemsIpcHandlers } from "./vendorItemsHandler.js"
-import { registerSetupInstructionsIpcHandlers } from "./setupInstructionsHandler.js"
 import { registerPaymentsIpcHandlers } from "./paymentsHandler.js"
-import { registerNotesIpcHandlers } from "./notesHandler.js"
 import { registerTournamentDetailsIpcHandlers } from "./tournamentDetailsHandler.js"
 import { registerMenuOfChargeItemsIpcHandlers } from "./menuOfChargeItemsHandler.js"
 import { registerCartDetailsIpcHandlers } from "./cartDetailsHandler.js"
@@ -23,9 +21,7 @@ export const registerAllIpcHandlers = () => {
     registerFoodItemsIpcHandlers()
     registerBeverageItemsIpcHandlers()
     registerVendorItemsIpcHandlers()
-    registerSetupInstructionsIpcHandlers()
     registerPaymentsIpcHandlers()
-    registerNotesIpcHandlers()
     registerTournamentDetailsIpcHandlers()
     registerMenuOfChargeItemsIpcHandlers()
     registerCartDetailsIpcHandlers()

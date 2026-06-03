@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router";
 
-import { Button } from '~/components/ui/button'
+import { Button } from '~/components/atoms/button'
 
 function NotFound() {
 

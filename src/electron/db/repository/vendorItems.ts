@@ -37,7 +37,6 @@ export function createVendorItemsRepository(database: AppDatabase, options: Vend
           contactName: "",
           contactPhone: "",
           contactEmail: "",
-          notes: null,
         }).returning().get()!
 
         return { timeblock: newTimeblock, vendor: newVendor }

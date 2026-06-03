@@ -2,7 +2,12 @@ import { formatDate, getDateString } from "~/lib/formatters"
 import { SectionBox } from "./SectionBox"
 import type { Event } from "~/definitions/database"
 
-export function PrintHeader({event}: {event: Event}) {
+type PrintHeaderProps = {
+  event: Event
+  showContactInfo?: boolean
+}
+
+export function PrintHeader({ event, showContactInfo = true }: PrintHeaderProps) {
 
   if (!event) return null
 
@@ -40,7 +45,7 @@ export function PrintHeader({event}: {event: Event}) {
           </div>
         </SectionBox>
 
-        {event.clientName && <SectionBox title="Contact Information">
+        {showContactInfo && event.clientName && <SectionBox title="Contact Information">
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
               <dt className="text-muted-foreground">Name</dt>
               <dd className="font-medium">{event.clientName}</dd>

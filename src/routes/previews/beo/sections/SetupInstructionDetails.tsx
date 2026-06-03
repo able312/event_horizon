@@ -20,10 +20,10 @@ export const SetupInstructionDetails = () => {
                     <dd className="font-medium">{timeblock?.time}</dd>
                 </dl>
 
-                {timeblock?.setupInstruction?.instruction && (
+                {timeblock.details && (
                     <div className="mt-3 pt-3 border-t text-sm">
                         <p className="text-muted-foreground mb-1">Instructions</p>
-                        <pre className="font-sans whitespace-pre-wrap">{timeblock?.setupInstruction?.instruction}</pre>
+                        <pre className="font-sans whitespace-pre-wrap">{timeblock.details}</pre>
                     </div>
                 )}
             </div>

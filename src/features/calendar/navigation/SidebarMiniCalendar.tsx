@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from "react"
 
-import { Calendar, CalendarDayButton } from "~/components/ui/calendar"
+import { Calendar, CalendarDayButton } from "~/components/atoms/calendar"
 import type { Event, EventType } from "~/definitions/database"
 import { EVENT_TYPE_DOT_COLORS } from "~/definitions/events/ui"
 import { useHotkey } from "~/lib/hotKeys"

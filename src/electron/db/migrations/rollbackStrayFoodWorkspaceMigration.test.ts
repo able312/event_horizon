@@ -119,6 +119,7 @@ describe("rollback stray food workspace migration", () => {
         "event_id",
         "title",
         "time",
+        "details",
         "section_type",
         "assigned_to",
         "created_at",
@@ -137,11 +138,9 @@ describe("rollback stray food workspace migration", () => {
 
       expect(foreignKeyTables(testDb.sqlite, "beverage_items")).toEqual(["timeblocks"])
       expect(foreignKeyTables(testDb.sqlite, "vendor_items")).toEqual(["timeblocks"])
-      expect(foreignKeyTables(testDb.sqlite, "setup_instructions")).toEqual(["timeblocks"])
-      expect(foreignKeyTables(testDb.sqlite, "notes")).toEqual(["timeblocks"])
 
       const repairedTimeblock = testDb.sqlite.prepare(`
-        SELECT id, event_id, title, time, section_type, assigned_to, created_at, updated_at
+        SELECT id, event_id, title, time, details, section_type, assigned_to, created_at, updated_at
         FROM timeblocks
         WHERE id = 'tb-1'
       `).get() as Record<string, string | null>
@@ -151,6 +150,7 @@ describe("rollback stray food workspace migration", () => {
         event_id: "event-1",
         title: "Dinner",
         time: "18:00",
+        details: null,
         section_type: "food",
         assigned_to: "Kitchen",
         created_at: "created",
@@ -178,7 +178,7 @@ describe("rollback stray food workspace migration", () => {
     }
   })
 
-  it("runs safely on databases that already match the current schema", async () => {
+  it("creates databases with the current post-migration schema", async () => {
     testDb = await createTestDb()
 
     try {
@@ -188,8 +188,8 @@ describe("rollback stray food workspace migration", () => {
       `).run()
 
       testDb.sqlite.prepare(`
-        INSERT INTO timeblocks (id, event_id, title, time, section_type, assigned_to, created_at, updated_at)
-        VALUES ('tb-2', 'event-2', 'Lunch', '12:00', 'food', 'Chef', 'created', NULL)
+        INSERT INTO timeblocks (id, event_id, title, time, details, section_type, assigned_to, created_at, updated_at)
+        VALUES ('tb-2', 'event-2', 'Lunch', '12:00', NULL, 'food', 'Chef', 'created', NULL)
       `).run()
 
       testDb.sqlite.prepare(`
@@ -198,12 +198,12 @@ describe("rollback stray food workspace migration", () => {
       `).run()
 
       testDb.sqlite.prepare(`
-        INSERT INTO timeblocks (id, event_id, title, time, section_type, assigned_to, created_at, updated_at)
+        INSERT INTO timeblocks (id, event_id, title, time, details, section_type, assigned_to, created_at, updated_at)
         VALUES
-          ('tb-bev-2', 'event-2', 'Bar', '17:00', 'beverage', 'Bar Team', 'created', NULL),
-          ('tb-vendor-2', 'event-2', 'Band', '15:30', 'vendor', 'Planner', 'created', NULL),
-          ('tb-setup-2', 'event-2', 'Flip', '16:00', 'setup_instruction', 'Ops', 'created', NULL),
-          ('tb-note-2', 'event-2', 'Reminder', '14:00', 'note', 'Lead', 'created', NULL)
+          ('tb-bev-2', 'event-2', 'Bar', '17:00', NULL, 'beverage', 'Bar Team', 'created', NULL),
+          ('tb-vendor-2', 'event-2', 'Band', '15:30', NULL, 'vendor', 'Planner', 'created', NULL),
+          ('tb-setup-2', 'event-2', 'Flip', '16:00', 'Place linens.', 'setup_instruction', 'Ops', 'created', NULL),
+          ('tb-note-2', 'event-2', 'Reminder', '14:00', 'Check candles.', 'note', 'Lead', 'created', NULL)
       `).run()
 
       testDb.sqlite.prepare(`
@@ -212,32 +212,16 @@ describe("rollback stray food workspace migration", () => {
       `).run()
 
       testDb.sqlite.prepare(`
-        INSERT INTO vendor_items (id, timeblock_id, contact_name, contact_phone, contact_email, notes)
-        VALUES ('vendor-2', 'tb-vendor-2', 'Band Lead', '555-2000', 'band@example.com', 'Need stage power')
+        INSERT INTO vendor_items (id, timeblock_id, contact_name, contact_phone, contact_email)
+        VALUES ('vendor-2', 'tb-vendor-2', 'Band Lead', '555-2000', 'band@example.com')
       `).run()
-
-      testDb.sqlite.prepare(`
-        INSERT INTO setup_instructions (id, timeblock_id, instruction, created_at)
-        VALUES ('setup-2', 'tb-setup-2', 'Place linens.', 'created')
-      `).run()
-
-      testDb.sqlite.prepare(`
-        INSERT INTO notes (id, timeblock_id, content, created_at)
-        VALUES ('note-2', 'tb-note-2', 'Check candles.', 'created')
-      `).run()
-
-      testDb.sqlite.prepare(`
-        DELETE FROM __drizzle_migrations
-        WHERE rowid = (SELECT MAX(rowid) FROM __drizzle_migrations)
-      `).run()
-
-      runMigrations(testDb.db, migrationsFolder)
 
       expect(columnNames(testDb.sqlite, "timeblocks")).toEqual([
         "id",
         "event_id",
         "title",
         "time",
+        "details",
         "section_type",
         "assigned_to",
         "created_at",
@@ -256,11 +240,9 @@ describe("rollback stray food workspace migration", () => {
 
       expect(foreignKeyTables(testDb.sqlite, "beverage_items")).toEqual(["timeblocks"])
       expect(foreignKeyTables(testDb.sqlite, "vendor_items")).toEqual(["timeblocks"])
-      expect(foreignKeyTables(testDb.sqlite, "setup_instructions")).toEqual(["timeblocks"])
-      expect(foreignKeyTables(testDb.sqlite, "notes")).toEqual(["timeblocks"])
 
       const timeblockRow = testDb.sqlite.prepare(`
-        SELECT id, event_id, title, time, section_type, assigned_to, created_at, updated_at
+        SELECT id, event_id, title, time, details, section_type, assigned_to, created_at, updated_at
         FROM timeblocks
         WHERE id = 'tb-2'
       `).get()
@@ -270,6 +252,7 @@ describe("rollback stray food workspace migration", () => {
         event_id: "event-2",
         title: "Lunch",
         time: "12:00",
+        details: null,
         section_type: "food",
         assigned_to: "Chef",
         created_at: "created",
@@ -308,7 +291,7 @@ describe("rollback stray food workspace migration", () => {
       })
 
       expect(testDb.sqlite.prepare(`
-        SELECT id, timeblock_id, contact_name, contact_phone, contact_email, notes
+        SELECT id, timeblock_id, contact_name, contact_phone, contact_email
         FROM vendor_items
         WHERE id = 'vendor-2'
       `).get()).toEqual({
@@ -317,32 +300,39 @@ describe("rollback stray food workspace migration", () => {
         contact_name: "Band Lead",
         contact_phone: "555-2000",
         contact_email: "band@example.com",
-        notes: "Need stage power",
       })
 
       expect(testDb.sqlite.prepare(`
-        SELECT id, timeblock_id, instruction, created_at, updated_at
-        FROM setup_instructions
-        WHERE id = 'setup-2'
+        SELECT id, details
+        FROM timeblocks
+        WHERE id = 'tb-setup-2'
       `).get()).toEqual({
-        id: "setup-2",
-        timeblock_id: "tb-setup-2",
-        instruction: "Place linens.",
-        created_at: "created",
-        updated_at: null,
+        id: "tb-setup-2",
+        details: "Place linens.",
       })
 
       expect(testDb.sqlite.prepare(`
-        SELECT id, timeblock_id, content, created_at, updated_at
-        FROM notes
-        WHERE id = 'note-2'
+        SELECT id, details
+        FROM timeblocks
+        WHERE id = 'tb-note-2'
       `).get()).toEqual({
-        id: "note-2",
-        timeblock_id: "tb-note-2",
-        content: "Check candles.",
-        created_at: "created",
-        updated_at: null,
+        id: "tb-note-2",
+        details: "Check candles.",
       })
+
+      const notesTable = testDb.sqlite.prepare(`
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table' AND name = 'notes'
+      `).get()
+      const setupInstructionsTable = testDb.sqlite.prepare(`
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table' AND name = 'setup_instructions'
+      `).get()
+
+      expect(notesTable).toBeUndefined()
+      expect(setupInstructionsTable).toBeUndefined()
     } finally {
       // no-op
     }

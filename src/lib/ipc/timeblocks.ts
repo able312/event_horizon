@@ -1,11 +1,16 @@
+import type { CreateTimeblockInput } from "~/definitions/timeblocks/timeblock-create"
 import type { Timeblock, UpdateTimeblock } from "~/definitions/database"
-import type { TimelineTimeblock } from "~/definitions/timeblocks/timeblocks-types";
+import type { TimeblockType, TimeblockWithItems, TimelineTimeblock } from "~/definitions/timeblocks/timeblocks-types";
+
+export function getTimeblocksByEventAndSection(eventId: string, sectionType: TimeblockType): Promise<TimeblockWithItems[]> {
+  return window.electron.ipcRenderer.invoke("timeblocks:get-by-event-and-section", eventId, sectionType) as Promise<TimeblockWithItems[]>
+}
 
 export function getAllTimelineBlocks(eventId: string): Promise<TimelineTimeblock[]> {
   return window.electron.ipcRenderer.invoke("timeblocks:get-all-timeline-blocks", eventId) as Promise<TimelineTimeblock[]>
 }
 
-export function createTimeblock(data: { eventId: string; title: string; time?: string; sectionType: string }): Promise<Timeblock> {
+export function createTimeblock(data: CreateTimeblockInput): Promise<Timeblock> {
   return window.electron.ipcRenderer.invoke("timeblocks:post", data) as Promise<Timeblock>
 }
 

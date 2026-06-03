@@ -1,22 +1,28 @@
 import { ipcMain } from "electron"
 import timeblockQueries from "../db/repository/timeblocks.js"
+import type { CreateTimeblockInput } from "../../definitions/timeblocks/timeblock-create.js"
+import type { TimeblockType, TimelineTimeblock } from "../../definitions/timeblocks/timeblocks-types.js"
+import type { UpdateTimeblock } from "../../definitions/database.js"
 import { logAndThrow } from "./ipcErrors.js"
 
 export const registerTimeblocksIpcHandlers = () => {
-  ipcMain.handle("timeblocks:post", async (_event, data: { eventId: string; title: string; time?: string; sectionType: string }) => {
+  ipcMain.handle("timeblocks:get-by-event-and-section", async (_event, eventId: string, sectionType: TimeblockType) => {
     try {
-      return timeblockQueries.insert({
-        eventId: data.eventId,
-        title: data.title,
-        time: data.time ?? null,
-        sectionType: data.sectionType as 'food' | 'beverage' | 'vendor' | 'note'
-      })
+      return await timeblockQueries.getByEventIdAndSectionType(eventId, sectionType)
+    } catch (err) {
+      logAndThrow("Error fetching timeblocks by section:", err)
+    }
+  })
+
+  ipcMain.handle("timeblocks:post", async (_event, data: CreateTimeblockInput) => {
+    try {
+      return timeblockQueries.insert(data)
     } catch (err) {
       logAndThrow("Error creating timeblock:", err)
     }
   })
 
-  ipcMain.handle("timeblocks:patch", async (_event, id: string, updates: { title?: string; time?: string; displayOrder?: number }) => {
+  ipcMain.handle("timeblocks:patch", async (_event, id: string, updates: UpdateTimeblock) => {
     try {
       return timeblockQueries.update(id, updates)
     } catch (err) {
@@ -32,7 +38,7 @@ export const registerTimeblocksIpcHandlers = () => {
     }
   })
 
-  ipcMain.handle("timeblocks:get-all-timeline-blocks", async (_event, eventId: string) => {
+  ipcMain.handle("timeblocks:get-all-timeline-blocks", async (_event, eventId: string): Promise<TimelineTimeblock[]> => {
     try {
       return timeblockQueries.getAllTimelineBlocks(eventId)
     } catch (err) {

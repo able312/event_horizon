@@ -48,13 +48,13 @@ const TimelineBlock: React.FC<TimelineBlocksProps> = ({ timeblock, updateTimeblo
         <GenericDetailsBlock 
           blockHeader={ timeblock.vendorItem?.contactName }
           blockSubtitle={ timeblock.vendorItem?.contactPhone + " | " + timeblock.vendorItem?.contactEmail  }
-          blockNotes={ timeblock.vendorItem?.notes } 
+          blockNotes={ timeblock.details } 
           borderColor='purple'
         />
       }
 
       {timeblock.sectionType === SECTION_TYPE.SETUP_INSTRUCTION &&
-         timeblock.setupInstruction?.instruction.split("\n\n").map(part => (
+         timeblock.details?.split("\n\n").map(part => (
            <GenericDetailsBlock
              key={"setupInstructionPart_" + uuidv4()}
              {...parseBlock(part)}
@@ -64,7 +64,7 @@ const TimelineBlock: React.FC<TimelineBlocksProps> = ({ timeblock, updateTimeblo
       }
 
       {timeblock.sectionType === SECTION_TYPE.NOTE &&
-         timeblock.note?.content.split("\n\n").map(part => (
+         timeblock.details?.split("\n\n").map(part => (
            <GenericDetailsBlock
              key={"notePart_" + uuidv4()}
              {...parseBlock(part)}
@@ -74,7 +74,7 @@ const TimelineBlock: React.FC<TimelineBlocksProps> = ({ timeblock, updateTimeblo
       }
 
       {timeblock.sectionType === SECTION_TYPE.TOURNAMENT_DETAIL &&
-         timeblock.note?.content.split("\n\n").map(part => (
+         timeblock.details?.split("\n\n").map(part => (
            <GenericDetailsBlock
              key={"notePart_" + uuidv4()}
              {...parseBlock(part)}

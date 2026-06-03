@@ -1,5 +1,5 @@
 import React from "react"
-import { DatePicker } from "~/components/ui/date-picker"
+import { DatePicker } from "~/components/atoms/date-picker"
 
 interface WeatherContingencyProps {
   rainDate: string | null
