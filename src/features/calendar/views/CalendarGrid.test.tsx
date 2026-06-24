@@ -144,9 +144,9 @@ describe("CalendarGrid row stability and event rendering", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Event 10-4" }))
 
-    expect(navigateMock).toHaveBeenCalledWith("/events/event-10-4", {
-      state: { returnTo: "/events?view=calendar&date=2026-04" },
-    })
+    expect(navigateMock).toHaveBeenCalledWith(
+      "/events/event-10-4?returnTo=%2Fevents%3Fview%3Dcalendar%26date%3D2026-04",
+    )
     expect(onDayCellClick).not.toHaveBeenCalled()
   })
 
@@ -156,9 +156,9 @@ describe("CalendarGrid row stability and event rendering", () => {
 
     fireEvent.click(screen.getByTitle("Event 10-1"))
 
-    expect(navigateMock).toHaveBeenCalledWith("/events/event-10-1", {
-      state: { returnTo: "/events?view=calendar&date=2026-04" },
-    })
+    expect(navigateMock).toHaveBeenCalledWith(
+      "/events/event-10-1?returnTo=%2Fevents%3Fview%3Dcalendar%26date%3D2026-04",
+    )
     expect(onDayCellClick).not.toHaveBeenCalled()
   })
 

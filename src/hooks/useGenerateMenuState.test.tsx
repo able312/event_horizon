@@ -28,6 +28,16 @@ describe("getGenerateMenuContext", () => {
     })
   })
 
+  it("sends event-details context for section sub-routes", () => {
+    pathname = "/events/evt_1/food"
+    renderHook(() => useGenerateMenuState())
+
+    expect(window.electron.ipcRenderer.send).toHaveBeenCalledWith("generate:active", {
+      view: "event-details",
+      eventId: "evt_1",
+    })
+  })
+
   it("sends other context for non-detail paths", () => {
     pathname = "/preview/timeline/evt_1"
     renderHook(() => useGenerateMenuState())

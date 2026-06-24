@@ -16,6 +16,7 @@ import React from "react"
 import { useLocation, useNavigate } from "react-router"
 import { EVENT_TYPE_COLORS } from "~/definitions/events/ui"
 import type { Event } from "~/definitions/database"
+import { buildEventDetailEntryPath } from "~/features/event-detail/workspace/lib/eventDetailRouteState"
 import EventItemContextMenu from "../interactions/EventItemContextMenu"
 
 interface UnscheduledEventsProps {
@@ -45,7 +46,7 @@ const UnscheduledEvents: React.FC<UnscheduledEventsProps> = ({
    * Handle clicking on an event - navigate to event detail
    */
   const handleEventClick = (eventId: string) => {
-    navigate(`/events/${eventId}`, { state: { returnTo } })
+    navigate(buildEventDetailEntryPath(eventId, returnTo))
   }
 
   // Don't render if there are no unscheduled events

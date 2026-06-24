@@ -58,9 +58,9 @@ describe("UnscheduledEvents", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Event event-1/i }))
 
-    expect(navigateMock).toHaveBeenCalledWith("/events/event-1", {
-      state: { returnTo: "/events?view=calendar&date=2026-04" },
-    })
+    expect(navigateMock).toHaveBeenCalledWith(
+      "/events/event-1?returnTo=%2Fevents%3Fview%3Dcalendar%26date%3D2026-04",
+    )
   })
 
   it("opens context menu on right-click and triggers edit/delete callbacks", () => {

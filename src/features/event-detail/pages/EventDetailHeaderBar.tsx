@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Link, useLocation } from "react-router"
+import { Link, useLocation, useSearchParams } from "react-router"
 import { ArrowLeft, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 
@@ -19,6 +19,10 @@ import {
   type GoogleCalendarEventInput,
 } from "~/lib/googleCalendar"
 import { openExternalUrl } from "~/lib/ipc/system"
+import {
+  DEFAULT_EVENT_DETAIL_RETURN_TO,
+  normalizeReturnTo,
+} from "../workspace/lib/eventDetailRouteState"
 import type { EventResource } from "../types"
 
 interface EventDetailHeaderBarProps {
@@ -27,15 +31,22 @@ interface EventDetailHeaderBarProps {
 
 const EventDetailHeaderBar: React.FC<EventDetailHeaderBarProps> = ({ eventResource }) => {
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const locationState =
     typeof location.state === "object" && location.state !== null
       ? (location.state as { returnTo?: unknown })
       : null
 
-  const returnTo =
+  const returnToFromQuery = normalizeReturnTo(searchParams.get("returnTo"))
+  const returnToFromState =
     typeof locationState?.returnTo === "string" && locationState.returnTo.length > 0
       ? locationState.returnTo
-      : "/events"
+      : null
+
+  const returnTo =
+    returnToFromQuery !== DEFAULT_EVENT_DETAIL_RETURN_TO
+      ? returnToFromQuery
+      : returnToFromState ?? DEFAULT_EVENT_DETAIL_RETURN_TO
 
   return (
     <div className="flex items-center justify-between gap-3 px-0 py-2 w-full">

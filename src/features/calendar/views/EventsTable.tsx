@@ -20,6 +20,7 @@ import { EVENT_TYPE_LABELS, EVENT_TYPE_COLORS, EVENT_STATUS_LABELS, EVENT_STATUS
 import { formatDate } from "~/lib/formatters"
 import { EntityKebabMenu } from "~/components/atoms/entity-kebab-menu"
 import type { Event } from "~/definitions/database"
+import { buildEventDetailEntryPath } from "~/features/event-detail/workspace/lib/eventDetailRouteState"
 
 interface EventsTableProps {
   /** Array of events to display */
@@ -123,8 +124,7 @@ const EventTableRow: React.FC<EventTableRowProps> = ({
       {/* Event Title - Clickable link to detail page */}
       <td className="px-4 py-3">
         <Link
-          to={`/events/${event.id}`}
-          state={{ returnTo }}
+          to={buildEventDetailEntryPath(event.id, returnTo)}
           className="font-medium text-primary hover:underline"
         >
           {event.title}
