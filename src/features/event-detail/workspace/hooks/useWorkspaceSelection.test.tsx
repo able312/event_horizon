@@ -1,4 +1,5 @@
-import { act, cleanup, render, screen } from "@testing-library/react"
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react"
+import { MemoryRouter, Route, Routes } from "react-router"
 import { afterEach, describe, expect, it } from "vitest"
 
 import { useWorkspaceSelection } from "./useWorkspaceSelection"
@@ -33,7 +34,7 @@ function SelectionHarness({ navModel }: SelectionHarnessProps) {
       <button type="button" onClick={() => selection.setSelectedNodeId("category:food")}>
         select-category
       </button>
-      <button type="button" onClick={() => selection.setSelectedNodeId("financial:overview")}>
+      <button type="button" onClick={() => selection.setSelectedNodeId("category:financial")}>
         select-financial
       </button>
       <button type="button" onClick={() => selection.setSelectedNodeId("scheduled:tournament")}>
@@ -60,10 +61,23 @@ function buildNavModel(overrides?: Partial<WorkspaceNavModel>): WorkspaceNavMode
       { id: "category:logistics", groupId: "categories", nodeType: "category", label: "Logistics", sourceRef: { kind: "category", categoryId: "logistics" } },
       { id: "category:notes", groupId: "categories", nodeType: "category", label: "Notes", sourceRef: { kind: "category", categoryId: "notes" } },
       { id: "category:tournament", groupId: "categories", nodeType: "category", label: "Tournament", sourceRef: { kind: "category", categoryId: "tournament" } },
-      { id: "financial:overview", groupId: "categories", nodeType: "financial", label: "Financial", sourceRef: { kind: "financial", view: "overview" } },
+      { id: "category:financial", groupId: "categories", nodeType: "financial", label: "Financial", sourceRef: { kind: "financial", view: "overview" } },
     ],
     ...overrides,
   }
+}
+
+function renderSelectionHarness(
+  navModel: WorkspaceNavModel,
+  initialEntry = "/events/evt_1",
+) {
+  return render(
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <Routes>
+        <Route path="/events/:id/:section?" element={<SelectionHarness navModel={navModel} />} />
+      </Routes>
+    </MemoryRouter>,
+  )
 }
 
 describe("useWorkspaceSelection", () => {
@@ -71,14 +85,16 @@ describe("useWorkspaceSelection", () => {
     cleanup()
   })
 
-  it("normalizes the initial selection to the first matching category", () => {
-    render(<SelectionHarness navModel={buildNavModel()} />)
+  it("normalizes the initial selection to the first matching category", async () => {
+    renderSelectionHarness(buildNavModel())
 
-    expect(screen.getByTestId("selected-node-id").textContent).toBe("category:food")
+    await waitFor(() => {
+      expect(screen.getByTestId("selected-node-id").textContent).toBe("category:food")
+    })
   })
 
-  it("normalizes scheduled and unscheduled timeblock selections to their categories", () => {
-    render(<SelectionHarness navModel={buildNavModel()} />)
+  it("normalizes scheduled and unscheduled timeblock selections to their categories", async () => {
+    renderSelectionHarness(buildNavModel(), "/events/evt_1/food")
 
     act(() => {
       screen.getByRole("button", { name: "select-scheduled-food" }).click()
@@ -91,8 +107,8 @@ describe("useWorkspaceSelection", () => {
     expect(screen.getByTestId("selected-node-id").textContent).toBe("category:notes")
   })
 
-  it("maps vendor and cart detail timeblocks to logistics", () => {
-    render(<SelectionHarness navModel={buildNavModel()} />)
+  it("maps vendor and cart detail timeblocks to logistics", async () => {
+    renderSelectionHarness(buildNavModel(), "/events/evt_1/food")
 
     act(() => {
       screen.getByRole("button", { name: "select-scheduled-vendor" }).click()
@@ -105,8 +121,8 @@ describe("useWorkspaceSelection", () => {
     expect(screen.getByTestId("selected-node-id").textContent).toBe("category:logistics")
   })
 
-  it("leaves system, category, and financial selections unchanged", () => {
-    render(<SelectionHarness navModel={buildNavModel()} />)
+  it("leaves system, category, and financial selections unchanged", async () => {
+    renderSelectionHarness(buildNavModel(), "/events/evt_1/food")
 
     act(() => {
       screen.getByRole("button", { name: "select-system" }).click()
@@ -121,19 +137,18 @@ describe("useWorkspaceSelection", () => {
     act(() => {
       screen.getByRole("button", { name: "select-financial" }).click()
     })
-    expect(screen.getByTestId("selected-node-id").textContent).toBe("financial:overview")
+    expect(screen.getByTestId("selected-node-id").textContent).toBe("category:financial")
   })
 
-  it("falls back to the original timeblock selection when the mapped category is missing", () => {
-    render(
-      <SelectionHarness
-        navModel={buildNavModel({
-          categories: [
-            { id: "category:food", groupId: "categories", nodeType: "category", label: "Food", sourceRef: { kind: "category", categoryId: "food" } },
-            { id: "financial:overview", groupId: "categories", nodeType: "financial", label: "Financial", sourceRef: { kind: "financial", view: "overview" } },
-          ],
-        })}
-      />,
+  it("falls back to the original timeblock selection when the mapped category is missing", async () => {
+    renderSelectionHarness(
+      buildNavModel({
+        categories: [
+          { id: "category:food", groupId: "categories", nodeType: "category", label: "Food", sourceRef: { kind: "category", categoryId: "food" } },
+          { id: "category:financial", groupId: "categories", nodeType: "financial", label: "Financial", sourceRef: { kind: "financial", view: "overview" } },
+        ],
+      }),
+      "/events/evt_1/food",
     )
 
     act(() => {

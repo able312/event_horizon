@@ -20,6 +20,7 @@ import { AlertTriangle } from "lucide-react"
 import { EVENT_TYPE_COLORS } from "~/definitions/events/ui"
 import type { Event } from "~/definitions/database"
 import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
+import { buildEventDetailEntryPath } from "~/features/event-detail/workspace/lib/eventDetailRouteState"
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/atoms/popover"
 import EventItemContextMenu from "../interactions/EventItemContextMenu"
 
@@ -114,7 +115,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
    * Handle clicking on an event - navigate to event detail
    */
   const handleEventClick = (eventId: string) => {
-    navigate(`/events/${eventId}`, { state: { returnTo } })
+    navigate(buildEventDetailEntryPath(eventId, returnTo))
   }
 
   const handleDayCellClick = (day: number) => {
