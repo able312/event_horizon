@@ -1,6 +1,6 @@
 import React, { type ReactNode } from "react"
 
-export const Root: React.FC<{ children: ReactNode }> = ({ children }) => {
+const Root: React.FC<{ children: ReactNode }> = ({ children }) => {
     return (
       <div className="h-screen w-full overflow-hidden bg-stone-100">
         <div className="flex h-full min-h-0">

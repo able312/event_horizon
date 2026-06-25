@@ -15,7 +15,8 @@ dist-ssr
 *.local
 
 # Agents and Internal Documentation
-
+.fallowrc.json
+.fallowrc.*
 
 # Editor directories and files
 .vscode/*

@@ -30,7 +30,7 @@ export function normalizeMonthParam(value: unknown): string | null {
   return toMonthParam(year, month)
 }
 
-export function parseMonthParam(value: unknown): MonthParts | null {
+function parseMonthParam(value: unknown): MonthParts | null {
   const normalized = normalizeMonthParam(value)
   if (!normalized) return null
 

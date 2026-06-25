@@ -55,7 +55,7 @@ export function resolveSelectedNodeId(
   return categoryNode?.id ?? nodeId
 }
 
-export function normalizeSection(value: unknown): WorkspaceSectionId | null {
+function normalizeSection(value: unknown): WorkspaceSectionId | null {
   if (typeof value !== "string") return null
   return SECTION_VALUES.has(value as WorkspaceSectionId) ? (value as WorkspaceSectionId) : null
 }
@@ -67,13 +67,13 @@ export function normalizeReturnTo(value: unknown): string {
   return trimmed
 }
 
-export function normalizeNode(value: unknown): string | null {
+function normalizeNode(value: unknown): string | null {
   if (typeof value !== "string") return null
   const trimmed = value.trim()
   return trimmed.length > 0 ? trimmed : null
 }
 
-export function nodeIdFromSection(section: WorkspaceSectionId): string {
+function nodeIdFromSection(section: WorkspaceSectionId): string {
   if (section === "system") return ""
   return `category:${section}`
 }
@@ -106,7 +106,7 @@ export function getDefaultSelectedNodeId(navModel: WorkspaceNavModel): string | 
   return resolveSelectedNodeId(allNodes[0].id, navModel, allNodes)
 }
 
-export function isSectionAvailable(section: WorkspaceSectionId, navModel: WorkspaceNavModel): boolean {
+function isSectionAvailable(section: WorkspaceSectionId, navModel: WorkspaceNavModel): boolean {
   if (section === "system") {
     return navModel.scheduled.some((node) => node.nodeType === "system")
   }
@@ -145,7 +145,7 @@ function isSectionValidForSelection(
   )
 }
 
-export function getFirstAvailableSection(navModel: WorkspaceNavModel): WorkspaceSectionId | null {
+function getFirstAvailableSection(navModel: WorkspaceNavModel): WorkspaceSectionId | null {
   const defaultNodeId = getDefaultSelectedNodeId(navModel)
   if (!defaultNodeId) return null
 

@@ -48,7 +48,7 @@ export function getEventScopeQueryKey(scope: EventScope) {
     : EVENTS_UNSCHEDULED_QUERY_KEY
 }
 
-export async function invalidateEventScope(
+async function invalidateEventScope(
   queryClient: QueryClient,
   scope: EventScope,
 ): Promise<void> {
