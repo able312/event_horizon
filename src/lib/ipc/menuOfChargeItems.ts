@@ -1,9 +1,5 @@
 import type { ChargeCategory, MenuOfChargeItem, UpdateMenuOfChargeItem } from "~/definitions/database"
 
-export function getAllMenuOfChargeItems(): Promise<MenuOfChargeItem[]> {
-  return window.electron.ipcRenderer.invoke("menuOfChargeItems:get-many") as Promise<MenuOfChargeItem[]>
-}
-
 export function getMenuOfChargeItemsByEventId(eventId: string): Promise<MenuOfChargeItem[]> {
   return window.electron.ipcRenderer.invoke("menuOfChargeItems:get-many-by-event-id", eventId) as Promise<MenuOfChargeItem[]>
 }

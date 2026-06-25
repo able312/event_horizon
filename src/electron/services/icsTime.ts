@@ -1,7 +1,5 @@
 import ICAL from "ical.js"
 
-export const VENUE_TIME_ZONE = "America/Toronto"
-
 function pad(value: number): string {
   return String(value).padStart(2, "0")
 }

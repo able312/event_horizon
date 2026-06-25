@@ -1,7 +1,4 @@
-import { timeblocks } from '~/electron/db/schema'
 import type { TimeblockType } from '~/definitions/timeblocks/timeblocks-types'
-
-export const ITER_TIMELINE_TYPES = timeblocks.sectionType.enumValues
 
 type TimeblockTypeMapping = {
   [K in Uppercase<TimeblockType>]: TimeblockType;

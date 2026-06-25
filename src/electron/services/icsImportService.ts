@@ -390,14 +390,6 @@ export async function prepareIcsImportReview(filePath: string): Promise<IcsImpor
   return payload
 }
 
-export function getIcsImportSession(sessionId: string): IcsImportReviewPayload | null {
-  return sessions.get(sessionId)?.payload ?? null
-}
-
-export function clearIcsImportSession(sessionId: string): void {
-  sessions.delete(sessionId)
-}
-
 export async function commitIcsImport(
   request: IcsImportCommitRequest,
 ): Promise<IcsImportCommitResult> {

@@ -3,7 +3,7 @@ import type { EventsSearchParams } from "~/hooks/useEventsSearchQuery"
 import type { EventsQueryState } from "~/hooks/useEventsQueryState"
 import { toLocalDateEndExclusiveIso, toLocalDateStartIso } from "~/lib/months"
 
-export const DEFAULT_SEARCH_PAGE_SIZE = 50
+const DEFAULT_SEARCH_PAGE_SIZE = 50
 
 export type CalendarSearchFilters = {
   dateFrom: string
@@ -53,8 +53,4 @@ export function buildEventsSearchParams(
     page: uiState.page,
     pageSize: uiState.pageSize,
   }
-}
-
-export function shouldEnableSearch(query: string): boolean {
-  return query.trim().length >= 2
 }

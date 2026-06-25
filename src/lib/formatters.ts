@@ -7,15 +7,6 @@ export const formatDate = (dateStr: string | null): string => {
   })
 }
 
-export const formatDateLong = (dateStr: string): string => {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  })
-}
-
 export const formatDateMonthDay = (dateStr: string | null): string => {
   if (!dateStr) return "-"
   const date = new Date(dateStr)
@@ -49,14 +40,6 @@ export const formatTime = (dateStr: string): string => {
   })
 }
 
-export const formatCurrency = (cents: number | null): string => {
-  if (!cents) return "-"
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(cents / 100)
-}
-
 export const getDateString = (start: string, end: string): string => {
     const startDate = formatDate(start)
     const endDate = formatDate(end)
@@ -65,32 +48,6 @@ export const getDateString = (start: string, end: string): string => {
 
     return `${startDate} | ${startTime} - ${startDate !== endDate ? endDate + " | " : ""} ${endTime}`
 }
-
-export const parseNote = (str: string) => {
-  let blockHeader = null;
-  let blockSubtitle = null;
-  let blockNotes = null;
-
-  const lines = str.split('\n');
-  const noteLines = [];
-
-  for (const line of lines) {
-    if (line.startsWith('## ')) {
-      blockHeader = line.slice(3).trim();
-    } else if (line.startsWith('# ')) {
-      blockSubtitle = line.slice(2).trim();
-    } else if (line.trim() !== '') {
-      noteLines.push(line.trim());
-    }
-  }
-
-  if (noteLines.length > 0) {
-    blockNotes = noteLines.join('\n');
-  }
-
-  return { blockHeader, blockSubtitle, blockNotes };
-}
-
 
 export function toIsoForDayUsingCurrentTime(day: Date): string {
   const now = new Date()

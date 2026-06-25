@@ -4,10 +4,6 @@ export function getAllPayments(): Promise<Payment[]> {
   return window.electron.ipcRenderer.invoke("payments:get-many") as Promise<Payment[]>
 }
 
-export function getPaymentsByEventId(eventId: string): Promise<Payment> {
-  return window.electron.ipcRenderer.invoke("payments:get-many-by-event-id", eventId) as Promise<Payment>
-}
-
 export function createPayment(eventId: string): Promise<Payment> {
   return window.electron.ipcRenderer.invoke("payments:post", eventId) as Promise<Payment>
 }
