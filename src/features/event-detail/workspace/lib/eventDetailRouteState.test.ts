@@ -5,7 +5,6 @@ import type { WorkspaceNavModel } from "../types"
 import {
   buildEventDetailNavigationPath,
   getCanonicalEventDetailPath,
-  getDefaultSelectedNodeId,
   parseEventDetailRoute,
   resolveSelectedNodeId,
   sectionFromNodeId,
@@ -210,7 +209,6 @@ describe("eventDetailRouteState", () => {
       ],
     })
 
-    expect(getDefaultSelectedNodeId(navModel)).toBe("category:food")
     expect(
       toEventDetailPath({
         eventId: "evt_1",

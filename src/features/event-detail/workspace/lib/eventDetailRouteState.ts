@@ -101,12 +101,6 @@ export function sectionFromNodeId(
   return null
 }
 
-export function getDefaultSelectedNodeId(navModel: WorkspaceNavModel): string | null {
-  const allNodes = flattenNav(navModel)
-  if (allNodes.length === 0) return null
-  return resolveSelectedNodeId(allNodes[0].id, navModel, allNodes)
-}
-
 function isSectionAvailable(section: WorkspaceSectionId, navModel: WorkspaceNavModel): boolean {
   if (section === "system") {
     return navModel.scheduled.some((node) => node.nodeType === "system")
@@ -147,7 +141,7 @@ function isSectionValidForSelection(
 }
 
 function getFirstAvailableSection(navModel: WorkspaceNavModel): WorkspaceSectionId | null {
-  const defaultNodeId = getDefaultSelectedNodeId(navModel)
+  const defaultNodeId = "category:overview"
   if (!defaultNodeId) return null
 
   const section = sectionFromNodeId(defaultNodeId, flattenNav(navModel))
@@ -186,7 +180,7 @@ export function toEventDetailPath({
     const fallbackSection = getFirstAvailableSection(navModel)
     if (!fallbackSection) return `/events/${eventId}`
 
-    const fallbackNodeId = nodeIdFromSection(fallbackSection) || getDefaultSelectedNodeId(navModel)
+    const fallbackNodeId = nodeIdFromSection(fallbackSection) || "category:overview"
     if (!fallbackNodeId) return `/events/${eventId}`
 
     return toEventDetailPath({
@@ -266,7 +260,7 @@ export function parseEventDetailRoute(
   }
 
   return {
-    selectedNodeId: getDefaultSelectedNodeId(navModel),
+    selectedNodeId: "category:overview",
     returnTo,
   }
 }
@@ -306,7 +300,7 @@ export function buildEventDetailNavigationPath(
   navModel: WorkspaceNavModel,
   returnTo?: string,
 ): string {
-  const defaultNodeId = getDefaultSelectedNodeId(navModel)
+  const defaultNodeId = "category:overview"
   if (!defaultNodeId) return buildEventDetailEntryPath(eventId, returnTo)
 
   return toEventDetailPath({
