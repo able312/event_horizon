@@ -1,7 +1,7 @@
 import React from "react"
 import { AlertCircle, CheckCircle2, Circle, Copy, Plus } from "lucide-react"
 
-import { Button } from "~/components/atoms/button"
+import { ClientDetailsCard } from "./components/ClientDetailsCard"
 
 // NOTE: This is a static UI/UX scaffold. All content is hard-coded demo data.
 
@@ -12,11 +12,17 @@ const OverviewWorkspaceSection: React.FC = () => {
       <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="min-w-0 space-y-4">
           <EventDescriptionCard />
-          <DeadlinesCard />
         </div>
 
         <div className="min-w-0 space-y-4">
-          <ClientCard />
+          <ClientDetailsCard 
+            client={{
+              name: "Jordan Macdonald",
+              email: "jordan.macdonald@example.com",
+              phone: "(902) 555-0142",
+            }}
+          />
+          <DeadlinesCard />
           <InternalNotesCard />
         </div>
       </div>
@@ -121,45 +127,6 @@ const DeadlineRow: React.FC<{ deadline: DemoDeadline }> = ({ deadline }) => {
     </li>
   )
 }
-
-/* ------------------------------------------------------------------ */
-/* Client card                                                         */
-/* ------------------------------------------------------------------ */
-
-const ClientCard: React.FC = () => (
-  <section className="rounded-xs border border-border bg-background p-3 shadow-sm">
-    <div className="border-b border-border pb-2">
-      <h3 className="text-sm font-semibold tracking-wide">Client</h3>
-      <p className="text-xs text-muted-foreground">Primary contact for this event.</p>
-    </div>
-
-    <div className="mt-2 space-y-3">
-      <ClientField label="Name" value="Jordan Macdonald" />
-      <ClientField label="Email" value="jordan.macdonald@example.com" />
-      <ClientField label="Phone" value="(902) 555-0142" />
-      <ClientField label="Preferred Contact" value="Email" />
-    </div>
-
-    <div className="mt-3 border-t border-border pt-3">
-      <Button type="button" variant="outline" size="sm">
-        <Copy />
-        Copy Email
-      </Button>
-    </div>
-  </section>
-)
-
-interface ClientFieldProps {
-  label: string
-  value: string
-}
-
-const ClientField: React.FC<ClientFieldProps> = ({ label, value }) => (
-  <div>
-    <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-    <p className="text-sm font-medium">{value}</p>
-  </div>
-)
 
 /* ------------------------------------------------------------------ */
 /* Internal Notes card                                                 */

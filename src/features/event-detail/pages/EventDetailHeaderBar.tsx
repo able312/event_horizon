@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Link, useLocation, useSearchParams } from "react-router"
-import { ArrowLeft, ChevronDown } from "lucide-react"
+import { ArrowLeft, CalendarPlus, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "~/components/atoms/button"
@@ -80,7 +80,7 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
   const hasCalendarId = Boolean(event.calendarId && event.calendarId.trim().length > 0)
   const canPushToCalendar = Boolean(event.startDateTime && event.endDateTime)
 
-  const actionLabel = hasCalendarId ? "Update" : "Create"
+  const actionLabel = hasCalendarId ? "Update" : <CalendarPlus />
 
   const openGoogleCalendar = async () => {
     if (!canPushToCalendar) return
