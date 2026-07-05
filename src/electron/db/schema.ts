@@ -57,9 +57,9 @@ export const events = sqliteTable("events", {
   isInternal: integer("is_internal").default(0), // 0 = false, 1 = true
   createdAt: text("created_at").notNull(), // Unix timestamp
   updatedAt: text("updated_at"),           // Unix timestamp
-}, (table) => ({
-  startDateTimeIdx: index("events_start_date_time_idx").on(table.startDateTime),
-}));
+}, (table) => [
+  index("events_start_date_time_idx").on(table.startDateTime),
+]);
 export const eventsRelations = relations(events, ({ many }) => ({
   timeblocks: many(timeblocks),
   payments: many(payments),
@@ -82,9 +82,9 @@ export const tournamentDetails = sqliteTable("tournament_details", {
   notes: text("notes"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at"),
-}, (table) => ({
-  eventIdUnique: uniqueIndex("tournament_details_event_id_unique").on(table.eventId),
-}))
+}, (table) => [
+  uniqueIndex("tournament_details_event_id_unique").on(table.eventId),
+])
 export const tournamentDetailsRelations = relations(tournamentDetails, ({ one }) => ({
   event: one(events, {
     fields: [tournamentDetails.eventId],
@@ -114,9 +114,9 @@ export const cartDetails = sqliteTable('cart_details', {
   
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at')
-}, (table) => ({
-  eventIdUnique: uniqueIndex("cart_details_event_id_unique").on(table.eventId),
-}));
+}, (table) => [
+  uniqueIndex("cart_details_event_id_unique").on(table.eventId),
+]);
 export const cartDetailsRelations = relations(cartDetails, ({ one }) => ({
   event: one(events, {
     fields: [cartDetails.eventId],
@@ -230,9 +230,9 @@ export const vendorItems = sqliteTable("vendor_items", {
   contactName: text("contact_name"),
   contactPhone: text("contact_phone"),
   contactEmail: text("contact_email"),
-}, (table) => ({
-  timeblockIdUnique: uniqueIndex("vendor_items_timeblock_id_unique").on(table.timeblockId),
-}));
+}, (table) => [
+  uniqueIndex("vendor_items_timeblock_id_unique").on(table.timeblockId),
+]);
 export const vendorItemsRelations = relations(vendorItems, ({ one }) => ({
   timeblock: one(timeblocks, {
     fields: [vendorItems.timeblockId],
