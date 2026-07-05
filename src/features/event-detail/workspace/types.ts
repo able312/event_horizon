@@ -2,6 +2,7 @@ import type { Event, UpdateEvent } from "~/definitions/database"
 import type { TimeblockType, TimelineTimeblock, TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 
 export type WorkspaceCategoryId =
+  | "overview"
   | "food"
   | "beverage"
   | "logistics"

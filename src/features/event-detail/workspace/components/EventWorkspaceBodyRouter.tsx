@@ -1,4 +1,5 @@
 
+import OverviewWorkspaceSection from "../../sections/event-overview/OverviewWorkspaceSection"
 import TournamentDetailsSection from "~/components/event-detail/detail-sections/sections/TournamentDetailsSection"
 import GolfCartsSection from "~/components/event-detail/detail-sections/sections/GolfCartsSection"
 import FinancialWorkspaceSection from "./FinancialWorkspaceSection"
@@ -26,6 +27,8 @@ function renderCategoryWorkspace(
   onSelectNode: (nodeId: string) => void,
 ) {
   switch (categoryId) {
+    case "overview":
+      return <div className={`${scrollContainerClassName} p-4`}><OverviewWorkspaceSection /></div>
     case "food":
       return <div className={`${scrollContainerClassName} p-4`}><FoodWorkspaceSection /></div>
     case "beverage":

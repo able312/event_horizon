@@ -6,6 +6,7 @@ export type WorkspaceSectionId = WorkspaceCategoryId | "system"
 export const DEFAULT_EVENT_DETAIL_RETURN_TO = "/events"
 
 const CATEGORY_SECTIONS = new Set<WorkspaceCategoryId>([
+  "overview",
   "food",
   "beverage",
   "logistics",

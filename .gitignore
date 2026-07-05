@@ -15,6 +15,8 @@ dist-ssr
 *.local
 
 # Agents and Internal Documentation
+.cursor/*
+.fallow/*
 .fallowrc.json
 .fallowrc.*
 

@@ -61,6 +61,7 @@ function toSectionSubLabel(sectionType: TimeblockWithItems["sectionType"]): stri
 
 function buildCategoryNodes(event: Event | undefined): WorkspaceNavNode[] {
   const categories: Array<{ id: WorkspaceCategoryId; label: string; nodeType: WorkspaceNavNode["nodeType"] }> = [
+    { id: "overview", label: "Overview", nodeType: "category" },
     { id: "food", label: "Food", nodeType: "category" },
     { id: "beverage", label: "Beverage", nodeType: "category" },
     { id: "logistics", label: "Logistics", nodeType: "category" },
