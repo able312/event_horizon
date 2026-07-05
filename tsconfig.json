@@ -3,7 +3,8 @@
   "exclude": ["src/electron", "**/*.test.ts"],
   "references": [
     { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
+    { "path": "./tsconfig.node.json" },
+    { "path": "./tsconfig.test.json" }
   ],
   "compilerOptions": {
     "paths": {
