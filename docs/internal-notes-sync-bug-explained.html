@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Why Internal Notes Save/Sync Breaks</title>
+  <style>
+    :root {
+      --bg: #f7f5f1;
+      --ink: #1c1917;
+      --muted: #57534e;
+      --card: #ffffff;
+      --line: #d6d3d1;
+      --accent: #0f766e;
+      --danger: #b91c1c;
+      --danger-bg: #fef2f2;
+      --warn: #a16207;
+      --warn-bg: #fffbeb;
+      --ok: #166534;
+      --ok-bg: #f0fdf4;
+      --code-bg: #1c1917;
+      --code-ink: #e7e5e4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at top left, #efe8dc 0%, transparent 50%),
+        radial-gradient(ellipse at bottom right, #e2ebe8 0%, transparent 45%),
+        var(--bg);
+      line-height: 1.55;
+    }
+    .wrap {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 4rem;
+    }
+    h1 {
+      font-size: clamp(1.75rem, 4vw, 2.35rem);
+      line-height: 1.2;
+      margin: 0 0 0.5rem;
+      letter-spacing: -0.02em;
+    }
+    .lede {
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin: 0 0 2rem;
+      max-width: 40rem;
+    }
+    h2 {
+      font-size: 1.25rem;
+      margin: 2.25rem 0 0.75rem;
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      font-size: 1.05rem;
+      margin: 1.5rem 0 0.5rem;
+    }
+    p, li { font-size: 1rem; }
+    .callout {
+      border: 1px solid var(--line);
+      background: var(--card);
+      border-radius: 2px;
+      padding: 1rem 1.1rem;
+      margin: 1rem 0;
+    }
+    .callout.danger {
+      border-color: #fecaca;
+      background: var(--danger-bg);
+    }
+    .callout.warn {
+      border-color: #fde68a;
+      background: var(--warn-bg);
+    }
+    .callout.ok {
+      border-color: #bbf7d0;
+      background: var(--ok-bg);
+    }
+    .callout strong.label {
+      display: block;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.35rem;
+    }
+    .callout.danger strong.label { color: var(--danger); }
+    .callout.warn strong.label { color: var(--warn); }
+    .callout.ok strong.label { color: var(--ok); }
+    code, .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.88em;
+    }
+    pre {
+      background: var(--code-bg);
+      color: var(--code-ink);
+      padding: 1rem 1.1rem;
+      overflow-x: auto;
+      border-radius: 2px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      margin: 0.75rem 0 1.25rem;
+    }
+    .hl { color: #fca5a5; }
+    .dim { color: #a8a29e; }
+    .good { color: #86efac; }
+    .flow {
+      display: grid;
+      gap: 0.65rem;
+      margin: 1rem 0 1.5rem;
+    }
+    .step {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.85rem;
+      align-items: start;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      padding: 0.85rem 1rem;
+    }
+    .step .n {
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 0.8rem;
+      width: 1.6rem;
+      height: 1.6rem;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: #e7e5e4;
+      color: var(--ink);
+      margin-top: 0.1rem;
+    }
+    .step.bad .n { background: #fecaca; color: var(--danger); }
+    .step.ok .n { background: #bbf7d0; color: var(--ok); }
+    .step .title {
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin: 0 0 0.2rem;
+    }
+    .step p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+    .compare {
+      display: grid;
+      gap: 0.75rem;
+      margin: 1rem 0;
+    }
+    @media (min-width: 700px) {
+      .compare { grid-template-columns: 1fr 1fr; }
+    }
+    .compare .box {
+      border: 1px solid var(--line);
+      background: var(--card);
+      padding: 1rem;
+      border-radius: 2px;
+    }
+    .compare .box h3 {
+      margin-top: 0;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .compare .box.bad { border-color: #fecaca; background: var(--danger-bg); }
+    .compare .box.good { border-color: #bbf7d0; background: var(--ok-bg); }
+    ul.tight { padding-left: 1.2rem; margin: 0.4rem 0; }
+    ul.tight li { margin: 0.25rem 0; }
+    .path {
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 2rem;
+    }
+    .diagram {
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      border: 1px solid var(--line);
+      background: var(--card);
+      padding: 1.1rem;
+      border-radius: 2px;
+      margin: 1rem 0 1.5rem;
+      overflow-x: auto;
+    }
+    .diagram svg { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+    footer {
+      margin-top: 2.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="path">docs/internal-notes-sync-bug-explained.html · Event Horizon</p>
+    <h1>Why the Internal Notes save/sync bug happens</h1>
+    <p class="lede">
+      A junior-friendly walkthrough of the Overview page notes field: why the UI
+      can lie about which event’s notes you’re editing, how that becomes silent
+      data loss in SQLite — and how to structure controlled fields and forms
+      (saved state vs draft state) without the “four sources of truth” wiring mess.
+    </p>
+
+    <div class="callout danger">
+      <strong class="label">The risk in one sentence</strong>
+      The textarea is an <em>uncontrolled</em> input. React seeds it once on mount,
+      then stops updating it — but blur still writes whatever is on screen into
+      whatever event is currently loaded. That can overwrite or wipe notes.
+    </div>
+
+    <h2>1. Where the code lives</h2>
+    <p>
+      Parent loads the event and wires save. Child owns the textarea.
+    </p>
+    <pre><span class="dim">// OverviewWorkspaceSection.tsx</span>
+&lt;InternalNotesCard
+  defaultValue={eventDetails?.internalNotes ?? ""}
+  onUpdate={handleUpdateInternalNotes}  <span class="dim">// → updateEvent({ internalNotes })</span>
+/&gt;
+
+<span class="dim">// InternalNotesCard.tsx</span>
+&lt;textarea
+  <span class="hl">defaultValue={defaultValue}</span>
+  onBlur={(e) =&gt; handleUpdate(e.target.value)}
+/&gt;</pre>
+
+    <h2>2. Core React idea: controlled vs uncontrolled</h2>
+    <div class="compare">
+      <div class="box bad">
+        <h3>Uncontrolled (what we have)</h3>
+        <p>
+          Use <code>defaultValue</code>. The browser owns the text after first paint.
+          Changing the React prop later does <strong>not</strong> change what the
+          user sees in the box.
+        </p>
+      </div>
+      <div class="box good">
+        <h3>Controlled (safer for sync)</h3>
+        <p>
+          Use <code>value={...}</code> plus <code>onChange</code> (or remount with
+          a <code>key</code>). React always drives what appears, so when the event
+          changes, the text changes too.
+        </p>
+      </div>
+    </div>
+
+    <div class="diagram" aria-label="defaultValue only applies on mount">
+      <svg viewBox="0 0 720 220" role="img">
+        <title>defaultValue applies only on first mount</title>
+        <rect x="20" y="30" width="200" height="70" fill="#fef2f2" stroke="#b91c1c" stroke-width="2"/>
+        <text x="120" y="60" text-anchor="middle" font-size="14" font-weight="700" fill="#1c1917">Mount #1</text>
+        <text x="120" y="82" text-anchor="middle" font-size="12" fill="#57534e">defaultValue → "Notes A"</text>
+
+        <path d="M230 65 H300" stroke="#78716c" stroke-width="2" marker-end="url(#arrow)"/>
+        <text x="265" y="52" text-anchor="middle" font-size="11" fill="#78716c">prop updates</text>
+
+        <rect x="310" y="30" width="200" height="70" fill="#fffbeb" stroke="#a16207" stroke-width="2"/>
+        <text x="410" y="60" text-anchor="middle" font-size="14" font-weight="700" fill="#1c1917">Same component</text>
+        <text x="410" y="82" text-anchor="middle" font-size="12" fill="#57534e">defaultValue="Notes B"</text>
+
+        <path d="M520 65 H590" stroke="#78716c" stroke-width="2" marker-end="url(#arrow)"/>
+
+        <rect x="600" y="20" width="100" height="90" fill="#ffffff" stroke="#d6d3d1" stroke-width="2"/>
+        <text x="650" y="50" text-anchor="middle" font-size="11" fill="#57534e">DOM still</text>
+        <text x="650" y="72" text-anchor="middle" font-size="13" font-weight="700" fill="#b91c1c">"Notes A"</text>
+        <text x="650" y="94" text-anchor="middle" font-size="11" fill="#57534e">ignored B</text>
+
+        <text x="360" y="160" text-anchor="middle" font-size="13" fill="#57534e">
+          React Router keeps Overview mounted when switching events → no remount → textarea stuck.
+        </text>
+        <text x="360" y="185" text-anchor="middle" font-size="12" fill="#78716c">
+          There is no key={`{eventId}`} on InternalNotesCard to force a fresh mount.
+        </text>
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#78716c"/>
+          </marker>
+        </defs>
+      </svg>
+    </div>
+
+    <h2>3. Bug A — wrong event overwrite (high risk)</h2>
+    <div class="flow">
+      <div class="step">
+        <div class="n">1</div>
+        <div>
+          <p class="title">Open Event A</p>
+          <p>Query loads. Card mounts with <code>defaultValue = "Caterer prefers email"</code>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="n">2</div>
+        <div>
+          <p class="title">Navigate to Event B</p>
+          <p>
+            URL / React Query switch to B. Parent re-renders with
+            <code>defaultValue = "VIP seating"</code>. Client details card updates
+            (it reads props each render). The notes textarea does <strong>not</strong>.
+          </p>
+        </div>
+      </div>
+      <div class="step bad">
+        <div class="n">3</div>
+        <div>
+          <p class="title">Screen lies</p>
+          <p>
+            You still see Event A’s notes while the rest of the Overview shows Event B.
+            Easy to miss.
+          </p>
+        </div>
+      </div>
+      <div class="step bad">
+        <div class="n">4</div>
+        <div>
+          <p class="title">Blur saves into Event B</p>
+          <p>
+            <code>onBlur</code> reads the DOM value (<code>"Caterer prefers email"</code>)
+            and calls <code>updateEvent</code> for the <em>current</em> route id — Event B.
+            SQLite now has the wrong notes on B. Silent data corruption.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout danger">
+      <strong class="label">Why this is data loss, not just a UI glitch</strong>
+      <code>useEvent().updateEvent</code> writes through IPC to better-sqlite3.
+      There is no “are these notes for this event id?” check on blur. Whatever is
+      in the box becomes the stored <code>internalNotes</code> for the loaded event.
+    </div>
+
+    <h2>4. Bug B — wipe while loading (high risk)</h2>
+    <div class="flow">
+      <div class="step">
+        <div class="n">1</div>
+        <div>
+          <p class="title">Open an event that already has notes</p>
+          <p><code>useEvent()</code> starts fetching. For a moment <code>eventDetails</code> is undefined.</p>
+        </div>
+      </div>
+      <div class="step bad">
+        <div class="n">2</div>
+        <div>
+          <p class="title">Card mounts empty</p>
+          <p>
+            Parent passes <code>eventDetails?.internalNotes ?? ""</code> →
+            <code>defaultValue=""</code>. Textarea mounts blank.
+          </p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="n">3</div>
+        <div>
+          <p class="title">Fetch completes</p>
+          <p>
+            Prop becomes the real notes string — but uncontrolled textarea
+            <strong>keeps showing empty</strong> unless something remounts it.
+          </p>
+        </div>
+      </div>
+      <div class="step bad">
+        <div class="n">4</div>
+        <div>
+          <p class="title">Accidental blur</p>
+          <p>
+            Click into the empty box, click away → blur saves <code>""</code> →
+            existing notes wiped from the DB.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <h2>5. Why Client Details looks fine but Notes don’t</h2>
+    <p>
+      <code>ClientDetailsCard</code> renders <code>{client.name}</code> etc. from props
+      on every render — pure display. Notes use a form control that caches its own
+      state in the DOM. Same parent, two different React patterns, inconsistent sync.
+    </p>
+
+    <h2>6. “But controlled state adds another source of truth” — does it?</h2>
+    <p>
+      The objection: <em>DB → React Query cache → React state → UI</em> feels like four
+      places holding the same value, all needing to stay in sync. So the React state
+      layer was removed. Here’s the catch:
+    </p>
+
+    <div class="callout warn">
+      <strong class="label">You never removed the fourth copy</strong>
+      An uncontrolled <code>&lt;textarea defaultValue&gt;</code> still stores the text —
+      inside the <strong>DOM</strong>. You didn’t eliminate the state; you moved it
+      somewhere React can’t see or update. That invisible copy is exactly what causes
+      Bugs A and B. The choice was never “3 layers vs 4 layers.” It’s “who owns the
+      4th layer: React, or the browser behind React’s back?”
+    </div>
+
+    <p>
+      The way out is to stop thinking in layers and think in <strong>roles</strong>.
+      There are only ever two meaningful states for a field:
+    </p>
+
+    <div class="compare">
+      <div class="box good">
+        <h3>Saved state</h3>
+        <p>
+          What’s committed. Owned by <strong>React Query</strong> (the DB is just its
+          persistence; the query cache is its in-app representative). You already
+          treat this as the source of truth — keep that.
+        </p>
+      </div>
+      <div class="box good">
+        <h3>Draft state</h3>
+        <p>
+          What the user has typed but <em>not saved yet</em>. This state is
+          <strong>unavoidable</strong> — it exists the moment someone types. It can
+          live in React state (visible, controllable) or in the DOM (invisible,
+          buggy). It is not a competing copy of saved state; it’s a different thing.
+        </p>
+      </div>
+    </div>
+
+    <p>
+      DB and UI drop out of the mental model: the DB is just where saved state
+      persists, and the UI is just a projection of whichever state currently owns the
+      field. Two owners, not four.
+    </p>
+
+    <h2>7. Who owns what, when</h2>
+
+    <div class="diagram" aria-label="Ownership handoff between query and draft">
+      <svg viewBox="0 0 720 250" role="img">
+        <title>Ownership handoff: query owns, draft owns while editing, query owns again after save</title>
+        <rect x="20" y="30" width="190" height="80" fill="#f0fdf4" stroke="#166534" stroke-width="2"/>
+        <text x="115" y="58" text-anchor="middle" font-size="13" font-weight="700" fill="#1c1917">Not editing</text>
+        <text x="115" y="78" text-anchor="middle" font-size="11" fill="#57534e">Query owns.</text>
+        <text x="115" y="94" text-anchor="middle" font-size="11" fill="#57534e">UI renders query data.</text>
+
+        <path d="M220 70 H280" stroke="#78716c" stroke-width="2" marker-end="url(#arrow2)"/>
+        <text x="250" y="58" text-anchor="middle" font-size="10" fill="#78716c">focus / type</text>
+
+        <rect x="290" y="30" width="190" height="80" fill="#fffbeb" stroke="#a16207" stroke-width="2"/>
+        <text x="385" y="58" text-anchor="middle" font-size="13" font-weight="700" fill="#1c1917">Editing</text>
+        <text x="385" y="78" text-anchor="middle" font-size="11" fill="#57534e">Draft owns this field.</text>
+        <text x="385" y="94" text-anchor="middle" font-size="11" fill="#57534e">Query is ignored for it.</text>
+
+        <path d="M490 70 H550" stroke="#78716c" stroke-width="2" marker-end="url(#arrow2)"/>
+        <text x="520" y="58" text-anchor="middle" font-size="10" fill="#78716c">save / blur</text>
+
+        <rect x="560" y="30" width="140" height="80" fill="#f0fdf4" stroke="#166534" stroke-width="2"/>
+        <text x="630" y="58" text-anchor="middle" font-size="13" font-weight="700" fill="#1c1917">Saved</text>
+        <text x="630" y="78" text-anchor="middle" font-size="11" fill="#57534e">Mutation → refetch.</text>
+        <text x="630" y="94" text-anchor="middle" font-size="11" fill="#57534e">Query owns again.</text>
+
+        <text x="360" y="150" text-anchor="middle" font-size="13" font-weight="600" fill="#1c1917">
+          The one sync rule that replaces all the messy wiring:
+        </text>
+        <text x="360" y="175" text-anchor="middle" font-size="12" fill="#57534e">
+          Seed the draft from the query exactly once per entity — when eventId changes or data first loads.
+        </text>
+        <text x="360" y="195" text-anchor="middle" font-size="12" fill="#b91c1c">
+          Never mirror query → draft continuously, and never while the user is typing.
+        </text>
+        <defs>
+          <marker id="arrow2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#78716c"/>
+          </marker>
+        </defs>
+      </svg>
+    </div>
+
+    <p>
+      The “keep four things in sync” pain came from imagining the draft must always
+      mirror the cache. It must not. The draft is seeded once, diverges freely while
+      the user types, and is thrown away after save (the refetch brings back the
+      authoritative value). There is no ongoing two-way sync to manage — just two
+      one-way handoffs: <span class="mono">seed</span> on entry,
+      <span class="mono">commit</span> on save.
+    </p>
+
+    <h2>8. Recipe A — single onBlur field (Internal Notes)</h2>
+
+    <p>Three ingredients: a loading gate, an entity-keyed seed, and a no-op guard.</p>
+
+    <pre><span class="dim">// OverviewWorkspaceSection.tsx — gate on load, key by entity</span>
+const { data: eventDetails, isLoading, updateEvent } = useEvent()
+
+if (isLoading || !eventDetails) return &lt;OverviewSkeleton /&gt;   <span class="good">// kills Bug B</span>
+
+&lt;InternalNotesCard
+  <span class="good">key={eventDetails.id}</span>                       <span class="dim">// new event = fresh card (kills Bug A)</span>
+  savedValue={eventDetails.internalNotes ?? ""}
+  onSave={(value) =&gt; updateEvent({ internalNotes: value })}
+/&gt;</pre>
+
+    <pre><span class="dim">// InternalNotesCard.tsx — controlled draft, seeded once</span>
+const InternalNotesCard = ({ savedValue, onSave }) =&gt; {
+  <span class="good">const [draft, setDraft] = useState(savedValue)</span>  <span class="dim">// seed happens at mount — key guarantees</span>
+                                                 <span class="dim">// a fresh mount per event, so no useEffect needed</span>
+  return (
+    &lt;textarea
+      <span class="good">value={draft}</span>
+      onChange={(e) =&gt; setDraft(e.target.value)}
+      onBlur={() =&gt; {
+        <span class="good">if (draft === savedValue) return</span>        <span class="dim">// no-op guard: focus+blur writes nothing</span>
+        onSave(draft)
+      }}
+    /&gt;
+  )
+}</pre>
+
+    <ul class="tight">
+      <li>
+        <strong>Loading gate</strong> — the card can’t mount with an empty seed,
+        so blur can never persist a false <code>""</code>.
+      </li>
+      <li>
+        <strong><code>key={eventId}</code></strong> — this is the trick that removes
+        the sync wiring. Changing events unmounts the old card and mounts a fresh one,
+        so <code>useState(savedValue)</code> re-seeds naturally. No
+        <code>useEffect</code>, no “when do I re-sync?” question.
+      </li>
+      <li>
+        <strong>No-op guard</strong> — clicking in and out writes nothing; only real
+        edits hit the DB.
+      </li>
+      <li>
+        After <code>onSave</code>, your existing <code>useEvent</code> flow
+        (optimistic update → invalidate → refetch) takes over. The draft doesn’t need
+        to hear back — the next mount re-seeds from the refetched value.
+      </li>
+    </ul>
+
+    <div class="callout ok">
+      <strong class="label">Why this isn’t the messy version</strong>
+      The draft never listens to the query after mount. There is no effect syncing
+      cache → state. Seeding is handled entirely by mount/unmount via
+      <code>key</code>, and commit is one function call. Two handoffs, zero ongoing sync.
+    </div>
+
+    <h2>9. Recipe B — a whole form (you already built this)</h2>
+
+    <p>
+      <code>EditEventSidebarForm.tsx</code> already follows the draft pattern:
+      one <code>formValues</code> draft seeded from the event, controlled fields,
+      an explicit <strong>Save</strong> that commits everything at once, and
+      React Query refetching afterwards.
+    </p>
+
+    <pre><span class="dim">// EditEventSidebarForm.tsx — the shape you already have</span>
+const [formValues, setFormValues] = useState(createFormValuesFromEvent(event))
+
+useEffect(() =&gt; {
+  setFormValues(createFormValuesFromEvent(event))
+}, <span class="hl">[event]</span>)   <span class="dim">// ← one refinement needed here, see below</span>
+
+&lt;EventFormFields values={formValues} onChange={...} /&gt;
+&lt;button onClick={handleSave}&gt;Save&lt;/button&gt;   <span class="dim">// draft → onSave(updates) → refetch</span></pre>
+
+    <div class="callout warn">
+      <strong class="label">The one refinement: re-seed on identity, not on data</strong>
+      Depending on <code>[event]</code> means any refetch that returns a new object
+      (same data, new reference) resets the form and <strong>discards in-progress
+      typing</strong>. Depend on <code>[event?.id]</code> instead — re-seed only when
+      you’re editing a <em>different</em> event. Or skip the effect entirely and put
+      <code>key={event.id}</code> on the form where it’s rendered, same as Recipe A.
+    </div>
+
+    <h3>Form vs single field — same model, different commit trigger</h3>
+    <div class="compare">
+      <div class="box">
+        <h3>Whole form</h3>
+        <ul class="tight">
+          <li>One draft object for all fields</li>
+          <li>Commit on explicit <strong>Save</strong> click</li>
+          <li>Cancel = throw the draft away, nothing written</li>
+          <li>Good when fields relate to each other (dates, guest counts)</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>Single onBlur field</h3>
+        <ul class="tight">
+          <li>One draft string</li>
+          <li>Commit on <strong>blur</strong> (with a no-op guard)</li>
+          <li>No cancel button — blur without changes is the cancel</li>
+          <li>Good for independent long-text fields like notes</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>10. The checklist</h2>
+    <ul class="tight">
+      <li><strong>Gate on load</strong> — never render an editable field before its saved value exists.</li>
+      <li><strong>Key by entity</strong> — <code>key={entityId}</code> on the editable card/form so switching entities re-seeds by remount. This replaces sync effects.</li>
+      <li><strong>Controlled inputs</strong> — <code>value</code> + <code>onChange</code> into draft state. Never <code>defaultValue</code> for DB-backed fields.</li>
+      <li><strong>Seed once, diverge freely</strong> — no continuous cache → draft mirroring, ever.</li>
+      <li><strong>Guard the commit</strong> — skip the write if draft equals saved value.</li>
+      <li><strong>Let React Query close the loop</strong> — commit fires the mutation; invalidate/refetch restores query ownership. The draft never needs to “hear back.”</li>
+    </ul>
+
+    <div class="callout ok">
+      <strong class="label">Mental model to keep</strong>
+      Saved state belongs to React Query. Draft state belongs to the component that’s
+      editing, seeded once per entity via <code>key</code>. The DB persists; the UI
+      projects. Two owners, two one-way handoffs — not four synced copies.
+    </div>
+
+    <h2>11. Related files</h2>
+    <ul class="tight">
+      <li><code>src/features/event-detail/sections/event-overview/components/InternalNotesCard.tsx</code> — the buggy uncontrolled field</li>
+      <li><code>src/features/event-detail/sections/event-overview/OverviewWorkspaceSection.tsx</code> — where the loading gate and <code>key</code> belong</li>
+      <li><code>src/hooks/useEvent.ts</code> — loads by route <code>id</code>, persists via <code>updateEvent</code>, refetches on settle</li>
+      <li><code>src/features/calendar/forms/EditEventSidebarForm.tsx</code> — existing whole-form draft pattern (needs the <code>[event?.id]</code> refinement)</li>
+    </ul>
+
+    <footer>
+      Written for the feature/overview-page merge checkpoint. Explains the Bugbot
+      findings on InternalNotesCard and the draft-state pattern for fixing them;
+      does not implement the fix.
+    </footer>
+  </div>
+</body>
+</html>

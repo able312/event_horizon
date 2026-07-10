@@ -1,7 +1,7 @@
 import { ipcMain, shell } from "electron"
 import { logAndThrow } from "./ipcErrors.js"
 
-const ALLOWED_EXTERNAL_ORIGINS = new Set(["https://calendar.google.com"])
+const ALLOWED_EXTERNAL_ORIGINS = new Set(["https://calendar.google.com", "https://mail.google.com"])
 
 function assertAllowedExternalUrl(rawUrl: string): URL {
   let parsed: URL

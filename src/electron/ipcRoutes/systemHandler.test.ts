@@ -56,6 +56,22 @@ describe("registerSystemIpcHandlers", () => {
     expect(openExternalMock).not.toHaveBeenCalled()
   })
 
+  it("opens allowed Gmail compose URL", async () => {
+    const { registerSystemIpcHandlers } = await import("./systemHandler.js")
+    registerSystemIpcHandlers()
+
+    const call = handleMock.mock.calls.find((entry) => entry[0] === "system:open-external")
+    const handler = call?.[1] as ((...args: unknown[]) => Promise<void>) | undefined
+
+    await handler?.(
+      {},
+      "https://mail.google.com/mail/u/0/?view=cm&fs=1&to=client%40example.com&su=Attn%2C+Event",
+    )
+    expect(openExternalMock).toHaveBeenCalledWith(
+      "https://mail.google.com/mail/u/0/?view=cm&fs=1&to=client%40example.com&su=Attn%2C+Event",
+    )
+  })
+
   it("rejects disallowed origins", async () => {
     const { registerSystemIpcHandlers } = await import("./systemHandler.js")
     registerSystemIpcHandlers()

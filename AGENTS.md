@@ -29,6 +29,9 @@ Key docs for AI Agents and their purpose:
 - DB: better-sqlite3
 - Tests: not implemented
 
+## Test Policy
+Tests are required for migrations, repositories, IPC handlers, and pure logic. Do not write render-only tests for React components unless the component contains non-trivial logic.
+
 ## Commands
 
 npm run dev # compile electron to dist-electron and start both electron and dev server
