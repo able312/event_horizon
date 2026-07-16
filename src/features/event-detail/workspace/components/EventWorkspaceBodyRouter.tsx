@@ -28,7 +28,11 @@ function renderCategoryWorkspace(
 ) {
   switch (categoryId) {
     case "overview":
-      return <div className={`${scrollContainerClassName} p-4`}><OverviewWorkspaceSection /></div>
+      return (
+        <div className={`${scrollContainerClassName} p-4`}>
+          <OverviewWorkspaceSection eventResource={eventResource} />
+        </div>
+      )
     case "food":
       return <div className={`${scrollContainerClassName} p-4`}><FoodWorkspaceSection /></div>
     case "beverage":

@@ -2,8 +2,11 @@ import { cleanup, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import EventWorkspaceBodyRouter from "./EventWorkspaceBodyRouter"
+import type { Event } from "~/definitions/database"
 import { SECTION_TYPE } from "~/definitions/timeblocks/timeblock-constants"
+import type { EventResource } from "~/features/event-detail/types"
 
+const overviewWorkspaceSectionMock = vi.fn((_props: unknown) => <div data-testid="overview-workspace-section" />)
 const foodWorkspaceSectionMock = vi.fn(() => <div data-testid="food-workspace-section" />)
 const beverageWorkspaceSectionMock = vi.fn(() => <div data-testid="beverage-workspace-section" />)
 const vendorsSectionMock = vi.fn(() => <div data-testid="vendors-section" />)
@@ -11,7 +14,14 @@ const setupInstructionsSectionMock = vi.fn(() => <div data-testid="setup-section
 const notesSectionMock = vi.fn(() => <div data-testid="notes-section" />)
 const tournamentDetailsSectionMock = vi.fn(() => <div data-testid="tournament-details-section" />)
 const golfCartsSectionMock = vi.fn(() => <div data-testid="golf-carts-section" />)
-const financialWorkspaceSectionMock = vi.fn(() => <div data-testid="financial-workspace-section" />)
+const financialWorkspaceSectionMock = vi.fn((_props: unknown) => <div data-testid="financial-workspace-section" />)
+
+vi.mock("../../sections/event-overview/OverviewWorkspaceSection", () => ({
+  default: (props: unknown) => {
+    overviewWorkspaceSectionMock(props)
+    return <div data-testid="overview-workspace-section" />
+  },
+}))
 
 vi.mock("~/features/event-detail/sections/food-beverage-workspaces/FoodWorkspaceSection", () => ({
   default: () => foodWorkspaceSectionMock(),
@@ -48,12 +58,34 @@ vi.mock("./FinancialWorkspaceSection", () => ({
   },
 }))
 
-const baseEventResource = {
-  event: { id: "event-1", title: "Alpha" },
-  isLoading: false,
-  updateEvent: vi.fn(async () => ({ id: "event-1" } as never)),
-  deleteEvent: vi.fn(async () => true),
+const baseEvent: Event = {
+  id: "event-1",
+  title: "Alpha",
+  type: "function",
+  status: "planning",
+  startDateTime: null,
+  endDateTime: null,
+  clientName: null,
+  clientEmail: null,
+  clientPhone: null,
+  minGuests: null,
+  maxGuests: null,
+  guestCountFinal: null,
+  driveFolderId: null,
+  calendarId: null,
+  clientNotes: null,
+  internalNotes: null,
+  isInternal: 0,
+  createdAt: "created",
+  updatedAt: null,
 }
+
+const baseEventResource = {
+  event: baseEvent,
+  isLoading: false,
+  updateEvent: vi.fn(async (updates) => ({ ...baseEvent, ...updates })),
+  deleteEvent: vi.fn(async () => true),
+} satisfies EventResource
 
 function renderRouter(selectedNode: Parameters<typeof EventWorkspaceBodyRouter>[0]["selectedNode"]) {
   return render(
@@ -61,19 +93,6 @@ function renderRouter(selectedNode: Parameters<typeof EventWorkspaceBodyRouter>[
       eventResource={baseEventResource}
       selectedNode={selectedNode}
       onSelectNode={vi.fn()}
-      timelineRows={[
-        {
-          id: "tb-1",
-          time: "09:00",
-          title: "Doors",
-          assignedTo: "Ops",
-          sectionType: "note",
-          eventId: "event-1",
-          createdAt: "",
-          updatedAt: "",
-        },
-      ]}
-      sectionRows={[]}
     />,
   )
 }
@@ -98,6 +117,7 @@ function expectScrollContainerForText(text: string) {
 describe("EventWorkspaceBodyRouter", () => {
   afterEach(() => {
     cleanup()
+    vi.clearAllMocks()
   })
 
   it("renders an empty-state scroll container when no node is selected", () => {
@@ -109,6 +129,7 @@ describe("EventWorkspaceBodyRouter", () => {
   it("renders category nodes inside the shared scroll container contract", () => {
     renderRouter({
       id: "category:food",
+      groupId: "categories",
       label: "Food",
       nodeType: "category",
       sourceRef: { kind: "category", categoryId: "food" },
@@ -120,9 +141,25 @@ describe("EventWorkspaceBodyRouter", () => {
     expect(screen.getByTestId("food-workspace-section").parentElement?.className).toContain("overflow-y-auto")
   })
 
+  it("passes the shared event resource to the overview workspace", () => {
+    renderRouter({
+      id: "category:overview",
+      groupId: "categories",
+      label: "Overview",
+      nodeType: "category",
+      sourceRef: { kind: "category", categoryId: "overview" },
+    })
+
+    expect(screen.getByTestId("overview-workspace-section")).toBeTruthy()
+    expect(overviewWorkspaceSectionMock).toHaveBeenCalledWith({
+      eventResource: baseEventResource,
+    })
+  })
+
   it("renders tournament category content inside the shared scroll container contract", () => {
     renderRouter({
       id: "category:tournament",
+      groupId: "categories",
       label: "Tournament",
       nodeType: "category",
       sourceRef: { kind: "category", categoryId: "tournament" },
@@ -138,6 +175,7 @@ describe("EventWorkspaceBodyRouter", () => {
   it("renders financial nodes inside the shared scroll container contract", () => {
     renderRouter({
       id: "financial:summary",
+      groupId: "categories",
       label: "Financial",
       nodeType: "financial",
       sourceRef: { kind: "financial", view: "overview" },
@@ -155,6 +193,7 @@ describe("EventWorkspaceBodyRouter", () => {
   it("renders timeblock note nodes using category workspace content", () => {
     renderRouter({
       id: "timeblock:tb-1",
+      groupId: "scheduled",
       label: "Doors",
       subLabel: "Note",
       nodeType: "timeblock",
@@ -172,6 +211,7 @@ describe("EventWorkspaceBodyRouter", () => {
   it("renders timeblock food nodes using category workspace content", () => {
     renderRouter({
       id: "timeblock:tb-2",
+      groupId: "scheduled",
       label: "Lunch",
       subLabel: "Food",
       nodeType: "timeblock",
@@ -186,6 +226,7 @@ describe("EventWorkspaceBodyRouter", () => {
   it("renders beverage nodes using the beverage workspace content", () => {
     renderRouter({
       id: "timeblock:tb-4",
+      groupId: "scheduled",
       label: "Bar Service",
       subLabel: "Beverage",
       nodeType: "timeblock",
@@ -200,6 +241,7 @@ describe("EventWorkspaceBodyRouter", () => {
   it("renders a fallback for unsupported timeblock categories", () => {
     renderRouter({
       id: "timeblock:tb-3",
+      groupId: "scheduled",
       label: "Unknown",
       nodeType: "timeblock",
       sourceRef: { kind: "timeblock", timeblockId: "tb-3" },
@@ -211,6 +253,7 @@ describe("EventWorkspaceBodyRouter", () => {
   it("keeps system nodes read-only", () => {
     renderRouter({
       id: "system:event-start",
+      groupId: "scheduled",
       label: "Event Start",
       nodeType: "system",
       sourceRef: { kind: "system", source: "event_start", syntheticId: "event-start" },
