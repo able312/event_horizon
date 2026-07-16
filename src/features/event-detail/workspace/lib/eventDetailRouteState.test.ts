@@ -50,6 +50,13 @@ function buildNavModel(overrides?: Partial<WorkspaceNavModel>): WorkspaceNavMode
     ],
     categories: [
       {
+        id: "category:overview",
+        groupId: "categories",
+        nodeType: "category",
+        label: "Overview",
+        sourceRef: { kind: "category", categoryId: "overview" },
+      },
+      {
         id: "category:food",
         groupId: "categories",
         nodeType: "category",
@@ -166,11 +173,11 @@ describe("eventDetailRouteState", () => {
     })
   })
 
-  it("defaults to the first normalized node when route is incomplete", () => {
+  it("defaults to the overview category when route is incomplete", () => {
     const navModel = buildNavModel()
 
     expect(parseEventDetailRoute({ id: "evt_1" }, new URLSearchParams(), navModel)).toEqual({
-      selectedNodeId: "category:food",
+      selectedNodeId: "category:overview",
       returnTo: "/events",
     })
   })
@@ -185,14 +192,14 @@ describe("eventDetailRouteState", () => {
         searchParams: new URLSearchParams(),
         navModel,
       }),
-    ).toBe("/events/evt_1/food")
+    ).toBe("/events/evt_1/overview")
   })
 
   it("builds navigation paths for calendar entry points", () => {
     const navModel = buildNavModel()
 
     expect(buildEventDetailNavigationPath("evt_1", navModel, "/events?date=2026-04")).toBe(
-      "/events/evt_1/food?returnTo=%2Fevents%3Fdate%3D2026-04",
+      "/events/evt_1/overview?returnTo=%2Fevents%3Fdate%3D2026-04",
     )
   })
 
