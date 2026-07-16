@@ -10,8 +10,8 @@ Source: Feature branch merge-readiness review + existing release and stability f
 - Last full test run: FAIL — 3 files failed, 10 tests failed (2026-07-15)
 - Focused Overview/router tests: PASS — 14 tests (2026-07-15)
 - `npm run lint`: PASS with 3 warnings (2026-07-15)
-- `npm audit --omit=dev`: PASS (0 vulnerabilities, 2026-04-15)
-- `npm audit`: 4 moderate dev-only vulnerabilities (tracked, 2026-04-15)
+- `npm audit --omit=dev`: PASS (0 vulnerabilities, 2026-07-16)
+- `npm audit`: PASS (0 vulnerabilities, 2026-07-16; drizzle-kit esbuild chain mitigated via npm override — see OPS-02)
 - `npm run dist:mac`: PASS (duplicate dependency reference warning, 2026-04-15)
 - Merge readiness: BLOCKED — see P0 items below
 
@@ -137,13 +137,15 @@ Source: Feature branch merge-readiness review + existing release and stability f
 
 #### Context
 
-- `npm audit --omit=dev`: 0 vulnerabilities.
-- `npm audit`: 4 moderate vulnerabilities in dev dependency chain via `drizzle-kit`.
+- `npm audit --omit=dev`: 0 vulnerabilities (2026-07-16).
+- `npm audit`: 0 vulnerabilities (2026-07-16).
+- Former moderate `esbuild@0.18.20` chain via `drizzle-kit` → `@esbuild-kit/*` is mitigated with a nested npm override forcing `@esbuild-kit/core-utils` onto `esbuild@^0.25.12` (do not use `npm audit fix --force`; it would downgrade `drizzle-kit`).
+- Upstream removes `@esbuild-kit/*` in Drizzle v1 beta; revisit override when upgrading.
 
 #### Goal
 
-- Track as non-blocking dev-only risk.
-- Recheck monthly and on dependency upgrades.
+- Keep audit clean on dependency upgrades.
+- Recheck monthly and after package changes.
 
 ---
 
@@ -491,7 +493,7 @@ Current warnings from `react-refresh/only-export-components` (2026-07-15):
 - [ ] `npm run build`
 - [ ] `npm audit --omit=dev`
 - [ ] `npm audit`
-  - Leaves 4 moderate severity dev dependency warnings
+  - Expect 0 vulnerabilities while `@esbuild-kit/core-utils` esbuild override remains in `package.json`
 - [ ] `npm run dev` smoke test:
   - [ ] Events list load/create/edit/delete
   - [ ] Event detail sections CRUD
