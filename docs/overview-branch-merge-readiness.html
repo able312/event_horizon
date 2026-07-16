@@ -204,11 +204,10 @@
       still reflect the earlier 2026-07-15 snapshot.
     </p>
 
-    <div class="callout danger">
+    <div class="callout ok">
       <strong class="label">Verdict</strong>
-      Not ready to merge. Build, tests, lint, branch-wide diff checks, and the
-      working tree are clean, but the manual Overview smoke check remains
-      unverified.
+      Ready to merge. Build, tests, lint, branch-wide diff checks, and the
+      working tree are clean, and the manual Overview smoke check passed.
     </div>
 
     <h2>Current status</h2>
@@ -237,9 +236,9 @@
         <div class="k">Branch-wide diff check</div>
         <div class="v">PASS — no whitespace errors</div>
       </div>
-      <div class="status bad">
+      <div class="status good">
         <div class="k">Merge readiness</div>
-        <div class="v">BLOCKED</div>
+        <div class="v">READY</div>
       </div>
     </div>
 
@@ -299,15 +298,18 @@
       </p>
     </div>
 
-    <div class="ticket bad">
+    <div class="ticket good">
       <div class="id">SMOKE-01</div>
-      <h3>Complete the manual Overview smoke check</h3>
+      <h3>Manual Overview smoke check completed</h3>
       <p>
-        Automated verification is green, but there is no recorded verification
-        yet that notes save, switching events re-seeds the Overview, and Gmail
-        compose still works in the packaged interaction flow.
+        Manually verified on 2026-07-16 that internal notes save and remain
+        saved after a hard application restart. Navigating between events and
+        opening their Overview pages displays the correct notes for each event.
+        Gmail compose works for new emails, and Gmail inbox search opens with
+        the correct client email query.
       </p>
-      <p><strong>Done when:</strong> all three interactions pass manually.</p>
+      <p><strong>Status:</strong> Resolved. All requested interactions passed
+        manual verification.</p>
     </div>
 
     <h2>Non-blocking issues</h2>
@@ -378,7 +380,7 @@
       <li><span class="box" aria-hidden="true">✓</span><span><code>npm run test</code> (with native rebuild) — 355 tests green</span></li>
       <li><span class="box" aria-hidden="true">✓</span><span><code>npm run lint</code> — 0 errors, 3 tracked Fast Refresh warnings</span></li>
       <li><span class="box" aria-hidden="true">✓</span><span><code>npm run build</code> — production bundle built successfully</span></li>
-      <li><span class="box" aria-hidden="true"></span><span>Smoke Overview: notes save, event switch re-seeds, Gmail compose still works</span></li>
+      <li><span class="box" aria-hidden="true">✓</span><span>Smoke Overview: notes persist after restart, event navigation shows the correct notes, and Gmail compose/search work</span></li>
     </ul>
 
     <div class="callout">
