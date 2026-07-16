@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Overview Branch Merge Readiness</title>
+  <style>
+    :root {
+      --bg: #f7f5f1;
+      --ink: #1c1917;
+      --muted: #57534e;
+      --card: #ffffff;
+      --line: #d6d3d1;
+      --danger: #b91c1c;
+      --danger-bg: #fef2f2;
+      --warn: #a16207;
+      --warn-bg: #fffbeb;
+      --ok: #166534;
+      --ok-bg: #f0fdf4;
+      --code-bg: #1c1917;
+      --code-ink: #e7e5e4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at top left, #efe8dc 0%, transparent 50%),
+        radial-gradient(ellipse at bottom right, #e2ebe8 0%, transparent 45%),
+        var(--bg);
+      line-height: 1.55;
+    }
+    .wrap {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 4rem;
+    }
+    h1 {
+      font-size: clamp(1.75rem, 4vw, 2.35rem);
+      line-height: 1.2;
+      margin: 0 0 0.5rem;
+      letter-spacing: -0.02em;
+    }
+    .lede {
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin: 0 0 2rem;
+      max-width: 40rem;
+    }
+    h2 {
+      font-size: 1.25rem;
+      margin: 2.25rem 0 0.75rem;
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      font-size: 1.05rem;
+      margin: 1.5rem 0 0.5rem;
+    }
+    p, li { font-size: 1rem; }
+    .path {
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 2rem;
+    }
+    .callout {
+      border: 1px solid var(--line);
+      background: var(--card);
+      border-radius: 2px;
+      padding: 1rem 1.1rem;
+      margin: 1rem 0;
+    }
+    .callout.danger {
+      border-color: #fecaca;
+      background: var(--danger-bg);
+    }
+    .callout.warn {
+      border-color: #fde68a;
+      background: var(--warn-bg);
+    }
+    .callout.ok {
+      border-color: #bbf7d0;
+      background: var(--ok-bg);
+    }
+    .callout strong.label {
+      display: block;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.35rem;
+    }
+    .callout.danger strong.label { color: var(--danger); }
+    .callout.warn strong.label { color: var(--warn); }
+    .callout.ok strong.label { color: var(--ok); }
+    code, .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.88em;
+    }
+    pre {
+      background: var(--code-bg);
+      color: var(--code-ink);
+      padding: 1rem 1.1rem;
+      overflow-x: auto;
+      border-radius: 2px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      margin: 0.75rem 0 1.25rem;
+    }
+    .status-grid {
+      display: grid;
+      gap: 0.75rem;
+      margin: 1rem 0 1.5rem;
+    }
+    @media (min-width: 700px) {
+      .status-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .status {
+      border: 1px solid var(--line);
+      background: var(--card);
+      border-radius: 2px;
+      padding: 0.9rem 1rem;
+    }
+    .status .k {
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.25rem;
+    }
+    .status .v {
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .status.bad { border-color: #fecaca; background: var(--danger-bg); }
+    .status.good { border-color: #bbf7d0; background: var(--ok-bg); }
+    .status.warn { border-color: #fde68a; background: var(--warn-bg); }
+    .ticket {
+      border: 1px solid var(--line);
+      background: var(--card);
+      border-radius: 2px;
+      padding: 1rem 1.1rem;
+      margin: 0.85rem 0;
+    }
+    .ticket.bad { border-color: #fecaca; background: var(--danger-bg); }
+    .ticket.warn { border-color: #fde68a; background: var(--warn-bg); }
+    .ticket .id {
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.2rem;
+    }
+    .ticket h3 {
+      margin: 0 0 0.45rem;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 1rem;
+    }
+    ul.tight { padding-left: 1.2rem; margin: 0.4rem 0; }
+    ul.tight li { margin: 0.25rem 0; }
+    .checklist {
+      list-style: none;
+      padding: 0;
+      margin: 0.75rem 0;
+    }
+    .checklist li {
+      display: grid;
+      grid-template-columns: 1.4rem 1fr;
+      gap: 0.55rem;
+      margin: 0.45rem 0;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 0.95rem;
+    }
+    .checklist .box {
+      width: 1.1rem;
+      height: 1.1rem;
+      border: 1.5px solid #a8a29e;
+      border-radius: 2px;
+      margin-top: 0.15rem;
+    }
+    footer {
+      margin-top: 2.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="path">docs/overview-branch-merge-readiness.html · Event Horizon</p>
+    <h1>Overview branch merge readiness</h1>
+    <p class="lede">
+      Snapshot of whether <code>feature/overview-page</code> is safe to merge into
+      <code>main</code>, based on the 2026-07-15 review. Mirrors the current
+      entries in <code>docs/TASKS.md</code>.
+    </p>
+
+    <div class="callout danger">
+      <strong class="label">Verdict</strong>
+      Not ready to merge. Three blockers remain: production build TypeScript
+      failures, a dirty full test suite, and an uncommitted docs deletion.
+    </div>
+
+    <h2>Current status</h2>
+    <div class="status-grid">
+      <div class="status bad">
+        <div class="k">Build</div>
+        <div class="v">FAIL — TypeScript errors</div>
+      </div>
+      <div class="status bad">
+        <div class="k">Full test suite</div>
+        <div class="v">FAIL — 3 files / 10 tests</div>
+      </div>
+      <div class="status good">
+        <div class="k">Focused Overview tests</div>
+        <div class="v">PASS — 14 tests</div>
+      </div>
+      <div class="status warn">
+        <div class="k">Lint</div>
+        <div class="v">PASS with 3 warnings</div>
+      </div>
+      <div class="status warn">
+        <div class="k">Working tree</div>
+        <div class="v">Dirty — uncommitted docs delete</div>
+      </div>
+      <div class="status bad">
+        <div class="k">Merge readiness</div>
+        <div class="v">BLOCKED</div>
+      </div>
+    </div>
+
+    <h2>Blocking issues (P0)</h2>
+
+    <div class="ticket bad">
+      <div class="id">BUILD-01</div>
+      <h3>Restore a clean production build</h3>
+      <p>
+        <code>npm run build</code> fails on TypeScript. Do not “fix” this by
+        excluding broken files from type-checking.
+      </p>
+      <ul class="tight">
+        <li>
+          <code>useEventDetailRouteState.ts</code> —
+          <code>EventDetailRouteParams</code> does not satisfy React Router’s
+          <code>useParams</code> generic constraint.
+        </li>
+        <li>
+          Timeline / workspace test fixtures missing required
+          <code>details</code> (and related) fields on
+          <code>TimelineTimeblock</code> / <code>TimeblockWithItems</code>.
+        </li>
+        <li>
+          <code>CalendarGrid.test.tsx</code> imports missing
+          <code>./calendarDraftPreview</code>.
+        </li>
+        <li>
+          Hook and IPC contract tests have fixture/cast mismatches exposed by
+          the test TypeScript project.
+        </li>
+      </ul>
+      <p><strong>Done when:</strong> <code>npm run build</code> passes cleanly.</p>
+    </div>
+
+    <div class="ticket bad">
+      <div class="id">TEST-01</div>
+      <h3>Restore the full test suite</h3>
+      <p>
+        Last full run: 3 failed files, 10 failed tests. The new Overview and
+        workspace-router coverage (14 tests) passes on its own, but that does
+        not replace a green full suite.
+      </p>
+      <p><strong>Done when:</strong></p>
+      <ul class="tight">
+        <li>Run <code>npm run test</code> (rebuilds native module for Node).</li>
+        <li>All test files pass.</li>
+        <li>Failures are fixed, not skipped without justification.</li>
+      </ul>
+    </div>
+
+    <div class="ticket bad">
+      <div class="id">MERGE-01</div>
+      <h3>Resolve the dirty working tree</h3>
+      <p>
+        <code>docs/internal-notes-sync-bug-explained.html</code> is deleted in
+        the working tree but that deletion is not committed. Decide whether the
+        explainer stays as project docs or is intentionally removed.
+      </p>
+      <p><strong>Done when:</strong> file restored <em>or</em> deletion
+        committed, and <code>git status</code> has no unintended changes.</p>
+    </div>
+
+    <h2>Non-blocking issues</h2>
+
+    <div class="ticket warn">
+      <div class="id">DOC-01 · Low</div>
+      <h3>Repair stale documentation references</h3>
+      <p>
+        <code>docs/health-check.md</code> was removed on this branch while
+        older notes still point at it. Restore the file, or update/remove every
+        stale reference.
+      </p>
+    </div>
+
+    <div class="ticket warn">
+      <div class="id">OPS-06 · Low</div>
+      <h3>Remove deprecated npm <code>devdir</code> config</h3>
+      <p>
+        npm warns: <code>Unknown env config "devdir"</code>. Non-blocking now;
+        will break on a future npm major. Find whether it comes from user,
+        project, or environment config and remove it.
+      </p>
+    </div>
+
+    <div class="ticket warn">
+      <div class="id">CODE-01 · Low</div>
+      <h3>Trailing whitespace in changed files</h3>
+      <p>
+        <code>git diff --check main...HEAD</code> reports trailing whitespace in:
+      </p>
+      <ul class="tight">
+        <li><code>OverviewWorkspaceSection.tsx</code></li>
+        <li><code>ClientDetailsCard.tsx</code></li>
+      </ul>
+    </div>
+
+    <div class="ticket warn">
+      <div class="id">OPS-03 · Low</div>
+      <h3>Fast Refresh lint warnings (3)</h3>
+      <ul class="tight">
+        <li><code>src/components/atoms/button.tsx:68</code></li>
+        <li><code>src/components/layouts/SplitLayout.tsx:52</code></li>
+        <li><code>src/components/layouts/SplitLayout.tsx:74</code></li>
+      </ul>
+      <p>Keep warning count at 3 or lower until cleaned up.</p>
+    </div>
+
+    <div class="ticket warn">
+      <div class="id">OPS-02 · Medium</div>
+      <h3>Dev dependency audit noise</h3>
+      <p>
+        <code>npm audit --omit=dev</code>: clean.
+        Full <code>npm audit</code>: 4 moderate issues in the
+        <code>drizzle-kit</code> chain. Track only; recheck monthly / on upgrades.
+      </p>
+    </div>
+
+    <div class="ticket warn">
+      <div class="id">OPS-04 · Medium</div>
+      <h3><code>dist:mac</code> duplicate dependency warning</h3>
+      <p>
+        Packaging still succeeds. Warning looks informational from
+        <code>app-builder-lib</code>, but noisy logs can hide real packaging
+        issues later. Still tracked for investigation.
+      </p>
+    </div>
+
+    <div class="callout ok">
+      <strong class="label">Not a blocker: schema change</strong>
+      The Drizzle schema diff on this branch only modernizes callback syntax
+      (object → array). It does not change table structure, so no migration is
+      required for that change.
+    </div>
+
+    <h2>Pre-merge checklist</h2>
+    <ul class="checklist">
+      <li><span class="box" aria-hidden="true"></span><span>Working tree has no unintended changes</span></li>
+      <li><span class="box" aria-hidden="true"></span><span><code>git diff --check main...HEAD</code> clean</span></li>
+      <li><span class="box" aria-hidden="true"></span><span><code>npm run test</code> (with native rebuild) all green</span></li>
+      <li><span class="box" aria-hidden="true"></span><span><code>npm run lint</code> — 3 tracked Fast Refresh warnings max</span></li>
+      <li><span class="box" aria-hidden="true"></span><span><code>npm run build</code> passes</span></li>
+      <li><span class="box" aria-hidden="true"></span><span>Smoke Overview: notes save, event switch re-seeds, Gmail compose still works</span></li>
+    </ul>
+
+    <div class="callout">
+      <strong class="label">Canonical tracker</strong>
+      Living task list with acceptance criteria:
+      <code>docs/TASKS.md</code>. This HTML page is a readable snapshot for
+      browser review.
+    </div>
+
+    <footer>
+      Written 2026-07-15 for the <code>feature/overview-page</code> merge
+      checkpoint. Open this file in the Cursor Simple Browser (or any browser)
+      via the path above.
+    </footer>
+  </div>
+</body>
+</html>

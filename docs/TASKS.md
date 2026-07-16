@@ -1,17 +1,19 @@
 # TASKS
 
-Last Updated: 2026-04-16
-Source: Health check + dist:mac warning investigation + events month pagination implementation findings
+Last Updated: 2026-07-15
+Source: Feature branch merge-readiness review + existing release and stability findings
 
-## Current Status
+## Current Branch Status
 
-- `npm run build`: PASS (2026-04-14)
-- `npm run test`: PASS (24 files, 136 tests, 2026-04-15)
-- `npm run lint`: PASS (4 warnings, 2026-04-15)
+- Branch: `feature/overview-page`
+- `npm run build`: FAIL — TypeScript errors must be resolved before merge (2026-07-15)
+- Last full test run: FAIL — 3 files failed, 10 tests failed (2026-07-15)
+- Focused Overview/router tests: PASS — 14 tests (2026-07-15)
+- `npm run lint`: PASS with 3 warnings (2026-07-15)
 - `npm audit --omit=dev`: PASS (0 vulnerabilities, 2026-04-15)
 - `npm audit`: 4 moderate dev-only vulnerabilities (tracked, 2026-04-15)
 - `npm run dist:mac`: PASS (duplicate dependency reference warning, 2026-04-15)
-- Release readiness: Early Release Ready
+- Merge readiness: BLOCKED — see P0 items below
 
 ## Priority Legend
 
@@ -28,11 +30,7 @@ Source: Health check + dist:mac warning investigation + events month pagination 
 
 ## Hu - Human Consideration
 
-- Health check completed (see `docs/health-check.md`, 2026-04-15)
 - Do I need playwright tests maybe or better e2e testing?
-- What is on the other branch?
-- Check lint warning issue
-- Electron tsconfig showing type / degradation errors.
 - Signature / Notorization - low priority
 
 ### Event Calendar Page
@@ -46,6 +44,63 @@ Source: Health check + dist:mac warning investigation + events month pagination 
 ---
 
 ## P0 - Release Blockers
+
+### [BUILD-01] Restore a clean production build
+
+**Status:** Ready for Development  
+**Priority:** Blocking  
+**Type:** Build / Type Safety
+
+#### Current Failures
+
+- `src/features/event-detail/workspace/hooks/useEventDetailRouteState.ts`
+  - `EventDetailRouteParams` does not satisfy React Router's `useParams` generic constraint.
+- Timeline and workspace test fixtures no longer satisfy the required `TimelineTimeblock` / `TimeblockWithItems` fields.
+- `src/features/calendar/views/CalendarGrid.test.tsx` imports missing `./calendarDraftPreview`.
+- Several hook and IPC contract tests have fixture/cast type mismatches exposed by the test TypeScript project.
+
+#### Acceptance Criteria
+
+- [ ] `npm run build` passes without TypeScript errors.
+- [ ] Do not hide failures by excluding affected production or test files from type-checking.
+
+---
+
+### [TEST-01] Restore the full test suite
+
+**Status:** Ready for Development  
+**Priority:** Blocking  
+**Type:** Testing
+
+#### Context
+
+- The last full run reported 3 failed files and 10 failed tests.
+- The new Overview and workspace-router coverage passes independently (14 tests), but focused tests do not replace the full suite.
+
+#### Acceptance Criteria
+
+- [ ] Run `npm run test` so the native module is rebuilt for Node.
+- [ ] All test files pass.
+- [ ] Confirm failures are fixed rather than skipped or removed without justification.
+
+---
+
+### [MERGE-01] Resolve the dirty working tree before merge
+
+**Status:** Needs Decision  
+**Priority:** Blocking  
+**Type:** Git / Documentation
+
+#### Context
+
+- `docs/internal-notes-sync-bug-explained.html` is currently deleted but the deletion is not committed.
+- The file documents the controlled-input/data-loss issue fixed by this branch.
+
+#### Acceptance Criteria
+
+- [ ] Decide whether the explanation remains useful project documentation.
+- [ ] Restore the file, or intentionally commit its deletion.
+- [ ] Confirm `git status` contains no unintended changes before merging.
 
 ---
 
@@ -89,6 +144,62 @@ Source: Health check + dist:mac warning investigation + events month pagination 
 
 - Track as non-blocking dev-only risk.
 - Recheck monthly and on dependency upgrades.
+
+---
+
+### [DOC-01] Repair stale documentation references
+
+**Status:** Ready for Development  
+**Priority:** Low  
+**Type:** Documentation
+
+#### Context
+
+- `docs/health-check.md` was removed on this branch.
+- Existing task/release notes must not direct readers to a deleted document.
+
+#### Acceptance Criteria
+
+- [ ] Restore `docs/health-check.md`, or remove/replace every stale reference to it.
+- [ ] Keep historical audit findings discoverable if the old file remains intentionally deleted.
+
+---
+
+### [OPS-06] Remove deprecated npm `devdir` configuration
+
+**Status:** Tracking  
+**Priority:** Low  
+**Type:** Tooling
+
+#### Context
+
+- npm prints: `Unknown env config "devdir". This will stop working in the next major version of npm.`
+- This is non-blocking today but will become incompatible with a future npm major version.
+
+#### Acceptance Criteria
+
+- [ ] Identify whether `devdir` comes from user, project, or environment npm configuration.
+- [ ] Remove or replace the deprecated configuration.
+- [ ] Confirm npm scripts run without the warning.
+
+---
+
+### [CODE-01] Remove changed-file whitespace errors
+
+**Status:** Ready for Development  
+**Priority:** Low  
+**Type:** Cleanup
+
+#### Context
+
+- `git diff --check main...HEAD` reports trailing whitespace in:
+  - `OverviewWorkspaceSection.tsx`
+  - `ClientDetailsCard.tsx`
+
+#### Acceptance Criteria
+
+- [ ] Remove trailing whitespace from changed files.
+- [ ] `git diff --check main...HEAD` passes.
 
 ---
 
@@ -356,26 +467,27 @@ Adjustments to this hook may be made, just suggest good changes and ask first.
 
 #### Context
 
-Current warnings from `react-refresh/only-export-components`:
+Current warnings from `react-refresh/only-export-components` (2026-07-15):
 
-- `src/components/ui/button.tsx:66`
-- `src/components/ui/form.tsx:157`
-- `src/components/ui/sidebar.tsx:727`
-- `src/contexts/OverlayManager.tsx:18`
+- `src/components/atoms/button.tsx:68`
+- `src/components/layouts/SplitLayout.tsx:52`
+- `src/components/layouts/SplitLayout.tsx:74`
 
 #### Goal
 
-- Keep lint warning count at 4 or lower until cleaned up.
+- Keep lint warning count at 3 or lower until cleaned up.
 - Move shared constants/helpers out of component-only files to remove warnings.
 
 ---
 
 ## Validation Checklist (Run Before Release)
 
+- [ ] Working tree contains no unintended or unresolved changes
+- [ ] `git diff --check main...HEAD`
 - [ ] `npm run test`
   - Includes `npm run rebuild:node`
 - [ ] `npm run lint`
-  - Tracked and expectedly throws 4 warnings from `react-refresh/only-export-components`
+  - Currently expected to report 3 tracked warnings from `react-refresh/only-export-components`
 - [ ] `npm run build`
 - [ ] `npm audit --omit=dev`
 - [ ] `npm audit`
