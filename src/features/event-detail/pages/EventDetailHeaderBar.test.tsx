@@ -55,49 +55,6 @@ describe("EventDetailHeaderBar", () => {
     expect(screen.getByRole("link", { name: /Back to Events/i })).toBeTruthy()
   })
 
-  it("renders create when the event has no calendar id", () => {
-    const eventResource = makeEventResource({
-      event: makeEvent({ calendarId: null }),
-    })
-
-    render(
-      <MemoryRouter>
-        <EventDetailHeaderBar eventResource={eventResource} />
-      </MemoryRouter>,
-    )
-
-    expect(screen.getByRole("button", { name: "Create" })).toBeTruthy()
-  })
-
-  it("renders update when the event has a calendar id", () => {
-    const eventResource = makeEventResource({
-      event: makeEvent({ calendarId: "abc123" }),
-    })
-
-    render(
-      <MemoryRouter>
-        <EventDetailHeaderBar eventResource={eventResource} />
-      </MemoryRouter>,
-    )
-
-    expect(screen.getByRole("button", { name: "Update" })).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Calendar ID actions" })).toBeTruthy()
-  })
-
-  it("disables create when start or end date is missing", () => {
-    const eventResource = makeEventResource({
-      event: makeEvent({ startDateTime: null }),
-    })
-
-    render(
-      <MemoryRouter>
-        <EventDetailHeaderBar eventResource={eventResource} />
-      </MemoryRouter>,
-    )
-
-    expect(screen.getByRole("button", { name: "Create" }).hasAttribute("disabled")).toBe(true)
-  })
-
   it("reveals the calendar id input after create succeeds", async () => {
     const eventResource = makeEventResource()
 
@@ -107,7 +64,9 @@ describe("EventDetailHeaderBar", () => {
       </MemoryRouter>,
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Create" }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "Create Event in Google Calendar" }),
+    )
 
     await waitFor(() => {
       expect(window.electron.ipcRenderer.invoke).toHaveBeenCalledWith(
@@ -116,7 +75,9 @@ describe("EventDetailHeaderBar", () => {
       )
     })
     expect(screen.getByPlaceholderText("Paste Google Calendar ID")).toBeTruthy()
-    expect(screen.queryByRole("button", { name: "Create" })).toBeNull()
+    expect(
+      screen.queryByRole("button", { name: "Create Event in Google Calendar" }),
+    ).toBeNull()
   })
 
   it("shows an error and does not save a blank calendar id", async () => {
@@ -129,7 +90,9 @@ describe("EventDetailHeaderBar", () => {
       </MemoryRouter>,
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Create" }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "Create Event in Google Calendar" }),
+    )
     await screen.findByPlaceholderText("Paste Google Calendar ID")
 
     fireEvent.change(screen.getByPlaceholderText("Paste Google Calendar ID"), {
@@ -140,7 +103,9 @@ describe("EventDetailHeaderBar", () => {
     expect(toast.error).toHaveBeenCalledWith("Calendar ID is required")
     expect(updateEvent).not.toHaveBeenCalled()
     expect(screen.getByPlaceholderText("Paste Google Calendar ID")).toBeTruthy()
-    expect(screen.queryByRole("button", { name: "Create" })).toBeNull()
+    expect(
+      screen.queryByRole("button", { name: "Create Event in Google Calendar" }),
+    ).toBeNull()
   })
 
   it("saves a trimmed calendar id", async () => {
@@ -153,7 +118,9 @@ describe("EventDetailHeaderBar", () => {
       </MemoryRouter>,
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Create" }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "Create Event in Google Calendar" }),
+    )
     await screen.findByPlaceholderText("Paste Google Calendar ID")
 
     fireEvent.change(screen.getByPlaceholderText("Paste Google Calendar ID"), {

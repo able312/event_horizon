@@ -57,6 +57,7 @@ function buildNavModel(overrides?: Partial<WorkspaceNavModel>): WorkspaceNavMode
       { id: "unscheduled:note", groupId: "unscheduled", nodeType: "timeblock", label: "Reminder", sectionType: SECTION_TYPE.NOTE, sourceRef: { kind: "timeblock", timeblockId: "tb-note" } },
     ],
     categories: [
+      { id: "category:overview", groupId: "categories", nodeType: "category", label: "Overview", sourceRef: { kind: "category", categoryId: "overview" } },
       { id: "category:food", groupId: "categories", nodeType: "category", label: "Food", sourceRef: { kind: "category", categoryId: "food" } },
       { id: "category:logistics", groupId: "categories", nodeType: "category", label: "Logistics", sourceRef: { kind: "category", categoryId: "logistics" } },
       { id: "category:notes", groupId: "categories", nodeType: "category", label: "Notes", sourceRef: { kind: "category", categoryId: "notes" } },
@@ -85,11 +86,11 @@ describe("useWorkspaceSelection", () => {
     cleanup()
   })
 
-  it("normalizes the initial selection to the first matching category", async () => {
+  it("defaults an incomplete event route to Overview", async () => {
     renderSelectionHarness(buildNavModel())
 
     await waitFor(() => {
-      expect(screen.getByTestId("selected-node-id").textContent).toBe("category:food")
+      expect(screen.getByTestId("selected-node-id").textContent).toBe("category:overview")
     })
   })
 

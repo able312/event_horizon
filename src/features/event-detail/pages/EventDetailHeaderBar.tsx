@@ -212,7 +212,12 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
         </div>
       ) : canPushToCalendar ? (
         /* Mode 3: Unlinked + dates set — single Create button */
-        <Button variant="outline" size="sm" onClick={() => void openGoogleCalendar()}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => void openGoogleCalendar()}
+          aria-label="Create Event in Google Calendar"
+        >
           {actionLabel}
         </Button>
       ) : null}
@@ -223,7 +228,12 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
         <Tooltip>
           <TooltipTrigger asChild>
             <span tabIndex={0}>
-              <Button variant="outline" size="sm" disabled>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                aria-label="Create Event in Google Calendar"
+              >
                 {actionLabel}
               </Button>
             </span>

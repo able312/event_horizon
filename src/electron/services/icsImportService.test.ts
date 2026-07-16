@@ -55,10 +55,16 @@ beforeEach(() => {
   vi.mocked(eventQueries.getByCalendarIds).mockReset()
   vi.mocked(eventQueries.getScheduled).mockReset()
   vi.mocked(eventQueries.insertMany).mockReset()
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date("2026-06-01T12:00:00.000Z"))
 })
 
 afterEach(() => {
-  vi.clearAllMocks()
+  try {
+    vi.clearAllMocks()
+  } finally {
+    vi.useRealTimers()
+  }
 })
 
 describe("icsImportService", () => {
