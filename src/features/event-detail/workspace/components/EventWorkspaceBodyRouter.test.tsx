@@ -6,7 +6,7 @@ import type { Event } from "~/definitions/database"
 import { SECTION_TYPE } from "~/definitions/timeblocks/timeblock-constants"
 import type { EventResource } from "~/features/event-detail/types"
 
-const overviewWorkspaceSectionMock = vi.fn((_props: unknown) => <div data-testid="overview-workspace-section" />)
+const overviewWorkspaceSectionMock = vi.fn<(props: unknown) => void>()
 const foodWorkspaceSectionMock = vi.fn(() => <div data-testid="food-workspace-section" />)
 const beverageWorkspaceSectionMock = vi.fn(() => <div data-testid="beverage-workspace-section" />)
 const vendorsSectionMock = vi.fn(() => <div data-testid="vendors-section" />)
@@ -14,7 +14,7 @@ const setupInstructionsSectionMock = vi.fn(() => <div data-testid="setup-section
 const notesSectionMock = vi.fn(() => <div data-testid="notes-section" />)
 const tournamentDetailsSectionMock = vi.fn(() => <div data-testid="tournament-details-section" />)
 const golfCartsSectionMock = vi.fn(() => <div data-testid="golf-carts-section" />)
-const financialWorkspaceSectionMock = vi.fn((_props: unknown) => <div data-testid="financial-workspace-section" />)
+const financialWorkspaceSectionMock = vi.fn<(props: unknown) => void>()
 
 vi.mock("../../sections/event-overview/OverviewWorkspaceSection", () => ({
   default: (props: unknown) => {
