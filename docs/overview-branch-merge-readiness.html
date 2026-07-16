@@ -148,6 +148,7 @@
     }
     .ticket.bad { border-color: #fecaca; background: var(--danger-bg); }
     .ticket.warn { border-color: #fde68a; background: var(--warn-bg); }
+    .ticket.good { border-color: #bbf7d0; background: var(--ok-bg); }
     .ticket .id {
       font-family: ui-sans-serif, system-ui, sans-serif;
       font-size: 0.75rem;
@@ -198,29 +199,31 @@
     <h1>Overview branch merge readiness</h1>
     <p class="lede">
       Snapshot of whether <code>feature/overview-page</code> is safe to merge into
-      <code>main</code>, based on the 2026-07-15 review. Mirrors the current
-      entries in <code>docs/TASKS.md</code>.
+      <code>main</code>, updated from verification run on 2026-07-16. Some
+      merge-readiness entries in <code>docs/TASKS.md</code> still reflect the
+      earlier 2026-07-15 snapshot.
     </p>
 
     <div class="callout danger">
       <strong class="label">Verdict</strong>
-      Not ready to merge. Three blockers remain: production build TypeScript
-      failures, a dirty full test suite, and an uncommitted docs deletion.
+      Not ready to merge. The production build and full test suite are green,
+      but the branch still has unresolved working-tree and diff-cleanliness
+      issues.
     </div>
 
     <h2>Current status</h2>
     <div class="status-grid">
-      <div class="status bad">
+      <div class="status good">
         <div class="k">Build</div>
-        <div class="v">FAIL — TypeScript errors</div>
+        <div class="v">PASS — production bundle built</div>
       </div>
-      <div class="status bad">
+      <div class="status good">
         <div class="k">Full test suite</div>
-        <div class="v">FAIL — 3 files / 10 tests</div>
+        <div class="v">PASS — 78 files / 355 tests</div>
       </div>
       <div class="status good">
         <div class="k">Focused Overview tests</div>
-        <div class="v">PASS — 14 tests</div>
+        <div class="v">PASS — included in green suite</div>
       </div>
       <div class="status warn">
         <div class="k">Lint</div>
@@ -228,7 +231,7 @@
       </div>
       <div class="status warn">
         <div class="k">Working tree</div>
-        <div class="v">Dirty — uncommitted docs delete</div>
+        <div class="v">Dirty — intended local fixes remain uncommitted</div>
       </div>
       <div class="status bad">
         <div class="k">Merge readiness</div>
@@ -238,61 +241,39 @@
 
     <h2>Blocking issues (P0)</h2>
 
-    <div class="ticket bad">
+    <div class="ticket good">
       <div class="id">BUILD-01</div>
-      <h3>Restore a clean production build</h3>
+      <h3>Clean production build restored</h3>
       <p>
-        <code>npm run build</code> fails on TypeScript. Do not “fix” this by
-        excluding broken files from type-checking.
+        Verified on 2026-07-16: <code>npm run build</code> passes after aligning
+        test fixtures and imports with the current production contracts.
       </p>
-      <ul class="tight">
-        <li>
-          <code>useEventDetailRouteState.ts</code> —
-          <code>EventDetailRouteParams</code> does not satisfy React Router’s
-          <code>useParams</code> generic constraint.
-        </li>
-        <li>
-          Timeline / workspace test fixtures missing required
-          <code>details</code> (and related) fields on
-          <code>TimelineTimeblock</code> / <code>TimeblockWithItems</code>.
-        </li>
-        <li>
-          <code>CalendarGrid.test.tsx</code> imports missing
-          <code>./calendarDraftPreview</code>.
-        </li>
-        <li>
-          Hook and IPC contract tests have fixture/cast mismatches exposed by
-          the test TypeScript project.
-        </li>
-      </ul>
-      <p><strong>Done when:</strong> <code>npm run build</code> passes cleanly.</p>
+      <p><strong>Status:</strong> Resolved.</p>
     </div>
 
-    <div class="ticket bad">
+    <div class="ticket good">
       <div class="id">TEST-01</div>
-      <h3>Restore the full test suite</h3>
+      <h3>Full test suite restored</h3>
       <p>
-        Last full run: 3 failed files, 10 failed tests. The new Overview and
-        workspace-router coverage (14 tests) passes on its own, but that does
-        not replace a green full suite.
+        Verified on 2026-07-16: all 78 test files and all 355 tests pass.
+        The previous 10 failures were resolved by making ICS fixtures
+        deterministic, aligning route-selection expectations with Overview,
+        and updating meaningful Calendar interactions while removing three
+        obsolete render-only assertions.
       </p>
-      <p><strong>Done when:</strong></p>
-      <ul class="tight">
-        <li>Run <code>npm run test</code> (rebuilds native module for Node).</li>
-        <li>All test files pass.</li>
-        <li>Failures are fixed, not skipped without justification.</li>
-      </ul>
+      <p><strong>Status:</strong> Resolved.</p>
     </div>
 
     <div class="ticket bad">
       <div class="id">MERGE-01</div>
       <h3>Resolve the dirty working tree</h3>
       <p>
-        <code>docs/internal-notes-sync-bug-explained.html</code> is deleted in
-        the working tree but that deletion is not committed. Decide whether the
-        explainer stays as project docs or is intentionally removed.
+        The earlier deletion of
+        <code>docs/internal-notes-sync-bug-explained.html</code> is now
+        committed. The working tree still contains an uncommitted production
+        edit to <code>eventDetailRouteState.ts</code>, plus this report update.
       </p>
-      <p><strong>Done when:</strong> file restored <em>or</em> deletion
+      <p><strong>Done when:</strong> all intended changes are reviewed and
         committed, and <code>git status</code> has no unintended changes.</p>
     </div>
 
@@ -325,6 +306,7 @@
         <code>git diff --check main...HEAD</code> reports trailing whitespace in:
       </p>
       <ul class="tight">
+        <li><code>docs/TASKS.md</code></li>
         <li><code>OverviewWorkspaceSection.tsx</code></li>
         <li><code>ClientDetailsCard.tsx</code></li>
       </ul>
@@ -372,9 +354,9 @@
     <ul class="checklist">
       <li><span class="box" aria-hidden="true"></span><span>Working tree has no unintended changes</span></li>
       <li><span class="box" aria-hidden="true"></span><span><code>git diff --check main...HEAD</code> clean</span></li>
-      <li><span class="box" aria-hidden="true"></span><span><code>npm run test</code> (with native rebuild) all green</span></li>
-      <li><span class="box" aria-hidden="true"></span><span><code>npm run lint</code> — 3 tracked Fast Refresh warnings max</span></li>
-      <li><span class="box" aria-hidden="true"></span><span><code>npm run build</code> passes</span></li>
+      <li><span class="box" aria-hidden="true">✓</span><span><code>npm run test</code> (with native rebuild) — 355 tests green</span></li>
+      <li><span class="box" aria-hidden="true">✓</span><span><code>npm run lint</code> — 0 errors, 3 tracked Fast Refresh warnings</span></li>
+      <li><span class="box" aria-hidden="true">✓</span><span><code>npm run build</code> — production bundle built successfully</span></li>
       <li><span class="box" aria-hidden="true"></span><span>Smoke Overview: notes save, event switch re-seeds, Gmail compose still works</span></li>
     </ul>
 
@@ -386,9 +368,9 @@
     </div>
 
     <footer>
-      Written 2026-07-15 for the <code>feature/overview-page</code> merge
-      checkpoint. Open this file in the Cursor Simple Browser (or any browser)
-      via the path above.
+      Written 2026-07-15 and updated 2026-07-16 for the
+      <code>feature/overview-page</code> merge checkpoint. Open this file in the
+      Cursor Simple Browser (or any browser) via the path above.
     </footer>
   </div>
 </body>

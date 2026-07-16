@@ -21,6 +21,7 @@ function makeTimeblock(overrides: Partial<TimelineTimeblock> = {}): TimelineTime
       isEditable: true,
     },
     ...overrides,
+    details: overrides.details ?? null,
   }
 }
 

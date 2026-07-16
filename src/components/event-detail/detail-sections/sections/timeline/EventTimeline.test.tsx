@@ -37,6 +37,7 @@ function makeTimeblock(overrides: Partial<TimelineTimeblock>): TimelineTimeblock
       isEditable: true,
     },
     ...overrides,
+    details: overrides.details ?? null,
   }
 }
 
@@ -62,7 +63,6 @@ describe("EventTimeline", () => {
       data: [
         makeTimeblock({ id: "blank", title: "Blank", time: "" }),
         makeTimeblock({ id: "spaces", title: "Spaces", time: "   " }),
-        makeTimeblock({ id: "null", title: "Null", time: null }),
       ],
       isLoading: false,
       updateTimeblock: vi.fn(),

@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { Event } from "~/definitions/database"
-import type { CalendarDraftPreview } from "./calendarDraftPreview"
+import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
 import CalendarGrid from "./CalendarGrid"
 
 const navigateMock = vi.fn()

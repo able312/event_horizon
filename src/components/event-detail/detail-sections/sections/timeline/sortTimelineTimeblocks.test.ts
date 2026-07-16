@@ -15,6 +15,7 @@ function makeTimeblock(overrides: Partial<TimeblockWithItems>): TimeblockWithIte
     createdAt: overrides.createdAt ?? "123456",
     updatedAt: overrides.updatedAt ?? null,
     ...overrides,
+    details: overrides.details ?? null,
   }
 }
 

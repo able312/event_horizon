@@ -102,6 +102,8 @@ export function sectionFromNodeId(
 }
 
 function isSectionAvailable(section: WorkspaceSectionId, navModel: WorkspaceNavModel): boolean {
+  if (section === "overview") return true
+
   if (section === "system") {
     return navModel.scheduled.some((node) => node.nodeType === "system")
   }
@@ -140,20 +142,8 @@ function isSectionValidForSelection(
   )
 }
 
-function getFirstAvailableSection(navModel: WorkspaceNavModel): WorkspaceSectionId | null {
-  const defaultNodeId = "category:overview"
-  if (!defaultNodeId) return null
-
-  const section = sectionFromNodeId(defaultNodeId, flattenNav(navModel))
-  if (section && isSectionAvailable(section, navModel)) return section
-
-  for (const candidate of CATEGORY_SECTIONS) {
-    if (isSectionAvailable(candidate, navModel)) return candidate
-  }
-
-  if (isSectionAvailable("system", navModel)) return "system"
-
-  return null
+function getDefaultSection(): WorkspaceSectionId {
+  return "overview"
 }
 
 function isNodeQueryRedundant(section: WorkspaceSectionId, selectedNodeId: string): boolean {
@@ -177,15 +167,9 @@ export function toEventDetailPath({
   const normalizedReturnTo = normalizeReturnTo(returnTo)
 
   if (!section || !isSectionValidForSelection(section, selectedNodeId, navModel, allNodes)) {
-    const fallbackSection = getFirstAvailableSection(navModel)
-    if (!fallbackSection) return `/events/${eventId}`
-
-    const fallbackNodeId = nodeIdFromSection(fallbackSection) || "category:overview"
-    if (!fallbackNodeId) return `/events/${eventId}`
-
     return toEventDetailPath({
       eventId,
-      selectedNodeId: fallbackNodeId,
+      selectedNodeId: nodeIdFromSection(getDefaultSection()),
       navModel,
       returnTo: normalizedReturnTo,
     })
@@ -300,12 +284,9 @@ export function buildEventDetailNavigationPath(
   navModel: WorkspaceNavModel,
   returnTo?: string,
 ): string {
-  const defaultNodeId = "category:overview"
-  if (!defaultNodeId) return buildEventDetailEntryPath(eventId, returnTo)
-
   return toEventDetailPath({
     eventId,
-    selectedNodeId: defaultNodeId,
+    selectedNodeId: "category:overview",
     navModel,
     returnTo,
   })

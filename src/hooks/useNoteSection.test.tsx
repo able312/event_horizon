@@ -1,5 +1,6 @@
 import { waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import * as timeblocksIpc from "~/lib/ipc/timeblocks"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
 import { useNoteSection } from "./useNoteSection"
@@ -28,7 +29,9 @@ vi.mock("~/lib/ipc/timeblocks", () => ({
   getTimeblocksByEventAndSection: vi.fn(),
 }))
 
-function makeNoteTimeblock(overrides: Partial<Awaited<ReturnType<typeof timeblocksIpc.getTimeblocksByEventAndSection>>[number]> = {}) {
+function makeNoteTimeblock(
+  overrides: Partial<TimeblockWithItems> = {},
+): TimeblockWithItems {
   return {
     id: "tb-note-1",
     eventId: "event-1",

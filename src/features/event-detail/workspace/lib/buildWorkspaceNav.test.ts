@@ -17,6 +17,8 @@ const makeTimelineRow = (overrides: Partial<TimelineTimeblock>): TimelineTimeblo
     isSystem: false,
     isEditable: true,
   },
+  ...overrides,
+  details: overrides.details ?? null,
 })
 
 const makeSectionRow = (overrides: Partial<TimeblockWithItems>): TimeblockWithItems => ({
@@ -28,6 +30,8 @@ const makeSectionRow = (overrides: Partial<TimeblockWithItems>): TimeblockWithIt
   assignedTo: overrides.assignedTo ?? null,
   createdAt: overrides.createdAt ?? "1",
   updatedAt: overrides.updatedAt ?? null,
+  ...overrides,
+  details: overrides.details ?? null,
 })
 
 describe("buildWorkspaceNav", () => {

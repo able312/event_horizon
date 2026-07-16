@@ -61,6 +61,7 @@ function makeTimeblock(overrides: Partial<TimeblockWithItems> = {}): TimeblockWi
       },
     ],
     ...overrides,
+    details: overrides.details ?? null,
   }
 }
 
