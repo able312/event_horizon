@@ -17,7 +17,12 @@ const recordId = "record-1"
 const timeblockId = "timeblock-1"
 const monthParam = "2026-04"
 
-const createEventArg = { eventType: "Tournament Event" } as Parameters<typeof eventsIpc.createEvent>[0]
+const createEventArg: Parameters<typeof eventsIpc.createEvent>[0] = {
+  id: "event-1",
+  title: "Tournament Event",
+  type: "tournament",
+  createdAt: "2026-07-16T00:00:00.000Z",
+}
 const updateEventArg = { title: "Updated Event" } as Parameters<typeof eventsIpc.updateEvent>[1]
 const icsImportCommitArg = {
   sessionId: "session-1",
