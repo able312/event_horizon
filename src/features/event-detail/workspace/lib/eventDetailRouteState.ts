@@ -21,7 +21,7 @@ const SECTION_VALUES = new Set<WorkspaceSectionId>([
   "system",
 ])
 
-export interface EventDetailRouteParams {
+export type EventDetailRouteParams = {
   id?: string
   section?: string
 }
