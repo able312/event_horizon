@@ -199,16 +199,16 @@
     <h1>Overview branch merge readiness</h1>
     <p class="lede">
       Snapshot of whether <code>feature/overview-page</code> is safe to merge into
-      <code>main</code>, updated from verification run on 2026-07-16. Some
-      merge-readiness entries in <code>docs/TASKS.md</code> still reflect the
-      earlier 2026-07-15 snapshot.
+      <code>main</code>, updated from verification and repository inspection on
+      2026-07-16. Some merge-readiness entries in <code>docs/TASKS.md</code>
+      still reflect the earlier 2026-07-15 snapshot.
     </p>
 
     <div class="callout danger">
       <strong class="label">Verdict</strong>
-      Not ready to merge. The production build and full test suite are green,
-      but the branch still has unresolved working-tree and diff-cleanliness
-      issues.
+      Not ready to merge. Build, tests, lint, branch-wide diff checks, and the
+      working tree are clean, but the manual Overview smoke check remains
+      unverified.
     </div>
 
     <h2>Current status</h2>
@@ -222,16 +222,20 @@
         <div class="v">PASS — 78 files / 355 tests</div>
       </div>
       <div class="status good">
-        <div class="k">Focused Overview tests</div>
-        <div class="v">PASS — included in green suite</div>
+        <div class="k">Touched-file checks</div>
+        <div class="v">PASS — no diff-check issues</div>
       </div>
       <div class="status warn">
         <div class="k">Lint</div>
         <div class="v">PASS with 3 warnings</div>
       </div>
-      <div class="status warn">
+      <div class="status good">
         <div class="k">Working tree</div>
-        <div class="v">Dirty — intended local fixes remain uncommitted</div>
+        <div class="v">CLEAN at inspection</div>
+      </div>
+      <div class="status good">
+        <div class="k">Branch-wide diff check</div>
+        <div class="v">PASS — no whitespace errors</div>
       </div>
       <div class="status bad">
         <div class="k">Merge readiness</div>
@@ -264,17 +268,46 @@
       <p><strong>Status:</strong> Resolved.</p>
     </div>
 
-    <div class="ticket bad">
+    <div class="ticket good">
       <div class="id">MERGE-01</div>
-      <h3>Resolve the dirty working tree</h3>
+      <h3>Clean working tree restored</h3>
       <p>
         The earlier deletion of
         <code>docs/internal-notes-sync-bug-explained.html</code> is now
-        committed. The working tree still contains an uncommitted production
-        edit to <code>eventDetailRouteState.ts</code>, plus this report update.
+        committed, as is the production edit to
+        <code>eventDetailRouteState.ts</code>.
       </p>
-      <p><strong>Done when:</strong> all intended changes are reviewed and
-        committed, and <code>git status</code> has no unintended changes.</p>
+      <p><strong>Status:</strong> Resolved. The working tree was clean after
+        the whitespace cleanup commit.</p>
+    </div>
+
+    <div class="ticket good">
+      <div class="id">DIFF-01</div>
+      <h3>Branch-wide whitespace errors repaired</h3>
+      <p>
+        Removed 24 trailing-whitespace errors across three committed files:
+      </p>
+      <ul class="tight">
+        <li><code>docs/TASKS.md</code> — 12 lines</li>
+        <li><code>OverviewWorkspaceSection.tsx</code> — 2 lines</li>
+        <li><code>ClientDetailsCard.tsx</code> — 10 lines</li>
+      </ul>
+      <p>
+        A tracked Cursor workspace setting now trims trailing whitespace on
+        save. <strong>Status:</strong>
+        <code>git diff --check main...HEAD</code> passes.
+      </p>
+    </div>
+
+    <div class="ticket bad">
+      <div class="id">SMOKE-01</div>
+      <h3>Complete the manual Overview smoke check</h3>
+      <p>
+        Automated verification is green, but there is no recorded verification
+        yet that notes save, switching events re-seeds the Overview, and Gmail
+        compose still works in the packaged interaction flow.
+      </p>
+      <p><strong>Done when:</strong> all three interactions pass manually.</p>
     </div>
 
     <h2>Non-blocking issues</h2>
@@ -297,19 +330,6 @@
         will break on a future npm major. Find whether it comes from user,
         project, or environment config and remove it.
       </p>
-    </div>
-
-    <div class="ticket warn">
-      <div class="id">CODE-01 · Low</div>
-      <h3>Trailing whitespace in changed files</h3>
-      <p>
-        <code>git diff --check main...HEAD</code> reports trailing whitespace in:
-      </p>
-      <ul class="tight">
-        <li><code>docs/TASKS.md</code></li>
-        <li><code>OverviewWorkspaceSection.tsx</code></li>
-        <li><code>ClientDetailsCard.tsx</code></li>
-      </ul>
     </div>
 
     <div class="ticket warn">
@@ -352,8 +372,9 @@
 
     <h2>Pre-merge checklist</h2>
     <ul class="checklist">
-      <li><span class="box" aria-hidden="true"></span><span>Working tree has no unintended changes</span></li>
-      <li><span class="box" aria-hidden="true"></span><span><code>git diff --check main...HEAD</code> clean</span></li>
+      <li><span class="box" aria-hidden="true">✓</span><span>Working tree clean after the whitespace cleanup commit</span></li>
+      <li><span class="box" aria-hidden="true">✓</span><span><code>git diff --check main...HEAD</code> clean</span></li>
+      <li><span class="box" aria-hidden="true">✓</span><span>Touched-file diff checks passed</span></li>
       <li><span class="box" aria-hidden="true">✓</span><span><code>npm run test</code> (with native rebuild) — 355 tests green</span></li>
       <li><span class="box" aria-hidden="true">✓</span><span><code>npm run lint</code> — 0 errors, 3 tracked Fast Refresh warnings</span></li>
       <li><span class="box" aria-hidden="true">✓</span><span><code>npm run build</code> — production bundle built successfully</span></li>

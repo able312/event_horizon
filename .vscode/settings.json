@@ -1,0 +1,8 @@
+{
+  "files.trimTrailingWhitespace": true,
+  "workbench.colorTheme": "Tomorrow Night Blue",
+  "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#710000",
+    "titleBar.inactiveBackground": "#710000"
+  }
+}

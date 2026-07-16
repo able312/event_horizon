@@ -50,10 +50,10 @@ export const ClientDetailsCard: React.FC<ClientDetailsCardProps> = ({ client, ev
         <section className="rounded-md border border-border bg-background p-2 shadow-sm">
             <div className="group">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-semibold tracking-wide rounded-lg p-1 px-2 group-hover:bg-stone-100 cursor-pointer" onClick={() => setDetailsOpen(!detailsOpen)}>{client.name}</h3>    
+                    <h3 className="text-xl font-semibold tracking-wide rounded-lg p-1 px-2 group-hover:bg-stone-100 cursor-pointer" onClick={() => setDetailsOpen(!detailsOpen)}>{client.name}</h3>
                     {/* Button Group */}
                     <div className="flex items-center gap-1 mt-1">
-                        <Button 
+                        <Button
                             type="button"
                             variant="outline"
                             className="size-8 rounded-full"
@@ -63,7 +63,7 @@ export const ClientDetailsCard: React.FC<ClientDetailsCardProps> = ({ client, ev
                             <Send className="size-4" />
                         </Button>
 
-                        <Button 
+                        <Button
                             type="button"
                             variant="outline"
                             className="size-8 rounded-full"
@@ -77,12 +77,12 @@ export const ClientDetailsCard: React.FC<ClientDetailsCardProps> = ({ client, ev
                             <Copy className="size-4" />
                         </Button>
                     </div>
-                  
+
                 </div>
-               
+
 
             </div>
-        
+
             <div className={
                 `overflow-hidden transition-height duration-300 flex justify-between group
                 ${detailsOpen ? "h-36 py-3 border-t border-border mt-2" : "h-0 py-0"}`
@@ -95,16 +95,16 @@ export const ClientDetailsCard: React.FC<ClientDetailsCardProps> = ({ client, ev
                     <Edit className="size-4" />
                 </Button>
             </div>
-                
+
         </section>
     )
 }
-  
+
   interface ClientFieldProps {
     label: string
     value: string
   }
-  
+
   const ClientField: React.FC<ClientFieldProps> = ({ label, value }) => {
 
     const handleCopy = () => {
@@ -112,7 +112,7 @@ export const ClientDetailsCard: React.FC<ClientDetailsCardProps> = ({ client, ev
         toast.success(value + " copied to clipboard")
     }
 
-    return ( 
+    return (
         <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
             <div className="flex items-center gap-1">

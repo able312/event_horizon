@@ -47,8 +47,8 @@ Source: Feature branch merge-readiness review + existing release and stability f
 
 ### [BUILD-01] Restore a clean production build
 
-**Status:** Ready for Development  
-**Priority:** Blocking  
+**Status:** Ready for Development<br>
+**Priority:** Blocking<br>
 **Type:** Build / Type Safety
 
 #### Current Failures
@@ -68,8 +68,8 @@ Source: Feature branch merge-readiness review + existing release and stability f
 
 ### [TEST-01] Restore the full test suite
 
-**Status:** Ready for Development  
-**Priority:** Blocking  
+**Status:** Ready for Development<br>
+**Priority:** Blocking<br>
 **Type:** Testing
 
 #### Context
@@ -87,8 +87,8 @@ Source: Feature branch merge-readiness review + existing release and stability f
 
 ### [MERGE-01] Resolve the dirty working tree before merge
 
-**Status:** Needs Decision  
-**Priority:** Blocking  
+**Status:** Needs Decision<br>
+**Priority:** Blocking<br>
 **Type:** Git / Documentation
 
 #### Context
@@ -149,8 +149,8 @@ Source: Feature branch merge-readiness review + existing release and stability f
 
 ### [DOC-01] Repair stale documentation references
 
-**Status:** Ready for Development  
-**Priority:** Low  
+**Status:** Ready for Development<br>
+**Priority:** Low<br>
 **Type:** Documentation
 
 #### Context
@@ -167,8 +167,8 @@ Source: Feature branch merge-readiness review + existing release and stability f
 
 ### [OPS-06] Remove deprecated npm `devdir` configuration
 
-**Status:** Tracking  
-**Priority:** Low  
+**Status:** Tracking<br>
+**Priority:** Low<br>
 **Type:** Tooling
 
 #### Context
@@ -186,8 +186,8 @@ Source: Feature branch merge-readiness review + existing release and stability f
 
 ### [CODE-01] Remove changed-file whitespace errors
 
-**Status:** Ready for Development  
-**Priority:** Low  
+**Status:** Ready for Development<br>
+**Priority:** Low<br>
 **Type:** Cleanup
 
 #### Context

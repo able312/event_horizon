@@ -29,7 +29,7 @@ const OverviewWorkspaceSection: React.FC<OverviewWorkspaceSectionProps> = ({ eve
 
       <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="min-w-0 space-y-4">
-          <InternalNotesCard 
+          <InternalNotesCard
             key={eventDetails.id}
             savedValue={eventDetails.internalNotes ?? ""}
             onUpdate={handleUpdateInternalNotes}
@@ -37,7 +37,7 @@ const OverviewWorkspaceSection: React.FC<OverviewWorkspaceSectionProps> = ({ eve
         </div>
 
         <div className="min-w-0 space-y-4">
-          <ClientDetailsCard 
+          <ClientDetailsCard
             client={{
               name: eventDetails.clientName ?? "No client listed",
               email: eventDetails.clientEmail ?? "-",
