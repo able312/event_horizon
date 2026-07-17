@@ -48,6 +48,17 @@ describe("googleCalendar utils", () => {
     expect(description).toContain("STATUS:")
   })
 
+  it("appends incomplete touchpoints to the description", () => {
+    const description = buildGoogleCalendarDescription(makeEvent(), {
+      incompleteTouchpoints: [
+        { title: "Final guest count", dueDate: "2026-07-20T00:00:00.000Z" },
+      ],
+    })
+
+    expect(description).toContain("TOUCHPOINTS")
+    expect(description).toContain("Final guest count")
+  })
+
   it("builds create and update URLs with required params", () => {
     const event = makeEvent()
 

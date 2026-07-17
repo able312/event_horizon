@@ -18,6 +18,7 @@ import {
   buildGoogleCalendarUpdateUrl,
   type GoogleCalendarEventInput,
 } from "~/lib/googleCalendar"
+import { getIncompleteTouchpointsByEventId } from "~/lib/ipc/touchpoints"
 import { openExternalUrl } from "~/lib/ipc/system"
 import {
   DEFAULT_EVENT_DETAIL_RETURN_TO,
@@ -59,6 +60,7 @@ const EventDetailHeaderBar: React.FC<EventDetailHeaderBarProps> = ({ eventResour
 
       {!eventResource.isLoading && eventResource.event ? (
         <GoogleCalendarHeaderAction
+          eventId={eventResource.event.id}
           event={eventResource.event}
           onSaveCalendarId={eventResource.updateEvent}
         />
@@ -68,6 +70,7 @@ const EventDetailHeaderBar: React.FC<EventDetailHeaderBarProps> = ({ eventResour
 }
 
 type GoogleCalendarHeaderActionProps = {
+  eventId: string
   event: GoogleCalendarEventInput
   onSaveCalendarId: (updates: UpdateEvent) => Promise<unknown>
 }
@@ -75,6 +78,7 @@ type GoogleCalendarHeaderActionProps = {
 // Google Calendar integration for the event header.
 // Flow: Create opens Google Calendar pre-filled → user pastes returned event ID → future clicks Update.
 const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
+  eventId,
   event,
   onSaveCalendarId,
 }) => {
@@ -92,9 +96,16 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
     if (!canPushToCalendar) return
 
     try {
+      const incomplete = await getIncompleteTouchpointsByEventId(eventId)
+      const options = {
+        incompleteTouchpoints: (incomplete ?? []).map((row) => ({
+          title: row.title,
+          dueDate: row.dueDate,
+        })),
+      }
       const url = hasCalendarId
-        ? buildGoogleCalendarUpdateUrl(event)
-        : buildGoogleCalendarCreateUrl(event)
+        ? buildGoogleCalendarUpdateUrl(event, options)
+        : buildGoogleCalendarCreateUrl(event, options)
 
       await openExternalUrl(url)
       if (!hasCalendarId) {

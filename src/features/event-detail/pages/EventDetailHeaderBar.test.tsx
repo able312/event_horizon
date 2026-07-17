@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 import { toast } from "sonner"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import EventDetailHeaderBar from "./EventDetailHeaderBar"
 import type { EventResource } from "../types"
@@ -43,6 +43,14 @@ function makeEventResource(overrides: Partial<EventResource> = {}): EventResourc
 }
 
 describe("EventDetailHeaderBar", () => {
+  beforeEach(() => {
+    vi.mocked(window.electron.ipcRenderer.invoke).mockImplementation(async (channel: string) => {
+      if (channel === "touchpoints:get-incomplete-by-event-id") return []
+      if (channel === "system:open-external") return undefined
+      return undefined
+    })
+  })
+
   it("renders a back to events link", () => {
     const eventResource = makeEventResource()
 

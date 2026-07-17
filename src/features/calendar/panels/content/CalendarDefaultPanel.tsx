@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react"
 
 import SidebarMiniCalendar from "~/features/calendar/navigation/SidebarMiniCalendar"
+import { SidebarTouchpoints } from "~/features/touchpoints/components/SidebarTouchpoints"
 
 import { useEventsMonthQuery } from "~/hooks/useEventsMonthQuery"
 
@@ -45,6 +46,7 @@ const CalendarDefaultPanel: React.FC<CalendarDefaultPanelProps> = ({ UrlDate, se
                 onBrowseMonthChange={handleMiniBrowseMonthChange}
                 onSelectMonth={handleMiniSelectMonth}
             />
+            <SidebarTouchpoints />
         </div>
     )
 }

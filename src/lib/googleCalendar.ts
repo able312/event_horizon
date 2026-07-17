@@ -1,5 +1,7 @@
 import type { Event } from "~/definitions/database"
 import { EVENT_STATUS_LABELS, EVENT_TYPE_LABELS } from "~/definitions/events/ui"
+import { formatTouchpointsPlainText } from "~/features/touchpoints/lib/formatTouchpointsPlainText"
+import type { TouchpointPlainItem } from "~/features/touchpoints/types"
 
 const GOOGLE_CREATE_URL = "https://calendar.google.com/calendar/u/0/r/eventedit"
 const MISSING_PLACEHOLDER = "Not set"
@@ -53,7 +55,14 @@ export function formatGoogleCalendarDateUtc(isoDate: string): string {
   return `${toDateDigits(date)}T${toTimeDigits(date)}Z`
 }
 
-export function buildGoogleCalendarDescription(event: GoogleCalendarEventInput): string {
+export type GoogleCalendarDescriptionOptions = {
+  incompleteTouchpoints?: TouchpointPlainItem[]
+}
+
+export function buildGoogleCalendarDescription(
+  event: GoogleCalendarEventInput,
+  options: GoogleCalendarDescriptionOptions = {},
+): string {
   const eventType = EVENT_TYPE_LABELS[event.type] ?? event.type
   const eventStatus = EVENT_STATUS_LABELS[event.status] ?? event.status
   const internalNote = cleanText(event.internalNotes)
@@ -82,10 +91,19 @@ export function buildGoogleCalendarDescription(event: GoogleCalendarEventInput):
     `Phone: ${phone}`,
   )
 
+  const touchpointsBlock = formatTouchpointsPlainText(options.incompleteTouchpoints ?? [])
+  if (touchpointsBlock) {
+    lines.push("", touchpointsBlock)
+  }
+
   return lines.join("\n")
 }
 
-function buildBaseGoogleCalendarUrl(event: GoogleCalendarEventInput, baseUrl: string): string {
+function buildBaseGoogleCalendarUrl(
+  event: GoogleCalendarEventInput,
+  baseUrl: string,
+  options: GoogleCalendarDescriptionOptions = {},
+): string {
   if (!event.startDateTime || !event.endDateTime) {
     throw new Error("Event startDateTime and endDateTime are required")
   }
@@ -97,20 +115,26 @@ function buildBaseGoogleCalendarUrl(event: GoogleCalendarEventInput, baseUrl: st
     "dates",
     `${formatGoogleCalendarDateUtc(event.startDateTime)}/${formatGoogleCalendarDateUtc(event.endDateTime)}`,
   )
-  url.searchParams.set("details", buildGoogleCalendarDescription(event))
+  url.searchParams.set("details", buildGoogleCalendarDescription(event, options))
   return url.toString()
 }
 
-export function buildGoogleCalendarCreateUrl(event: GoogleCalendarEventInput): string {
-  return buildBaseGoogleCalendarUrl(event, GOOGLE_CREATE_URL)
+export function buildGoogleCalendarCreateUrl(
+  event: GoogleCalendarEventInput,
+  options: GoogleCalendarDescriptionOptions = {},
+): string {
+  return buildBaseGoogleCalendarUrl(event, GOOGLE_CREATE_URL, options)
 }
 
-export function buildGoogleCalendarUpdateUrl(event: GoogleCalendarEventInput): string {
+export function buildGoogleCalendarUpdateUrl(
+  event: GoogleCalendarEventInput,
+  options: GoogleCalendarDescriptionOptions = {},
+): string {
   const calendarId = cleanText(event.calendarId)
   if (!calendarId) {
     throw new Error("calendarId is required for update URL")
   }
 
   const baseUrl = `https://calendar.google.com/calendar/u/0/r/eventedit/${encodeURIComponent(calendarId)}`
-  return buildBaseGoogleCalendarUrl(event, baseUrl)
+  return buildBaseGoogleCalendarUrl(event, baseUrl, options)
 }

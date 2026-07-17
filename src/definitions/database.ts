@@ -4,7 +4,8 @@ import {
     foodItems, 
     beverageItems, 
     vendorItems, 
-    payments, 
+    payments,
+    touchpoints,
     tournamentDetails,
     menuOfChargeItems,
     cartDetails 
@@ -57,6 +58,18 @@ export type ChargeCategory = (typeof menuOfChargeItems.category.enumValues)[numb
 export type Payment = InferSelectModel<typeof payments>
 export type NewPayment = InferInsertModel<typeof payments>
 export type UpdatePayment = Partial<Omit<Payment, "id" | "createdAt">>
+
+// ============================================================================
+// Touchpoints
+// ============================================================================
+
+export type Touchpoint = InferSelectModel<typeof touchpoints>
+export type NewTouchpoint = InferInsertModel<typeof touchpoints>
+export type UpdateTouchpoint = Partial<Omit<Touchpoint, "id" | "createdAt">>
+
+export type IncompleteTouchpointWithEvent = Touchpoint & {
+  eventTitle: string
+}
 
 // ============================================================================
 // Timeblocks

@@ -63,6 +63,7 @@ export const events = sqliteTable("events", {
 export const eventsRelations = relations(events, ({ many }) => ({
   timeblocks: many(timeblocks),
   payments: many(payments),
+  touchpoints: many(touchpoints),
 }));
 
 
@@ -136,6 +137,24 @@ export const payments = sqliteTable("payments", {
 export const paymentsRelations = relations(payments, ({ one }) => ({
   event: one(events, {
     fields: [payments.eventId],
+    references: [events.id],
+  }),
+}));
+
+export const touchpoints = sqliteTable("touchpoints", {
+  id: text("id").primaryKey(),
+  eventId: text("event_id").references(() => events.id, { onDelete: "cascade" }).notNull(),
+  title: text("title").notNull().default(""),
+  dueDate: text("due_date"), // ISO date string, nullable for title-only saves
+  completedAt: text("completed_at"), // ISO datetime when marked complete; null = open
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  index("touchpoints_event_id_idx").on(table.eventId),
+  index("touchpoints_due_date_idx").on(table.dueDate),
+]);
+export const touchpointsRelations = relations(touchpoints, ({ one }) => ({
+  event: one(events, {
+    fields: [touchpoints.eventId],
     references: [events.id],
   }),
 }));

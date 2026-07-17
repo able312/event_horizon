@@ -3,7 +3,7 @@ import React from "react"
 import { Skeleton } from "~/components/atoms/skeleton"
 import type { EventResource } from "~/features/event-detail/types"
 
-import { DeadlinesCard } from "~/features/deadlines"
+import { TouchpointsCard } from "~/features/touchpoints"
 
 import { ClientDetailsCard } from "./components/ClientDetailsCard"
 import { InternalNotesCard } from "./components/InternalNotesCard"
@@ -46,13 +46,7 @@ const OverviewWorkspaceSection: React.FC<OverviewWorkspaceSectionProps> = ({ eve
             }}
             eventTitle={eventDetails.title ?? "Untitled event"}
           />
-          <DeadlinesCard
-            eventStartDate={
-              eventDetails.startDateTime
-                ? new Date(eventDetails.startDateTime)
-                : new Date()
-            }
-          />
+          <TouchpointsCard eventId={eventDetails.id} />
         </div>
       </div>
     </div>
