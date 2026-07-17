@@ -3,9 +3,10 @@ import React from "react"
 import { Skeleton } from "~/components/atoms/skeleton"
 import type { EventResource } from "~/features/event-detail/types"
 
+import { DeadlinesCard } from "~/features/deadlines"
+
 import { ClientDetailsCard } from "./components/ClientDetailsCard"
 import { InternalNotesCard } from "./components/InternalNotesCard"
-import { DeadlinesCard } from "./components/DeadlineCard"
 
 interface OverviewWorkspaceSectionProps {
   eventResource: EventResource
