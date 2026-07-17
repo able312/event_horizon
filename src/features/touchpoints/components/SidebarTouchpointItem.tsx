@@ -34,7 +34,7 @@ export const SidebarTouchpointItem: React.FC<SidebarTouchpointItemProps> = ({ it
     <li>
       <Link
         to={to}
-        className={`block rounded-sm border-l-2 px-1.5 py-1.5 transition-colors hover:bg-white/5 ${ACCENT_BY_URGENCY[item.urgency]}`}
+        className={`block rounded-none border-l-2 px-1.5 py-1.5 transition-colors hover:bg-white/5 ${ACCENT_BY_URGENCY[item.urgency]}`}
       >
         <p className={`truncate ${TITLE_BY_URGENCY[item.urgency]}`}>
           {item.title.trim() || "Untitled touchpoint"}
