@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest"
 
 import {
   daysFromToday,
+  formatSidebarDueLabel,
+  formatSidebarDueLabelFromStored,
   getTouchpointUrgency,
   getTouchpointUrgencyFromStored,
   parseStoredDueDate,
@@ -68,5 +70,34 @@ describe("parseStoredDueDate / getTouchpointUrgencyFromStored", () => {
     expect(parsed?.getMonth()).toBe(6)
     expect(parsed?.getDate()).toBe(16)
     expect(getTouchpointUrgencyFromStored("2026-07-16T00:00:00.000Z", now)).toBe("due today")
+  })
+})
+
+describe("formatSidebarDueLabel", () => {
+  const now = dateAt(2026, 6, 16)
+
+  it("returns Today for the current day", () => {
+    expect(formatSidebarDueLabel(dateAt(2026, 6, 16), now)).toBe("Today")
+  })
+
+  it("returns singular and plural late labels", () => {
+    expect(formatSidebarDueLabel(dateAt(2026, 6, 15), now)).toBe("1 day late")
+    expect(formatSidebarDueLabel(dateAt(2026, 6, 13), now)).toBe("3 days late")
+  })
+
+  it("returns Tomorrow and In N days for near future", () => {
+    expect(formatSidebarDueLabel(dateAt(2026, 6, 17), now)).toBe("Tomorrow")
+    expect(formatSidebarDueLabel(dateAt(2026, 6, 19), now)).toBe("In 3 days")
+  })
+
+  it("returns a short date for farther-out days", () => {
+    expect(formatSidebarDueLabel(dateAt(2026, 6, 20), now)).toBe(
+      dateAt(2026, 6, 20).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+    )
+  })
+
+  it("formatSidebarDueLabelFromStored returns null for missing dates", () => {
+    expect(formatSidebarDueLabelFromStored(null, now)).toBeNull()
+    expect(formatSidebarDueLabelFromStored("2026-07-16T00:00:00.000Z", now)).toBe("Today")
   })
 })

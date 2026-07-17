@@ -57,6 +57,7 @@ export function useEvent() {
     },
     onSettled: async (_updatedEvent, _err, _updates, context) => {
       await queryClient.invalidateQueries({ queryKey: ["event", id] })
+      await queryClient.invalidateQueries({ queryKey: ["touchpoints", "incomplete"] })
       await invalidateEventsSearchQueries(queryClient)
 
       if (context?.previousScope || context?.nextScope) {
@@ -92,6 +93,7 @@ export function useEvent() {
     },
     onSettled: async (_deleted, _err, _variables, context) => {
       await queryClient.invalidateQueries({ queryKey: ["event", id] })
+      await queryClient.invalidateQueries({ queryKey: ["touchpoints", "incomplete"] })
       await invalidateEventsSearchQueries(queryClient)
 
       if (context?.previousScope) {

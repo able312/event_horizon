@@ -45,6 +45,26 @@ export function getTouchpointUrgencyFromStored(
   return getTouchpointUrgency(dueDate, now)
 }
 
+/** Short relative due label for the calendar sidebar (e.g. Today, 3 days late, Jul 19). */
+export function formatSidebarDueLabel(dueDate: Date, now = new Date()): string {
+  const diff = daysFromToday(dueDate, now)
+  if (diff === 0) return "Today"
+  if (diff === -1) return "1 day late"
+  if (diff < -1) return `${Math.abs(diff)} days late`
+  if (diff === 1) return "Tomorrow"
+  if (diff <= 3) return `In ${diff} days`
+  return dueDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+}
+
+export function formatSidebarDueLabelFromStored(
+  dueDateIso: string | null | undefined,
+  now = new Date(),
+): string | null {
+  const dueDate = parseStoredDueDate(dueDateIso)
+  if (!dueDate) return null
+  return formatSidebarDueLabel(dueDate, now)
+}
+
 export const URGENCY_STYLES: Record<TouchpointUrgency, StatusStyle> = {
   standard: {
     Icon: Circle,

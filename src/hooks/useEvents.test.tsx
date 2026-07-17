@@ -189,6 +189,7 @@ describe("useEvents month-scoped queries and mutations", () => {
     })
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: EVENTS_SEARCH_QUERY_KEY_PREFIX })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["touchpoints", "incomplete"] })
   })
 
   it("optimistically updates and invalidates single-event cache after update", async () => {
@@ -304,5 +305,6 @@ describe("useEvents month-scoped queries and mutations", () => {
     })
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["event", "event-1"] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["touchpoints", "incomplete"] })
   })
 })

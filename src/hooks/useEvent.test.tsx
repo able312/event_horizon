@@ -122,5 +122,24 @@ describe("useEvent async mutation contract", () => {
     })
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: EVENTS_SEARCH_QUERY_KEY_PREFIX })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["touchpoints", "incomplete"] })
+  })
+
+  it("invalidates incomplete touchpoints after successful delete", async () => {
+    const getEventByIdMock = vi.mocked(eventsApi.getEventById)
+    const deleteEventMock = vi.mocked(eventsApi.deleteEvent)
+
+    getEventByIdMock.mockResolvedValue(makeEvent())
+    deleteEventMock.mockResolvedValue(true)
+
+    const { result, queryClient } = renderHookWithProviders(() => useEvent())
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
+
+    await act(async () => {
+      await result.current.deleteEvent()
+    })
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["touchpoints", "incomplete"] })
   })
 })

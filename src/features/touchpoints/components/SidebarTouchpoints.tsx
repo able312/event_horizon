@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { Link, useLocation } from "react-router"
+import { useLocation } from "react-router"
 
 import { buildEventDetailEntryPath } from "~/features/event-detail/workspace/lib/eventDetailRouteState"
 import { useIncompleteTouchpoints } from "~/hooks/useTouchpointsSection"
@@ -9,7 +9,13 @@ import {
   visibleSidebarItems,
   type SidebarTouchpointSectionKey,
 } from "../lib/groupSidebarTouchpoints"
-import { parseStoredDueDate } from "../lib/touchpointStatus"
+import { SidebarTouchpointItem } from "./SidebarTouchpointItem"
+
+const SECTION_HEADER_CLASS: Record<SidebarTouchpointSectionKey, string> = {
+  "due today": "text-orange-400/90",
+  "past due": "text-red-300/80",
+  upcoming: "text-stone-400",
+}
 
 export const SidebarTouchpoints: React.FC = () => {
   const location = useLocation()
@@ -37,29 +43,23 @@ export const SidebarTouchpoints: React.FC = () => {
 
           return (
             <section key={section.key}>
-              <h4 className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-stone-500">
+              <h4
+                className={`my-1.5 border-t border-white/30 pt-1.5 text-[11px] font-medium uppercase tracking-wide ${SECTION_HEADER_CLASS[section.key]}`}
+              >
                 {section.label}
+                <span className="normal-case tracking-normal text-stone-500">
+                  {" "}
+                  · {section.items.length}
+                </span>
               </h4>
               <ul className="space-y-1">
-                {visible.map((item) => {
-                  const due = parseStoredDueDate(item.dueDate)
-                  return (
-                    <li key={item.id}>
-                      <Link
-                        to={buildEventDetailEntryPath(item.eventId, returnTo)}
-                        className="block rounded-sm px-1.5 py-1.5 transition-colors hover:bg-white/5"
-                      >
-                        <p className="truncate text-sm text-stone-100">
-                          {item.title.trim() || "Untitled touchpoint"}
-                        </p>
-                        <p className="truncate text-xs text-stone-400">
-                          {item.eventTitle}
-                          {due ? ` · ${due.toLocaleDateString()}` : ""}
-                        </p>
-                      </Link>
-                    </li>
-                  )
-                })}
+                {visible.map((item) => (
+                  <SidebarTouchpointItem
+                    key={item.id}
+                    item={item}
+                    to={buildEventDetailEntryPath(item.eventId, returnTo)}
+                  />
+                ))}
               </ul>
               {hiddenCount > 0 ? (
                 <button
