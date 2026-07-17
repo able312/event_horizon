@@ -69,23 +69,25 @@ export const URGENCY_STYLES: Record<TouchpointUrgency, StatusStyle> = {
   standard: {
     Icon: Circle,
     iconClassName: "shrink-0 text-muted-foreground",
-    rowClassName: "group flex items-center gap-3 py-2.5",
+    rowClassName: "group flex items-center gap-3 border-l-2 border-transparent py-2.5 pl-2",
     labelClassName: "text-sm font-medium",
   },
   upcoming: {
     Icon: Circle,
-    iconClassName: "shrink-0 text-orange-500",
-    rowClassName: "group flex items-center gap-3 rounded-xs bg-orange-50/60 px-1 -mx-1 py-2.5",
+    iconClassName: "shrink-0 text-stone-500",
+    rowClassName:
+      "group flex items-center gap-3 border-l-2 border-stone-400 bg-stone-50/70 py-2.5 pl-2",
     labelClassName: "text-sm font-medium",
     badge: {
       text: "Upcoming",
-      className: "rounded-xs bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700",
+      className: "rounded-xs bg-stone-200 px-2 py-0.5 text-xs font-medium text-stone-700",
     },
   },
   "due today": {
     Icon: AlertCircle,
     iconClassName: "shrink-0 text-orange-600",
-    rowClassName: "group flex items-center gap-3 rounded-xs bg-orange-100 px-2 -mx-2 py-2.5",
+    rowClassName:
+      "group flex items-center gap-3 border-l-2 border-orange-400 bg-orange-50 py-2.5 pl-2",
     labelClassName: "text-sm font-semibold text-orange-900",
     badge: {
       text: "Due today",
@@ -93,13 +95,14 @@ export const URGENCY_STYLES: Record<TouchpointUrgency, StatusStyle> = {
     },
   },
   "past due": {
-    Icon: Circle,
-    iconClassName: "shrink-0 text-muted-foreground/50",
-    rowClassName: "group flex items-center gap-3 py-2.5 opacity-80",
-    labelClassName: "text-sm font-medium text-muted-foreground",
+    Icon: AlertCircle,
+    iconClassName: "shrink-0 text-red-600",
+    rowClassName:
+      "group flex items-center gap-3 border-l-2 border-red-400 bg-red-50/80 py-2.5 pl-2",
+    labelClassName: "text-sm font-semibold text-red-900",
     badge: {
       text: "Past due",
-      className: "rounded-xs bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground",
+      className: "rounded-xs bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700",
     },
   },
 }

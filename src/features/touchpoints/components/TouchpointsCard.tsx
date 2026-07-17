@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { ChevronDown, Copy, Plus } from "lucide-react"
 import { toast } from "sonner"
 import { v4 as uuidv4 } from "uuid"
@@ -10,9 +10,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/atoms/dropdown-menu"
+import type { Touchpoint } from "~/definitions/database"
 import { useTouchpointsSection } from "~/hooks/useTouchpointsSection"
 
 import { formatTouchpointsPlainText } from "../lib/formatTouchpointsPlainText"
+import { groupOverviewTouchpoints } from "../lib/groupOverviewTouchpoints"
 import type { TouchpointDraft } from "../types"
 import { TouchpointRow } from "./TouchpointRow"
 
@@ -31,9 +33,15 @@ export const TouchpointsCard: React.FC<{ eventId: string }> = ({ eventId }) => {
   } = useTouchpointsSection(eventId)
 
   const [drafts, setDrafts] = useState<TouchpointDraft[]>([])
+  const [completedOpen, setCompletedOpen] = useState(false)
   const savingDraftIds = useRef(new Set<string>())
   const draftsRef = useRef(drafts)
   draftsRef.current = drafts
+
+  const { sections, completed } = useMemo(
+    () => groupOverviewTouchpoints(touchpoints),
+    [touchpoints],
+  )
 
   const persistDraft = async (
     clientId: string,
@@ -100,6 +108,31 @@ export const TouchpointsCard: React.FC<{ eventId: string }> = ({ eventId }) => {
     }
   }
 
+  const renderPersistedRow = (touchpoint: Touchpoint) => (
+    <TouchpointRow
+      key={touchpoint.id}
+      kind="persisted"
+      touchpoint={touchpoint}
+      onUpdateTitle={(title) =>
+        updateTouchpoint({ id: touchpoint.id, updates: { title } })
+      }
+      onUpdateDueDate={(dueDate) =>
+        updateTouchpoint({ id: touchpoint.id, updates: { dueDate } })
+      }
+      onToggleComplete={(isComplete) =>
+        updateTouchpoint({
+          id: touchpoint.id,
+          updates: {
+            completedAt: isComplete ? new Date().toISOString() : null,
+          },
+        })
+      }
+      onDelete={() => deleteTouchpoint(touchpoint.id)}
+    />
+  )
+
+  const isEmpty = touchpoints.length === 0 && drafts.length === 0
+
   return (
     <section className="rounded-xs border border-border bg-background p-3 shadow-sm">
       <div className="flex items-center justify-between gap-2 border-b border-border pb-2">
@@ -156,54 +189,71 @@ export const TouchpointsCard: React.FC<{ eventId: string }> = ({ eventId }) => {
 
       {isLoading ? (
         <p className="py-3 text-xs text-muted-foreground">Loading touchpoints…</p>
+      ) : isEmpty ? (
+        <p className="py-3 text-xs text-muted-foreground">
+          No touchpoints yet. Add one, or seed the common set.
+        </p>
       ) : (
-        <ul className="mt-1 divide-y divide-border">
-          {touchpoints.map((touchpoint) => (
-            <TouchpointRow
-              key={touchpoint.id}
-              kind="persisted"
-              touchpoint={touchpoint}
-              onUpdateTitle={(title) =>
-                updateTouchpoint({ id: touchpoint.id, updates: { title } })
-              }
-              onUpdateDueDate={(dueDate) =>
-                updateTouchpoint({ id: touchpoint.id, updates: { dueDate } })
-              }
-              onToggleComplete={(completed) =>
-                updateTouchpoint({
-                  id: touchpoint.id,
-                  updates: {
-                    completedAt: completed ? new Date().toISOString() : null,
-                  },
-                })
-              }
-              onDelete={() => deleteTouchpoint(touchpoint.id)}
-            />
+        <div className="mt-1 space-y-3">
+          {sections.map((section) => (
+            <section key={section.key}>
+              <h4 className="mb-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                {section.label}
+                <span className="normal-case tracking-normal text-muted-foreground/70">
+                  {" "}
+                  · {section.items.length}
+                </span>
+              </h4>
+              <ul className="divide-y divide-border">{section.items.map(renderPersistedRow)}</ul>
+            </section>
           ))}
-          {drafts.map((draft) => (
-            <TouchpointRow
-              key={draft.clientId}
-              kind="draft"
-              draft={draft}
-              onChangeTitle={(title) => handleDraftChange(draft.clientId, { title })}
-              onChangeDueDate={(dueDate) => {
-                handleDraftChange(draft.clientId, { dueDate })
-                void persistDraft(draft.clientId, { dueDate })
-              }}
-              onPersist={() => void persistDraft(draft.clientId)}
-              onDiscard={() =>
-                setDrafts((current) =>
-                  current.filter((row) => row.clientId !== draft.clientId),
-                )
-              }
-            />
-          ))}
-          {touchpoints.length === 0 && drafts.length === 0 ? (
-            <li className="py-3 text-xs text-muted-foreground">
-              No touchpoints yet. Add one, or seed the common set.
-            </li>
+
+          {drafts.length > 0 ? (
+            <ul className="divide-y divide-border">
+              {drafts.map((draft) => (
+                <TouchpointRow
+                  key={draft.clientId}
+                  kind="draft"
+                  draft={draft}
+                  onChangeTitle={(title) => handleDraftChange(draft.clientId, { title })}
+                  onChangeDueDate={(dueDate) => {
+                    handleDraftChange(draft.clientId, { dueDate })
+                    void persistDraft(draft.clientId, { dueDate })
+                  }}
+                  onPersist={() => void persistDraft(draft.clientId)}
+                  onDiscard={() =>
+                    setDrafts((current) =>
+                      current.filter((row) => row.clientId !== draft.clientId),
+                    )
+                  }
+                />
+              ))}
+            </ul>
           ) : null}
-        </ul>
+
+          {completed.length > 0 ? (
+            <div>
+              <button
+                type="button"
+                className="flex w-full items-center gap-1 py-1 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
+                aria-expanded={completedOpen}
+                onClick={() => setCompletedOpen((open) => !open)}
+              >
+                <ChevronDown
+                  className={`size-3.5 transition-transform ${completedOpen ? "" : "-rotate-90"}`}
+                  aria-hidden
+                />
+                Completed
+                <span className="normal-case tracking-normal text-muted-foreground/70">
+                  · {completed.length}
+                </span>
+              </button>
+              {completedOpen ? (
+                <ul className="divide-y divide-border">{completed.map(renderPersistedRow)}</ul>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       )}
     </section>
   )
