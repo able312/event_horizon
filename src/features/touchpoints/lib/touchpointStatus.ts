@@ -69,14 +69,14 @@ export const URGENCY_STYLES: Record<TouchpointUrgency, StatusStyle> = {
   standard: {
     Icon: Circle,
     iconClassName: "shrink-0 text-muted-foreground",
-    rowClassName: "group flex items-center gap-3 border-l-2 border-transparent py-2.5 pl-2",
+    rowClassName: "group flex flex-col gap-0.5 border-l-2 border-transparent py-2.5 pl-2",
     labelClassName: "text-sm font-medium",
   },
   upcoming: {
     Icon: Circle,
     iconClassName: "shrink-0 text-stone-500",
     rowClassName:
-      "group flex items-center gap-3 border-l-2 border-stone-400 bg-stone-50/70 py-2.5 pl-2",
+      "group flex flex-col gap-0.5 border-l-2 border-stone-400 bg-stone-50/70 py-2.5 pl-2",
     labelClassName: "text-sm font-medium",
     badge: {
       text: "Upcoming",
@@ -87,7 +87,7 @@ export const URGENCY_STYLES: Record<TouchpointUrgency, StatusStyle> = {
     Icon: AlertCircle,
     iconClassName: "shrink-0 text-orange-600",
     rowClassName:
-      "group flex items-center gap-3 border-l-2 border-orange-400 bg-orange-50 py-2.5 pl-2",
+      "group flex flex-col gap-0.5 border-l-2 border-orange-400 bg-orange-50 py-2.5 pl-2",
     labelClassName: "text-sm font-semibold text-orange-900",
     badge: {
       text: "Due today",
@@ -98,7 +98,7 @@ export const URGENCY_STYLES: Record<TouchpointUrgency, StatusStyle> = {
     Icon: AlertCircle,
     iconClassName: "shrink-0 text-red-600",
     rowClassName:
-      "group flex items-center gap-3 border-l-2 border-red-400 bg-red-50/80 py-2.5 pl-2",
+      "group flex flex-col gap-0.5 border-l-2 border-red-400 bg-red-50/80 py-2.5 pl-2",
     labelClassName: "text-sm font-semibold text-red-900",
     badge: {
       text: "Past due",
