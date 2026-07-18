@@ -46,7 +46,10 @@ const OverviewWorkspaceSection: React.FC<OverviewWorkspaceSectionProps> = ({ eve
             }}
             eventTitle={eventDetails.title ?? "Untitled event"}
           />
-          <TouchpointsCard eventId={eventDetails.id} />
+          <TouchpointsCard
+            eventId={eventDetails.id}
+            eventStartDateTime={eventDetails.startDateTime ?? null}
+          />
         </div>
       </div>
     </div>

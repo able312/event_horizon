@@ -22,7 +22,10 @@ function draftHasPersistableContent(draft: TouchpointDraft): boolean {
   return draft.title.trim().length > 0 || Boolean(draft.dueDate)
 }
 
-export const TouchpointsCard: React.FC<{ eventId: string }> = ({ eventId }) => {
+export const TouchpointsCard: React.FC<{
+  eventId: string
+  eventStartDateTime: string | null
+}> = ({ eventId, eventStartDateTime }) => {
   const {
     data: touchpoints = [],
     isLoading,
@@ -113,6 +116,7 @@ export const TouchpointsCard: React.FC<{ eventId: string }> = ({ eventId }) => {
       key={touchpoint.id}
       kind="persisted"
       touchpoint={touchpoint}
+      eventStartDateTime={eventStartDateTime}
       onUpdateTitle={(title) =>
         updateTouchpoint({ id: touchpoint.id, updates: { title } })
       }
@@ -215,6 +219,7 @@ export const TouchpointsCard: React.FC<{ eventId: string }> = ({ eventId }) => {
                   key={draft.clientId}
                   kind="draft"
                   draft={draft}
+                  eventStartDateTime={eventStartDateTime}
                   onChangeTitle={(title) => handleDraftChange(draft.clientId, { title })}
                   onChangeDueDate={(dueDate) => {
                     handleDraftChange(draft.clientId, { dueDate })

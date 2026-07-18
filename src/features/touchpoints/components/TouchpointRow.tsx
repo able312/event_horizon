@@ -3,13 +3,10 @@ import { Check, Trash2 } from "lucide-react"
 import { Button } from "~/components/atoms/button"
 import { Input } from "~/components/atoms/input"
 import type { Touchpoint } from "~/definitions/database"
-import {
-  fromDateInputValue,
-  toDateInputValue,
-} from "~/features/event-detail/workspace/lib/financial"
 
 import type { TouchpointDraft } from "../types"
 import { getTouchpointUrgencyFromStored, URGENCY_STYLES } from "../lib/touchpointStatus"
+import { TouchpointDueDatePicker } from "./TouchpointDueDatePicker"
 
 const COMPLETE_TOGGLE_CLASS =
   "inline-flex size-4 shrink-0 items-center justify-center rounded-full border border-border bg-white text-orange-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40 disabled:opacity-50"
@@ -26,9 +23,6 @@ const DONE_BADGE_CLASS =
 const ROW_CHROME_STANDARD =
   "group flex flex-col gap-0.5 border-l-2 border-transparent py-2.5 pl-2"
 
-const DATE_INPUT_CLASS =
-  "h-6 w-[9.5rem] shrink-0 border-0 bg-transparent px-0 text-xs text-stone-500 shadow-none focus-visible:ring-0 [&::-webkit-calendar-picker-indicator]:opacity-60"
-
 const TITLE_INPUT_CLASS =
   "h-8 min-w-0 flex-1 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
 
@@ -38,6 +32,7 @@ const DELETE_BUTTON_CLASS =
 type PersistedRowProps = {
   kind: "persisted"
   touchpoint: Touchpoint
+  eventStartDateTime: string | null
   onUpdateTitle: (title: string) => void
   onUpdateDueDate: (dueDate: string | null) => void
   onToggleComplete: (completed: boolean) => void
@@ -47,6 +42,7 @@ type PersistedRowProps = {
 type DraftRowProps = {
   kind: "draft"
   draft: TouchpointDraft
+  eventStartDateTime: string | null
   onChangeTitle: (title: string) => void
   onChangeDueDate: (dueDate: string | null) => void
   onPersist: () => void
@@ -101,15 +97,10 @@ export const TouchpointRow: React.FC<TouchpointRowProps> = (props) => {
           </div>
         </div>
         <div className={`flex items-center gap-1.5 ${TITLE_COLUMN_OFFSET}`}>
-          <Input
-            type="date"
-            value={toDateInputValue(props.draft.dueDate)}
-            className={DATE_INPUT_CLASS}
-            onChange={(event) => {
-              const value = event.target.value
-              props.onChangeDueDate(value ? fromDateInputValue(value) : null)
-            }}
-            onBlur={() => props.onPersist()}
+          <TouchpointDueDatePicker
+            dueDate={props.draft.dueDate}
+            eventStartDateTime={props.eventStartDateTime}
+            onChange={props.onChangeDueDate}
           />
         </div>
       </li>
@@ -183,14 +174,10 @@ export const TouchpointRow: React.FC<TouchpointRowProps> = (props) => {
         </div>
       </div>
       <div className={`flex items-center gap-1.5 text-xs text-stone-500 ${TITLE_COLUMN_OFFSET}`}>
-        <Input
-          type="date"
-          defaultValue={toDateInputValue(touchpoint.dueDate)}
-          key={`${touchpoint.id}-date-${touchpoint.dueDate ?? "none"}`}
-          className={DATE_INPUT_CLASS}
-          onBlur={(event) => {
-            const value = event.target.value
-            const next = value ? fromDateInputValue(value) : null
+        <TouchpointDueDatePicker
+          dueDate={touchpoint.dueDate}
+          eventStartDateTime={props.eventStartDateTime}
+          onChange={(next) => {
             if (next !== touchpoint.dueDate) props.onUpdateDueDate(next)
           }}
         />
