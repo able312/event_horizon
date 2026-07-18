@@ -1,10 +1,31 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { Event } from "~/definitions/database"
 import type { EventResource } from "~/features/event-detail/types"
 
 import OverviewWorkspaceSection from "./OverviewWorkspaceSection"
+
+const useTouchpointsSectionMock = vi.hoisted(() => vi.fn())
+
+vi.mock("~/hooks/useTouchpointsSection", () => ({
+  useTouchpointsSection: useTouchpointsSectionMock,
+}))
+
+function stubTouchpointsSection() {
+  useTouchpointsSectionMock.mockReturnValue({
+    data: [],
+    isLoading: false,
+    createTouchpoint: vi.fn(),
+    createTouchpointAsync: vi.fn(),
+    updateTouchpoint: vi.fn(),
+    updateTouchpointAsync: vi.fn(),
+    deleteTouchpoint: vi.fn(),
+    deleteTouchpointAsync: vi.fn(),
+    seedCommonTouchpoints: vi.fn(),
+    seedCommonTouchpointsAsync: vi.fn(),
+  })
+}
 
 function makeEvent(overrides: Partial<Event> = {}): Event {
   return {
@@ -44,6 +65,10 @@ function makeEventResource(overrides: Partial<EventResource> = {}): EventResourc
 }
 
 describe("OverviewWorkspaceSection", () => {
+  beforeEach(() => {
+    stubTouchpointsSection()
+  })
+
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
