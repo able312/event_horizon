@@ -4,6 +4,7 @@ import { Copy, Send, Search, Edit } from "lucide-react"
 import { toast } from "sonner"
 import { buildGmailComposeUrl, buildGmailSearchUrl } from "~/lib/gmailUrlConstructors"
 import { openExternalUrl } from "~/lib/ipc/system"
+import formatClientDetailsPlainText from "../lib/formatClientDetailsPlainText"
 
 
 interface ClientDetailsCardProps {
@@ -46,6 +47,27 @@ export const ClientDetailsCard: React.FC<ClientDetailsCardProps> = ({ client, ev
         }
     }
 
+    const handleCopyAll = async () => {
+        const text = formatClientDetailsPlainText({
+            name: client.name,
+            email: client.email,
+            phone: client.phone,
+            eventTitle,
+        })
+
+        if (!text) {
+            toast.error("Not enough client information available to share.")
+            return
+        }
+
+        try {
+            await navigator.clipboard.writeText(text)
+            toast.success("Client details copied to clipboard")
+        } catch {
+            toast.error("Failed to copy client details")
+        }
+    }
+
     return (
         <section className="rounded-md border border-border bg-background p-2 shadow-sm">
             <div className="group">
@@ -73,7 +95,14 @@ export const ClientDetailsCard: React.FC<ClientDetailsCardProps> = ({ client, ev
                             <Search className="size-4" />
                         </Button>
 
-                        <Button type="button" variant="outline" className="size-8 rounded-full" disabled>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="size-8 rounded-full"
+                            aria-label="Copy client details"
+                            onClick={() => void handleCopyAll()}
+                            disabled={ !client.name || !eventTitle}
+                        >
                             <Copy className="size-4" />
                         </Button>
                     </div>
