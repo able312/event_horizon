@@ -18,6 +18,7 @@
     "rebuild:electron": "electron-rebuild -f -w better-sqlite3",
     "rebuild:node": "npm rebuild better-sqlite3",
     "lint": "eslint .",
+    "generate:icons": "bash scripts/generate-icons.sh",
     "preview": "vite preview",
     "transpile:electron": "tsc --project src/electron/tsconfig.json && cp -r migrations dist-electron/",
     "dist:mac": "npm run rebuild:electron && npm run transpile:electron && npm run build && electron-builder --mac --arm64",

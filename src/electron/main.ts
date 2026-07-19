@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, nativeImage } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url'
 import { isDev } from './utils.js';
@@ -9,9 +9,20 @@ import { initDB } from './db/index.js';
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+const resolveWindowIconPath = () => {
+    if (isDev()) {
+        return path.join(__dirname, '../../src/assets/eventHorizon-256.png')
+    }
+    return path.join(app.getAppPath(), 'dist-react/icon-512.png')
+}
+
 const createWindow = () => {
+    const iconPath = resolveWindowIconPath()
+    const windowIcon = nativeImage.createFromPath(iconPath)
+
     const mainWindow = new BrowserWindow({
         backgroundColor: '#ffffff',  // Add this line
+        ...(windowIcon.isEmpty() ? {} : { icon: windowIcon }),
         webPreferences: {
             preload: path.join(__dirname, 'preload.cjs'),
             contextIsolation: true,
