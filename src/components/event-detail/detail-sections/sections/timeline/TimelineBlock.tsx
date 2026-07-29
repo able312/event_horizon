@@ -22,7 +22,7 @@ const TimelineBlock: React.FC<TimelineBlocksProps> = ({ timeblock, updateTimeblo
 
       {timeblock.sectionType === SECTION_TYPE.FOOD &&
         timeblock.foodItems?.map(item => (
-          <GenericDetailsBlock 
+          <GenericDetailsBlock
             key={"foodItem_" + item.id}
             blockHeader={ (item.quantity ? item.quantity + " x " : "") + item.name }
             blockSubtitle={ item.serviceStyle }
@@ -34,7 +34,7 @@ const TimelineBlock: React.FC<TimelineBlocksProps> = ({ timeblock, updateTimeblo
 
       {timeblock.sectionType === SECTION_TYPE.BEVERAGE &&
         timeblock.beverageItems?.map(item => (
-          <GenericDetailsBlock 
+          <GenericDetailsBlock
             key={"beverageItem_" + item.id}
             blockHeader={ (item.quantity ? item.quantity + " x " : "") + item.name }
             blockSubtitle={ item.serviceStyle }
@@ -45,10 +45,10 @@ const TimelineBlock: React.FC<TimelineBlocksProps> = ({ timeblock, updateTimeblo
       }
 
       {timeblock.sectionType === SECTION_TYPE.VENDOR &&
-        <GenericDetailsBlock 
+        <GenericDetailsBlock
           blockHeader={ timeblock.vendorItem?.contactName }
           blockSubtitle={ timeblock.vendorItem?.contactPhone + " | " + timeblock.vendorItem?.contactEmail  }
-          blockNotes={ timeblock.details } 
+          blockNotes={ timeblock.details }
           borderColor='purple'
         />
       }
@@ -58,9 +58,9 @@ const TimelineBlock: React.FC<TimelineBlocksProps> = ({ timeblock, updateTimeblo
            <GenericDetailsBlock
              key={"setupInstructionPart_" + uuidv4()}
              {...parseBlock(part)}
-             borderColor='red' 
+             borderColor='red'
            />
-         )) 
+         ))
       }
 
       {timeblock.sectionType === SECTION_TYPE.NOTE &&
@@ -68,9 +68,9 @@ const TimelineBlock: React.FC<TimelineBlocksProps> = ({ timeblock, updateTimeblo
            <GenericDetailsBlock
              key={"notePart_" + uuidv4()}
              {...parseBlock(part)}
-             borderColor='gray' 
+             borderColor='gray'
            />
-         )) 
+         ))
       }
 
       {timeblock.sectionType === SECTION_TYPE.TOURNAMENT_DETAIL &&
@@ -78,13 +78,13 @@ const TimelineBlock: React.FC<TimelineBlocksProps> = ({ timeblock, updateTimeblo
            <GenericDetailsBlock
              key={"notePart_" + uuidv4()}
              {...parseBlock(part)}
-             borderColor='green' 
+             borderColor='green'
            />
-         )) 
+         ))
       }
 
       {timeblock.sectionType === SECTION_TYPE.CART_DETAIL &&
-        <>
+        <div className="break-inside-avoid">
           <GenericDetailsBlock
             blockHeader={ "Goes on Cart" }
             blockNotes={ timeblock.cartDetails?.whatGoesOnCarts }
@@ -94,7 +94,7 @@ const TimelineBlock: React.FC<TimelineBlocksProps> = ({ timeblock, updateTimeblo
             grid={ timeblock.cartDetails?.customGrid }
             borderColor="green"
           />
-        </>
+        </div>
       }
 
 
@@ -114,7 +114,7 @@ const GenericTimeblock: React.FC<GenericTimeblockProps> = ({ timeblock, updateTi
 
   return (
     <div
-      className="flex items-start gap-3 p-3 hover:bg-stone-100 transition-colors border-b-2 border-solid break-inside-avoid"
+      className={`flex items-start gap-3 p-3 hover:bg-stone-100 transition-colors border-b-2 border-solid ${timeblock.sectionType === "cart_detail" ? "break-inside-avoid" : ""}`}
     >
       {/* Time */}
       <div className="flex items-center gap-2 min-w-[80px]">
@@ -162,21 +162,21 @@ type GenericDetailsBlockProps = {
 const GenericDetailsBlock: React.FC<GenericDetailsBlockProps> = ({ blockHeader, blockSubtitle, blockNotes, borderColor }) => {
   if (!blockHeader && !blockSubtitle && !blockNotes) return null
   return (
-    <div className={`mt-2 pl-2 border-l-2 border-${borderColor}-200`}>
+    <div className={`mt-2 pl-2 border-l-2 border-${borderColor}-200 break-inside-avoid`}>
       <div className="pb-2">
           {blockHeader && <div className='text-xs text-stone-600 font-bold pb-1'>{blockHeader}</div>}
           {blockSubtitle && <div className='text-xs font-sans text-stone-600 pb-1'>{ blockSubtitle }</div>}
           {blockNotes && <pre className='text-xs font-sans italic text-stone-600 text-wrap pb-1'>{ blockNotes }</pre>}
         </div>
     </div>
-  ) 
+  )
 }
 
 type CartGridBlockProps = {
   grid: (string | number | null)[][] | null | undefined
   borderColor?: string
 }
-const CartGridBlock: React.FC<CartGridBlockProps> = ({ 
+const CartGridBlock: React.FC<CartGridBlockProps> = ({
   grid = [
     [7, 5, 9, 10, 3, 1],
     [7, 5, 9, 10, 3, 1],
@@ -195,8 +195,8 @@ const CartGridBlock: React.FC<CartGridBlockProps> = ({
 
   return (
     <>
-      <div className={`mt-2 pl-2 border-l-2 border-${borderColor}-200`}>
-       
+      <div className={`mt-2 pl-2 border-l-2 border-${borderColor}-200 break-inside-avoid`}>
+
         <div className="grid grid-cols-[10%_20%_10%_20%_10%_10%] gap-2">
             {grid?.map((row, ri) => (
               <>
@@ -211,7 +211,7 @@ const CartGridBlock: React.FC<CartGridBlockProps> = ({
            <p className='text-sm pt-4 text-stone-500'>Requires {cartCount} carts.</p>
       </div>
 
-      <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mt-6">
+      <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mt-6 break-inside-avoid">
         <p className="text-xs font-semibold text-yellow-800">
           ⚠️ DO NOT leave keys in carts or hand out keys before tournament start time
         </p>

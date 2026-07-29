@@ -3,14 +3,14 @@ import TimelineBlock from "./TimelineBlock"
 
 
 const EventTimeline = () => {
-  
-  const { 
+
+  const {
     data: allTimeblocks,
     isLoading,
     updateTimeblock,
   } = useTimeline()
 
-  
+
 
   if (isLoading) {
     return <div className="w-full">Loading...</div>
@@ -45,7 +45,7 @@ const EventTimeline = () => {
 
   return (
     <div className="space-y-3 print:bg-white">
-      <h4 className="font-medium text-sm mb-3 break-after-avoid">Event Timeline</h4>
+      <h4 className="font-medium text-sm mb-3">Event Timeline</h4>
       <div className="print:bg-white">
         {sortedTimeblocks.map((timeblock) => (
           <TimelineBlock
