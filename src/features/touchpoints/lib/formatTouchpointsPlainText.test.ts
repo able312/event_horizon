@@ -25,4 +25,33 @@ describe("formatTouchpointsPlainText", () => {
     expect(text).toContain(`- Final guest count — ${expectedDate}`)
     expect(text).toContain("- Untitled touchpoint")
   })
+
+  it("orders items by due date, with undated last", () => {
+    const later = "2026-07-25T00:00:00.000Z"
+    const earlier = "2026-07-18T00:00:00.000Z"
+    const laterLabel = parseStoredDueDate(later)?.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
+    const earlierLabel = parseStoredDueDate(earlier)?.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
+
+    const text = formatTouchpointsPlainText([
+      { title: "Later task", dueDate: later },
+      { title: "No date", dueDate: null },
+      { title: "Earlier task", dueDate: earlier },
+    ])
+
+    const earlierIndex = text.indexOf(`- Earlier task — ${earlierLabel}`)
+    const laterIndex = text.indexOf(`- Later task — ${laterLabel}`)
+    const undatedIndex = text.indexOf("- No date")
+
+    expect(earlierIndex).toBeGreaterThan(-1)
+    expect(laterIndex).toBeGreaterThan(earlierIndex)
+    expect(undatedIndex).toBeGreaterThan(laterIndex)
+  })
 })
