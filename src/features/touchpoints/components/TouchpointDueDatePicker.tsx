@@ -2,7 +2,7 @@ import * as React from "react"
 import { CalendarIcon } from "lucide-react"
 
 import { Button } from "~/components/atoms/button"
-import { Calendar } from "~/components/atoms/calendar"
+import { Calendar, CalendarDayButton } from "~/components/atoms/calendar"
 import {
   Popover,
   PopoverContent,
@@ -12,6 +12,18 @@ import { fromDateInputValue } from "~/features/event-detail/workspace/lib/financ
 import { cn } from "~/lib/utils"
 
 import { parseStoredDueDate } from "../lib/touchpointStatus"
+
+function CenteredDayButton(
+  props: React.ComponentProps<typeof CalendarDayButton>,
+) {
+  const { className, ...rest } = props
+  return (
+    <CalendarDayButton
+      {...rest}
+      className={cn(className, "justify-center")}
+    />
+  )
+}
 
 type TouchpointDueDatePickerProps = {
   dueDate: string | null
@@ -87,10 +99,11 @@ export function TouchpointDueDatePicker({
           month={month}
           onMonthChange={setMonth}
           captionLayout="dropdown"
+          components={{ DayButton: CenteredDayButton }}
           modifiers={eventDay ? { eventDay } : undefined}
           modifiersClassNames={{
             eventDay:
-              "relative after:absolute after:inset-1 after:rounded-md after:ring-2 after:ring-orange-400/80 after:ring-inset after:pointer-events-none",
+              "relative after:absolute after:inset-1 after:rounded-md after:ring-3 after:ring-orange-400/80 after:pointer-events-none",
           }}
           onSelect={(date) => {
             if (!date) return

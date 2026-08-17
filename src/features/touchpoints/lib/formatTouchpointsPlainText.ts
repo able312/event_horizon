@@ -1,9 +1,10 @@
 import type { TouchpointPlainItem } from "../types"
 
+import { parseStoredDueDate } from "./touchpointStatus"
+
 function formatDueDate(dueDate: string | null): string | null {
-  if (!dueDate) return null
-  const parsed = new Date(dueDate)
-  if (Number.isNaN(parsed.getTime())) return null
+  const parsed = parseStoredDueDate(dueDate)
+  if (!parsed) return null
   return parsed.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
