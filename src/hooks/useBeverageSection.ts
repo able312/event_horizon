@@ -1,17 +1,17 @@
 import { useParams } from "react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import type { BeverageItem } from "~/definitions/database"
+import type { BeverageItemType } from "~/definitions/database"
+import type { BeverageItemWithAssignments, BeverageSectionPayload } from "~/definitions/beverage/beverage-types"
 import * as beverageItemsIpc from "~/lib/ipc/beverageItems"
 import { useTimeblockMutations } from "./useTimeblockMutations"
-import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import {
-  appendListItem,
-  removeListItem,
-  replaceListItemByTempId,
-  updateListItem,
-} from "./util/optimisticTimeblockCache"
-
+  appendBeverageItem,
+  removeBeverageItem,
+  replaceBeverageItemByTempId,
+  setBeverageItemAssignments,
+  updateBeverageItem as updateBeverageItemInCache,
+} from "./util/optimisticBeverageSectionCache"
 
 export function useBeverageSection() {
   const { id: eventId } = useParams()
@@ -36,46 +36,49 @@ export function useBeverageSection() {
     queryKey,
     eventId: eventId!,
     sectionType: "beverage",
+    cacheShape: "beverageSection",
   })
 
   const addItemMutation = useMutation({
-    mutationFn: ({ timeblockId, newItem }: { timeblockId: string; newItem?: Partial<BeverageItem> }) =>
+    mutationFn: ({ type, newItem }: { type: BeverageItemType; newItem?: { name?: string } }) =>
       beverageItemsIpc.createBeverageItem({
-        timeblockId,
+        eventId: eventId!,
         name: newItem?.name || "",
-        quantity: newItem?.quantity ?? undefined,
-        type: newItem?.type ?? undefined,
-        serviceStyle: newItem?.serviceStyle ?? undefined,
-        includes: newItem?.includes ?? undefined,
-        unitPriceCents: newItem?.unitPriceCents ?? undefined,
+        type,
       }),
-    onMutate: async ({ timeblockId, newItem }) => {
+    onMutate: async ({ type, newItem }) => {
       await queryClient.cancelQueries({ queryKey })
-      const previousData = queryClient.getQueryData<TimeblockWithItems[]>(queryKey)
+      const previousData = queryClient.getQueryData<BeverageSectionPayload>(queryKey)
 
       const tempId = `temp_${Date.now()}`
-      const optimisticItem: BeverageItem = {
+      const optimisticItem: BeverageItemWithAssignments = {
         id: tempId,
+        eventId: eventId!,
         name: newItem?.name || "",
-        quantity: newItem?.quantity ?? null,
-        type: newItem?.type ?? null,
-        serviceStyle: newItem?.serviceStyle ?? null,
-        includes: newItem?.includes ?? null,
-        unitPriceCents: newItem?.unitPriceCents ?? null,
-        timeblockId,
+        quantity: null,
+        type,
+        serviceStyle: null,
+        includes: null,
+        unitPriceCents: null,
+        assignedTimeblockIds: [],
       }
 
-      queryClient.setQueryData<TimeblockWithItems[]>(queryKey, (old = []) =>
-        appendListItem(old, timeblockId, "beverageItems", optimisticItem)
+      queryClient.setQueryData<BeverageSectionPayload>(queryKey, (old) =>
+        appendBeverageItem(old, optimisticItem),
       )
 
-      return { previousData, tempId, timeblockId }
+      return { previousData, tempId }
     },
     onSuccess: (createdItem, _variables, context) => {
       if (!context) return
 
-      queryClient.setQueryData<TimeblockWithItems[]>(queryKey, (old = []) =>
-        replaceListItemByTempId(old, context.timeblockId, "beverageItems", context.tempId, createdItem)
+      const withAssignments: BeverageItemWithAssignments = {
+        ...createdItem,
+        assignedTimeblockIds: [],
+      }
+
+      queryClient.setQueryData<BeverageSectionPayload>(queryKey, (old) =>
+        replaceBeverageItemByTempId(old, context.tempId, withAssignments),
       )
     },
     onError: (_err, _variables, context) => {
@@ -91,21 +94,19 @@ export function useBeverageSection() {
   })
 
   const updateItemMutation = useMutation({
-    mutationFn: ({ itemId, updates }: { timeblockId: string; itemId: string; updates: Partial<BeverageItem> }) =>
+    mutationFn: ({ itemId, updates }: { itemId: string; updates: Partial<BeverageItemWithAssignments> }) =>
       beverageItemsIpc.updateBeverageItem(itemId, {
         name: updates.name ?? undefined,
         quantity: updates.quantity ?? undefined,
         type: updates.type ?? undefined,
-        serviceStyle: updates.serviceStyle ?? undefined,
-        includes: updates.includes ?? undefined,
         unitPriceCents: updates.unitPriceCents ?? undefined,
       }),
-    onMutate: async ({ timeblockId, itemId, updates }) => {
+    onMutate: async ({ itemId, updates }) => {
       await queryClient.cancelQueries({ queryKey })
-      const previousData = queryClient.getQueryData<TimeblockWithItems[]>(queryKey)
+      const previousData = queryClient.getQueryData<BeverageSectionPayload>(queryKey)
 
-      queryClient.setQueryData<TimeblockWithItems[]>(queryKey, (old = []) =>
-        updateListItem(old, timeblockId, "beverageItems", itemId, updates)
+      queryClient.setQueryData<BeverageSectionPayload>(queryKey, (old) =>
+        updateBeverageItemInCache(old, itemId, updates),
       )
 
       return { previousData }
@@ -123,14 +124,14 @@ export function useBeverageSection() {
   })
 
   const deleteItemMutation = useMutation({
-    mutationFn: ({ itemId }: { timeblockId: string; itemId: string }) =>
+    mutationFn: ({ itemId }: { itemId: string }) =>
       beverageItemsIpc.deleteBeverageItem(itemId),
-    onMutate: async ({ timeblockId, itemId }) => {
+    onMutate: async ({ itemId }) => {
       await queryClient.cancelQueries({ queryKey })
-      const previousData = queryClient.getQueryData<TimeblockWithItems[]>(queryKey)
+      const previousData = queryClient.getQueryData<BeverageSectionPayload>(queryKey)
 
-      queryClient.setQueryData<TimeblockWithItems[]>(queryKey, (old = []) =>
-        removeListItem(old, timeblockId, "beverageItems", itemId)
+      queryClient.setQueryData<BeverageSectionPayload>(queryKey, (old) =>
+        removeBeverageItem(old, itemId),
       )
 
       return { previousData }
@@ -147,13 +148,43 @@ export function useBeverageSection() {
     },
   })
 
+  const setItemTimeblocksMutation = useMutation({
+    mutationFn: ({ itemId, timeblockIds }: { itemId: string; timeblockIds: string[] }) =>
+      beverageItemsIpc.setBeverageItemTimeblocks(itemId, timeblockIds),
+    onMutate: async ({ itemId, timeblockIds }) => {
+      await queryClient.cancelQueries({ queryKey })
+      const previousData = queryClient.getQueryData<BeverageSectionPayload>(queryKey)
+
+      queryClient.setQueryData<BeverageSectionPayload>(queryKey, (old) =>
+        setBeverageItemAssignments(old, itemId, timeblockIds),
+      )
+
+      return { previousData }
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(queryKey, context.previousData)
+      }
+      toast.error("Failed to update timeblock assignments")
+      console.error("Failed to update timeblock assignments: ", _err.message)
+    },
+    onSettled: () => {
+      invalidateKeys()
+    },
+  })
+
+  const section = query.data
+
   return {
     ...query,
+    timeblocks: section?.timeblocks ?? [],
+    items: section?.items ?? [],
     addTimeblock,
     updateTimeblock,
     removeTimeblock,
     addItem: addItemMutation.mutate,
     updateItem: updateItemMutation.mutate,
     removeItem: deleteItemMutation.mutate,
+    setItemTimeblocks: setItemTimeblocksMutation.mutate,
   }
 }

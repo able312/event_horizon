@@ -136,7 +136,18 @@ describe("rollback stray food workspace migration", () => {
         "unit_price_cents",
       ])
 
-      expect(foreignKeyTables(testDb.sqlite, "beverage_items")).toEqual(["timeblocks"])
+      expect(columnNames(testDb.sqlite, "beverage_items")).toEqual([
+        "id",
+        "event_id",
+        "name",
+        "quantity",
+        "type",
+        "service_style",
+        "includes",
+        "unit_price_cents",
+      ])
+
+      expect(foreignKeyTables(testDb.sqlite, "beverage_items")).toEqual(["events"])
       expect(foreignKeyTables(testDb.sqlite, "vendor_items")).toEqual(["timeblocks"])
 
       const repairedTimeblock = testDb.sqlite.prepare(`
@@ -207,8 +218,13 @@ describe("rollback stray food workspace migration", () => {
       `).run()
 
       testDb.sqlite.prepare(`
-        INSERT INTO beverage_items (id, timeblock_id, name, quantity, type, service_style, includes, unit_price_cents)
-        VALUES ('bev-2', 'tb-bev-2', 'Negroni', 3, 'Cocktail', 'Open Bar', 'Orange peel', 1800)
+        INSERT INTO beverage_items (id, event_id, name, quantity, type, service_style, includes, unit_price_cents)
+        VALUES ('bev-2', 'event-2', 'Negroni', 3, 'Rails', 'Open Bar', 'Orange peel', 1800)
+      `).run()
+
+      testDb.sqlite.prepare(`
+        INSERT INTO beverage_item_timeblocks (beverage_item_id, timeblock_id)
+        VALUES ('bev-2', 'tb-bev-2')
       `).run()
 
       testDb.sqlite.prepare(`
@@ -238,7 +254,18 @@ describe("rollback stray food workspace migration", () => {
         "unit_price_cents",
       ])
 
-      expect(foreignKeyTables(testDb.sqlite, "beverage_items")).toEqual(["timeblocks"])
+      expect(columnNames(testDb.sqlite, "beverage_items")).toEqual([
+        "id",
+        "event_id",
+        "name",
+        "quantity",
+        "type",
+        "service_style",
+        "includes",
+        "unit_price_cents",
+      ])
+
+      expect(foreignKeyTables(testDb.sqlite, "beverage_items")).toEqual(["events"])
       expect(foreignKeyTables(testDb.sqlite, "vendor_items")).toEqual(["timeblocks"])
 
       const timeblockRow = testDb.sqlite.prepare(`
@@ -276,18 +303,27 @@ describe("rollback stray food workspace migration", () => {
       })
 
       expect(testDb.sqlite.prepare(`
-        SELECT id, timeblock_id, name, quantity, type, service_style, includes, unit_price_cents
+        SELECT id, event_id, name, quantity, type, service_style, includes, unit_price_cents
         FROM beverage_items
         WHERE id = 'bev-2'
       `).get()).toEqual({
         id: "bev-2",
-        timeblock_id: "tb-bev-2",
+        event_id: "event-2",
         name: "Negroni",
         quantity: 3,
-        type: "Cocktail",
+        type: "Rails",
         service_style: "Open Bar",
         includes: "Orange peel",
         unit_price_cents: 1800,
+      })
+
+      expect(testDb.sqlite.prepare(`
+        SELECT beverage_item_id, timeblock_id
+        FROM beverage_item_timeblocks
+        WHERE beverage_item_id = 'bev-2'
+      `).get()).toEqual({
+        beverage_item_id: "bev-2",
+        timeblock_id: "tb-bev-2",
       })
 
       expect(testDb.sqlite.prepare(`

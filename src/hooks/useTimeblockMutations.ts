@@ -3,14 +3,21 @@ import { toast } from "sonner"
 import type { UpdateTimeblock } from "~/definitions/database"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import type { TimeblockType } from "~/definitions/timeblocks/timeblocks-types"
+import type { BeverageSectionPayload } from "~/definitions/beverage/beverage-types"
 import type { CreateTimeblockInput, TimeblockPrefillRequest } from "~/definitions/timeblocks/timeblock-create"
 import { getSectionDefaultPrefill } from "~/definitions/timeblocks/setupInstructionPrefill"
 import * as timeblocksIpc from "~/lib/ipc/timeblocks"
+import {
+  appendBeverageTimeblock,
+  removeTimeblockFromBeverageSection,
+  updateBeverageTimeblock,
+} from "./util/optimisticBeverageSectionCache"
 
 interface UseTimeblockMutationsOptions {
   queryKey: readonly [string, string | undefined]
   eventId: string
   sectionType: TimeblockType
+  cacheShape?: "timeblockList" | "beverageSection"
 }
 
 export interface AddTimeblockInput {
@@ -42,7 +49,7 @@ function resolveOptimisticValues(sectionType: TimeblockType, input?: AddTimebloc
   }
 }
 
-export function useTimeblockMutations({ queryKey, eventId, sectionType }: UseTimeblockMutationsOptions) {
+export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheShape = "timeblockList" }: UseTimeblockMutationsOptions) {
   const queryClient = useQueryClient()
 
   const invalidateKeys = (type: string) => {
@@ -67,7 +74,7 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType }: UseTim
     },
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey })
-      const previousData = queryClient.getQueryData<TimeblockWithItems[]>(queryKey)
+      const previousData = queryClient.getQueryData(queryKey)
       const optimisticValues = resolveOptimisticValues(sectionType, input)
 
       const tempId = `temp_${Date.now()}`
@@ -83,10 +90,16 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType }: UseTim
         updatedAt: null,
       }
 
-      queryClient.setQueryData<TimeblockWithItems[]>(queryKey, (old = []) => [
-        ...old,
-        optimisticTimeblock,
-      ])
+      if (cacheShape === "beverageSection") {
+        queryClient.setQueryData<BeverageSectionPayload>(queryKey, (old) =>
+          appendBeverageTimeblock(old, optimisticTimeblock),
+        )
+      } else {
+        queryClient.setQueryData<TimeblockWithItems[]>(queryKey, (old = []) => [
+          ...old,
+          optimisticTimeblock,
+        ])
+      }
 
       return { previousData, tempId }
     },
@@ -106,13 +119,19 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType }: UseTim
       timeblocksIpc.updateTimeblock(id, updates),
     onMutate: async ({ id, updates }) => {
       await queryClient.cancelQueries({ queryKey })
-      const previousData = queryClient.getQueryData<TimeblockWithItems[]>(queryKey)
+      const previousData = queryClient.getQueryData(queryKey)
 
-      queryClient.setQueryData<TimeblockWithItems[]>(queryKey, (old = []) =>
-        old.map(tb =>
-          tb.id === id ? { ...tb, ...updates } : tb
+      if (cacheShape === "beverageSection") {
+        queryClient.setQueryData<BeverageSectionPayload>(queryKey, (old) =>
+          updateBeverageTimeblock(old, id, updates),
         )
-      )
+      } else {
+        queryClient.setQueryData<TimeblockWithItems[]>(queryKey, (old = []) =>
+          old.map(tb =>
+            tb.id === id ? { ...tb, ...updates } : tb
+          )
+        )
+      }
 
       return { previousData }
     },
@@ -131,11 +150,17 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType }: UseTim
     mutationFn: (id: string) => timeblocksIpc.deleteTimeblock(id),
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey })
-      const previousData = queryClient.getQueryData<TimeblockWithItems[]>(queryKey)
+      const previousData = queryClient.getQueryData(queryKey)
 
-      queryClient.setQueryData<TimeblockWithItems[]>(queryKey, (old = []) =>
-        old.filter(tb => tb.id !== id)
-      )
+      if (cacheShape === "beverageSection") {
+        queryClient.setQueryData<BeverageSectionPayload>(queryKey, (old) =>
+          removeTimeblockFromBeverageSection(old, id),
+        )
+      } else {
+        queryClient.setQueryData<TimeblockWithItems[]>(queryKey, (old = []) =>
+          old.filter(tb => tb.id !== id)
+        )
+      }
 
       return { previousData }
     },

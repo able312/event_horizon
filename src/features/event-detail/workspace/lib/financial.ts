@@ -1,4 +1,4 @@
-import type { ChargeCategory, MenuOfChargeItem, Payment } from "~/definitions/database"
+import type { ChargeCategory, MenuOfChargeItem, Payment, BeverageItem } from "~/definitions/database"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 
 export const HST_RATE = 0.13
@@ -72,22 +72,20 @@ export function computeFoodSubtotalCents(foodTimeblocks: TimeblockWithItems[] | 
   ), 0)
 }
 
-export function computeBeverageSubtotalCents(beverageTimeblocks: TimeblockWithItems[] | undefined): number {
-  if (!beverageTimeblocks || beverageTimeblocks.length === 0) return 0
+export function computeBeverageSubtotalCents(beverageItems: BeverageItem[] | undefined): number {
+  if (!beverageItems || beverageItems.length === 0) return 0
 
-  return beverageTimeblocks.reduce((sum, timeblock) => (
-    sum + (timeblock.beverageItems ?? []).reduce((itemSum, item) => itemSum + computeBillableLineTotalCents(item), 0)
-  ), 0)
+  return beverageItems.reduce((sum, item) => sum + computeBillableLineTotalCents(item), 0)
 }
 
 export function computeAllChargesSubtotalCents(params: {
   menuItems: MenuOfChargeItem[] | undefined
   foodTimeblocks: TimeblockWithItems[] | undefined
-  beverageTimeblocks: TimeblockWithItems[] | undefined
+  beverageItems: BeverageItem[] | undefined
 }): number {
   return computeMenuSubtotalCents(params.menuItems)
     + computeFoodSubtotalCents(params.foodTimeblocks)
-    + computeBeverageSubtotalCents(params.beverageTimeblocks)
+    + computeBeverageSubtotalCents(params.beverageItems)
 }
 
 export function computeGratuityBaseCents(foodSubtotalCents: number, beverageSubtotalCents: number): number {
@@ -101,12 +99,12 @@ export function computeGratuityCents(gratuityBaseCents: number): number {
 export function computeFinancialSummaryAllSources(params: {
   menuItems: MenuOfChargeItem[] | undefined
   foodTimeblocks: TimeblockWithItems[] | undefined
-  beverageTimeblocks: TimeblockWithItems[] | undefined
+  beverageItems: BeverageItem[] | undefined
   payments: Payment[] | undefined
 }) {
   const menuSubtotalCents = computeMenuSubtotalCents(params.menuItems)
   const foodSubtotalCents = computeFoodSubtotalCents(params.foodTimeblocks)
-  const beverageSubtotalCents = computeBeverageSubtotalCents(params.beverageTimeblocks)
+  const beverageSubtotalCents = computeBeverageSubtotalCents(params.beverageItems)
   const chargesSubtotalCents = menuSubtotalCents + foodSubtotalCents + beverageSubtotalCents
   const gratuityBaseCents = computeGratuityBaseCents(foodSubtotalCents, beverageSubtotalCents)
   const gratuityCents = computeGratuityCents(gratuityBaseCents)
@@ -134,7 +132,7 @@ export function computeFinancialSummaryAllSources(params: {
 export function computeFinancialPreviewModel(params: {
   menuItems: MenuOfChargeItem[] | undefined
   foodTimeblocks: TimeblockWithItems[] | undefined
-  beverageTimeblocks: TimeblockWithItems[] | undefined
+  beverageItems: BeverageItem[] | undefined
   payments: Payment[] | undefined
 }) {
   return computeFinancialSummaryAllSources(params)

@@ -5,16 +5,9 @@ import { renderWithProviders } from "~/test/renderWithProviders"
 import BeverageWorkspaceSection from "./BeverageWorkspaceSection"
 
 const useBeverageSectionMock = vi.fn()
-const addSetupInstructionMock = vi.fn()
 
 vi.mock("~/hooks/useBeverageSection", () => ({
   useBeverageSection: () => useBeverageSectionMock(),
-}))
-
-vi.mock("~/hooks/useSetupInstrucionSection", () => ({
-  useSetupInstructionSection: () => ({
-    addSetupInstruction: addSetupInstructionMock,
-  }),
 }))
 
 describe("BeverageWorkspaceSection", () => {
@@ -23,9 +16,9 @@ describe("BeverageWorkspaceSection", () => {
     vi.clearAllMocks()
   })
 
-  it("renders compact beverage planning rows and subtotals", () => {
+  it("renders type-grouped drink table and beverage timeblocks", () => {
     useBeverageSectionMock.mockReturnValue({
-      data: [
+      timeblocks: [
         {
           id: "tb-1",
           eventId: "event-1",
@@ -35,18 +28,20 @@ describe("BeverageWorkspaceSection", () => {
           assignedTo: "Bar Team",
           createdAt: "created",
           updatedAt: null,
-          beverageItems: [
-            {
-              id: "bev-1",
-              timeblockId: "tb-1",
-              name: "House Red",
-              quantity: 12,
-              type: null,
-              serviceStyle: "Tray Passed",
-              includes: "Cabernet",
-              unitPriceCents: 2200,
-            },
-          ],
+          details: "Ice on the left",
+        },
+      ],
+      items: [
+        {
+          id: "bev-1",
+          eventId: "event-1",
+          name: "House Red",
+          quantity: 12,
+          type: "Wine",
+          serviceStyle: null,
+          includes: null,
+          unitPriceCents: 2200,
+          assignedTimeblockIds: ["tb-1"],
         },
       ],
       isLoading: false,
@@ -56,28 +51,34 @@ describe("BeverageWorkspaceSection", () => {
       addItem: vi.fn(),
       updateItem: vi.fn(),
       removeItem: vi.fn(),
+      setItemTimeblocks: vi.fn(),
     })
 
     renderWithProviders(<BeverageWorkspaceSection />)
 
     expect(screen.getByText("Beverage Planning")).toBeTruthy()
-    expect(screen.getByRole("table")).toBeTruthy()
+    expect(screen.getByText("Drinks")).toBeTruthy()
+    expect(screen.getByRole("heading", { name: "Timeblocks", level: 4 })).toBeTruthy()
+    expect(screen.getAllByText("Wine").length).toBeGreaterThan(0)
     expect(screen.getByDisplayValue("House Red")).toBeTruthy()
-    expect(screen.getByText("$264.00")).toBeTruthy()
-    expect(screen.queryByText("Subtotal: $264.00")).toBeNull()
-    expect(screen.getByText("Cabernet")).toBeTruthy()
+    expect(screen.getByDisplayValue("Reception Bar")).toBeTruthy()
+    expect(screen.getByText("Ice on the left")).toBeTruthy()
+    expect(screen.queryByText("Special Orders")).toBeNull()
+    expect(screen.queryByLabelText("Service Style")).toBeNull()
+    expect(screen.queryByText("$264.00")).toBeNull()
   })
 
-  it("wires beverage mutations through the workspace list actions", async () => {
+  it("wires beverage mutations through the workspace actions", async () => {
     const addTimeblock = vi.fn()
     const updateTimeblock = vi.fn()
     const removeTimeblock = vi.fn()
     const addItem = vi.fn()
     const updateItem = vi.fn()
     const removeItem = vi.fn()
+    const setItemTimeblocks = vi.fn()
 
     useBeverageSectionMock.mockReturnValue({
-      data: [
+      timeblocks: [
         {
           id: "tb-1",
           eventId: "event-1",
@@ -87,18 +88,31 @@ describe("BeverageWorkspaceSection", () => {
           assignedTo: "",
           createdAt: "created",
           updatedAt: null,
-          beverageItems: [
-            {
-              id: "bev-1",
-              timeblockId: "tb-1",
-              name: "Sparkling Water",
-              quantity: 10,
-              type: null,
-              serviceStyle: null,
-              includes: null,
-              unitPriceCents: 300,
-            },
-          ],
+          details: "",
+        },
+        {
+          id: "tb-2",
+          eventId: "event-1",
+          title: "Dinner Bar",
+          time: "18:00",
+          sectionType: "beverage",
+          assignedTo: "",
+          createdAt: "created",
+          updatedAt: null,
+          details: "",
+        },
+      ],
+      items: [
+        {
+          id: "bev-1",
+          eventId: "event-1",
+          name: "Sparkling Water",
+          quantity: 10,
+          type: "Non-Alcoholic",
+          serviceStyle: null,
+          includes: null,
+          unitPriceCents: 300,
+          assignedTimeblockIds: ["tb-1"],
         },
       ],
       isLoading: false,
@@ -108,67 +122,56 @@ describe("BeverageWorkspaceSection", () => {
       addItem,
       updateItem,
       removeItem,
+      setItemTimeblocks,
     })
 
     renderWithProviders(<BeverageWorkspaceSection />)
 
-    fireEvent.change(screen.getByLabelText("Assigned To"), { target: { value: "Lead Bartender" } })
-    fireEvent.blur(screen.getByLabelText("Assigned To"))
+    fireEvent.change(screen.getAllByLabelText("Assigned To")[0], { target: { value: "Lead Bartender" } })
+    fireEvent.blur(screen.getAllByLabelText("Assigned To")[0])
     expect(updateTimeblock).toHaveBeenCalledWith({
       id: "tb-1",
       updates: { assignedTo: "Lead Bartender" },
     })
 
-    fireEvent.change(screen.getByLabelText("Item Name"), { target: { value: "Still Water" } })
-    fireEvent.blur(screen.getByLabelText("Item Name"))
+    fireEvent.change(screen.getByLabelText("Beverage item name"), { target: { value: "Still Water" } })
+    fireEvent.blur(screen.getByLabelText("Beverage item name"))
     expect(updateItem).toHaveBeenCalledWith({
-      timeblockId: "tb-1",
       itemId: "bev-1",
       updates: { name: "Still Water" },
     })
 
-    fireEvent.change(screen.getByLabelText("Service Style"), { target: { value: "Open Bar" } })
-    fireEvent.blur(screen.getByLabelText("Service Style"))
+    fireEvent.change(screen.getByLabelText("Beverage quantity"), { target: { value: "14" } })
+    fireEvent.blur(screen.getByLabelText("Beverage quantity"))
     expect(updateItem).toHaveBeenCalledWith({
-      timeblockId: "tb-1",
-      itemId: "bev-1",
-      updates: { serviceStyle: "Open Bar" },
-    })
-
-    expect(screen.getByText("Notes...")).toBeTruthy()
-    fireEvent.click(screen.getByText("Notes..."))
-    const notesField = screen.getByLabelText("Includes / Notes")
-    fireEvent.change(notesField, { target: { value: "Chilled bottles" } })
-    fireEvent.blur(notesField)
-    expect(updateItem).toHaveBeenCalledWith({
-      timeblockId: "tb-1",
-      itemId: "bev-1",
-      updates: { includes: "Chilled bottles" },
-    })
-
-    fireEvent.change(screen.getByLabelText("Quantity"), { target: { value: "14" } })
-    fireEvent.blur(screen.getByLabelText("Quantity"))
-    expect(updateItem).toHaveBeenCalledWith({
-      timeblockId: "tb-1",
       itemId: "bev-1",
       updates: { quantity: 14 },
     })
 
-    fireEvent.change(screen.getByLabelText("Unit Price"), { target: { value: "4.50" } })
-    fireEvent.blur(screen.getByLabelText("Unit Price"))
-    expect(updateItem).toHaveBeenCalledWith({
-      timeblockId: "tb-1",
+    fireEvent.click(screen.getByRole("button", { name: /Add Item/i }))
+    expect(addItem).toHaveBeenCalledWith({ type: "Beer", newItem: { name: "" } })
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove beverage item" }))
+    expect(removeItem).toHaveBeenCalledWith({ itemId: "bev-1" })
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "1 selected" }))
+    fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: "Dinner Bar" }))
+    expect(setItemTimeblocks).toHaveBeenCalledWith({
       itemId: "bev-1",
-      updates: { unitPriceCents: 450 },
+      timeblockIds: ["tb-1", "tb-2"],
     })
 
-    fireEvent.click(screen.getByRole("button", { name: /Add Item/i }))
-    expect(addItem).toHaveBeenCalledWith({ timeblockId: "tb-1", newItem: { name: "" } })
+    expect(screen.getAllByText("Notes...").length).toBeGreaterThan(0)
+    fireEvent.click(screen.getAllByText("Notes...")[0])
+    const notesField = screen.getByLabelText("Timeblock notes")
+    fireEvent.change(notesField, { target: { value: "Chilled bottles" } })
+    fireEvent.blur(notesField)
+    expect(updateTimeblock).toHaveBeenCalledWith({
+      id: "tb-1",
+      updates: { details: "Chilled bottles" },
+    })
 
-    fireEvent.click(screen.getByRole("button", { name: "Remove Item" }))
-    expect(removeItem).toHaveBeenCalledWith({ timeblockId: "tb-1", itemId: "bev-1" })
-
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Timeblock header actions" }))
+    fireEvent.pointerDown(screen.getAllByRole("button", { name: "Timeblock header actions" })[0])
     fireEvent.click(await screen.findByRole("menuitem", { name: "Delete Timeblock" }))
     expect(removeTimeblock).toHaveBeenCalledWith("tb-1")
 

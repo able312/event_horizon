@@ -1,6 +1,6 @@
 import { act, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
+import type { BeverageSectionPayload } from "~/definitions/beverage/beverage-types"
 import * as beverageItemsIpc from "~/lib/ipc/beverageItems"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
 import { useBeverageSection } from "./useBeverageSection"
@@ -26,6 +26,7 @@ vi.mock("~/lib/ipc/beverageItems", () => ({
   createBeverageItem: vi.fn(),
   updateBeverageItem: vi.fn(),
   deleteBeverageItem: vi.fn(),
+  setBeverageItemTimeblocks: vi.fn(),
 }))
 
 function createDeferred<T>() {
@@ -38,30 +39,35 @@ function createDeferred<T>() {
   return { promise, resolve, reject }
 }
 
-function makeTimeblock(overrides: Partial<TimeblockWithItems> = {}): TimeblockWithItems {
+function makeSection(overrides: Partial<BeverageSectionPayload> = {}): BeverageSectionPayload {
   return {
-    id: "tb-1",
-    eventId: "event-1",
-    title: "Drinks",
-    time: "10:00",
-    sectionType: "beverage",
-    assignedTo: null,
-    createdAt: "created",
-    updatedAt: null,
-    beverageItems: [
+    timeblocks: [
+      {
+        id: "tb-1",
+        eventId: "event-1",
+        title: "Drinks",
+        time: "10:00",
+        sectionType: "beverage",
+        assignedTo: null,
+        createdAt: "created",
+        updatedAt: null,
+        details: null,
+      },
+    ],
+    items: [
       {
         id: "bev-1",
-        timeblockId: "tb-1",
+        eventId: "event-1",
         name: "Coffee",
         quantity: 1,
-        type: "Hot",
+        type: "Beer",
         serviceStyle: "Consumption Bar",
         includes: "Cream",
         unitPriceCents: 300,
+        assignedTimeblockIds: ["tb-1"],
       },
     ],
     ...overrides,
-    details: overrides.details ?? null,
   }
 }
 
@@ -70,30 +76,30 @@ afterEach(() => {
 })
 
 describe("useBeverageSection optimistic cache", () => {
-  it("optimistic add inserts into beverageItems and replaces temp id on success", async () => {
+  it("optimistic add inserts into items and replaces temp id on success", async () => {
     const getSectionMock = vi.mocked(beverageItemsIpc.getBeverageSectionWithItems)
     const createItemMock = vi.mocked(beverageItemsIpc.createBeverageItem)
 
     const createdItem = {
       id: "bev-2",
-      timeblockId: "tb-1",
+      eventId: "event-1",
       name: "Tea",
       quantity: 2,
-      type: null,
+      type: "Wine" as const,
       serviceStyle: null,
       includes: null,
       unitPriceCents: null,
     }
 
     getSectionMock
-      .mockResolvedValueOnce([makeTimeblock()])
-      .mockResolvedValue([makeTimeblock({
-        beverageItems: [
-          makeTimeblock().beverageItems![0],
-          createdItem,
+      .mockResolvedValueOnce(makeSection())
+      .mockResolvedValue(makeSection({
+        items: [
+          makeSection().items[0],
+          { ...createdItem, assignedTimeblockIds: [] },
         ],
-      })])
-    const deferredCreate = createDeferred<ReturnType<typeof beverageItemsIpc.createBeverageItem> extends Promise<infer R> ? R : never>()
+      }))
+    const deferredCreate = createDeferred<typeof createdItem>()
     createItemMock.mockReturnValue(deferredCreate.promise)
 
     const { result, queryClient } = renderHookWithProviders(() => useBeverageSection())
@@ -101,15 +107,14 @@ describe("useBeverageSection optimistic cache", () => {
 
     act(() => {
       result.current.addItem({
-        timeblockId: "tb-1",
+        type: "Wine",
         newItem: { name: "Tea", quantity: 2 },
       })
     })
 
     await waitFor(() => {
-      const cached = queryClient.getQueryData<TimeblockWithItems[]>(["beverageSection", "event-1"])
-      expect(cached?.[0].beverageItems?.map((item) => item.name)).toEqual(["Coffee", "Tea"])
-      expect((cached?.[0] as TimeblockWithItems & { items?: unknown }).items).toBeUndefined()
+      const cached = queryClient.getQueryData<BeverageSectionPayload>(["beverageSection", "event-1"])
+      expect(cached?.items.map((item) => item.name)).toEqual(["Coffee", "Tea"])
     })
 
     await act(async () => {
@@ -118,17 +123,17 @@ describe("useBeverageSection optimistic cache", () => {
     })
 
     await waitFor(() => {
-      const cached = queryClient.getQueryData<TimeblockWithItems[]>(["beverageSection", "event-1"])
-      expect(cached?.[0].beverageItems?.map((item) => item.id)).toEqual(["bev-1", "bev-2"])
-      expect(cached?.[0].beverageItems?.some((item) => item.id.startsWith("temp_"))).toBe(false)
+      const cached = queryClient.getQueryData<BeverageSectionPayload>(["beverageSection", "event-1"])
+      expect(cached?.items.map((item) => item.id)).toEqual(["bev-1", "bev-2"])
+      expect(cached?.items.some((item) => item.id.startsWith("temp_"))).toBe(false)
     })
   })
 
-  it("optimistic update changes beverageItems[n], not items", async () => {
+  it("optimistic update changes items[n]", async () => {
     const getSectionMock = vi.mocked(beverageItemsIpc.getBeverageSectionWithItems)
     const updateItemMock = vi.mocked(beverageItemsIpc.updateBeverageItem)
 
-    getSectionMock.mockResolvedValue([makeTimeblock()])
+    getSectionMock.mockResolvedValue(makeSection())
     const deferredUpdate = createDeferred<ReturnType<typeof beverageItemsIpc.updateBeverageItem> extends Promise<infer R> ? R : never>()
     updateItemMock.mockReturnValue(deferredUpdate.promise)
 
@@ -137,60 +142,48 @@ describe("useBeverageSection optimistic cache", () => {
 
     act(() => {
       result.current.updateItem({
-        timeblockId: "tb-1",
         itemId: "bev-1",
         updates: { name: "Espresso" },
       })
     })
 
     await waitFor(() => {
-      const cached = queryClient.getQueryData<TimeblockWithItems[]>(["beverageSection", "event-1"])
-      expect(cached?.[0].beverageItems?.[0].name).toBe("Espresso")
-      expect((cached?.[0] as TimeblockWithItems & { items?: unknown }).items).toBeUndefined()
+      const cached = queryClient.getQueryData<BeverageSectionPayload>(["beverageSection", "event-1"])
+      expect(cached?.items[0]?.name).toBe("Espresso")
     })
 
     deferredUpdate.resolve({
       id: "bev-1",
-      timeblockId: "tb-1",
+      eventId: "event-1",
       name: "Espresso",
       quantity: 1,
-      type: "Hot",
+      type: "Beer",
       serviceStyle: "Consumption Bar",
       includes: "Cream",
       unitPriceCents: 300,
     })
   })
 
-  it("optimistic delete removes from beverageItems, not items", async () => {
+  it("optimistic delete removes from items", async () => {
     const getSectionMock = vi.mocked(beverageItemsIpc.getBeverageSectionWithItems)
     const deleteItemMock = vi.mocked(beverageItemsIpc.deleteBeverageItem)
 
-    getSectionMock.mockResolvedValue([
-      makeTimeblock({
-        beverageItems: [
-          {
-            id: "bev-1",
-            timeblockId: "tb-1",
-            name: "Coffee",
-            quantity: 1,
-            type: "Hot",
-            serviceStyle: "Consumption Bar",
-            includes: null,
-            unitPriceCents: 300,
-          },
-          {
-            id: "bev-2",
-            timeblockId: "tb-1",
-            name: "Tea",
-            quantity: 1,
-            type: "Hot",
-            serviceStyle: "Consumption Bar",
-            includes: null,
-            unitPriceCents: 250,
-          },
-        ],
-      }),
-    ])
+    getSectionMock.mockResolvedValue(makeSection({
+      items: [
+        makeSection().items[0],
+        {
+          id: "bev-2",
+          eventId: "event-1",
+          name: "Tea",
+          quantity: 1,
+          type: "Wine",
+          serviceStyle: null,
+          includes: null,
+          unitPriceCents: 250,
+          assignedTimeblockIds: [],
+        },
+      ],
+    }))
     const deferredDelete = createDeferred<boolean>()
     deleteItemMock.mockReturnValue(deferredDelete.promise)
 
@@ -198,26 +191,45 @@ describe("useBeverageSection optimistic cache", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     act(() => {
-      result.current.removeItem({
-        timeblockId: "tb-1",
-        itemId: "bev-1",
-      })
+      result.current.removeItem({ itemId: "bev-1" })
     })
 
     await waitFor(() => {
-      const cached = queryClient.getQueryData<TimeblockWithItems[]>(["beverageSection", "event-1"])
-      expect(cached?.[0].beverageItems?.map((item) => item.id)).toEqual(["bev-2"])
-      expect((cached?.[0] as TimeblockWithItems & { items?: unknown }).items).toBeUndefined()
+      const cached = queryClient.getQueryData<BeverageSectionPayload>(["beverageSection", "event-1"])
+      expect(cached?.items.map((item) => item.id)).toEqual(["bev-2"])
     })
 
     deferredDelete.resolve(true)
+  })
+
+  it("optimistic assignment updates assignedTimeblockIds", async () => {
+    const getSectionMock = vi.mocked(beverageItemsIpc.getBeverageSectionWithItems)
+    const setAssignmentsMock = vi.mocked(beverageItemsIpc.setBeverageItemTimeblocks)
+
+    getSectionMock.mockResolvedValue(makeSection())
+    const deferredAssign = createDeferred<{ itemId: string; timeblockIds: string[] }>()
+    setAssignmentsMock.mockReturnValue(deferredAssign.promise)
+
+    const { result, queryClient } = renderHookWithProviders(() => useBeverageSection())
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    act(() => {
+      result.current.setItemTimeblocks({ itemId: "bev-1", timeblockIds: ["tb-1", "tb-2"] })
+    })
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData<BeverageSectionPayload>(["beverageSection", "event-1"])
+      expect(cached?.items[0]?.assignedTimeblockIds).toEqual(["tb-1", "tb-2"])
+    })
+
+    deferredAssign.resolve({ itemId: "bev-1", timeblockIds: ["tb-1", "tb-2"] })
   })
 
   it("rolls cache back to previous state when mutation fails", async () => {
     const getSectionMock = vi.mocked(beverageItemsIpc.getBeverageSectionWithItems)
     const createItemMock = vi.mocked(beverageItemsIpc.createBeverageItem)
 
-    const initialData = [makeTimeblock()]
+    const initialData = makeSection()
     getSectionMock.mockResolvedValue(initialData)
     createItemMock.mockRejectedValue(new Error("create failed"))
 
@@ -226,13 +238,13 @@ describe("useBeverageSection optimistic cache", () => {
 
     act(() => {
       result.current.addItem({
-        timeblockId: "tb-1",
+        type: "Beer",
         newItem: { name: "Latte" },
       })
     })
 
     await waitFor(() => {
-      const cached = queryClient.getQueryData<TimeblockWithItems[]>(["beverageSection", "event-1"])
+      const cached = queryClient.getQueryData<BeverageSectionPayload>(["beverageSection", "event-1"])
       expect(cached).toEqual(initialData)
     })
   })

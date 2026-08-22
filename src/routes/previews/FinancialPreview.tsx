@@ -21,7 +21,7 @@ export default function FinancialPreview() {
 
   const { data: chargeItems } = useMenuOfChargeItemsSection()
   const { data: food } = useFoodSection()
-  const { data: beverage } = useBeverageSection()
+  const { items: beverageItems } = useBeverageSection()
 
   const { data: payments } = usePaymentsSection()
 
@@ -37,7 +37,7 @@ export default function FinancialPreview() {
   const summary = computeFinancialPreviewModel({
     menuItems: chargeItems,
     foodTimeblocks: food,
-    beverageTimeblocks: beverage,
+    beverageItems,
     payments,
   })
 
@@ -177,7 +177,7 @@ export default function FinancialPreview() {
         </div>}
 
         {/* Food & Beverage Section */}
-        {(chargeItemsByCategory && chargeItemsByCategory["Food & Beverage"] || food || beverage) && <div>
+        {(chargeItemsByCategory && chargeItemsByCategory["Food & Beverage"] || food || beverageItems.length > 0) && <div>
           <div className="grid grid-cols-6 border-b-1 border-dashed border-black text-sm pt-2">
             <p className="col-span-3">Food & Beverage</p>
             <p className="col-span-1 text-end">Cost</p>
@@ -201,16 +201,12 @@ export default function FinancialPreview() {
             ))}
 
             {/* Beverage Direct */}
-            {beverage && beverage.map(timeblock => (
-              <React.Fragment key={timeblock.id}>
-                {timeblock.beverageItems?.map(item => (item.quantity && item.quantity > 0 &&  item.unitPriceCents && item.unitPriceCents > 0) && (
-                  <React.Fragment key={timeblock.id}>
-                    <p className="col-span-3 text font-bold">{item.name}</p>
-                    <p className="col-span-1 text-end">{toCurrency(item.unitPriceCents ?? 0)}</p>
-                    <p className="col-span-1 text-end">{item.quantity ?? 0}</p>
-                    <p className="col-span-1 text-end">{toCurrency((item.quantity ?? 0) * (item.unitPriceCents ?? 0))}</p>
-                  </React.Fragment>
-                ))}
+            {beverageItems.map(item => (item.quantity && item.quantity > 0 && item.unitPriceCents && item.unitPriceCents > 0) && (
+              <React.Fragment key={item.id}>
+                <p className="col-span-3 text font-bold">{item.name}</p>
+                <p className="col-span-1 text-end">{toCurrency(item.unitPriceCents ?? 0)}</p>
+                <p className="col-span-1 text-end">{item.quantity ?? 0}</p>
+                <p className="col-span-1 text-end">{toCurrency((item.quantity ?? 0) * (item.unitPriceCents ?? 0))}</p>
               </React.Fragment>
             ))}
 

@@ -49,7 +49,11 @@ describe("useEventWorkspaceData", () => {
     }
 
     useFoodSectionMock.mockReturnValue({ data: [{ id: "u-food", title: "Food prep", time: "", sectionType: "food" }], ...common })
-    useBeverageSectionMock.mockReturnValue({ data: [], ...common })
+    useBeverageSectionMock.mockReturnValue({
+      timeblocks: [{ id: "u-bev", title: "Bar", time: "", sectionType: "beverage" }],
+      items: [],
+      ...common,
+    })
     useVendorSectionMock.mockReturnValue({ data: [], ...common })
     useNoteSectionMock.mockReturnValue({ data: [], ...common })
     useSetupInstructionSectionMock.mockReturnValue({ data: [], ...common })
@@ -57,7 +61,7 @@ describe("useEventWorkspaceData", () => {
     const { result } = renderHook(() => useEventWorkspaceData())
 
     expect(result.current.navModel.scheduled).toHaveLength(1)
-    expect(result.current.navModel.unscheduled).toHaveLength(1)
+    expect(result.current.navModel.unscheduled).toHaveLength(2)
     expect(result.current.updateEvent).toBe(updateEvent)
     expect(result.current.deleteEvent).toBe(deleteEvent)
 

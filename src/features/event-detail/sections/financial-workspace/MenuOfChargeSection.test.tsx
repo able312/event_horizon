@@ -53,12 +53,8 @@ describe("MenuOfChargeSection", () => {
             foodItems: [],
           } as never,
         ]}
-        beverageTimeblocks={[
-          {
-            id: "bev-tb-1",
-            title: "Bar",
-            beverageItems: [{ id: "bev-1", name: "Wine", quantity: 1, unitPriceCents: 900 }],
-          } as never,
+        beverageItems={[
+          { id: "bev-1", name: "Wine", quantity: 1, unitPriceCents: 900, type: "Wine", eventId: "event-1" } as never,
         ]}
         onNavigateToFood={onNavigateToFood}
         onUpdateFoodBillingItem={updateFoodBillingItem}
@@ -72,7 +68,7 @@ describe("MenuOfChargeSection", () => {
     expect(screen.getAllByText("From Planning")).toHaveLength(2)
     expect(screen.getAllByText("These items are organized in planning. Adjust qty and pricing here.")).toHaveLength(2)
     expect(screen.getByText("Dinner")).toBeTruthy()
-    expect(screen.getByText("Bar")).toBeTruthy()
+    expect(screen.getAllByText("Wine").length).toBeGreaterThan(0)
 
     const planningRow = screen.getByText("Steak").closest("tr")
     expect(planningRow?.getAttribute("draggable")).toBeNull()
@@ -90,7 +86,6 @@ describe("MenuOfChargeSection", () => {
     fireEvent.change(beveragePriceInput, { target: { value: "13.37" } })
     fireEvent.blur(beveragePriceInput)
     expect(updateBeverageBillingItem).toHaveBeenCalledWith({
-      timeblockId: "bev-tb-1",
       itemId: "bev-1",
       updates: { unitPriceCents: 1337 },
     })
@@ -149,7 +144,7 @@ describe("MenuOfChargeSection", () => {
 
     expect(screen.getByText("No charge items yet.")).toBeTruthy()
     expect(screen.getByText("No food timeblocks from planning yet.")).toBeTruthy()
-    expect(screen.getByText("No beverage timeblocks from planning yet.")).toBeTruthy()
+    expect(screen.getByText("No beverage items from planning yet.")).toBeTruthy()
 
     fireEvent.click(screen.getByRole("button", { name: "Add First Charge Item" }))
 

@@ -1,21 +1,46 @@
-import type { NewBeverageItem, UpdateBeverageItem } from "~/definitions/database.js"
+import type { BeverageItemType, NewBeverageItem, UpdateBeverageItem } from "~/definitions/database.js"
+import type { BeverageItemWithAssignments, BeverageSectionPayload } from "~/definitions/beverage/beverage-types.js"
 import { db } from "../index.js"
 import type { AppDatabase } from "../factory.js"
-import { beverageItems, timeblocks } from "../schema.js"
-import { eq, and } from "drizzle-orm"
+import { beverageItemTimeblocks, beverageItems, timeblocks } from "../schema.js"
+import { eq, and, inArray } from "drizzle-orm"
 import { v4 as uuidv4 } from "uuid"
+
+const VALID_BEVERAGE_TYPES = new Set<string>([
+  "Special Orders",
+  "Beer",
+  "Wine",
+  "Coolers",
+  "Rails",
+  "Non-Alcoholic",
+])
+
+function mapAssignmentsByItemId(
+  rows: Array<{ beverageItemId: string; timeblockId: string }>,
+): Map<string, string[]> {
+  const assignments = new Map<string, string[]>()
+
+  for (const row of rows) {
+    const current = assignments.get(row.beverageItemId) ?? []
+    current.push(row.timeblockId)
+    assignments.set(row.beverageItemId, current)
+  }
+
+  return assignments
+}
 
 export function createBeverageItemsRepository(database: AppDatabase) {
   return {
     insert: (data: NewBeverageItem) => {
-      if (!data.timeblockId) throw new Error("insertBeverageItem: timeblockId is required")
+      if (!data.eventId) throw new Error("insertBeverageItem: eventId is required")
+      if (!data.type) throw new Error("insertBeverageItem: type is required")
 
       return database.insert(beverageItems).values({
         id: uuidv4(),
-        timeblockId: data.timeblockId,
+        eventId: data.eventId,
         name: data.name,
         quantity: data.quantity ?? null,
-        type: data.type ?? null,
+        type: data.type,
         serviceStyle: data.serviceStyle ?? null,
         includes: data.includes ?? null,
         unitPriceCents: data.unitPriceCents ?? null,
@@ -48,22 +73,88 @@ export function createBeverageItemsRepository(database: AppDatabase) {
       return true
     },
 
-    getByEventId: async (eventId: string) => {
-      if (!eventId) throw new Error("getBeverageItemsByEventId: eventId is required")
+    setItemTimeblocks: (itemId: string, timeblockIds: string[]) => {
+      if (!itemId) throw new Error("setItemTimeblocks: itemId is required")
 
-      const beverageTimeblocks = await database.query.timeblocks.findMany({
-        where: and(
-          eq(timeblocks.eventId, eventId),
-          eq(timeblocks.sectionType, "beverage"),
-        ),
-        with: {
-          beverageItems: true,
-        },
+      const item = database.select().from(beverageItems).where(eq(beverageItems.id, itemId)).get()
+      if (!item) throw new Error(`Beverage item not found for id ${itemId}`)
+
+      if (timeblockIds.length > 0) {
+        const validTimeblocks = database.select({ id: timeblocks.id })
+          .from(timeblocks)
+          .where(and(
+            eq(timeblocks.eventId, item.eventId),
+            eq(timeblocks.sectionType, "beverage"),
+            inArray(timeblocks.id, timeblockIds),
+          ))
+          .all()
+
+        if (validTimeblocks.length !== timeblockIds.length) {
+          throw new Error("setItemTimeblocks: one or more timeblock ids are invalid for this event")
+        }
+      }
+
+      database.transaction((tx) => {
+        tx.delete(beverageItemTimeblocks).where(eq(beverageItemTimeblocks.beverageItemId, itemId)).run()
+
+        for (const timeblockId of timeblockIds) {
+          tx.insert(beverageItemTimeblocks).values({
+            beverageItemId: itemId,
+            timeblockId,
+          }).run()
+        }
       })
 
-      return beverageTimeblocks
+      return { itemId, timeblockIds }
+    },
+
+    getByEventId: async (eventId: string): Promise<BeverageSectionPayload> => {
+      if (!eventId) throw new Error("getBeverageItemsByEventId: eventId is required")
+
+      const [beverageTimeblocks, eventItems] = await Promise.all([
+        database.query.timeblocks.findMany({
+          where: and(
+            eq(timeblocks.eventId, eventId),
+            eq(timeblocks.sectionType, "beverage"),
+          ),
+        }),
+        database.query.beverageItems.findMany({
+          where: eq(beverageItems.eventId, eventId),
+        }),
+      ])
+
+      const itemIds = eventItems.map((item) => item.id)
+      const assignmentRows = itemIds.length === 0
+        ? []
+        : database.select({
+          beverageItemId: beverageItemTimeblocks.beverageItemId,
+          timeblockId: beverageItemTimeblocks.timeblockId,
+        })
+          .from(beverageItemTimeblocks)
+          .where(inArray(beverageItemTimeblocks.beverageItemId, itemIds))
+          .all()
+
+      const assignmentsByItemId = mapAssignmentsByItemId(assignmentRows)
+
+      const items: BeverageItemWithAssignments[] = eventItems.map((item) => ({
+        ...item,
+        assignedTimeblockIds: assignmentsByItemId.get(item.id) ?? [],
+      }))
+
+      return {
+        timeblocks: beverageTimeblocks,
+        items,
+      }
     },
   }
+}
+
+export function normalizeBeverageItemType(type: string | null | undefined): BeverageItemType {
+  if (type && VALID_BEVERAGE_TYPES.has(type)) {
+    return type as BeverageItemType
+  }
+
+  return "Special Orders"
 }
 
 export default createBeverageItemsRepository(db)

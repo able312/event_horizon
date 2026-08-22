@@ -70,7 +70,7 @@ describe("FinancialWorkspaceSection", () => {
       updateItem: updateFoodItem,
     })
     hooksMock.useBeverageSection.mockReturnValue({
-      data: [{ id: "b-tb", beverageItems: [{ id: "b1", quantity: 1, unitPriceCents: 1500 }] }],
+      items: [{ id: "b1", quantity: 1, unitPriceCents: 1500, type: "Beer", eventId: "event-1", name: "Beer" }],
       updateItem: updateBeverageItem,
     })
 
@@ -104,11 +104,11 @@ describe("FinancialWorkspaceSection", () => {
     expect(paymentsPropsMock).toHaveBeenCalledWith(expect.objectContaining({ emptyStateMode: "workspace" }))
     expect(menuPropsMock).toHaveBeenCalledWith(expect.objectContaining({
       foodTimeblocks: [{ id: "f-tb", foodItems: [{ id: "f1", quantity: 2, unitPriceCents: 1000 }] }],
-      beverageTimeblocks: [{ id: "b-tb", beverageItems: [{ id: "b1", quantity: 1, unitPriceCents: 1500 }] }],
+      beverageItems: [{ id: "b1", quantity: 1, unitPriceCents: 1500, type: "Beer", eventId: "event-1", name: "Beer" }],
       onNavigateToFood: expect.any(Function),
       onNavigateToBeverage: expect.any(Function),
       onUpdateFoodBillingItem: updateFoodItem,
-      onUpdateBeverageBillingItem: updateBeverageItem,
+      onUpdateBeverageBillingItem: expect.any(Function),
     }))
 
     ;(menuPropsMock.mock.calls[0][0] as { onNavigateToFood: () => void }).onNavigateToFood()

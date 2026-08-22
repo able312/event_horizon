@@ -35,4 +35,12 @@ export const registerBeverageItemsIpcHandlers = () => {
       logAndThrow("Error deleting beverage item:", err)
     }
   })
+
+  ipcMain.handle("beverage-items:set-timeblocks", async (_event, itemId: string, timeblockIds: string[]) => {
+    try {
+      return beverageItemQueries.setItemTimeblocks(itemId, timeblockIds)
+    } catch (err) {
+      logAndThrow("Error assigning beverage item timeblocks:", err)
+    }
+  })
 }

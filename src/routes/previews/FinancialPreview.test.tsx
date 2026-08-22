@@ -66,7 +66,7 @@ describe("FinancialPreview", () => {
       data: [{ id: "f-tb", foodItems: [{ id: "f1", name: "Dinner", quantity: 2, unitPriceCents: 1000 }] }],
     })
     hooksMock.useBeverageSection.mockReturnValue({
-      data: [{ id: "b-tb", beverageItems: [{ id: "b1", name: "Drinks", quantity: 1, unitPriceCents: 1500 }] }],
+      items: [{ id: "b1", name: "Drinks", quantity: 1, unitPriceCents: 1500, type: "Beer", eventId: "event-1" }],
     })
     hooksMock.usePaymentsSection.mockReturnValue({
       data: [{ id: "p1", date: "2026-05-01T00:00:00.000Z", amountCents: 2500, notes: "", recieptNumber: "" }],

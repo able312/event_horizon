@@ -64,6 +64,7 @@ export const eventsRelations = relations(events, ({ many }) => ({
   timeblocks: many(timeblocks),
   payments: many(payments),
   touchpoints: many(touchpoints),
+  beverageItems: many(beverageItems),
 }));
 
 
@@ -198,7 +199,7 @@ export const timeblocksRelations = relations(timeblocks, ({ many, one }) => ({
     references: [events.id],
   }),
   foodItems: many(foodItems),
-  beverageItems: many(beverageItems),
+  beverageItemTimeblocks: many(beverageItemTimeblocks),
   vendorItem: one(vendorItems),
 }));
 
@@ -227,17 +228,35 @@ export const foodItemsRelations = relations(foodItems, ({ one }) => ({
 // Beverage items
 export const beverageItems = sqliteTable("beverage_items", {
   id: text("id").primaryKey(),
-  timeblockId: text("timeblock_id").references(() => timeblocks.id, { onDelete: "cascade" }).notNull(),
+  eventId: text("event_id").references(() => events.id, { onDelete: "cascade" }).notNull(),
   name: text("name").notNull(),
   quantity: integer("quantity"),
-  type: text("type"),
+  type: text("type", { enum: ["Special Orders", "Beer", "Wine", "Coolers", "Rails", "Non-Alcoholic"] }).notNull(),
   serviceStyle: text("service_style", {enum: ["Consumption Bar", "Cash Bar", "Open Bar", "Ticketed Bar"]}),
   includes: text("includes"),
   unitPriceCents: integer("unit_price_cents"),
 });
-export const beverageItemsRelations = relations(beverageItems, ({ one }) => ({
+export const beverageItemsRelations = relations(beverageItems, ({ one, many }) => ({
+  event: one(events, {
+    fields: [beverageItems.eventId],
+    references: [events.id],
+  }),
+  beverageItemTimeblocks: many(beverageItemTimeblocks),
+}));
+
+export const beverageItemTimeblocks = sqliteTable("beverage_item_timeblocks", {
+  beverageItemId: text("beverage_item_id").references(() => beverageItems.id, { onDelete: "cascade" }).notNull(),
+  timeblockId: text("timeblock_id").references(() => timeblocks.id, { onDelete: "cascade" }).notNull(),
+}, (table) => [
+  uniqueIndex("beverage_item_timeblocks_unique").on(table.beverageItemId, table.timeblockId),
+]);
+export const beverageItemTimeblocksRelations = relations(beverageItemTimeblocks, ({ one }) => ({
+  beverageItem: one(beverageItems, {
+    fields: [beverageItemTimeblocks.beverageItemId],
+    references: [beverageItems.id],
+  }),
   timeblock: one(timeblocks, {
-    fields: [beverageItems.timeblockId],
+    fields: [beverageItemTimeblocks.timeblockId],
     references: [timeblocks.id],
   }),
 }));

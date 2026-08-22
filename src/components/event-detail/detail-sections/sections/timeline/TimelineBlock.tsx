@@ -1,9 +1,13 @@
 import React from 'react';
 import { Clock } from "lucide-react"
 import type { TimelineTimeblock } from '~/definitions/timeblocks/timeblocks-types';
-import type { Timeblock } from '~/definitions/database';
+import type { Timeblock, BeverageItem } from '~/definitions/database';
 import { v4 as uuidv4 } from 'uuid'
 import { SECTION_TYPE } from '~/definitions/timeblocks/timeblock-constants';
+import {
+  formatBeverageItemLine,
+  getVisibleBeverageTypeSections,
+} from '~/features/event-detail/sections/food-beverage-workspaces/beverage/beverageTypeSections';
 
 interface TimelineBlocksProps {
   timeblock: TimelineTimeblock,
@@ -32,17 +36,32 @@ const TimelineBlock: React.FC<TimelineBlocksProps> = ({ timeblock, updateTimeblo
         ))
       }
 
-      {timeblock.sectionType === SECTION_TYPE.BEVERAGE &&
-        timeblock.beverageItems?.map(item => (
-          <GenericDetailsBlock
-            key={"beverageItem_" + item.id}
-            blockHeader={ (item.quantity ? item.quantity + " x " : "") + item.name }
-            blockSubtitle={ item.serviceStyle }
-            blockNotes={ item.includes }
-            borderColor='blue'
-          />
-        ))
-      }
+      {timeblock.sectionType === SECTION_TYPE.BEVERAGE && (
+        <>
+          {timeblock.details ? (
+            <GenericDetailsBlock
+              key={`beverage_notes_${timeblock.id}`}
+              blockNotes={timeblock.details}
+              borderColor='blue'
+            />
+          ) : null}
+          {getVisibleBeverageTypeSections(timeblock.beverageItems ?? [], { hideEmptySpecialOrders: true }).map((section) => (
+            <div key={`${timeblock.id}_${section.type}`} className="break-inside-avoid">
+              <GenericDetailsBlock
+                blockHeader={section.type}
+                borderColor='blue'
+              />
+              {section.items.map((item: BeverageItem) => (
+                <GenericDetailsBlock
+                  key={`beverageItem_${item.id}`}
+                  blockHeader={formatBeverageItemLine(item)}
+                  borderColor='blue'
+                />
+              ))}
+            </div>
+          ))}
+        </>
+      )}
 
       {timeblock.sectionType === SECTION_TYPE.VENDOR &&
         <GenericDetailsBlock

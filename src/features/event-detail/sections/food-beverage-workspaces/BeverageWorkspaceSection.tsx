@@ -1,13 +1,40 @@
-import React from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
+import { ChevronDown, Plus, Trash2 } from "lucide-react"
 
-import type { BeverageItem } from "~/definitions/database"
-import { ITER_BEVERAGE_SERVICE_STYLE } from "~/definitions/sections/section-constants"
+import type { BeverageItemType, Timeblock, UpdateTimeblock } from "~/definitions/database"
+import type { BeverageItemWithAssignments } from "~/definitions/beverage/beverage-types"
+import { ITER_BEVERAGE_TYPE } from "~/definitions/sections/section-constants"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
-import PlanningWorkspaceTimeblockList from "./PlanningWorkspaceTimeblocks/PlanningWorkspaceTimeblockList"
+import { Button } from "~/components/atoms/button"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/atoms/dropdown-menu"
+import TimeBlockHeader from "~/components/organisms/TimeblockHeader"
+import {
+  SECTION_TABLE_BODY_CELL_CLASS,
+  SECTION_TABLE_BODY_ROW_CLASS,
+  SECTION_TABLE_CLASS,
+  SECTION_TABLE_CONTAINER_CLASS,
+  SECTION_TABLE_HEAD_CELL_CLASS_LEFT,
+  SECTION_TABLE_HEAD_CELL_CLASS_RIGHT,
+  SECTION_TABLE_HEAD_ROW_CLASS,
+} from "~/components/event-detail/detail-sections/sections/tableStyles"
+import { getVisibleBeverageTypeSections } from "./beverage/beverageTypeSections"
+import { BeverageTimeblockHeaderTail } from "./beverage/BeverageTimeblockHeaderTail"
+import { BeverageTimeblockNoteRow } from "./beverage/BeverageTimeblockNoteRow"
+
+function parseQuantity(value: string): number {
+  return Math.max(0, Number(value) || 0)
+}
 
 const BeverageWorkspaceSection: React.FC = () => {
   const {
-    data: timeblocks = [],
+    timeblocks,
+    items,
     isLoading,
     addTimeblock,
     updateTimeblock,
@@ -15,28 +42,255 @@ const BeverageWorkspaceSection: React.FC = () => {
     addItem,
     updateItem,
     removeItem,
+    setItemTimeblocks,
   } = useBeverageSection()
 
+  const [lastChosenType, setLastChosenType] = useState<BeverageItemType>("Beer")
+  const focusNewRowRef = useRef(false)
+
+  const typeSections = useMemo(
+    () => getVisibleBeverageTypeSections(items, { hideEmptySpecialOrders: true }),
+    [items],
+  )
+
+  useEffect(() => {
+    if (!focusNewRowRef.current) return
+    focusNewRowRef.current = false
+
+    const firstInput = document.querySelector<HTMLInputElement>('[data-beverage-item="true"] [data-cell="item"]')
+    firstInput?.focus()
+  }, [items])
+
+  const handlePrimaryAdd = () => {
+    focusNewRowRef.current = true
+    addItem({ type: lastChosenType, newItem: { name: "" } })
+  }
+
+  const handleTypeAdd = (type: BeverageItemType) => {
+    setLastChosenType(type)
+    focusNewRowRef.current = true
+    addItem({ type, newItem: { name: "" } })
+  }
+
+  const toggleTimeblockAssignment = (item: BeverageItemWithAssignments, timeblockId: string, checked: boolean) => {
+    const nextIds = checked
+      ? [...item.assignedTimeblockIds, timeblockId]
+      : item.assignedTimeblockIds.filter((id) => id !== timeblockId)
+
+    setItemTimeblocks({ itemId: item.id, timeblockIds: nextIds })
+  }
+
+  if (isLoading) {
+    return <div className="w-full text-sm text-muted-foreground">Loading...</div>
+  }
+
   return (
-    <PlanningWorkspaceTimeblockList<BeverageItem>
-      sectionTitle="Beverage Planning"
-      noTimeblocksCopy="No beverage timeblocks yet."
-      emptyItemsCopy="No beverage items have been added to this timeblock."
-      addTimeblockLabel="Add Timeblock"
-      addItemLabel="Add Item"
-      titlePlaceholder="e.g. Cocktail Hour, Toast"
-      serviceStyleOptions={ITER_BEVERAGE_SERVICE_STYLE}
-      timeblocks={timeblocks}
-      isLoading={isLoading}
-      getItems={(timeblock) => timeblock.beverageItems ?? []}
-      addTimeblock={() => addTimeblock({ title: "" })}
-      updateTimeblock={updateTimeblock}
-      removeTimeblock={removeTimeblock}
-      addItem={({ timeblockId }) => addItem({ timeblockId, newItem: { name: "" } })}
-      updateItem={updateItem}
-      removeItem={removeItem}
-    />
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold tracking-wide">Beverage Planning</h3>
+          <p className="text-xs text-muted-foreground">Manage drinks by type and assign them to beverage timeblocks.</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div className="min-w-0 rounded-xs border border-border bg-background p-3 shadow-sm">
+          <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
+            <h4 className="text-sm font-semibold tracking-wide">Drinks</h4>
+            <div className="inline-flex items-center">
+              <button
+                type="button"
+                onClick={handlePrimaryAdd}
+                className="inline-flex items-center gap-1 rounded-l-xs border border-r-0 border-orange-200 bg-orange-100 px-2 text-sm text-orange-700 hover:bg-orange-50"
+              >
+                <Plus size={14} />
+                Add Item
+              </button>
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Choose beverage type"
+                    className="inline-flex h-full min-h-[22px] items-center rounded-r-xs border border-orange-200 bg-orange-100 px-2 text-orange-700 hover:bg-orange-50"
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {ITER_BEVERAGE_TYPE.map((type) => (
+                    <DropdownMenuItem key={type} onClick={() => handleTypeAdd(type)}>
+                      {type}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {typeSections.map((section) => (
+              <div key={section.type} className="space-y-2">
+                <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{section.type}</h5>
+                <div className={SECTION_TABLE_CONTAINER_CLASS}>
+                  <table className={`${SECTION_TABLE_CLASS} min-w-[640px]`} data-beverage-item="true">
+                    <thead>
+                      <tr className={SECTION_TABLE_HEAD_ROW_CLASS}>
+                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Item</th>
+                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Qty</th>
+                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Timeblocks</th>
+                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Remove</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {section.items.length === 0 ? (
+                        <tr className={SECTION_TABLE_BODY_ROW_CLASS}>
+                          <td colSpan={4} className="px-1.5 py-3 text-xs text-muted-foreground">
+                            No {section.type.toLowerCase()} items yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        section.items.map((item) => (
+                          <tr key={item.id} className={SECTION_TABLE_BODY_ROW_CLASS}>
+                            <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-top`}>
+                              <input
+                                data-cell="item"
+                                type="text"
+                                defaultValue={item.name}
+                                placeholder="Item name"
+                                onBlur={(e) => updateItem({ itemId: item.id, updates: { name: e.target.value } })}
+                                aria-label="Beverage item name"
+                                className="h-7 w-full border-0 border-b border-border bg-transparent px-1 text-xs focus:border-primary focus:outline-none"
+                              />
+                            </td>
+                            <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-top text-right`}>
+                              <input
+                                type="number"
+                                min="0"
+                                defaultValue={item.quantity ?? 0}
+                                onBlur={(e) => updateItem({
+                                  itemId: item.id,
+                                  updates: { quantity: parseQuantity(e.target.value) },
+                                })}
+                                aria-label="Beverage quantity"
+                                className="ml-auto block h-7 w-14 border-0 border-b border-border bg-transparent px-1 text-right text-xs focus:border-primary focus:outline-none"
+                              />
+                            </td>
+                            <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-top`}>
+                              <DropdownMenu modal={false}>
+                                <DropdownMenuTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="inline-flex h-7 items-center gap-1 rounded-xs border border-border px-2 text-xs text-muted-foreground hover:bg-muted"
+                                  >
+                                    {item.assignedTimeblockIds.length > 0
+                                      ? `${item.assignedTimeblockIds.length} selected`
+                                      : "Assign timeblocks"}
+                                    <ChevronDown size={12} />
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="min-w-48">
+                                  {timeblocks.length === 0 ? (
+                                    <DropdownMenuItem disabled>No beverage timeblocks yet</DropdownMenuItem>
+                                  ) : (
+                                    timeblocks.map((timeblock) => (
+                                      <DropdownMenuCheckboxItem
+                                        key={timeblock.id}
+                                        checked={item.assignedTimeblockIds.includes(timeblock.id)}
+                                        onCheckedChange={(checked) =>
+                                          toggleTimeblockAssignment(item, timeblock.id, checked === true)
+                                        }
+                                      >
+                                        {timeblock.title || "Untitled timeblock"}
+                                      </DropdownMenuCheckboxItem>
+                                    ))
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </td>
+                            <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-top text-right`}>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeItem({ itemId: item.id })}
+                                aria-label="Remove beverage item"
+                                className="h-8 px-2 text-muted-foreground hover:text-destructive"
+                              >
+                                <Trash2 />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="min-w-0 rounded-xs border border-border bg-background p-3 shadow-sm">
+          <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
+            <h4 className="text-sm font-semibold tracking-wide">Timeblocks</h4>
+            <Button type="button" variant="outline" size="sm" onClick={() => addTimeblock({ title: "" })}>
+              <Plus />
+              Add Timeblock
+            </Button>
+          </div>
+
+          {timeblocks.length === 0 ? (
+            <div className="rounded-xs border border-dashed border-border bg-orange-50 px-4 py-4">
+              <p className="text-sm text-muted-foreground">No beverage timeblocks yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {timeblocks.map((timeblock) => (
+                <BeverageTimeblockCard
+                  key={timeblock.id}
+                  timeblock={timeblock}
+                  updateTimeblock={updateTimeblock}
+                  removeTimeblock={removeTimeblock}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
+
+interface BeverageTimeblockCardProps {
+  timeblock: Timeblock
+  updateTimeblock: (payload: { id: string; updates: UpdateTimeblock }) => void
+  removeTimeblock: (id: string) => void
+}
+
+const BeverageTimeblockCard: React.FC<BeverageTimeblockCardProps> = ({
+  timeblock,
+  updateTimeblock,
+  removeTimeblock,
+}) => (
+  <section className="overflow-hidden rounded-xs border border-stone-200 bg-background shadow-sm">
+    <TimeBlockHeader
+      timeblockID={timeblock.id}
+      title={timeblock.title ?? ""}
+      titlePlaceholder="e.g. Cocktail Hour, Toast"
+      sectionTitle="Beverage Planning"
+      time={timeblock.time ?? ""}
+      assignedTo={timeblock.assignedTo ?? ""}
+      tail={<BeverageTimeblockHeaderTail deleteTimeblock={() => removeTimeblock(timeblock.id)} />}
+      updateTimeblock={updateTimeblock}
+    />
+    <div className="bg-stone-50 px-3 py-2">
+      <BeverageTimeblockNoteRow
+        note={timeblock.details ?? ""}
+        timeblockId={timeblock.id}
+        updateTimeblock={updateTimeblock}
+      />
+    </div>
+  </section>
+)
 
 export default BeverageWorkspaceSection

@@ -12,6 +12,7 @@ import type {
   TimelineTimeblock,
 } from "../../../definitions/timeblocks/timeblocks-types.js"
 import { getSectionDefaultPrefill } from "../../../definitions/timeblocks/setupInstructionPrefill.js"
+import type { BeverageItem } from "../../../definitions/database.js"
 
 const HHMM_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/
 
@@ -47,6 +48,19 @@ function compareTimelineRows(a: TimelineTimeblock, b: TimelineTimeblock): number
   if (titleCompare !== 0) return titleCompare
 
   return a.id.localeCompare(b.id)
+}
+
+function mapTimeblockWithBeverageItems<T extends {
+  beverageItemTimeblocks?: Array<{ beverageItem: BeverageItem | null }>
+}>(timeblock: T): Omit<T, "beverageItemTimeblocks"> & { beverageItems?: BeverageItem[] } {
+  const { beverageItemTimeblocks: beverageLinks, ...rest } = timeblock
+
+  return {
+    ...rest,
+    beverageItems: beverageLinks
+      ?.map((link) => link.beverageItem)
+      .filter((item): item is BeverageItem => item != null) ?? [],
+  }
 }
 
 function getBlankDetailsFallback(sectionType: TimeblockType): string | null {
@@ -174,10 +188,14 @@ export function createTimeblocksRepository(database: AppDatabase) {
         ),
         with: {
           foodItems: true,
-          beverageItems: true,
+          beverageItemTimeblocks: {
+            with: {
+              beverageItem: true,
+            },
+          },
           vendorItem: true,
         },
-      })
+      }).then((rows) => rows.map(mapTimeblockWithBeverageItems))
     },
 
     getAllTimelineBlocks: async (eventId: string): Promise<TimelineTimeblock[]> => {
@@ -189,7 +207,11 @@ export function createTimeblocksRepository(database: AppDatabase) {
           where: eq(timeblocks.eventId, eventId),
           with: {
             foodItems: true,
-            beverageItems: true,
+            beverageItemTimeblocks: {
+              with: {
+                beverageItem: true,
+              },
+            },
             vendorItem: true,
           },
         }),
@@ -204,6 +226,7 @@ export function createTimeblocksRepository(database: AppDatabase) {
       if (!event) throw new Error(`Event not found for id ${eventId}`)
 
       const persistedTimelineRows: TimelineTimeblock[] = persistedTimeblocks
+        .map(mapTimeblockWithBeverageItems)
         .filter(hasStrictTimelineTime)
         .map((timeblock) => ({
           ...timeblock,

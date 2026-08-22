@@ -5,6 +5,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "beverage-items:get-by-event",
   "beverage-items:patch",
   "beverage-items:post",
+  "beverage-items:set-timeblocks",
   "cart-details:delete",
   "cart-details:get-by-event-id",
   "cart-details:get-or-create-by-event-id",

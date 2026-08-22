@@ -23,12 +23,12 @@ export function useEventWorkspaceData(): EventWorkspaceData {
   const sectionRows = useMemo(
     () => [
       ...(foodQuery.data ?? []),
-      ...(beverageQuery.data ?? []),
+      ...(beverageQuery.timeblocks ?? []),
       ...(vendorQuery.data ?? []),
       ...(noteQuery.data ?? []),
       ...(setupQuery.data ?? []),
     ],
-    [foodQuery.data, beverageQuery.data, vendorQuery.data, noteQuery.data, setupQuery.data],
+    [foodQuery.data, beverageQuery.timeblocks, vendorQuery.data, noteQuery.data, setupQuery.data],
   )
 
   const navModel = useMemo(

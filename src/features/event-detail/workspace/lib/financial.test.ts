@@ -56,7 +56,7 @@ describe("financial helpers", () => {
     const preview = computeFinancialPreviewModel({
       menuItems: items,
       foodTimeblocks: [],
-      beverageTimeblocks: [],
+      beverageItems: [],
       payments: [{ id: "p", amountCents: 1250 } as never],
     })
     expect(preview.menuSubtotalCents).toBe(8202)
@@ -75,7 +75,7 @@ describe("financial helpers", () => {
       { id: "f-tb", foodItems: [{ id: "f1", quantity: 2, unitPriceCents: 250 }] } as never,
     ]
     const beverage = [
-      { id: "b-tb", beverageItems: [{ id: "b1", quantity: 3, unitPriceCents: 100 }] } as never,
+      { id: "b1", quantity: 3, unitPriceCents: 100 } as never,
     ]
     const payments = [{ id: "p1", amountCents: 500 } as never]
 
@@ -84,9 +84,9 @@ describe("financial helpers", () => {
     expect(computeBeverageSubtotalCents(beverage)).toBe(300)
     expect(computeGratuityBaseCents(500, 300)).toBe(800)
     expect(computeGratuityCents(800)).toBe(Math.round(800 * GRATUITY_RATE))
-    expect(computeAllChargesSubtotalCents({ menuItems, foodTimeblocks: food, beverageTimeblocks: beverage })).toBe(2800)
+    expect(computeAllChargesSubtotalCents({ menuItems, foodTimeblocks: food, beverageItems: beverage })).toBe(2800)
 
-    const summary = computeFinancialSummaryAllSources({ menuItems, foodTimeblocks: food, beverageTimeblocks: beverage, payments })
+    const summary = computeFinancialSummaryAllSources({ menuItems, foodTimeblocks: food, beverageItems: beverage, payments })
     expect(summary.menuSubtotalCents).toBe(2000)
     expect(summary.foodSubtotalCents).toBe(500)
     expect(summary.beverageSubtotalCents).toBe(300)
@@ -104,7 +104,7 @@ describe("financial helpers", () => {
     const summary = computeFinancialSummaryAllSources({
       menuItems: [{ id: "m1", quantity: 1, unitPriceCents: 1000 } as never],
       foodTimeblocks: [],
-      beverageTimeblocks: [],
+      beverageItems: [],
       payments: [],
     })
 
@@ -112,6 +112,14 @@ describe("financial helpers", () => {
     expect(summary.gratuityCents).toBe(0)
     expect(summary.hstCents).toBe(Math.round(1000 * HST_RATE))
     expect(summary.grandTotalCents).toBe(1130)
+  })
+
+  it("counts beverage items once even when assigned to multiple timeblocks", () => {
+    const beverageItems = [
+      { id: "b1", quantity: 2, unitPriceCents: 500 } as never,
+    ]
+
+    expect(computeBeverageSubtotalCents(beverageItems)).toBe(1000)
   })
 
   it("maps date input values to ISO and back", () => {

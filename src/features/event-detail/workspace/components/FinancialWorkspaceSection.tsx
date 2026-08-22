@@ -22,7 +22,7 @@ const FinancialWorkspaceSection: React.FC<FinancialWorkspaceSectionProps> = ({ e
     updateItem: updateFoodItem,
   } = useFoodSection()
   const {
-    data: beverageTimeblocks,
+    items: beverageItems,
     updateItem: updateBeverageItem,
   } = useBeverageSection()
   const { data: payments } = usePaymentsSection()
@@ -30,7 +30,7 @@ const FinancialWorkspaceSection: React.FC<FinancialWorkspaceSectionProps> = ({ e
   const summary = computeFinancialSummaryAllSources({
     menuItems,
     foodTimeblocks,
-    beverageTimeblocks,
+    beverageItems,
     payments,
   })
 
@@ -60,11 +60,13 @@ const FinancialWorkspaceSection: React.FC<FinancialWorkspaceSectionProps> = ({ e
           <MenuOfChargeSection
             emptyStateMode="workspace"
             foodTimeblocks={foodTimeblocks ?? []}
-            beverageTimeblocks={beverageTimeblocks ?? []}
+            beverageItems={beverageItems ?? []}
             onNavigateToFood={() => onSelectWorkspaceNode("category:food")}
             onNavigateToBeverage={() => onSelectWorkspaceNode("category:beverage")}
             onUpdateFoodBillingItem={updateFoodItem}
-            onUpdateBeverageBillingItem={updateBeverageItem}
+            onUpdateBeverageBillingItem={({ itemId, updates }) =>
+              updateBeverageItem({ itemId, updates })
+            }
           />
         </div>
 
