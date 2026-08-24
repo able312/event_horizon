@@ -1,4 +1,4 @@
-import { Clock3, UserPen } from 'lucide-react'
+import { Clock3 } from 'lucide-react'
 
 import type { UpdateTimeblock } from '~/definitions/database'
 
