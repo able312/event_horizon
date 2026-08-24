@@ -108,7 +108,7 @@ describe("useBeverageSection optimistic cache", () => {
     act(() => {
       result.current.addItem({
         type: "Wine",
-        newItem: { name: "Tea", quantity: 2 },
+        newItem: { name: "Tea" },
       })
     })
 
