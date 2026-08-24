@@ -28,7 +28,7 @@ const TimeBlockHeader:React.FC<TimeBlockHeaderProps> = ({
     const timeblockName = title.trim() || "Untitled"
 
     return (
-        <div className="@container/timeblockHeader bg-stone-800 rounded-t-xs shadow-lg border-b border-border/70 relative z-10">
+        <div className="bg-stone-800 rounded-t-xs shadow-lg border-b border-border/70 relative z-10">
             <div className="flex gap-3 flex-row items-start justify-between">
                 <div className="flex gap-6 justify-start items-center text-white max-w-7/8 group">
                     {/* Time */}
@@ -45,9 +45,9 @@ const TimeBlockHeader:React.FC<TimeBlockHeaderProps> = ({
                         </div>
                     </label>
 
-                    <div className='flex gap-4 @max-[54rem]/timeblockHeader:flex-col @max-[54rem]/timeblockHeader:gap-0'>
+                    <div className="flex flex-wrap gap-4 items-center">
                         {/* Title */}
-                        <label className="space-y-1 border-r-1 border-stone-300 @max-[54rem]/timeblockHeader:border-r-stone-800 pr-6 py-1.5 min-w-85">
+                        <label className="space-y-1 border-r-1 border-stone-300 pr-6 py-1.5 min-w-85">
                             <Input
                                 type="text"
                                 variant="ghost"
@@ -58,9 +58,8 @@ const TimeBlockHeader:React.FC<TimeBlockHeaderProps> = ({
                             />
                         </label>
 
-
                         {/* Assigned To */}
-                        <label className="space-y-1 pr-6 py-1.5 @max-[54rem]/timeblockHeader:hidden">
+                        <label className="space-y-1 pr-6 py-1.5">
                             <Input
                                 type="text"
                                 variant="darkSecondary"
@@ -68,7 +67,6 @@ const TimeBlockHeader:React.FC<TimeBlockHeaderProps> = ({
                                 onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { assignedTo: e.target.value } })}
                                 placeholder="Assign staff"
                                 aria-label={`${sectionTitle}: ${timeblockName} assigned to`}
-                                className={""}
                             />
                         </label>
                     </div>
@@ -80,19 +78,6 @@ const TimeBlockHeader:React.FC<TimeBlockHeaderProps> = ({
                     { tail }
 
                 </div>
-            </div>
-            <div className='@min-[54rem]/timeblockHeader:hidden'>
-                <label>
-                    <Input
-                        type="text"
-                        variant="darkFullLine"
-                        defaultValue={ assignedTo }
-                        onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { assignedTo: e.target.value } })}
-                        placeholder="Assign staff"
-                        aria-label={`${sectionTitle}: ${timeblockName} assigned to (narrow)`}
-                        className={"rounded-none p-1 border-t-0.5"}
-                    />
-                </label>
             </div>
         </div>
     )

@@ -1,7 +1,7 @@
 import { useParams } from "react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import type { BeverageItemType } from "~/definitions/database"
+import type { BeverageItemType, Timeblock } from "~/definitions/database"
 import type { BeverageItemWithAssignments, BeverageSectionPayload } from "~/definitions/beverage/beverage-types"
 import * as beverageItemsIpc from "~/lib/ipc/beverageItems"
 import { useTimeblockMutations } from "./useTimeblockMutations"
@@ -12,6 +12,9 @@ import {
   setBeverageItemAssignments,
   updateBeverageItem as updateBeverageItemInCache,
 } from "./util/optimisticBeverageSectionCache"
+
+const EMPTY_TIMEBLOCKS: Timeblock[] = []
+const EMPTY_ITEMS: BeverageItemWithAssignments[] = []
 
 export function useBeverageSection() {
   const { id: eventId } = useParams()
@@ -178,8 +181,8 @@ export function useBeverageSection() {
 
   return {
     ...query,
-    timeblocks: section?.timeblocks ?? [],
-    items: section?.items ?? [],
+    timeblocks: section?.timeblocks ?? EMPTY_TIMEBLOCKS,
+    items: section?.items ?? EMPTY_ITEMS,
     addTimeblock,
     updateTimeblock,
     removeTimeblock,

@@ -121,6 +121,14 @@ export function rebuildAppMenu(targetWindowId?: number) {
       { role: "redo"},
     ]
   },
+  {
+    label: "View",
+    submenu: [
+      { role: "togglefullscreen" },
+      { type: "separator" },
+      { role: "toggleDevTools" },
+    ],
+  },
   ...(canGenerate
     ? [
         {

@@ -141,8 +141,16 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheSha
       }
       toast.error("Failed to update timeblock")
     },
-    onSettled: (data) => {
-      invalidateKeys(data?.sectionType ?? "")
+    onSettled: (data, _error, variables) => {
+      const type = data?.sectionType ?? sectionType
+      const updates = variables.updates
+      const shouldRefreshTimeline = updates.time !== undefined || updates.title !== undefined
+
+      queryClient.invalidateQueries({ queryKey })
+      queryClient.invalidateQueries({ queryKey: [type, eventId] })
+      if (shouldRefreshTimeline) {
+        queryClient.invalidateQueries({ queryKey: ["timeblocks", eventId] })
+      }
     },
   })
 

@@ -73,10 +73,30 @@ function getGenerateMenu(template: MenuItemConstructorOptions[]) {
   return template.find((entry) => entry.label === "Generate")
 }
 
+function getViewMenu(template: MenuItemConstructorOptions[]) {
+  return template.find((entry) => entry.label === "View")
+}
+
 describe("appMenu Generate visibility", () => {
   beforeEach(() => {
     MockBrowserWindow.focusedWindow = null
     MockBrowserWindow.senderToWindow.clear()
+  })
+
+  it("always includes View toggleDevTools even when isDev is false", async () => {
+    const { appMenu, buildFromTemplate } = await loadAppMenu()
+    const win = new MockBrowserWindow(1)
+    MockBrowserWindow.focusedWindow = win
+
+    appMenu.rebuildAppMenu()
+
+    const template = buildFromTemplate.mock.calls.at(-1)?.[0] as MenuItemConstructorOptions[]
+    const viewMenu = getViewMenu(template)
+    const submenu = viewMenu?.submenu as MenuItemConstructorOptions[] | undefined
+    const toggleDevTools = submenu?.find((item) => item.role === "toggleDevTools")
+
+    expect(viewMenu).toBeDefined()
+    expect(toggleDevTools).toBeDefined()
   })
 
   it("omits Generate when no event detail context exists", async () => {

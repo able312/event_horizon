@@ -10,6 +10,10 @@ import { useSetupInstructionSection } from "~/hooks/useSetupInstrucionSection"
 
 import { buildWorkspaceNav } from "../lib/buildWorkspaceNav"
 import type { EventWorkspaceData } from "../types"
+import type { TimeblockWithItems, TimelineTimeblock } from "~/definitions/timeblocks/timeblocks-types"
+
+const EMPTY_TIMELINE_ROWS: TimelineTimeblock[] = []
+const EMPTY_SECTION_ROWS: TimeblockWithItems[] = []
 
 export function useEventWorkspaceData(): EventWorkspaceData {
   const eventQuery = useEvent()
@@ -22,11 +26,11 @@ export function useEventWorkspaceData(): EventWorkspaceData {
 
   const sectionRows = useMemo(
     () => [
-      ...(foodQuery.data ?? []),
-      ...(beverageQuery.timeblocks ?? []),
-      ...(vendorQuery.data ?? []),
-      ...(noteQuery.data ?? []),
-      ...(setupQuery.data ?? []),
+      ...(foodQuery.data ?? EMPTY_SECTION_ROWS),
+      ...(beverageQuery.timeblocks ?? EMPTY_SECTION_ROWS),
+      ...(vendorQuery.data ?? EMPTY_SECTION_ROWS),
+      ...(noteQuery.data ?? EMPTY_SECTION_ROWS),
+      ...(setupQuery.data ?? EMPTY_SECTION_ROWS),
     ],
     [foodQuery.data, beverageQuery.timeblocks, vendorQuery.data, noteQuery.data, setupQuery.data],
   )
@@ -35,7 +39,7 @@ export function useEventWorkspaceData(): EventWorkspaceData {
     () =>
       buildWorkspaceNav({
         event: eventQuery.data,
-        timelineRows: timelineQuery.data ?? [],
+        timelineRows: timelineQuery.data ?? EMPTY_TIMELINE_ROWS,
         sectionRows,
       }),
     [eventQuery.data, timelineQuery.data, sectionRows],
@@ -88,7 +92,7 @@ export function useEventWorkspaceData(): EventWorkspaceData {
     error,
     updateEvent: eventQuery.updateEvent,
     deleteEvent: eventQuery.deleteEvent,
-    timelineRows: timelineQuery.data ?? [],
+    timelineRows: timelineQuery.data ?? EMPTY_TIMELINE_ROWS,
     sectionRows,
     navModel,
     refetchAll,

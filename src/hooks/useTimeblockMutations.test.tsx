@@ -210,4 +210,54 @@ describe("useTimeblockMutations", () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["beverage", "event-1"] })
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
   })
+
+  it("invalidates the timeline after a title or time update", async () => {
+    vi.mocked(timeblocksIpc.updateTimeblock).mockResolvedValue(
+      makeCreatedTimeblock({ title: "Dinner", sectionType: "food" })
+    )
+
+    const { result, queryClient } = renderHookWithProviders(() =>
+      useTimeblockMutations({
+        queryKey: ["foodSection", "event-1"],
+        eventId: "event-1",
+        sectionType: "food",
+      })
+    )
+
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
+
+    act(() => {
+      result.current.updateTimeblock({ id: "tb-1", updates: { title: "Dinner" } })
+    })
+
+    await waitFor(() => expect(timeblocksIpc.updateTimeblock).toHaveBeenCalledTimes(1))
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["foodSection", "event-1"] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
+  })
+
+  it("does not invalidate the timeline after an assignedTo-only update", async () => {
+    vi.mocked(timeblocksIpc.updateTimeblock).mockResolvedValue(
+      makeCreatedTimeblock({ assignedTo: "Alex", sectionType: "food" })
+    )
+
+    const { result, queryClient } = renderHookWithProviders(() =>
+      useTimeblockMutations({
+        queryKey: ["foodSection", "event-1"],
+        eventId: "event-1",
+        sectionType: "food",
+      })
+    )
+
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
+
+    act(() => {
+      result.current.updateTimeblock({ id: "tb-1", updates: { assignedTo: "Alex" } })
+    })
+
+    await waitFor(() => expect(timeblocksIpc.updateTimeblock).toHaveBeenCalledTimes(1))
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["foodSection", "event-1"] })
+    expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
+  })
 })

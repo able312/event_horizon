@@ -23,7 +23,7 @@ const inputVariants = cva(
     "focus-visible:border-ring focus-visible:ring-orange-500 focus-visible:ring-[2px]",
     "aria-invalid:border-destructive aria-invalid:ring-destructive/20",
     "dark:aria-invalid:ring-destructive/40",
-    "md:text-sm field-sizing-content",
+    "md:text-sm",
   ].join(" "),
   {
     variants: {

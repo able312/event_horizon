@@ -2,7 +2,6 @@ import React from 'react';
 import { Clock } from "lucide-react"
 import type { TimelineTimeblock } from '~/definitions/timeblocks/timeblocks-types';
 import type { Timeblock } from '~/definitions/database';
-import { v4 as uuidv4 } from 'uuid'
 import { SECTION_TYPE } from '~/definitions/timeblocks/timeblock-constants';
 import {
   getVisibleBeverageTypeSections,
@@ -69,9 +68,9 @@ const TimelineBlock: React.FC<TimelineBlocksProps> = ({ timeblock, updateTimeblo
       }
 
       {timeblock.sectionType === SECTION_TYPE.SETUP_INSTRUCTION &&
-         timeblock.details?.split("\n\n").map(part => (
+         timeblock.details?.split("\n\n").map((part, index) => (
            <GenericDetailsBlock
-             key={"setupInstructionPart_" + uuidv4()}
+             key={`${timeblock.id}_setup_${index}`}
              {...parseBlock(part)}
              borderColor='red'
            />
@@ -79,9 +78,9 @@ const TimelineBlock: React.FC<TimelineBlocksProps> = ({ timeblock, updateTimeblo
       }
 
       {timeblock.sectionType === SECTION_TYPE.NOTE &&
-         timeblock.details?.split("\n\n").map(part => (
+         timeblock.details?.split("\n\n").map((part, index) => (
            <GenericDetailsBlock
-             key={"notePart_" + uuidv4()}
+             key={`${timeblock.id}_note_${index}`}
              {...parseBlock(part)}
              borderColor='gray'
            />
@@ -89,9 +88,9 @@ const TimelineBlock: React.FC<TimelineBlocksProps> = ({ timeblock, updateTimeblo
       }
 
       {timeblock.sectionType === SECTION_TYPE.TOURNAMENT_DETAIL &&
-         timeblock.details?.split("\n\n").map(part => (
+         timeblock.details?.split("\n\n").map((part, index) => (
            <GenericDetailsBlock
-             key={"notePart_" + uuidv4()}
+             key={`${timeblock.id}_tournament_${index}`}
              {...parseBlock(part)}
              borderColor='green'
            />
