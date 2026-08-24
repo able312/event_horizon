@@ -25,6 +25,7 @@ const TimeBlockHeader:React.FC<TimeBlockHeaderProps> = ({
     tail,
     updateTimeblock,
 }) => {
+    const timeblockName = title.trim() || "Untitled"
 
     return (
         <div className="@container/timeblockHeader bg-stone-800 rounded-t-xs shadow-lg border-b border-border/70 relative z-10">
@@ -38,7 +39,7 @@ const TimeBlockHeader:React.FC<TimeBlockHeaderProps> = ({
                                 type="time"
                                 defaultValue={time}
                                 onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { time: e.target.value } })}
-                                aria-label={`${sectionTitle} time`}
+                                aria-label={`${sectionTitle}: ${timeblockName} time`}
                                 className="bg-transparent text-sm font-bold outline-none w-full text-center"
                             />
                         </div>
@@ -53,7 +54,7 @@ const TimeBlockHeader:React.FC<TimeBlockHeaderProps> = ({
                                 defaultValue={ title }
                                 onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { title: e.target.value } })}
                                 placeholder={titlePlaceholder}
-                                aria-label={`${sectionTitle} title`}
+                                aria-label={`${sectionTitle}: ${timeblockName} title`}
                             />
                         </label>
 
@@ -66,7 +67,7 @@ const TimeBlockHeader:React.FC<TimeBlockHeaderProps> = ({
                                 defaultValue={ assignedTo }
                                 onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { assignedTo: e.target.value } })}
                                 placeholder="Assign staff"
-                                aria-label="Assigned To"
+                                aria-label={`${sectionTitle}: ${timeblockName} assigned to`}
                                 className={""}
                             />
                         </label>
@@ -88,7 +89,7 @@ const TimeBlockHeader:React.FC<TimeBlockHeaderProps> = ({
                         defaultValue={ assignedTo }
                         onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { assignedTo: e.target.value } })}
                         placeholder="Assign staff"
-                        aria-label="Assigned To"
+                        aria-label={`${sectionTitle}: ${timeblockName} assigned to (narrow)`}
                         className={"rounded-none p-1 border-t-0.5"}
                     />
                 </label>
