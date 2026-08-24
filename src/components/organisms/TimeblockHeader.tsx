@@ -84,7 +84,7 @@ const TimeBlockHeader:React.FC<TimeBlockHeaderProps> = ({
                 <label>
                     <Input
                         type="text"
-                        variant="darkSecondary"
+                        variant="darkFullLine"
                         defaultValue={ assignedTo }
                         onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { assignedTo: e.target.value } })}
                         placeholder="Assign staff"

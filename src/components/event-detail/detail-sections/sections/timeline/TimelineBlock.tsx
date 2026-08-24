@@ -45,21 +45,17 @@ const TimelineBlock: React.FC<TimelineBlocksProps> = ({ timeblock, updateTimeblo
               borderColor='blue'
             />
           ) : null}
-          {getVisibleBeverageTypeSections(timeblock.beverageItems ?? [], { hideEmptySpecialOrders: true }).map((section) => (
-            <div key={`${timeblock.id}_${section.type}`} className="break-inside-avoid">
-              <GenericDetailsBlock
-                blockHeader={section.type}
-                borderColor='blue'
-              />
-              {section.items.map((item: BeverageItem) => (
+          {getVisibleBeverageTypeSections(timeblock.beverageItems ?? [], { hideEmptySpecialOrders: true })
+            .filter(section => section.items.length > 0)
+            .map((section) => (
+              <div key={`${timeblock.id}_${section.type}`} className="break-inside-avoid">
                 <GenericDetailsBlock
-                  key={`beverageItem_${item.id}`}
-                  blockHeader={formatBeverageItemLine(item)}
+                  blockHeader={section.type}
                   borderColor='blue'
+                  blockNotes={section.items.map(i => i.name).join('\n')}
                 />
-              ))}
-            </div>
-          ))}
+              </div>
+            ))}
         </>
       )}
 
