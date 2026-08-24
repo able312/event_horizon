@@ -37,7 +37,7 @@ const inputVariants = cva(
         darkSecondary:
           "px-1.5 py-0.5 placeholder:text-white/50 rounded-sm text-sm text-white border-1 border-stone-600 shadow sm outline-none transition-colors bg-stone-700 hover:border-stone-300",
         darkFullLine:
-          "px-1.5 py-0.5 placeholder:text-white/50 rounded-sm text-sm text-white border-1 border-stone-600 shadow sm outline-none transition-colors bg-stone-700 hover:border-b-stone-300 focus:border-b-orange-500 focus-visible:border-stone-600 focus-visible:border-b-orange-500 focus-visible:ring-0"
+          "px-1.5 py-0.5 placeholder:text-white/50 rounded-sm text-sm text-white border-1 border-stone-900 shadow sm outline-none transition-colors bg-stone-700 hover:border-b-stone-300 focus:border-b-orange-500 focus-visible:border-stone-600 focus-visible:border-b-orange-500 focus-visible:ring-0"
       }
     }
   }

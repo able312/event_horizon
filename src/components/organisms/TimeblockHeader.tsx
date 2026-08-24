@@ -44,9 +44,9 @@ const TimeBlockHeader:React.FC<TimeBlockHeaderProps> = ({
                         </div>
                     </label>
 
-                    <div className='flex gap-4 @max-[54rem]/timeblockHeader:flex-col @max-[54rem]/timeblockHeader:gap-0 @max-[54rem]/timeblockHeader:border-r-1'>
+                    <div className='flex gap-4 @max-[54rem]/timeblockHeader:flex-col @max-[54rem]/timeblockHeader:gap-0'>
                         {/* Title */}
-                        <label className="space-y-1 border-r-1 border-stone-300 @max-[54rem]/timeblockHeader:border-r-black pr-6 py-1.5 min-w-85">
+                        <label className="space-y-1 border-r-1 border-stone-300 @max-[54rem]/timeblockHeader:border-r-stone-800 pr-6 py-1.5 min-w-85">
                             <Input
                                 type="text"
                                 variant="ghost"
@@ -89,7 +89,7 @@ const TimeBlockHeader:React.FC<TimeBlockHeaderProps> = ({
                         onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { assignedTo: e.target.value } })}
                         placeholder="Assign staff"
                         aria-label="Assigned To"
-                        className={"rounded-none p-1 border-t-0.5 border-t-stone-100/40"}
+                        className={"rounded-none p-1 border-t-0.5"}
                     />
                 </label>
             </div>
