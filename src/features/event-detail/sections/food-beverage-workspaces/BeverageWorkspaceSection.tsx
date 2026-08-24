@@ -89,7 +89,6 @@ const BeverageWorkspaceSection: React.FC = () => {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold tracking-wide">Beverage Planning</h3>
-          <p className="text-xs text-muted-foreground">Manage drinks by type and assign them to beverage timeblocks.</p>
         </div>
       </div>
 
@@ -230,7 +229,9 @@ const BeverageWorkspaceSection: React.FC = () => {
           </div>
         </div>
 
-        <div className="min-w-0 rounded-xs border border-border bg-background p-3 shadow-sm">
+        {/* TIMEBLOCK SECTION */}
+
+        <div className="min-w-0 bg-background p-2">
           <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
             <h4 className="text-sm font-semibold tracking-wide">Timeblocks</h4>
             <Button type="button" variant="outline" size="sm" onClick={() => addTimeblock({ title: "" })}>

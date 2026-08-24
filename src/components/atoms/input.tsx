@@ -30,8 +30,10 @@ const inputVariants = cva(
       variant: {
         default:
           "border-1 border-stone-300 text-stone-800",
-        ghost: 
+        ghost:
           "bg-transparent px-1.5 py-1 rounded-sm text-md font-bold outline-none transition-colors focus:border-orange-500 focus:bg-stone-600 group-hover:bg-stone-600 hover:ring hover:ring-stone-300",
+        whiteGhost:
+          "bg-transparent px-1.5 py-1 rounded-sm text-md font-bold outline-none transition-colors focus:border-b-orange-500 focus:bg-stone-50 group-hover:bg-stone-600 hover:ring hover:ring-stone-300",
         darkSecondary:
           "px-1.5 py-0.5 placeholder:text-white/50 rounded-sm text-sm text-white border-1 border-stone-600 shadow sm outline-none transition-colors bg-stone-700 hover:border-stone-300"
       }
