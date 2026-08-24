@@ -181,13 +181,19 @@ const BeverageWorkspaceSection: React.FC = () => {
               <div key={section.type} className="space-y-2">
                 <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{section.type}</h5>
                 <div className={SECTION_TABLE_CONTAINER_CLASS}>
-                  <table className={`${SECTION_TABLE_CLASS} min-w-[640px]`}>
+                  <table className={`${SECTION_TABLE_CLASS} table-fixed`}>
+                    <colgroup>
+                      <col />
+                      <col className="w-16" />
+                      <col className="w-44" />
+                      <col className="w-20" />
+                    </colgroup>
                     <thead>
                       <tr className={SECTION_TABLE_HEAD_ROW_CLASS}>
-                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Item</th>
-                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Qty</th>
-                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Timeblocks</th>
-                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Remove</th>
+                        <th className={`${SECTION_TABLE_HEAD_CELL_CLASS_LEFT} whitespace-nowrap`}>Item</th>
+                        <th className={`${SECTION_TABLE_HEAD_CELL_CLASS_RIGHT} whitespace-nowrap`}>Qty</th>
+                        <th className={`${SECTION_TABLE_HEAD_CELL_CLASS_LEFT} whitespace-nowrap`}>Timeblocks</th>
+                        <th className={`${SECTION_TABLE_HEAD_CELL_CLASS_RIGHT} whitespace-nowrap`}>Remove</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -200,7 +206,7 @@ const BeverageWorkspaceSection: React.FC = () => {
                       ) : (
                         section.items.map((item) => (
                           <tr key={item.id} className={SECTION_TABLE_BODY_ROW_CLASS} data-beverage-item-id={item.id}>
-                            <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-top`}>
+                            <td className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-0 align-top`}>
                               <input
                                 data-cell="item"
                                 type="text"
@@ -208,7 +214,7 @@ const BeverageWorkspaceSection: React.FC = () => {
                                 placeholder="Item name"
                                 onBlur={(e) => updateItem({ itemId: item.id, updates: { name: e.target.value } })}
                                 aria-label="Beverage item name"
-                                className="h-7 w-full border-0 border-b border-border bg-transparent px-1 text-xs focus:border-primary focus:outline-none"
+                                className="h-7 w-full min-w-0 truncate border-0 border-b border-border bg-transparent px-1 text-xs focus:border-primary focus:outline-none"
                               />
                             </td>
                             <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-top text-right`}>
@@ -221,20 +227,22 @@ const BeverageWorkspaceSection: React.FC = () => {
                                   updates: { quantity: parseQuantity(e.target.value) },
                                 })}
                                 aria-label="Beverage quantity"
-                                className="ml-auto block h-7 w-14 border-0 border-b border-border bg-transparent px-1 text-right text-xs focus:border-primary focus:outline-none"
+                                className="h-7 w-full border-0 border-b border-border bg-transparent px-1 text-right text-xs focus:border-primary focus:outline-none"
                               />
                             </td>
-                            <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-top`}>
+                            <td className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-0 align-top`}>
                               <DropdownMenu modal={false}>
                                 <DropdownMenuTrigger asChild>
                                   <button
                                     type="button"
-                                    className="inline-flex h-7 items-center gap-1 rounded-xs border border-border px-2 text-xs text-muted-foreground hover:bg-muted"
+                                    className="inline-flex h-7 w-full min-w-0 items-center justify-between gap-1 rounded-xs border border-border px-2 text-xs text-muted-foreground hover:bg-muted"
                                   >
-                                    {item.assignedTimeblockIds.length > 0
-                                      ? `${item.assignedTimeblockIds.length} selected`
-                                      : "Assign timeblocks"}
-                                    <ChevronDown size={12} />
+                                    <span className="truncate">
+                                      {item.assignedTimeblockIds.length > 0
+                                        ? `${item.assignedTimeblockIds.length} selected`
+                                        : "Assign timeblocks"}
+                                    </span>
+                                    <ChevronDown size={12} className="shrink-0" />
                                   </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="min-w-48">
