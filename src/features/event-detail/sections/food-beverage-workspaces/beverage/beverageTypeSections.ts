@@ -17,7 +17,3 @@ export function getVisibleBeverageTypeSections<T extends { type: BeverageItemTyp
     return [{ type, items: typeItems }]
   })
 }
-
-export function formatBeverageItemLine(item: { quantity: number | null; name: string }): string {
-  return `${item.quantity ? `${item.quantity} × ` : ""}${item.name || "Untitled item"}`
-}

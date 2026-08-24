@@ -1,11 +1,10 @@
 import React from 'react';
 import { Clock } from "lucide-react"
 import type { TimelineTimeblock } from '~/definitions/timeblocks/timeblocks-types';
-import type { Timeblock, BeverageItem } from '~/definitions/database';
+import type { Timeblock } from '~/definitions/database';
 import { v4 as uuidv4 } from 'uuid'
 import { SECTION_TYPE } from '~/definitions/timeblocks/timeblock-constants';
 import {
-  formatBeverageItemLine,
   getVisibleBeverageTypeSections,
 } from '~/features/event-detail/sections/food-beverage-workspaces/beverage/beverageTypeSections';
 
@@ -39,11 +38,12 @@ const TimelineBlock: React.FC<TimelineBlocksProps> = ({ timeblock, updateTimeblo
       {timeblock.sectionType === SECTION_TYPE.BEVERAGE && (
         <>
           {timeblock.details ? (
+            timeblock.details.split("\n\n").map((section, index) => (
             <GenericDetailsBlock
-              key={`beverage_notes_${timeblock.id}`}
-              blockNotes={timeblock.details}
+              key={`beverage_notes_${timeblock.id + index}`}
+              {...parseBlock(section)}
               borderColor='blue'
-            />
+            />))
           ) : null}
           {getVisibleBeverageTypeSections(timeblock.beverageItems ?? [], { hideEmptySpecialOrders: true })
             .filter(section => section.items.length > 0)
