@@ -110,7 +110,7 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheSha
       toast.error("Failed to create timeblock")
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey })
+      invalidateKeys(sectionType)
     },
   })
 
@@ -171,7 +171,7 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheSha
       toast.error("Failed to delete timeblock")
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey })
+      invalidateKeys(sectionType)
     },
   })
 

@@ -160,4 +160,54 @@ describe("useTimeblockMutations", () => {
 
     await waitFor(() => expect(timeblocksIpc.createTimeblock).toHaveBeenCalledTimes(1))
   })
+
+  it("invalidates the timeline query key after create settles", async () => {
+    vi.mocked(timeblocksIpc.createTimeblock).mockResolvedValue(makeCreatedTimeblock())
+
+    const { result, queryClient } = renderHookWithProviders(() =>
+      useTimeblockMutations({
+        queryKey: ["beverageSection", "event-1"],
+        eventId: "event-1",
+        sectionType: "beverage",
+        cacheShape: "beverageSection",
+      })
+    )
+
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
+
+    act(() => {
+      result.current.addTimeblock()
+    })
+
+    await waitFor(() => expect(timeblocksIpc.createTimeblock).toHaveBeenCalledTimes(1))
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["beverageSection", "event-1"] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["beverage", "event-1"] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
+  })
+
+  it("invalidates the timeline query key after delete settles", async () => {
+    vi.mocked(timeblocksIpc.deleteTimeblock).mockResolvedValue(true)
+
+    const { result, queryClient } = renderHookWithProviders(() =>
+      useTimeblockMutations({
+        queryKey: ["beverageSection", "event-1"],
+        eventId: "event-1",
+        sectionType: "beverage",
+        cacheShape: "beverageSection",
+      })
+    )
+
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
+
+    act(() => {
+      result.current.removeTimeblock("tb-1")
+    })
+
+    await waitFor(() => expect(timeblocksIpc.deleteTimeblock).toHaveBeenCalledWith("tb-1"))
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["beverageSection", "event-1"] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["beverage", "event-1"] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
+  })
 })
