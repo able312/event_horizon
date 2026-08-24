@@ -129,6 +129,63 @@ describe("useBeverageSection optimistic cache", () => {
     })
   })
 
+  it("uses a client-supplied id for optimistic add and keeps it after success", async () => {
+    const getSectionMock = vi.mocked(beverageItemsIpc.getBeverageSectionWithItems)
+    const createItemMock = vi.mocked(beverageItemsIpc.createBeverageItem)
+
+    const clientId = "client-bev-id"
+    const createdItem = {
+      id: clientId,
+      eventId: "event-1",
+      name: "Rosé",
+      quantity: null,
+      type: "Wine" as const,
+      serviceStyle: null,
+      includes: null,
+      unitPriceCents: null,
+    }
+
+    getSectionMock
+      .mockResolvedValueOnce(makeSection())
+      .mockResolvedValue(makeSection({
+        items: [
+          makeSection().items[0],
+          { ...createdItem, assignedTimeblockIds: [] },
+        ],
+      }))
+    const deferredCreate = createDeferred<typeof createdItem>()
+    createItemMock.mockReturnValue(deferredCreate.promise)
+
+    const { result, queryClient } = renderHookWithProviders(() => useBeverageSection())
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    act(() => {
+      result.current.addItem({
+        id: clientId,
+        type: "Wine",
+        newItem: { name: "Rosé" },
+      })
+    })
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData<BeverageSectionPayload>(["beverageSection", "event-1"])
+      expect(cached?.items.map((item) => item.id)).toEqual(["bev-1", clientId])
+    })
+
+    await act(async () => {
+      deferredCreate.resolve(createdItem)
+      await deferredCreate.promise
+    })
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData<BeverageSectionPayload>(["beverageSection", "event-1"])
+      expect(cached?.items.map((item) => item.id)).toEqual(["bev-1", clientId])
+      expect(cached?.items.some((item) => item.id.startsWith("temp_"))).toBe(false)
+    })
+
+    expect(createItemMock).toHaveBeenCalledWith(expect.objectContaining({ id: clientId }))
+  })
+
   it("optimistic update changes items[n]", async () => {
     const getSectionMock = vi.mocked(beverageItemsIpc.getBeverageSectionWithItems)
     const updateItemMock = vi.mocked(beverageItemsIpc.updateBeverageItem)

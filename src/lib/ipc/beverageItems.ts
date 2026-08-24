@@ -6,6 +6,7 @@ export function getBeverageSectionWithItems(eventId: string): Promise<BeverageSe
 }
 
 export function createBeverageItem(data: {
+  id?: string
   eventId: string
   name: string
   type: BeverageItemType

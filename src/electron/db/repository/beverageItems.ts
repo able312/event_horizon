@@ -35,8 +35,10 @@ export function createBeverageItemsRepository(database: AppDatabase) {
       if (!data.eventId) throw new Error("insertBeverageItem: eventId is required")
       if (!data.type) throw new Error("insertBeverageItem: type is required")
 
+      const id = data.id?.trim() ? data.id : uuidv4()
+
       return database.insert(beverageItems).values({
-        id: uuidv4(),
+        id,
         eventId: data.eventId,
         name: data.name,
         quantity: data.quantity ?? null,

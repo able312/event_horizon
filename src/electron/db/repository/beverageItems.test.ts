@@ -103,6 +103,40 @@ describe("beverage item repository integration", () => {
     ])
   })
 
+  it("uses a client-supplied id when provided and generates one when omitted", async () => {
+    if (!testDb) throw new Error("Expected test DB to be initialized")
+
+    const { createBeverageItemsRepository } = await import("./beverageItems.js")
+    const repo = createBeverageItemsRepository(testDb.db)
+
+    const eventId = uuidv4()
+    const clientId = uuidv4()
+
+    testDb.db.insert(events).values({
+      id: eventId,
+      title: "Client Id Event",
+      createdAt: new Date().toISOString(),
+    }).run()
+
+    const withClientId = repo.insert({
+      id: clientId,
+      eventId,
+      name: "Cider",
+      type: "Coolers",
+    })
+
+    expect(withClientId.id).toBe(clientId)
+
+    const withoutClientId = repo.insert({
+      eventId,
+      name: "Soda",
+      type: "Non-Alcoholic",
+    })
+
+    expect(withoutClientId.id).toBeTruthy()
+    expect(withoutClientId.id).not.toBe(clientId)
+  })
+
   it("removes assignments but keeps the drink when a timeblock is deleted", async () => {
     if (!testDb) throw new Error("Expected test DB to be initialized")
 

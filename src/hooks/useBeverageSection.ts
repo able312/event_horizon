@@ -40,17 +40,18 @@ export function useBeverageSection() {
   })
 
   const addItemMutation = useMutation({
-    mutationFn: ({ type, newItem }: { type: BeverageItemType; newItem?: { name?: string } }) =>
+    mutationFn: ({ id, type, newItem }: { id?: string; type: BeverageItemType; newItem?: { name?: string } }) =>
       beverageItemsIpc.createBeverageItem({
+        id,
         eventId: eventId!,
         name: newItem?.name || "",
         type,
       }),
-    onMutate: async ({ type, newItem }) => {
+    onMutate: async ({ id, type, newItem }) => {
       await queryClient.cancelQueries({ queryKey })
       const previousData = queryClient.getQueryData<BeverageSectionPayload>(queryKey)
 
-      const tempId = `temp_${Date.now()}`
+      const tempId = id ?? `temp_${Date.now()}`
       const optimisticItem: BeverageItemWithAssignments = {
         id: tempId,
         eventId: eventId!,
