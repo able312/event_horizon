@@ -10,21 +10,10 @@ interface TimeBlockHeaderProps {
     time: string,
     assignedTo: string,
     tail: React.ReactNode
-    updateTimeblock: (payload: { id: string, updates: UpdateTimeblock }) => void,
+    updateTimeblock: (payload: {id: string, updates: UpdateTimeblock}) => void,
 }
 
-// Small local helpers so the JSX below isn't full of .join(" ") noise.
-const cx = (...classes: Array<string | false | undefined>) =>
-    classes.filter(Boolean).join(" ")
-
-const BREAKPOINT = "@max-[54rem]/timeblockHeader"
-const narrow = (classes: string) =>
-    classes
-        .split(" ")
-        .map((c) => `${BREAKPOINT}:${c}`)
-        .join(" ")
-
-const TimeBlockHeader: React.FC<TimeBlockHeaderProps> = ({
+const TimeBlockHeader:React.FC<TimeBlockHeaderProps> = ({
     timeblockID,
     title,
     titlePlaceholder,
@@ -35,7 +24,6 @@ const TimeBlockHeader: React.FC<TimeBlockHeaderProps> = ({
     updateTimeblock,
 }) => {
     const timeblockName = title.trim() || "Untitled"
-    const labelPrefix = `${sectionTitle}: ${timeblockName}`
 
     return (
         <div className="@container/timeblockHeader bg-stone-800 rounded-t-xs shadow-lg border-b border-border/70 relative z-10">
@@ -44,83 +32,93 @@ const TimeBlockHeader: React.FC<TimeBlockHeaderProps> = ({
               (wide) to a full-width second row (narrow) via CSS Grid placement.
             */}
             <div
-                className={cx(
+                className={[
                     "grid items-stretch text-white group",
-                    "grid-cols-[auto_minmax(21.25rem,1fr)_auto_auto]",
-                    narrow("grid-cols-[auto_minmax(0,1fr)_auto]"),
-                )}
+                    "grid-cols-[auto_minmax(21.25rem,1fr)_1fr_auto]",
+                    "@max-[54rem]/timeblockHeader:grid-cols-[auto_minmax(0,1fr)_auto]",
+                ].join(" ")}
             >
                 {/* Time — always row 1, col 1 */}
-                <label
-                    className={cx(
+                <label className={[
                         "col-start-1 row-start-1 space-y-1 self-stretch max-w-22 border-r-1 border-stone-300",
-                        "flex items-center justify-center h-full gap-2 px-2 rounded-tl-xs",
-                        time ? "bg-stone-700 hover:bg-stone-600" : "bg-orange-500 hover:bg-orange-400",
-                    )}
+                        `flex items-center justify-center h-full gap-2 px-2 rounded-tl-xs ${time ? "bg-stone-700 hover:bg-stone-600" : "bg-orange-500 hover:bg-orange-400"}`
+                    ].join(" ")}
                 >
                     <input
                         type="time"
                         defaultValue={time}
                         onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { time: e.target.value } })}
-                        aria-label={`${labelPrefix} time`}
+                        aria-label={`${sectionTitle}: ${timeblockName} time`}
                         className="bg-transparent text-sm font-bold outline-none w-full text-center max-w-fit"
                     />
                 </label>
 
-                {/* Title — the primary field, styled with more visual weight */}
+                {/* Title — always row 1, col 2 */}
                 <label
-                    className={cx(
+                    className={[
                         "col-start-2 row-start-1 space-y-1 border-r-1 border-stone-300 px-4 py-1.5 min-w-85",
-                        narrow("border-r-stone-800 min-w-0"),
-                    )}
+                        "@max-[54rem]/timeblockHeader:border-r-stone-800",
+                        "@max-[54rem]/timeblockHeader:min-w-0",
+                    ].join(" ")}
                 >
                     <Input
                         type="text"
                         variant="ghost"
-                        defaultValue={title}
+                        defaultValue={ title }
                         onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { title: e.target.value } })}
                         placeholder={titlePlaceholder}
-                        aria-label={`${labelPrefix} title`}
-                        className="text-base font-semibold tracking-tight"
+                        aria-label={`${sectionTitle}: ${timeblockName} title`}
                     />
                 </label>
 
-                {/* Assigned To — secondary field, deliberately quieter than the title */}
+                {/* Assigned To — wide: row 1 col 3; narrow: row 2 full width */}
                 <label
-                    className={cx(
+                    className={[
                         "col-start-3 row-start-1 space-y-1 self-center px-4 py-1.5",
-                        narrow("col-start-1 col-span-3 row-start-2 self-stretch px-0 py-0"),
-                    )}
+                        "@max-[54rem]/timeblockHeader:col-start-1",
+                        "@max-[54rem]/timeblockHeader:col-span-3",
+                        "@max-[54rem]/timeblockHeader:row-start-2",
+                        "@max-[54rem]/timeblockHeader:self-stretch",
+                        "@max-[54rem]/timeblockHeader:px-0",
+                        "@max-[54rem]/timeblockHeader:py-0",
+                    ].join(" ")}
                 >
                     <Input
                         type="text"
                         variant="darkSecondary"
-                        defaultValue={assignedTo}
+                        defaultValue={ assignedTo }
                         onBlur={(e) => updateTimeblock({ id: timeblockID, updates: { assignedTo: e.target.value } })}
                         placeholder="Assign staff"
-                        aria-label={`${labelPrefix} assigned to`}
-                        className={cx(
-                            "text-sm text-stone-300 placeholder-stone-500 w-fit",
-                            narrow(
-                                cx(
-                                    "w-full bg-stone-200 text-stone-900 placeholder-stone-500",
-                                    "rounded-none p-1 border-t-0.5 border-x-0 border-t-0 border-stone-300",
-                                    "hover:border-b-stone-300 focus:border-b-orange-500",
-                                    "focus-visible:border-stone-600 focus-visible:border-b-orange-500 focus-visible:ring-0",
-                                ),
-                            ),
-                        )}
+                        aria-label={`${sectionTitle}: ${timeblockName} assigned to`}
+                        className={[
+                            "w-fit",
+                            "@max-[54rem]/timeblockHeader:w-full",
+                            "@max-[54rem]/timeblockHeader:bg-stone-200",
+                            "@max-[54rem]/timeblockHeader:text-stone-900",
+                            "@max-[54rem]/timeblockHeader:placeholder-stone-500",
+                            "@max-[54rem]/timeblockHeader:rounded-none",
+                            "@max-[54rem]/timeblockHeader:p-1",
+                            "@max-[54rem]/timeblockHeader:border-t-0.5",
+                            "@max-[54rem]/timeblockHeader:border-stone-300",
+                            "@max-[54rem]/timeblockHeader:border-t-0",
+                            "@max-[54rem]/timeblockHeader:border-x-0",
+                            "@max-[54rem]/timeblockHeader:hover:border-b-stone-300",
+                            "@max-[54rem]/timeblockHeader:focus:border-b-orange-500",
+                            "@max-[54rem]/timeblockHeader:focus-visible:border-stone-600",
+                            "@max-[54rem]/timeblockHeader:focus-visible:border-b-orange-500",
+                            "@max-[54rem]/timeblockHeader:focus-visible:ring-0",
+                        ].join(" ")}
                     />
                 </label>
 
-                {/* Tail — action zone, given a hairline separator on wide layouts */}
+                {/* Tail — wide: row 1 col 4; narrow: row 1 col 3 */}
                 <div
-                    className={cx(
-                        "col-start-4 row-start-1 flex justify-end self-stretch text-white border-l border-stone-700/70",
-                        narrow("col-start-3 border-l-0"),
-                    )}
+                    className={[
+                        "col-start-4 row-start-1 flex justify-end self-stretch text-white",
+                        "@max-[54rem]/timeblockHeader:col-start-3",
+                    ].join(" ")}
                 >
-                    {tail}
+                    { tail }
                 </div>
             </div>
         </div>
