@@ -1,4 +1,4 @@
-import { ChevronDown, Plus } from "lucide-react"
+import { EllipsisVertical, Plus } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "~/components/atoms/button"
@@ -7,7 +7,7 @@ import type { WorkspaceItemBase } from "./PlanningWorkspaceTimeblockList"
 import { useSetupInstructionSection } from "~/hooks/useSetupInstrucionSection"
 
 interface FoodBevHeaderTailProps<TItem extends WorkspaceItemBase> {
-    
+
     title: string,
     addItemLabel: string,
     timeblockItems: TItem[],
@@ -35,7 +35,7 @@ function FoodBevHeaderTail<TItem extends WorkspaceItemBase> ({
                 title: title + " Setup",
                 details: body
             })
-            
+
             toast.success("Created " + title + " Setup")
             console.log("SUCCESS")
 
@@ -59,7 +59,7 @@ function FoodBevHeaderTail<TItem extends WorkspaceItemBase> ({
                     aria-label="Timeblock header actions"
                     className=" rounded-none rounded-tr-xs h-full m-0 hover:bg-stone-600 hover:text-orange-500"
                     >
-                    <ChevronDown className="h-4 w-4" />
+                    <EllipsisVertical className="h-4 w-4" />
                 </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">

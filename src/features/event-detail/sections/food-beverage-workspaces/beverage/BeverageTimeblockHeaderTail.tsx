@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react"
+import { EllipsisVertical } from "lucide-react"
 
 import { Button } from "~/components/atoms/button"
 import {
@@ -21,7 +21,7 @@ export function BeverageTimeblockHeaderTail({ deleteTimeblock }: BeverageTimeblo
           aria-label="Timeblock header actions"
           className="m-0 h-full rounded-none rounded-tr-xs hover:bg-stone-600 hover:text-orange-500"
         >
-          <ChevronDown className="h-4 w-4" />
+          <EllipsisVertical className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
