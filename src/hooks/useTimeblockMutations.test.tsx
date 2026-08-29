@@ -54,6 +54,33 @@ describe("useTimeblockMutations", () => {
     )
   })
 
+  it("replaces optimistic temp ids with the real created timeblock id", async () => {
+    vi.mocked(timeblocksIpc.createTimeblock).mockResolvedValue(
+      makeCreatedTimeblock({ id: "tb-real-1", title: "New Note", sectionType: "note" }),
+    )
+
+    const { result, queryClient } = renderHookWithProviders(() =>
+      useTimeblockMutations({
+        queryKey: ["note", "event-1"],
+        eventId: "event-1",
+        sectionType: "note",
+      }),
+    )
+
+    queryClient.setQueryData(["note", "event-1"], [])
+
+    let createdId = ""
+    await act(async () => {
+      const created = await result.current.addTimeblockAsync({ title: "New Note", details: "" })
+      createdId = created.id
+    })
+
+    expect(createdId).toBe("tb-real-1")
+    const cached = queryClient.getQueryData<Array<{ id: string }>>(["note", "event-1"])
+    expect(cached?.some((row) => row.id === "tb-real-1")).toBe(true)
+    expect(cached?.some((row) => row.id.startsWith("temp_"))).toBe(false)
+  })
+
   it("passes explicit title and details through on create", async () => {
     vi.mocked(timeblocksIpc.createTimeblock).mockResolvedValue(
       makeCreatedTimeblock({ title: "Room Flip", details: "Move chairs" })
@@ -236,7 +263,7 @@ describe("useTimeblockMutations", () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
   })
 
-  it("does not invalidate the timeline after an assignedTo-only update", async () => {
+  it("invalidates the timeline after an assignedTo update so sidebar metadata stays fresh", async () => {
     vi.mocked(timeblocksIpc.updateTimeblock).mockResolvedValue(
       makeCreatedTimeblock({ assignedTo: "Alex", sectionType: "food" })
     )
@@ -258,6 +285,6 @@ describe("useTimeblockMutations", () => {
     await waitFor(() => expect(timeblocksIpc.updateTimeblock).toHaveBeenCalledTimes(1))
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["foodSection", "event-1"] })
-    expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
   })
 })

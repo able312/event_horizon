@@ -20,8 +20,10 @@ vi.mock("react-router", async () => {
 vi.mock("./useTimeblockMutations", () => ({
   useTimeblockMutations: () => ({
     addTimeblock,
+    addTimeblockAsync: addTimeblock,
     updateTimeblock,
     removeTimeblock,
+    isCreating: false,
   }),
 }))
 
@@ -69,7 +71,9 @@ describe("useNoteSection", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     expect(result.current.addNote).toBe(addTimeblock)
+    expect(result.current.addNoteAsync).toBe(addTimeblock)
     expect(result.current.updateTimeblock).toBe(updateTimeblock)
     expect(result.current.removeTimeblock).toBe(removeTimeblock)
+    expect(result.current.isCreating).toBe(false)
   })
 })

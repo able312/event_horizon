@@ -6,8 +6,6 @@ export type WorkspaceCategoryId =
   | "food"
   | "beverage"
   | "logistics"
-  | "setup"
-  | "notes"
   | "tournament"
   | "financial"
 
@@ -28,6 +26,7 @@ export interface WorkspaceNavNode {
   label: string
   subLabel?: string
   time?: string | null
+  assignedTo?: string | null
   sectionType?: TimeblockType
   isSystem?: boolean
   isEditable?: boolean
@@ -43,6 +42,8 @@ export interface WorkspaceNavModel {
 export interface WorkspaceSelection {
   selectedNodeId: string | null
   selectedNode: WorkspaceNavNode | null
+  selectedTimeblockId: string | null
+  selectedCategoryId: WorkspaceCategoryId | null
 }
 
 export interface EventWorkspaceData {

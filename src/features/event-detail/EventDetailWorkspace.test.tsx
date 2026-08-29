@@ -19,7 +19,14 @@ vi.mock("./workspace/hooks/useWorkspaceSelection", () => ({
 vi.mock("./panels/EventDetailPanelOrchestrator", () => ({
   default: (props: unknown) => {
     panelPropsMock(props)
-    return <button type="button" onClick={() => (props as { onSelectNode: (id: string) => void }).onSelectNode("category:food")}>pick-node</button>
+    return (
+      <button
+        type="button"
+        onClick={() => (props as { onSelectNode: (id: string) => void }).onSelectNode("category:food")}
+      >
+        pick-node
+      </button>
+    )
   },
 }))
 
@@ -35,9 +42,12 @@ describe("EventDetailWorkspace", () => {
     const updateEvent = vi.fn(async () => ({ id: "1" } as never))
     const deleteEvent = vi.fn(async () => true)
     const setSelectedNodeId = vi.fn()
+    const selectCategory = vi.fn()
+    const navigateToNote = vi.fn()
+    const navigateToOverview = vi.fn()
 
     useEventWorkspaceDataMock.mockReturnValue({
-      event: { id: "1", title: "Alpha" },
+      event: { id: "1", title: "Alpha", type: "wedding" },
       isLoading: false,
       isFetching: false,
       error: null,
@@ -52,7 +62,12 @@ describe("EventDetailWorkspace", () => {
     useWorkspaceSelectionMock.mockReturnValue({
       selectedNodeId: "scheduled:a",
       selectedNode: null,
+      selectedTimeblockId: null,
+      selectedCategoryId: "overview",
       setSelectedNodeId,
+      selectCategory,
+      navigateToNote,
+      navigateToOverview,
     })
 
     render(<EventDetailWorkspace />)
@@ -61,7 +76,11 @@ describe("EventDetailWorkspace", () => {
 
     expect(panelPropsMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        eventTitle: "Alpha",
+        eventType: "wedding",
+        selectedCategoryId: "overview",
+        onSelectCategory: selectCategory,
+        onNavigateToNote: navigateToNote,
+        onNavigateToOverview: navigateToOverview,
       }),
     )
     expect(setSelectedNodeId).toHaveBeenCalledWith("category:food")
@@ -73,6 +92,7 @@ describe("EventDetailWorkspace", () => {
           deleteEvent,
         }),
         onSelectNode: setSelectedNodeId,
+        onNavigateToOverview: navigateToOverview,
       }),
     )
   })
@@ -96,7 +116,12 @@ describe("EventDetailWorkspace", () => {
     useWorkspaceSelectionMock.mockReturnValue({
       selectedNodeId: null,
       selectedNode: null,
+      selectedTimeblockId: null,
+      selectedCategoryId: null,
       setSelectedNodeId: vi.fn(),
+      selectCategory: vi.fn(),
+      navigateToNote: vi.fn(),
+      navigateToOverview: vi.fn(),
     })
 
     render(<EventDetailWorkspace />)

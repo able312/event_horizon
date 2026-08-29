@@ -17,16 +17,19 @@ export function useNoteSection() {
     enabled: !!eventId,
   })
 
-  const { addTimeblock, removeTimeblock, updateTimeblock } = useTimeblockMutations({
-    queryKey,
-    eventId: eventId!,
-    sectionType: "note",
-  })
+  const { addTimeblock, addTimeblockAsync, removeTimeblock, updateTimeblock, isCreating } =
+    useTimeblockMutations({
+      queryKey,
+      eventId: eventId!,
+      sectionType: "note",
+    })
 
   return {
     ...query,
     addNote: addTimeblock,
+    addNoteAsync: addTimeblockAsync,
     removeTimeblock,
     updateTimeblock,
+    isCreating,
   }
 }

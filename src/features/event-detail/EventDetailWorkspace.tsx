@@ -39,10 +39,15 @@ const EventDetailWorkspace: React.FC = () => {
     <SplitLayout>
       <SplitLayout.PanelWrapper>
         <EventDetailPanelOrchestrator
-          eventTitle={workspaceData.event?.title ?? "Event Workspace"}
+          eventType={workspaceData.event?.type}
           navModel={workspaceData.navModel}
           selectedNodeId={selection.selectedNodeId}
+          selectedTimeblockId={selection.selectedTimeblockId}
+          selectedCategoryId={selection.selectedCategoryId}
           onSelectNode={selection.setSelectedNodeId}
+          onSelectCategory={selection.selectCategory}
+          onNavigateToNote={selection.navigateToNote}
+          onNavigateToOverview={selection.navigateToOverview}
         />
       </SplitLayout.PanelWrapper>
 
@@ -50,9 +55,10 @@ const EventDetailWorkspace: React.FC = () => {
         <EventDetailBodyOrchestrator
           eventResource={eventResource}
           selectedNode={selection.selectedNode}
+          selectedTimeblockId={selection.selectedTimeblockId}
+          selectedCategoryId={selection.selectedCategoryId}
           onSelectNode={selection.setSelectedNodeId}
-          timelineRows={workspaceData.timelineRows}
-          sectionRows={workspaceData.sectionRows}
+          onNavigateToOverview={selection.navigateToOverview}
         />
       </SplitLayout.BodyWrapper>
     </SplitLayout>

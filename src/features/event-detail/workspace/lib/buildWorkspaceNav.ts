@@ -1,11 +1,13 @@
 import type { Event } from "~/definitions/database"
 import type { TimeblockWithItems, TimelineTimeblock } from "~/definitions/timeblocks/timeblocks-types"
-import { SECTION_TYPE } from "~/definitions/timeblocks/timeblock-constants"
-import type {
-  WorkspaceCategoryId,
-  WorkspaceNavModel,
-  WorkspaceNavNode,
-} from "../types"
+import type { WorkspaceNavModel, WorkspaceNavNode } from "../types"
+import {
+  buildCategoryNodeId,
+  buildScheduledNodeId,
+  buildUnscheduledNodeId,
+  getAvailableWorkspaceCategories,
+  getSectionTypeLabel,
+} from "./navPolicy"
 
 const HHMM_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/
 
@@ -38,48 +40,16 @@ function dedupeById(rows: TimeblockWithItems[]): TimeblockWithItems[] {
   return result
 }
 
-function toSectionSubLabel(sectionType: TimeblockWithItems["sectionType"]): string {
-  switch (sectionType) {
-    case SECTION_TYPE.FOOD:
-      return "Food"
-    case SECTION_TYPE.BEVERAGE:
-      return "Beverage"
-    case SECTION_TYPE.VENDOR:
-      return "Logistics"
-    case SECTION_TYPE.SETUP_INSTRUCTION:
-      return "Setup"
-    case SECTION_TYPE.NOTE:
-      return "Notes"
-    case SECTION_TYPE.TOURNAMENT_DETAIL:
-      return "Tournament"
-    case SECTION_TYPE.CART_DETAIL:
-      return "Logistics"
-    default:
-      return "Details"
-  }
-}
-
 function buildCategoryNodes(event: Event | undefined): WorkspaceNavNode[] {
-  const categories: Array<{ id: WorkspaceCategoryId; label: string; nodeType: WorkspaceNavNode["nodeType"] }> = [
-    { id: "overview", label: "Overview", nodeType: "category" },
-    { id: "food", label: "Food", nodeType: "category" },
-    { id: "beverage", label: "Beverage", nodeType: "category" },
-    { id: "logistics", label: "Logistics", nodeType: "category" },
-    { id: "setup", label: "Setup", nodeType: "category" },
-    { id: "notes", label: "Notes", nodeType: "category" },
-    ...(event?.type === "tournament" ? [{ id: "tournament" as const, label: "Tournament", nodeType: "category" as const }] : []),
-    { id: "financial", label: "Financial", nodeType: "financial" },
-  ]
-
-  return categories.map((category) => ({
-    id: `category:${category.id}`,
-    groupId: "categories",
-    nodeType: category.nodeType,
+  return getAvailableWorkspaceCategories(event?.type).map((category) => ({
+    id: buildCategoryNodeId(category.id),
+    groupId: "categories" as const,
+    nodeType: category.id === "financial" ? ("financial" as const) : ("category" as const),
     label: category.label,
     sourceRef:
       category.id === "financial"
-        ? { kind: "financial", view: "overview" as const }
-        : { kind: "category", categoryId: category.id },
+        ? { kind: "financial" as const, view: "overview" as const }
+        : { kind: "category" as const, categoryId: category.id },
   }))
 }
 
@@ -98,12 +68,13 @@ export function buildWorkspaceNav({
       const isSystem = row.timelineMeta?.isSystem === true
 
       return {
-        id: `scheduled:${row.id}`,
+        id: buildScheduledNodeId(row.id),
         groupId: "scheduled",
         nodeType: isSystem ? "system" : "timeblock",
         label: row.title || "Untitled",
-        subLabel: toSectionSubLabel(row.sectionType),
+        subLabel: getSectionTypeLabel(row.sectionType),
         time: row.time,
+        assignedTo: row.assignedTo,
         sectionType: row.sectionType,
         isSystem,
         isEditable: row.timelineMeta?.isEditable ?? true,
@@ -117,12 +88,13 @@ export function buildWorkspaceNav({
   const unscheduled = dedupeById(sectionRows)
     .filter((row) => !isValidHHmm(row.time))
     .map<WorkspaceNavNode>((row) => ({
-      id: `unscheduled:${row.id}`,
+      id: buildUnscheduledNodeId(row.id),
       groupId: "unscheduled",
       nodeType: "timeblock",
       label: row.title || "Untitled",
-      subLabel: toSectionSubLabel(row.sectionType),
+      subLabel: getSectionTypeLabel(row.sectionType),
       time: row.time,
+      assignedTo: row.assignedTo,
       sectionType: row.sectionType,
       isSystem: false,
       isEditable: true,

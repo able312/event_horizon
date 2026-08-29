@@ -1,33 +1,27 @@
-import { getWorkspaceCategoryIdForSectionType } from "./getWorkspaceCategoryIdForSectionType"
 import type { WorkspaceCategoryId, WorkspaceNavModel, WorkspaceNavNode } from "../types"
+import {
+  buildCategoryNodeId,
+  findCategoryNode,
+  findNodeByTimeblockId,
+  getNavigationTarget,
+  getTimeblockIdFromNode,
+  isWorkspaceCategoryId,
+} from "./navPolicy"
 
-export type WorkspaceSectionId = WorkspaceCategoryId | "system"
+export type WorkspaceSectionId = WorkspaceCategoryId
 
 export const DEFAULT_EVENT_DETAIL_RETURN_TO = "/events"
-
-const CATEGORY_SECTIONS = new Set<WorkspaceCategoryId>([
-  "overview",
-  "food",
-  "beverage",
-  "logistics",
-  "setup",
-  "notes",
-  "tournament",
-  "financial",
-])
-
-const SECTION_VALUES = new Set<WorkspaceSectionId>([
-  ...CATEGORY_SECTIONS,
-  "system",
-])
 
 export type EventDetailRouteParams = {
   id?: string
   section?: string
+  timeblockId?: string
 }
 
 export interface EventDetailRouteState {
   selectedNodeId: string | null
+  selectedTimeblockId: string | null
+  selectedCategoryId: WorkspaceCategoryId | null
   returnTo: string
 }
 
@@ -39,26 +33,28 @@ export function findNodeById(nodeId: string, allNodes: WorkspaceNavNode[]) {
   return allNodes.find((node) => node.id === nodeId) ?? null
 }
 
+/**
+ * Resolve a clicked/selected nav node into the node id that should drive the URL.
+ * Note/setup keep their individual identity; aggregate types remap to a category node.
+ */
 export function resolveSelectedNodeId(
   nodeId: string,
   navModel: WorkspaceNavModel,
   allNodes: WorkspaceNavNode[],
-) {
+): string {
   const targetNode = findNodeById(nodeId, allNodes)
-  if (!targetNode || targetNode.nodeType !== "timeblock") return nodeId
+  if (!targetNode) return buildCategoryNodeId("overview")
 
-  const categoryId = getWorkspaceCategoryIdForSectionType(targetNode.sectionType)
-  if (!categoryId) return nodeId
+  const navigationTarget = getNavigationTarget(targetNode)
 
-  const categoryNode = navModel.categories.find(
-    (node) => node.sourceRef.kind === "category" && node.sourceRef.categoryId === categoryId,
-  )
-  return categoryNode?.id ?? nodeId
-}
+  if (navigationTarget.kind === "individual-note") {
+    // Prefer the live node (scheduled/unscheduled) so sidebar highlight matches placement.
+    const liveNode = findNodeByTimeblockId(navigationTarget.timeblockId, navModel)
+    return liveNode?.id ?? nodeId
+  }
 
-function normalizeSection(value: unknown): WorkspaceSectionId | null {
-  if (typeof value !== "string") return null
-  return SECTION_VALUES.has(value as WorkspaceSectionId) ? (value as WorkspaceSectionId) : null
+  const categoryNode = findCategoryNode(navigationTarget.categoryId, navModel)
+  return categoryNode?.id ?? buildCategoryNodeId(navigationTarget.categoryId)
 }
 
 export function normalizeReturnTo(value: unknown): string {
@@ -68,87 +64,25 @@ export function normalizeReturnTo(value: unknown): string {
   return trimmed
 }
 
-function normalizeNode(value: unknown): string | null {
+function normalizeSection(value: unknown): WorkspaceCategoryId | null {
   if (typeof value !== "string") return null
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
+  // Legacy slugs that no longer exist — treat as invalid so they canonicalize to overview.
+  if (value === "notes" || value === "setup" || value === "system" || value === "note") {
+    return null
+  }
+  return isWorkspaceCategoryId(value) ? value : null
 }
 
-function nodeIdFromSection(section: WorkspaceSectionId): string {
-  if (section === "system") return ""
-  return `category:${section}`
+function appendReturnToQuery(path: string, returnTo: string): string {
+  if (returnTo === DEFAULT_EVENT_DETAIL_RETURN_TO) return path
+  const params = new URLSearchParams()
+  params.set("returnTo", returnTo)
+  return `${path}?${params.toString()}`
 }
 
-export function sectionFromNodeId(
-  nodeId: string,
-  allNodes: WorkspaceNavNode[],
-): WorkspaceSectionId | null {
-  if (nodeId.startsWith("category:")) {
-    const categoryId = nodeId.slice("category:".length) as WorkspaceCategoryId
-    return CATEGORY_SECTIONS.has(categoryId) ? categoryId : null
-  }
-
-  if (nodeId.startsWith("system:")) {
-    return "system"
-  }
-
-  const targetNode = findNodeById(nodeId, allNodes)
-  if (targetNode?.nodeType === "timeblock") {
-    const categoryId = getWorkspaceCategoryIdForSectionType(targetNode.sectionType)
-    if (categoryId) return categoryId
-  }
-
-  return null
-}
-
-function isSectionAvailable(section: WorkspaceSectionId, navModel: WorkspaceNavModel): boolean {
-  if (section === "overview") return true
-
-  if (section === "system") {
-    return navModel.scheduled.some((node) => node.nodeType === "system")
-  }
-
-  if (section === "financial") {
-    return navModel.categories.some((node) => node.nodeType === "financial")
-  }
-
-  if (
-    navModel.categories.some(
-      (node) => node.sourceRef.kind === "category" && node.sourceRef.categoryId === section,
-    )
-  ) {
-    return true
-  }
-
-  return flattenNav(navModel).some(
-    (node) =>
-      node.nodeType === "timeblock" &&
-      getWorkspaceCategoryIdForSectionType(node.sectionType) === section,
-  )
-}
-
-function isSectionValidForSelection(
-  section: WorkspaceSectionId,
-  selectedNodeId: string,
-  navModel: WorkspaceNavModel,
-  allNodes: WorkspaceNavNode[],
-): boolean {
-  if (isSectionAvailable(section, navModel)) return true
-
-  const node = findNodeById(selectedNodeId, allNodes)
-  return (
-    node?.nodeType === "timeblock" &&
-    getWorkspaceCategoryIdForSectionType(node.sectionType) === section
-  )
-}
-
-function getDefaultSection(): WorkspaceSectionId {
-  return "overview"
-}
-
-function isNodeQueryRedundant(section: WorkspaceSectionId, selectedNodeId: string): boolean {
-  if (section === "system") return false
-  return selectedNodeId === nodeIdFromSection(section)
+function isCategoryAvailable(categoryId: WorkspaceCategoryId, navModel: WorkspaceNavModel): boolean {
+  if (categoryId === "overview") return true
+  return findCategoryNode(categoryId, navModel) !== null
 }
 
 export function toEventDetailPath({
@@ -163,29 +97,57 @@ export function toEventDetailPath({
   returnTo?: string
 }): string {
   const allNodes = flattenNav(navModel)
-  const section = sectionFromNodeId(selectedNodeId, allNodes)
   const normalizedReturnTo = normalizeReturnTo(returnTo)
+  const targetNode = findNodeById(selectedNodeId, allNodes)
 
-  if (!section || !isSectionValidForSelection(section, selectedNodeId, navModel, allNodes)) {
-    return toEventDetailPath({
-      eventId,
-      selectedNodeId: nodeIdFromSection(getDefaultSection()),
-      navModel,
-      returnTo: normalizedReturnTo,
-    })
+  if (!targetNode) {
+    // May be a note whose nav row is temporarily missing — try timeblock extraction from id.
+    const fallbackOverview = appendReturnToQuery(
+      `/events/${eventId}/overview`,
+      normalizedReturnTo,
+    )
+    return fallbackOverview
   }
 
-  const params = new URLSearchParams()
-  if (!isNodeQueryRedundant(section, selectedNodeId)) {
-    params.set("node", selectedNodeId)
+  const navigationTarget = getNavigationTarget(targetNode)
+
+  if (navigationTarget.kind === "individual-note") {
+    return appendReturnToQuery(
+      `/events/${eventId}/note/${navigationTarget.timeblockId}`,
+      normalizedReturnTo,
+    )
   }
 
-  if (normalizedReturnTo !== DEFAULT_EVENT_DETAIL_RETURN_TO) {
-    params.set("returnTo", normalizedReturnTo)
+  if (!isCategoryAvailable(navigationTarget.categoryId, navModel)) {
+    return appendReturnToQuery(`/events/${eventId}/overview`, normalizedReturnTo)
   }
 
-  const query = params.toString()
-  return query.length > 0 ? `/events/${eventId}/${section}?${query}` : `/events/${eventId}/${section}`
+  return appendReturnToQuery(
+    `/events/${eventId}/${navigationTarget.categoryId}`,
+    normalizedReturnTo,
+  )
+}
+
+export function toNoteEditorPath(
+  eventId: string,
+  timeblockId: string,
+  returnTo: string = DEFAULT_EVENT_DETAIL_RETURN_TO,
+): string {
+  return appendReturnToQuery(
+    `/events/${eventId}/note/${timeblockId}`,
+    normalizeReturnTo(returnTo),
+  )
+}
+
+export function toCategoryPath(
+  eventId: string,
+  categoryId: WorkspaceCategoryId,
+  returnTo: string = DEFAULT_EVENT_DETAIL_RETURN_TO,
+): string {
+  return appendReturnToQuery(
+    `/events/${eventId}/${categoryId}`,
+    normalizeReturnTo(returnTo),
+  )
 }
 
 export function parseEventDetailRoute(
@@ -193,58 +155,62 @@ export function parseEventDetailRoute(
   searchParams: URLSearchParams,
   navModel: WorkspaceNavModel,
 ): EventDetailRouteState {
-  const allNodes = flattenNav(navModel)
   const returnTo = normalizeReturnTo(searchParams.get("returnTo"))
-  const nodeParam = normalizeNode(searchParams.get("node"))
-  const section = normalizeSection(params.section)
+  const allNodes = flattenNav(navModel)
 
   if (allNodes.length === 0) {
-    return { selectedNodeId: null, returnTo }
-  }
-
-  if (nodeParam && findNodeById(nodeParam, allNodes)) {
     return {
-      selectedNodeId: resolveSelectedNodeId(nodeParam, navModel, allNodes),
+      selectedNodeId: null,
+      selectedTimeblockId: null,
+      selectedCategoryId: null,
       returnTo,
     }
   }
 
-  if (section && isSectionAvailable(section, navModel)) {
-    if (section === "system") {
-      const systemNode = allNodes.find((node) => node.nodeType === "system")
+  // Dedicated note route: /events/:id/note/:timeblockId
+  const noteTimeblockId =
+    typeof params.timeblockId === "string" && params.timeblockId.trim().length > 0
+      ? params.timeblockId.trim()
+      : null
+
+  if (noteTimeblockId) {
+    const noteNode = findNodeByTimeblockId(noteTimeblockId, navModel)
+    if (noteNode) {
       return {
-        selectedNodeId: systemNode?.id ?? null,
+        selectedNodeId: noteNode.id,
+        selectedTimeblockId: noteTimeblockId,
+        selectedCategoryId: null,
         returnTo,
       }
     }
 
-    const categoryNodeId = nodeIdFromSection(section)
-    const categoryNode = findNodeById(categoryNodeId, allNodes)
-    if (categoryNode) {
-      return {
-        selectedNodeId: categoryNode.id,
-        returnTo,
-      }
+    // Stale / deleted note — fall back to overview (canonicalization will redirect).
+    return {
+      selectedNodeId: buildCategoryNodeId("overview"),
+      selectedTimeblockId: null,
+      selectedCategoryId: "overview",
+      returnTo,
     }
   }
 
-  if (section && section !== "system") {
-    const matchingTimeblock = allNodes.find(
-      (node) =>
-        node.nodeType === "timeblock" &&
-        getWorkspaceCategoryIdForSectionType(node.sectionType) === section,
-    )
+  const section = normalizeSection(params.section)
 
-    if (matchingTimeblock) {
+  if (section && isCategoryAvailable(section, navModel)) {
+    const categoryNode = findCategoryNode(section, navModel)
+    if (categoryNode) {
       return {
-        selectedNodeId: resolveSelectedNodeId(matchingTimeblock.id, navModel, allNodes),
+        selectedNodeId: categoryNode.id,
+        selectedTimeblockId: null,
+        selectedCategoryId: section,
         returnTo,
       }
     }
   }
 
   return {
-    selectedNodeId: "category:overview",
+    selectedNodeId: buildCategoryNodeId("overview"),
+    selectedTimeblockId: null,
+    selectedCategoryId: "overview",
     returnTo,
   }
 }
@@ -270,11 +236,21 @@ export function getCanonicalEventDetailPath({
     returnTo: parsed.returnTo,
   })
 
-  const currentSection = normalizeSection(params.section)
-  const currentPath =
-    currentSection !== null
-      ? `/events/${eventId}/${params.section}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`
-      : `/events/${eventId}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`
+  const returnTo = normalizeReturnTo(searchParams.get("returnTo"))
+  const returnToSuffix =
+    returnTo !== DEFAULT_EVENT_DETAIL_RETURN_TO
+      ? `?returnTo=${encodeURIComponent(returnTo)}`
+      : ""
+
+  let currentPath: string
+  if (params.timeblockId) {
+    currentPath = `/events/${eventId}/note/${params.timeblockId}${returnToSuffix}`
+  } else if (params.section) {
+    // Rebuild without other query params; only returnTo is meaningful now.
+    currentPath = `/events/${eventId}/${params.section}${returnToSuffix}`
+  } else {
+    currentPath = `/events/${eventId}${returnToSuffix}`
+  }
 
   return canonicalPath === currentPath ? null : canonicalPath
 }
@@ -286,7 +262,7 @@ export function buildEventDetailNavigationPath(
 ): string {
   return toEventDetailPath({
     eventId,
-    selectedNodeId: "category:overview",
+    selectedNodeId: buildCategoryNodeId("overview"),
     navModel,
     returnTo,
   })
@@ -302,4 +278,20 @@ export function buildEventDetailEntryPath(eventId: string, returnTo?: string): s
 
   const query = params.toString()
   return query.length > 0 ? `/events/${eventId}?${query}` : `/events/${eventId}`
+}
+
+export function isNavNodeSelected(
+  node: WorkspaceNavNode,
+  selectedNodeId: string | null,
+  selectedTimeblockId: string | null,
+): boolean {
+  if (selectedTimeblockId) {
+    const nodeTimeblockId = getTimeblockIdFromNode(node)
+    if (node.sourceRef.kind === "timeblock" && nodeTimeblockId === selectedTimeblockId) {
+      return true
+    }
+    return false
+  }
+
+  return selectedNodeId !== null && node.id === selectedNodeId
 }

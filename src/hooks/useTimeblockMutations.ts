@@ -109,6 +109,27 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheSha
       }
       toast.error("Failed to create timeblock")
     },
+    onSuccess: (created, _variables, context) => {
+      // Swap the optimistic temp id for the real DB id before callers navigate.
+      if (!context?.tempId) return
+
+      if (cacheShape === "beverageSection") {
+        queryClient.setQueryData<BeverageSectionPayload>(queryKey, (old) => {
+          if (!old) return old
+          return {
+            ...old,
+            timeblocks: old.timeblocks.map((tb) =>
+              tb.id === context.tempId ? { ...created, beverageItems: tb.beverageItems } : tb,
+            ),
+          }
+        })
+        return
+      }
+
+      queryClient.setQueryData<TimeblockWithItems[]>(queryKey, (old = []) =>
+        old.map((tb) => (tb.id === context.tempId ? { ...tb, ...created } : tb)),
+      )
+    },
     onSettled: () => {
       invalidateKeys(sectionType)
     },
@@ -144,10 +165,19 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheSha
     onSettled: (data, _error, variables) => {
       const type = data?.sectionType ?? sectionType
       const updates = variables.updates
-      const shouldRefreshTimeline = updates.time !== undefined || updates.title !== undefined
+      const sectionTypeChanged = updates.sectionType !== undefined
+      const shouldRefreshTimeline =
+        sectionTypeChanged || updates.time !== undefined || updates.title !== undefined || updates.assignedTo !== undefined
 
       queryClient.invalidateQueries({ queryKey })
       queryClient.invalidateQueries({ queryKey: [type, eventId] })
+
+      // Note ↔ setup conversion must refresh both section caches and the shared sidebar labels.
+      if (sectionTypeChanged) {
+        queryClient.invalidateQueries({ queryKey: ["note", eventId] })
+        queryClient.invalidateQueries({ queryKey: ["setupInstructions", eventId] })
+      }
+
       if (shouldRefreshTimeline) {
         queryClient.invalidateQueries({ queryKey: ["timeblocks", eventId] })
       }
@@ -187,9 +217,15 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheSha
     addTimeblockMutation.mutate(input)
   }
 
+  const addTimeblockAsync = (input?: AddTimeblockInput) => {
+    return addTimeblockMutation.mutateAsync(input)
+  }
+
   return {
     addTimeblock,
+    addTimeblockAsync,
     updateTimeblock: updateTimeblockMutation.mutate,
     removeTimeblock: deleteTimeblockMutation.mutate,
+    isCreating: addTimeblockMutation.isPending,
   }
 }

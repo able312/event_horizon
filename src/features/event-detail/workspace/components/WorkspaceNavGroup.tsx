@@ -1,11 +1,13 @@
 import WorkspaceNavNodeRow from "./WorkspaceNavNodeRow"
 import type { WorkspaceNavNode } from "../types"
+import { isNavNodeSelected } from "../lib/eventDetailRouteState"
 
 interface WorkspaceNavGroupProps {
   title: string
   emptyCopy: string
   nodes: WorkspaceNavNode[]
   selectedNodeId: string | null
+  selectedTimeblockId: string | null
   onSelectNode: (nodeId: string) => void
 }
 
@@ -14,6 +16,7 @@ const WorkspaceNavGroup: React.FC<WorkspaceNavGroupProps> = ({
   emptyCopy,
   nodes,
   selectedNodeId,
+  selectedTimeblockId,
   onSelectNode,
 }) => {
   return (
@@ -27,7 +30,7 @@ const WorkspaceNavGroup: React.FC<WorkspaceNavGroupProps> = ({
             <WorkspaceNavNodeRow
               key={node.id}
               node={node}
-              isSelected={node.id === selectedNodeId}
+              isSelected={isNavNodeSelected(node, selectedNodeId, selectedTimeblockId)}
               onSelect={onSelectNode}
             />
           ))}

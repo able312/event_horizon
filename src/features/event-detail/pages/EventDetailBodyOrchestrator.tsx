@@ -3,22 +3,24 @@ import { Body } from "~/components/layouts/SplitLayout"
 import EventDetailHeaderBar from "./EventDetailHeaderBar"
 import DetailsTitleBar from "../components/DetailsTitleBar"
 import type { EventResource } from "../types"
-import type { TimeblockWithItems, TimelineTimeblock } from "~/definitions/timeblocks/timeblocks-types"
-import type { WorkspaceNavNode } from "../workspace/types"
+import type { WorkspaceCategoryId, WorkspaceNavNode } from "../workspace/types"
 import EventWorkspaceBodyRouter from "../workspace/components/EventWorkspaceBodyRouter"
 
 interface EventDetailBodyOrchestratorProps {
   eventResource: EventResource
   selectedNode: WorkspaceNavNode | null
+  selectedTimeblockId: string | null
+  selectedCategoryId: WorkspaceCategoryId | null
   onSelectNode: (nodeId: string) => void
-  timelineRows: TimelineTimeblock[]
-  sectionRows: TimeblockWithItems[]
+  onNavigateToOverview: () => void
 }
 
 const EventDetailBodyOrchestrator: React.FC<EventDetailBodyOrchestratorProps> = ({
   eventResource,
   selectedNode,
+  selectedTimeblockId,
   onSelectNode,
+  onNavigateToOverview,
 }) => {
   return (
     <>
@@ -32,7 +34,9 @@ const EventDetailBodyOrchestrator: React.FC<EventDetailBodyOrchestratorProps> = 
           <EventWorkspaceBodyRouter
             eventResource={eventResource}
             selectedNode={selectedNode}
+            selectedTimeblockId={selectedTimeblockId}
             onSelectNode={onSelectNode}
+            onNavigateToOverview={onNavigateToOverview}
           />
         </div>
       </Body.Content>

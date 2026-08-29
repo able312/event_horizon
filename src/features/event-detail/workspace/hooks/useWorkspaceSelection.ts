@@ -10,13 +10,23 @@ export function useWorkspaceSelection(navModel: WorkspaceNavModel) {
     () => ({
       selectedNodeId: routeState.selectedNodeId,
       selectedNode: routeState.selectedNode,
+      selectedTimeblockId: routeState.selectedTimeblockId,
+      selectedCategoryId: routeState.selectedCategoryId,
     }),
-    [routeState.selectedNode, routeState.selectedNodeId],
+    [
+      routeState.selectedCategoryId,
+      routeState.selectedNode,
+      routeState.selectedNodeId,
+      routeState.selectedTimeblockId,
+    ],
   )
 
   return {
     ...selection,
     setSelectedNodeId: routeState.selectNode,
+    selectCategory: routeState.selectCategory,
+    navigateToNote: routeState.navigateToNote,
+    navigateToOverview: routeState.navigateToOverview,
     returnTo: routeState.returnTo,
   }
 }

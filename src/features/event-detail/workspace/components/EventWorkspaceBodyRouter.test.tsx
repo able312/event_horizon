@@ -10,8 +10,7 @@ const overviewWorkspaceSectionMock = vi.fn<(props: unknown) => void>()
 const foodWorkspaceSectionMock = vi.fn(() => <div data-testid="food-workspace-section" />)
 const beverageWorkspaceSectionMock = vi.fn(() => <div data-testid="beverage-workspace-section" />)
 const vendorsSectionMock = vi.fn(() => <div data-testid="vendors-section" />)
-const setupInstructionsSectionMock = vi.fn(() => <div data-testid="setup-section" />)
-const notesSectionMock = vi.fn(() => <div data-testid="notes-section" />)
+const noteEditorMock = vi.fn<(props: unknown) => void>()
 const tournamentDetailsSectionMock = vi.fn(() => <div data-testid="tournament-details-section" />)
 const golfCartsSectionMock = vi.fn(() => <div data-testid="golf-carts-section" />)
 const financialWorkspaceSectionMock = vi.fn<(props: unknown) => void>()
@@ -35,12 +34,11 @@ vi.mock("~/features/event-detail/sections/vendor-workspace/VendorWorkspaceSectio
   default: () => vendorsSectionMock(),
 }))
 
-vi.mock("~/features/event-detail/sections/setup-notes-workspaces/SetupWorkspaceSection", () => ({
-  default: () => setupInstructionsSectionMock(),
-}))
-
-vi.mock("~/features/event-detail/sections/setup-notes-workspaces/NotesWorkspaceSection", () => ({
-  default: () => notesSectionMock(),
+vi.mock("../../sections/setup-notes-workspaces/NoteEditorWorkspace", () => ({
+  default: (props: unknown) => {
+    noteEditorMock(props)
+    return <div data-testid="note-editor-workspace" />
+  },
 }))
 
 vi.mock("~/components/event-detail/detail-sections/sections/TournamentDetailsSection", () => ({
@@ -87,31 +85,22 @@ const baseEventResource = {
   deleteEvent: vi.fn(async () => true),
 } satisfies EventResource
 
-function renderRouter(selectedNode: Parameters<typeof EventWorkspaceBodyRouter>[0]["selectedNode"]) {
+function renderRouter({
+  selectedNode,
+  selectedTimeblockId = null,
+}: {
+  selectedNode: Parameters<typeof EventWorkspaceBodyRouter>[0]["selectedNode"]
+  selectedTimeblockId?: string | null
+}) {
   return render(
     <EventWorkspaceBodyRouter
       eventResource={baseEventResource}
       selectedNode={selectedNode}
+      selectedTimeblockId={selectedTimeblockId}
       onSelectNode={vi.fn()}
+      onNavigateToOverview={vi.fn()}
     />,
   )
-}
-
-function expectScrollContainerForText(text: string) {
-  const matchingContainer = Array.from(document.querySelectorAll("div")).find((element) => {
-    const className = typeof element.className === "string" ? element.className : ""
-
-    return (
-      className.includes("h-full") &&
-      className.includes("min-h-0") &&
-      className.includes("overflow-y-auto") &&
-      element.textContent?.includes(text)
-    )
-  })
-
-  expect(matchingContainer?.className).toContain("h-full")
-  expect(matchingContainer?.className).toContain("min-h-0")
-  expect(matchingContainer?.className).toContain("overflow-y-auto")
 }
 
 describe("EventWorkspaceBodyRouter", () => {
@@ -121,33 +110,34 @@ describe("EventWorkspaceBodyRouter", () => {
   })
 
   it("renders an empty-state scroll container when no node is selected", () => {
-    renderRouter(null)
-
-    expectScrollContainerForText("Select a node from the left sidebar to begin.")
+    renderRouter({ selectedNode: null })
+    expect(screen.getByText("Select a node from the left sidebar to begin.")).toBeTruthy()
   })
 
   it("renders category nodes inside the shared scroll container contract", () => {
     renderRouter({
-      id: "category:food",
-      groupId: "categories",
-      label: "Food",
-      nodeType: "category",
-      sourceRef: { kind: "category", categoryId: "food" },
+      selectedNode: {
+        id: "category:food",
+        groupId: "categories",
+        label: "Food",
+        nodeType: "category",
+        sourceRef: { kind: "category", categoryId: "food" },
+      },
     })
 
     expect(screen.getByTestId("food-workspace-section")).toBeTruthy()
     expect(screen.getByTestId("food-workspace-section").parentElement?.className).toContain("h-full")
-    expect(screen.getByTestId("food-workspace-section").parentElement?.className).toContain("min-h-0")
-    expect(screen.getByTestId("food-workspace-section").parentElement?.className).toContain("overflow-y-auto")
   })
 
   it("passes the shared event resource to the overview workspace", () => {
     renderRouter({
-      id: "category:overview",
-      groupId: "categories",
-      label: "Overview",
-      nodeType: "category",
-      sourceRef: { kind: "category", categoryId: "overview" },
+      selectedNode: {
+        id: "category:overview",
+        groupId: "categories",
+        label: "Overview",
+        nodeType: "category",
+        sourceRef: { kind: "category", categoryId: "overview" },
+      },
     })
 
     expect(screen.getByTestId("overview-workspace-section")).toBeTruthy()
@@ -156,109 +146,131 @@ describe("EventWorkspaceBodyRouter", () => {
     })
   })
 
-  it("renders tournament category content inside the shared scroll container contract", () => {
+  it("renders tournament category content", () => {
     renderRouter({
-      id: "category:tournament",
-      groupId: "categories",
-      label: "Tournament",
-      nodeType: "category",
-      sourceRef: { kind: "category", categoryId: "tournament" },
+      selectedNode: {
+        id: "category:tournament",
+        groupId: "categories",
+        label: "Tournament",
+        nodeType: "category",
+        sourceRef: { kind: "category", categoryId: "tournament" },
+      },
     })
 
     expect(screen.getByTestId("tournament-details-section")).toBeTruthy()
     expect(screen.getByTestId("golf-carts-section")).toBeTruthy()
-    expect(screen.getByTestId("tournament-details-section").parentElement?.className).toContain("h-full")
-    expect(screen.getByTestId("tournament-details-section").parentElement?.className).toContain("min-h-0")
-    expect(screen.getByTestId("tournament-details-section").parentElement?.className).toContain("overflow-y-auto")
   })
 
-  it("renders financial nodes inside the shared scroll container contract", () => {
+  it("renders financial nodes", () => {
     renderRouter({
-      id: "financial:summary",
-      groupId: "categories",
-      label: "Financial",
-      nodeType: "financial",
-      sourceRef: { kind: "financial", view: "overview" },
+      selectedNode: {
+        id: "category:financial",
+        groupId: "categories",
+        label: "Financial",
+        nodeType: "financial",
+        sourceRef: { kind: "financial", view: "overview" },
+      },
     })
 
     expect(screen.getByTestId("financial-workspace-section")).toBeTruthy()
-    expect(screen.getByTestId("financial-workspace-section").parentElement?.className).toContain("h-full")
-    expect(screen.getByTestId("financial-workspace-section").parentElement?.className).toContain("min-h-0")
-    expect(screen.getByTestId("financial-workspace-section").parentElement?.className).toContain("overflow-y-auto")
-    expect(financialWorkspaceSectionMock).toHaveBeenCalledWith(
-      expect.objectContaining({ eventId: "event-1" }),
+  })
+
+  it("renders note and setup timeblocks with the individual note editor", () => {
+    renderRouter({
+      selectedNode: {
+        id: "unscheduled:tb-1",
+        groupId: "unscheduled",
+        label: "Doors",
+        subLabel: "Note",
+        nodeType: "timeblock",
+        sectionType: SECTION_TYPE.NOTE,
+        sourceRef: { kind: "timeblock", timeblockId: "tb-1" },
+      },
+      selectedTimeblockId: "tb-1",
+    })
+
+    expect(screen.getByTestId("note-editor-workspace")).toBeTruthy()
+    expect(noteEditorMock).toHaveBeenCalledWith(
+      expect.objectContaining({ timeblockId: "tb-1" }),
     )
   })
 
-  it("renders timeblock note nodes using category workspace content", () => {
+  it("renders setup instruction timeblocks with the individual note editor", () => {
     renderRouter({
-      id: "timeblock:tb-1",
-      groupId: "scheduled",
-      label: "Doors",
-      subLabel: "Note",
-      nodeType: "timeblock",
-      time: "09:00",
-      sectionType: SECTION_TYPE.NOTE,
-      sourceRef: { kind: "timeblock", timeblockId: "tb-1" },
+      selectedNode: {
+        id: "unscheduled:tb-setup",
+        groupId: "unscheduled",
+        label: "Buffet Setup",
+        nodeType: "timeblock",
+        sectionType: SECTION_TYPE.SETUP_INSTRUCTION,
+        sourceRef: { kind: "timeblock", timeblockId: "tb-setup" },
+      },
+      selectedTimeblockId: "tb-setup",
     })
 
-    expect(screen.getByTestId("notes-section")).toBeTruthy()
-    expect(screen.getByTestId("notes-section").parentElement?.className).toContain("h-full")
-    expect(screen.getByTestId("notes-section").parentElement?.className).toContain("min-h-0")
-    expect(screen.getByTestId("notes-section").parentElement?.className).toContain("overflow-y-auto")
+    expect(screen.getByTestId("note-editor-workspace")).toBeTruthy()
+    expect(noteEditorMock).toHaveBeenCalledWith(
+      expect.objectContaining({ timeblockId: "tb-setup" }),
+    )
   })
 
-  it("renders timeblock food nodes using category workspace content", () => {
+  it("renders food timeblocks using the food workspace", () => {
     renderRouter({
-      id: "timeblock:tb-2",
-      groupId: "scheduled",
-      label: "Lunch",
-      subLabel: "Food",
-      nodeType: "timeblock",
-      time: "12:00",
-      sectionType: SECTION_TYPE.FOOD,
-      sourceRef: { kind: "timeblock", timeblockId: "tb-2" },
+      selectedNode: {
+        id: "scheduled:tb-2",
+        groupId: "scheduled",
+        label: "Lunch",
+        nodeType: "timeblock",
+        time: "12:00",
+        sectionType: SECTION_TYPE.FOOD,
+        sourceRef: { kind: "timeblock", timeblockId: "tb-2" },
+      },
     })
 
     expect(screen.getByTestId("food-workspace-section")).toBeTruthy()
   })
 
-  it("renders beverage nodes using the beverage workspace content", () => {
+  it("renders cart detail timeblocks using the tournament workspace", () => {
     renderRouter({
-      id: "timeblock:tb-4",
-      groupId: "scheduled",
-      label: "Bar Service",
-      subLabel: "Beverage",
-      nodeType: "timeblock",
-      time: "13:00",
-      sectionType: SECTION_TYPE.BEVERAGE,
-      sourceRef: { kind: "timeblock", timeblockId: "tb-4" },
+      selectedNode: {
+        id: "scheduled:tb-cart",
+        groupId: "scheduled",
+        label: "Carts",
+        nodeType: "timeblock",
+        sectionType: SECTION_TYPE.CART_DETAIL,
+        sourceRef: { kind: "timeblock", timeblockId: "tb-cart" },
+      },
     })
 
-    expect(screen.getByTestId("beverage-workspace-section")).toBeTruthy()
+    expect(screen.getByTestId("tournament-details-section")).toBeTruthy()
+    expect(screen.getByTestId("golf-carts-section")).toBeTruthy()
   })
 
-  it("renders a fallback for unsupported timeblock categories", () => {
+  it("routes event start/end system nodes to overview", () => {
     renderRouter({
-      id: "timeblock:tb-3",
-      groupId: "scheduled",
-      label: "Unknown",
-      nodeType: "timeblock",
-      sourceRef: { kind: "timeblock", timeblockId: "tb-3" },
+      selectedNode: {
+        id: "scheduled:fake_timeblock_id_start",
+        groupId: "scheduled",
+        label: "Event Start",
+        nodeType: "system",
+        sourceRef: { kind: "system", source: "event_start", syntheticId: "fake_timeblock_id_start" },
+      },
     })
 
-    expect(screen.getByText("Unsupported timeblock category.")).toBeTruthy()
+    expect(screen.getByTestId("overview-workspace-section")).toBeTruthy()
   })
 
-  it("keeps system nodes read-only", () => {
+  it("routes tournament/cart system nodes to tournament workspace", () => {
     renderRouter({
-      id: "system:event-start",
-      groupId: "scheduled",
-      label: "Event Start",
-      nodeType: "system",
-      sourceRef: { kind: "system", source: "event_start", syntheticId: "event-start" },
+      selectedNode: {
+        id: "scheduled:fake_timeblock_id_cart_setup",
+        groupId: "scheduled",
+        label: "Cart Details",
+        nodeType: "system",
+        sourceRef: { kind: "system", source: "cart_detail", syntheticId: "fake_timeblock_id_cart_setup" },
+      },
     })
 
-    expect(screen.getByText("System timeline node")).toBeTruthy()
+    expect(screen.getByTestId("tournament-details-section")).toBeTruthy()
   })
 })

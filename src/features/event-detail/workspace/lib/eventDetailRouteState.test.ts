@@ -5,9 +5,9 @@ import type { WorkspaceNavModel } from "../types"
 import {
   buildEventDetailNavigationPath,
   getCanonicalEventDetailPath,
+  isNavNodeSelected,
   parseEventDetailRoute,
   resolveSelectedNodeId,
-  sectionFromNodeId,
   toEventDetailPath,
 } from "./eventDetailRouteState"
 
@@ -31,11 +31,19 @@ function buildNavModel(overrides?: Partial<WorkspaceNavModel>): WorkspaceNavMode
         sourceRef: { kind: "timeblock", timeblockId: "tb-tournament" },
       },
       {
-        id: "system:start",
+        id: "scheduled:fake_timeblock_id_start",
         groupId: "scheduled",
         nodeType: "system",
         label: "Event Start",
-        sourceRef: { kind: "system", source: "event_start", syntheticId: "system-start" },
+        sourceRef: { kind: "system", source: "event_start", syntheticId: "fake_timeblock_id_start" },
+      },
+      {
+        id: "scheduled:note",
+        groupId: "scheduled",
+        nodeType: "timeblock",
+        label: "Doors",
+        sectionType: SECTION_TYPE.NOTE,
+        sourceRef: { kind: "timeblock", timeblockId: "tb-note-scheduled" },
       },
     ],
     unscheduled: [
@@ -46,6 +54,14 @@ function buildNavModel(overrides?: Partial<WorkspaceNavModel>): WorkspaceNavMode
         label: "Reminder",
         sectionType: SECTION_TYPE.NOTE,
         sourceRef: { kind: "timeblock", timeblockId: "tb-note" },
+      },
+      {
+        id: "unscheduled:setup",
+        groupId: "unscheduled",
+        nodeType: "timeblock",
+        label: "Buffet Setup",
+        sectionType: SECTION_TYPE.SETUP_INSTRUCTION,
+        sourceRef: { kind: "timeblock", timeblockId: "tb-setup" },
       },
     ],
     categories: [
@@ -64,11 +80,11 @@ function buildNavModel(overrides?: Partial<WorkspaceNavModel>): WorkspaceNavMode
         sourceRef: { kind: "category", categoryId: "food" },
       },
       {
-        id: "category:notes",
+        id: "category:logistics",
         groupId: "categories",
         nodeType: "category",
-        label: "Notes",
-        sourceRef: { kind: "category", categoryId: "notes" },
+        label: "Logistics",
+        sourceRef: { kind: "category", categoryId: "logistics" },
       },
       {
         id: "category:tournament",
@@ -90,27 +106,48 @@ function buildNavModel(overrides?: Partial<WorkspaceNavModel>): WorkspaceNavMode
 }
 
 describe("eventDetailRouteState", () => {
-  it("normalizes timeblock selections to category node ids", () => {
-    const navModel = buildNavModel()
-
-    expect(resolveSelectedNodeId("scheduled:food", navModel, [...navModel.scheduled, ...navModel.unscheduled, ...navModel.categories])).toBe(
-      "category:food",
-    )
-    expect(resolveSelectedNodeId("unscheduled:note", navModel, [...navModel.scheduled, ...navModel.unscheduled, ...navModel.categories])).toBe(
-      "category:notes",
-    )
-  })
-
-  it("derives section from node ids", () => {
+  it("keeps note and setup selections individual while remapping aggregates", () => {
     const navModel = buildNavModel()
     const allNodes = [...navModel.scheduled, ...navModel.unscheduled, ...navModel.categories]
 
-    expect(sectionFromNodeId("category:food", allNodes)).toBe("food")
-    expect(sectionFromNodeId("system:start", allNodes)).toBe("system")
-    expect(sectionFromNodeId("scheduled:food", allNodes)).toBe("food")
+    expect(resolveSelectedNodeId("scheduled:food", navModel, allNodes)).toBe("category:food")
+    expect(resolveSelectedNodeId("unscheduled:note", navModel, allNodes)).toBe("unscheduled:note")
+    expect(resolveSelectedNodeId("unscheduled:setup", navModel, allNodes)).toBe("unscheduled:setup")
+    expect(resolveSelectedNodeId("scheduled:fake_timeblock_id_start", navModel, allNodes)).toBe(
+      "category:overview",
+    )
   })
 
-  it("builds canonical paths without redundant node params", () => {
+  it("builds note editor paths with stable timeblock ids", () => {
+    const navModel = buildNavModel()
+
+    expect(
+      toEventDetailPath({
+        eventId: "evt_1",
+        selectedNodeId: "unscheduled:note",
+        navModel,
+      }),
+    ).toBe("/events/evt_1/note/tb-note")
+
+    expect(
+      toEventDetailPath({
+        eventId: "evt_1",
+        selectedNodeId: "scheduled:note",
+        navModel,
+      }),
+    ).toBe("/events/evt_1/note/tb-note-scheduled")
+
+    expect(
+      toEventDetailPath({
+        eventId: "evt_1",
+        selectedNodeId: "unscheduled:setup",
+        navModel,
+        returnTo: "/events?date=2026-04",
+      }),
+    ).toBe("/events/evt_1/note/tb-setup?returnTo=%2Fevents%3Fdate%3D2026-04")
+  })
+
+  it("builds category paths without node query params", () => {
     const navModel = buildNavModel()
 
     expect(
@@ -120,75 +157,84 @@ describe("eventDetailRouteState", () => {
         navModel,
       }),
     ).toBe("/events/evt_1/food")
-  })
-
-  it("includes node query for system selections", () => {
-    const navModel = buildNavModel()
 
     expect(
       toEventDetailPath({
         eventId: "evt_1",
-        selectedNodeId: "system:start",
+        selectedNodeId: "scheduled:tournament",
         navModel,
       }),
-    ).toBe("/events/evt_1/system?node=system%3Astart")
+    ).toBe("/events/evt_1/tournament")
   })
 
-  it("includes returnTo when not default", () => {
+  it("parses note routes into selected timeblock identity", () => {
     const navModel = buildNavModel()
 
     expect(
-      toEventDetailPath({
-        eventId: "evt_1",
-        selectedNodeId: "category:food",
+      parseEventDetailRoute(
+        { id: "evt_1", timeblockId: "tb-note" },
+        new URLSearchParams(),
         navModel,
-        returnTo: "/events?date=2026-04",
-      }),
-    ).toBe("/events/evt_1/food?returnTo=%2Fevents%3Fdate%3D2026-04")
+      ),
+    ).toEqual({
+      selectedNodeId: "unscheduled:note",
+      selectedTimeblockId: "tb-note",
+      selectedCategoryId: null,
+      returnTo: "/events",
+    })
   })
 
-  it("parses section routes into selected node ids", () => {
+  it("parses section routes into category selections", () => {
     const navModel = buildNavModel()
 
     expect(
       parseEventDetailRoute({ id: "evt_1", section: "food" }, new URLSearchParams(), navModel),
     ).toEqual({
       selectedNodeId: "category:food",
+      selectedTimeblockId: null,
+      selectedCategoryId: "food",
       returnTo: "/events",
     })
   })
 
-  it("parses explicit node query params", () => {
-    const navModel = buildNavModel()
-
-    expect(
-      parseEventDetailRoute(
-        { id: "evt_1", section: "system" },
-        new URLSearchParams("node=system%3Astart"),
-        navModel,
-      ),
-    ).toEqual({
-      selectedNodeId: "system:start",
-      returnTo: "/events",
-    })
-  })
-
-  it("defaults to the overview category when route is incomplete", () => {
-    const navModel = buildNavModel()
-
-    expect(parseEventDetailRoute({ id: "evt_1" }, new URLSearchParams(), navModel)).toEqual({
-      selectedNodeId: "category:overview",
-      returnTo: "/events",
-    })
-  })
-
-  it("returns a canonical redirect path when URL is non-canonical", () => {
+  it("canonicalizes incomplete and legacy routes to overview", () => {
     const navModel = buildNavModel()
 
     expect(
       getCanonicalEventDetailPath({
         eventId: "evt_1",
         params: { id: "evt_1" },
+        searchParams: new URLSearchParams(),
+        navModel,
+      }),
+    ).toBe("/events/evt_1/overview")
+
+    expect(
+      getCanonicalEventDetailPath({
+        eventId: "evt_1",
+        params: { id: "evt_1", section: "notes" },
+        searchParams: new URLSearchParams(),
+        navModel,
+      }),
+    ).toBe("/events/evt_1/overview")
+
+    expect(
+      getCanonicalEventDetailPath({
+        eventId: "evt_1",
+        params: { id: "evt_1", section: "system" },
+        searchParams: new URLSearchParams("node=system%3Astart"),
+        navModel,
+      }),
+    ).toBe("/events/evt_1/overview")
+  })
+
+  it("redirects stale note ids to overview", () => {
+    const navModel = buildNavModel()
+
+    expect(
+      getCanonicalEventDetailPath({
+        eventId: "evt_1",
+        params: { id: "evt_1", timeblockId: "deleted-id" },
         searchParams: new URLSearchParams(),
         navModel,
       }),
@@ -203,7 +249,27 @@ describe("eventDetailRouteState", () => {
     )
   })
 
-  it("falls back to raw timeblock id when mapped category is missing", () => {
+  it("matches selection by stable timeblock id across scheduled and unscheduled ids", () => {
+    const unscheduled = {
+      id: "unscheduled:tb-note",
+      groupId: "unscheduled" as const,
+      nodeType: "timeblock" as const,
+      label: "Reminder",
+      sectionType: SECTION_TYPE.NOTE,
+      sourceRef: { kind: "timeblock" as const, timeblockId: "tb-note" },
+    }
+    const scheduled = {
+      ...unscheduled,
+      id: "scheduled:tb-note",
+      groupId: "scheduled" as const,
+    }
+
+    expect(isNavNodeSelected(unscheduled, "unscheduled:tb-note", "tb-note")).toBe(true)
+    expect(isNavNodeSelected(scheduled, "unscheduled:tb-note", "tb-note")).toBe(true)
+    expect(isNavNodeSelected(unscheduled, "category:food", null)).toBe(false)
+  })
+
+  it("falls back to overview when a mapped category is missing", () => {
     const navModel = buildNavModel({
       categories: [
         {
@@ -212,6 +278,13 @@ describe("eventDetailRouteState", () => {
           nodeType: "category",
           label: "Food",
           sourceRef: { kind: "category", categoryId: "food" },
+        },
+        {
+          id: "category:overview",
+          groupId: "categories",
+          nodeType: "category",
+          label: "Overview",
+          sourceRef: { kind: "category", categoryId: "overview" },
         },
       ],
     })
@@ -222,6 +295,6 @@ describe("eventDetailRouteState", () => {
         selectedNodeId: "scheduled:tournament",
         navModel,
       }),
-    ).toBe("/events/evt_1/tournament?node=scheduled%3Atournament")
+    ).toBe("/events/evt_1/overview")
   })
 })

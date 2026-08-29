@@ -11,17 +11,30 @@ const WorkspaceNavNodeRow: React.FC<WorkspaceNavNodeRowProps> = ({ node, isSelec
     <button
       type="button"
       onClick={() => onSelect(node.id)}
-      className={`w-full rounded-md border px-2 py-2 text-left transition-colors ${
+      aria-current={isSelected ? "true" : undefined}
+      className={`w-full rounded-md border px-2.5 py-2.5 text-left transition-colors ${
         isSelected
-          ? "border-white/60 bg-white/15"
+          ? "border-orange-500/40 bg-white/10 border-l-2 border-l-orange-500"
           : "border-transparent bg-transparent hover:border-white/20 hover:bg-white/10"
       }`}
     >
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium text-stone-100 truncate">{node.label}</p>
-        {node.time ? <span className="text-xs font-mono text-stone-300">{node.time}</span> : null}
+      <div className="flex items-start justify-between gap-2 min-w-0">
+        <p className="text-sm font-medium text-stone-100 truncate min-w-0 flex-1">{node.label}</p>
+        {node.time ? (
+          <span className="text-xs font-mono text-stone-300 shrink-0">{node.time}</span>
+        ) : null}
       </div>
-      {node.subLabel ? <p className="text-xs text-stone-400 mt-1">{node.subLabel}</p> : null}
+
+      <div className="mt-1 flex items-center justify-between gap-2 min-w-0">
+        {node.subLabel ? (
+          <p className="text-xs text-stone-400 truncate">{node.subLabel}</p>
+        ) : (
+          <span />
+        )}
+        {node.assignedTo ? (
+          <p className="text-xs text-stone-500 truncate shrink-0 max-w-[45%]">{node.assignedTo}</p>
+        ) : null}
+      </div>
     </button>
   )
 }

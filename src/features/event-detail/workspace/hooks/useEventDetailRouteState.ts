@@ -10,13 +10,18 @@ import {
   toEventDetailPath,
   type EventDetailRouteParams,
 } from "../lib/eventDetailRouteState"
-import type { WorkspaceNavModel, WorkspaceNavNode } from "../types"
+import type { WorkspaceCategoryId, WorkspaceNavModel, WorkspaceNavNode } from "../types"
 
 export interface UseEventDetailRouteStateReturn {
   selectedNodeId: string | null
   selectedNode: WorkspaceNavNode | null
+  selectedTimeblockId: string | null
+  selectedCategoryId: WorkspaceCategoryId | null
   returnTo: string
   selectNode: (nodeId: string) => void
+  selectCategory: (categoryId: WorkspaceCategoryId) => void
+  navigateToNote: (timeblockId: string) => void
+  navigateToOverview: () => void
 }
 
 export function useEventDetailRouteState(navModel: WorkspaceNavModel): UseEventDetailRouteStateReturn {
@@ -33,6 +38,9 @@ export function useEventDetailRouteState(navModel: WorkspaceNavModel): UseEventD
   )
 
   const selectedNodeId = routeState.selectedNodeId
+  const selectedTimeblockId = routeState.selectedTimeblockId
+  const selectedCategoryId = routeState.selectedCategoryId
+
   const selectedNode = useMemo(
     () => (selectedNodeId ? findNodeById(selectedNodeId, allNodes) : null),
     [allNodes, selectedNodeId],
@@ -70,10 +78,42 @@ export function useEventDetailRouteState(navModel: WorkspaceNavModel): UseEventD
     [allNodes, eventId, navModel, navigate, routeState.returnTo],
   )
 
+  const selectCategory = useCallback(
+    (categoryId: WorkspaceCategoryId) => {
+      selectNode(`category:${categoryId}`)
+    },
+    [selectNode],
+  )
+
+  const navigateToNote = useCallback(
+    (timeblockId: string) => {
+      if (!eventId) return
+      const params = new URLSearchParams()
+      if (routeState.returnTo !== "/events") {
+        params.set("returnTo", routeState.returnTo)
+      }
+      const query = params.toString()
+      const path = query.length > 0
+        ? `/events/${eventId}/note/${timeblockId}?${query}`
+        : `/events/${eventId}/note/${timeblockId}`
+      navigate(path, { replace: true })
+    },
+    [eventId, navigate, routeState.returnTo],
+  )
+
+  const navigateToOverview = useCallback(() => {
+    selectCategory("overview")
+  }, [selectCategory])
+
   return {
     selectedNodeId,
     selectedNode,
+    selectedTimeblockId,
+    selectedCategoryId,
     returnTo: routeState.returnTo,
     selectNode,
+    selectCategory,
+    navigateToNote,
+    navigateToOverview,
   }
 }

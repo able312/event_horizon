@@ -62,7 +62,17 @@ describe("buildWorkspaceNav", () => {
     expect(nav.scheduled.map((n) => n.label)).toEqual(["Event Start", "Alpha", "Bravo"])
     expect(nav.scheduled[0].nodeType).toBe("system")
     expect(nav.unscheduled.map((n) => n.id)).toEqual(["unscheduled:u2", "unscheduled:u1"])
-    expect(nav.categories.some((n) => n.id === "category:financial")).toBe(true)
-    expect(nav.categories.some((n) => n.id === "category:tournament")).toBe(true)
+    expect(nav.categories.map((n) => n.id)).toEqual([
+      "category:overview",
+      "category:food",
+      "category:beverage",
+      "category:logistics",
+      "category:tournament",
+      "category:financial",
+    ])
+    expect(nav.categories.some((n) => n.id === "category:notes")).toBe(false)
+    expect(nav.categories.some((n) => n.id === "category:setup")).toBe(false)
+    expect(nav.unscheduled.find((n) => n.id === "unscheduled:u1")?.subLabel).toBe("Setup Instruction")
+    expect(nav.unscheduled.find((n) => n.id === "unscheduled:u1")?.assignedTo).toBeNull()
   })
 })

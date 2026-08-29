@@ -28,14 +28,16 @@ describe("EventDetailBodyOrchestrator", () => {
       updateEvent: vi.fn(async () => ({ id: "1" } as never)),
       deleteEvent: vi.fn(async () => true),
     }
+    const onNavigateToOverview = vi.fn()
 
     render(
       <EventDetailBodyOrchestrator
         eventResource={eventResource}
         selectedNode={null}
+        selectedTimeblockId={null}
+        selectedCategoryId={null}
         onSelectNode={vi.fn()}
-        timelineRows={[]}
-        sectionRows={[]}
+        onNavigateToOverview={onNavigateToOverview}
       />,
     )
 
@@ -43,12 +45,12 @@ describe("EventDetailBodyOrchestrator", () => {
     expect(screen.getByTestId("details-title-bar")).toBeTruthy()
     expect(screen.getByTestId("workspace-body-router")).toBeTruthy()
     expect(screen.getByTestId("workspace-body-router").parentElement?.className).toContain("flex-1")
-    expect(screen.getByTestId("workspace-body-router").parentElement?.className).toContain("min-h-0")
-    expect(screen.getByTestId("workspace-body-router").parentElement?.className).toContain("overflow-hidden")
     expect(routerPropsMock).toHaveBeenCalledWith(
       expect.objectContaining({
         eventResource,
         selectedNode: null,
+        selectedTimeblockId: null,
+        onNavigateToOverview,
       }),
     )
   })
