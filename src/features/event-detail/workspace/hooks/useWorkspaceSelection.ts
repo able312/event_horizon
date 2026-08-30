@@ -26,6 +26,7 @@ export function useWorkspaceSelection(navModel: WorkspaceNavModel) {
     setSelectedNodeId: routeState.selectNode,
     selectCategory: routeState.selectCategory,
     navigateToNote: routeState.navigateToNote,
+    navigateToTimeblock: routeState.navigateToTimeblock,
     navigateToOverview: routeState.navigateToOverview,
     returnTo: routeState.returnTo,
   }

@@ -144,6 +144,7 @@ function renderSelectionHarness(navModel: WorkspaceNavModel, initialEntry = "/ev
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
+        <Route path="/events/:id/timeblock/:timeblockId" element={<SelectionHarness navModel={navModel} />} />
         <Route path="/events/:id/note/:timeblockId" element={<SelectionHarness navModel={navModel} />} />
         <Route path="/events/:id/:section?" element={<SelectionHarness navModel={navModel} />} />
       </Routes>
@@ -164,13 +165,16 @@ describe("useWorkspaceSelection", () => {
     })
   })
 
-  it("keeps note selections individual and remaps aggregate timeblocks to categories", async () => {
+  it("keeps note and food selections focused while remapping other aggregates to categories", async () => {
     renderSelectionHarness(buildNavModel(), "/events/evt_1/food")
 
     act(() => {
       screen.getByRole("button", { name: "select-scheduled-food" }).click()
     })
-    expect(screen.getByTestId("selected-node-id").textContent).toBe("category:food")
+    await waitFor(() => {
+      expect(screen.getByTestId("selected-node-id").textContent).toBe("scheduled:food")
+      expect(screen.getByTestId("selected-timeblock-id").textContent).toBe("tb-food")
+    })
 
     act(() => {
       screen.getByRole("button", { name: "select-unscheduled-note" }).click()
@@ -257,6 +261,14 @@ describe("useWorkspaceSelection", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("selected-node-id").textContent).toBe("unscheduled:note")
+      expect(screen.getByTestId("selected-timeblock-id").textContent).toBe("tb-note")
+    })
+  })
+
+  it("canonicalizes legacy note deep links onto the focused timeblock route", async () => {
+    renderSelectionHarness(buildNavModel(), "/events/evt_1/note/tb-note")
+
+    await waitFor(() => {
       expect(screen.getByTestId("selected-timeblock-id").textContent).toBe("tb-note")
     })
   })

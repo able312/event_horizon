@@ -131,6 +131,24 @@ const wrapperCases: WrapperCase[] = [
     invokeWrapper: timeblocksIpc.updateTimeblock as unknown as (...args: unknown[]) => Promise<unknown>,
   },
   {
+    name: "timeblocks.getTimeblockById",
+    channel: "timeblocks:get-by-id",
+    args: [recordId],
+    invokeWrapper: timeblocksIpc.getTimeblockById as unknown as (...args: unknown[]) => Promise<unknown>,
+  },
+  {
+    name: "timeblocks.inspectTimeblockConversion",
+    channel: "timeblocks:inspect-conversion",
+    args: [{ timeblockId: recordId, toType: "food" }],
+    invokeWrapper: timeblocksIpc.inspectTimeblockConversion as unknown as (...args: unknown[]) => Promise<unknown>,
+  },
+  {
+    name: "timeblocks.convertTimeblockSectionType",
+    channel: "timeblocks:convert-section-type",
+    args: [{ timeblockId: recordId, toType: "note", confirmDestructive: true }],
+    invokeWrapper: timeblocksIpc.convertTimeblockSectionType as unknown as (...args: unknown[]) => Promise<unknown>,
+  },
+  {
     name: "timeblocks.deleteTimeblock",
     channel: "timeblocks:delete",
     args: [recordId],

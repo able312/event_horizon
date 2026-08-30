@@ -10,7 +10,7 @@ const overviewWorkspaceSectionMock = vi.fn<(props: unknown) => void>()
 const foodWorkspaceSectionMock = vi.fn(() => <div data-testid="food-workspace-section" />)
 const beverageWorkspaceSectionMock = vi.fn(() => <div data-testid="beverage-workspace-section" />)
 const vendorsSectionMock = vi.fn(() => <div data-testid="vendors-section" />)
-const noteEditorMock = vi.fn<(props: unknown) => void>()
+const focusedEditorMock = vi.fn<(props: unknown) => void>()
 const tournamentDetailsSectionMock = vi.fn(() => <div data-testid="tournament-details-section" />)
 const golfCartsSectionMock = vi.fn(() => <div data-testid="golf-carts-section" />)
 const financialWorkspaceSectionMock = vi.fn<(props: unknown) => void>()
@@ -34,10 +34,10 @@ vi.mock("~/features/event-detail/sections/vendor-workspace/VendorWorkspaceSectio
   default: () => vendorsSectionMock(),
 }))
 
-vi.mock("../../sections/setup-notes-workspaces/NoteEditorWorkspace", () => ({
+vi.mock("../../sections/FocusedTimeblockWorkspace", () => ({
   default: (props: unknown) => {
-    noteEditorMock(props)
-    return <div data-testid="note-editor-workspace" />
+    focusedEditorMock(props)
+    return <div data-testid="focused-timeblock-workspace" />
   },
 }))
 
@@ -175,7 +175,7 @@ describe("EventWorkspaceBodyRouter", () => {
     expect(screen.getByTestId("financial-workspace-section")).toBeTruthy()
   })
 
-  it("renders note and setup timeblocks with the individual note editor", () => {
+  it("renders note and setup timeblocks with the focused timeblock workspace", () => {
     renderRouter({
       selectedNode: {
         id: "unscheduled:tb-1",
@@ -189,13 +189,13 @@ describe("EventWorkspaceBodyRouter", () => {
       selectedTimeblockId: "tb-1",
     })
 
-    expect(screen.getByTestId("note-editor-workspace")).toBeTruthy()
-    expect(noteEditorMock).toHaveBeenCalledWith(
+    expect(screen.getByTestId("focused-timeblock-workspace")).toBeTruthy()
+    expect(focusedEditorMock).toHaveBeenCalledWith(
       expect.objectContaining({ timeblockId: "tb-1" }),
     )
   })
 
-  it("renders setup instruction timeblocks with the individual note editor", () => {
+  it("renders setup instruction timeblocks with the focused timeblock workspace", () => {
     renderRouter({
       selectedNode: {
         id: "unscheduled:tb-setup",
@@ -208,13 +208,13 @@ describe("EventWorkspaceBodyRouter", () => {
       selectedTimeblockId: "tb-setup",
     })
 
-    expect(screen.getByTestId("note-editor-workspace")).toBeTruthy()
-    expect(noteEditorMock).toHaveBeenCalledWith(
+    expect(screen.getByTestId("focused-timeblock-workspace")).toBeTruthy()
+    expect(focusedEditorMock).toHaveBeenCalledWith(
       expect.objectContaining({ timeblockId: "tb-setup" }),
     )
   })
 
-  it("renders food timeblocks using the food workspace", () => {
+  it("renders food timeblocks with the focused timeblock workspace", () => {
     renderRouter({
       selectedNode: {
         id: "scheduled:tb-2",
@@ -224,6 +224,24 @@ describe("EventWorkspaceBodyRouter", () => {
         time: "12:00",
         sectionType: SECTION_TYPE.FOOD,
         sourceRef: { kind: "timeblock", timeblockId: "tb-2" },
+      },
+      selectedTimeblockId: "tb-2",
+    })
+
+    expect(screen.getByTestId("focused-timeblock-workspace")).toBeTruthy()
+    expect(focusedEditorMock).toHaveBeenCalledWith(
+      expect.objectContaining({ timeblockId: "tb-2" }),
+    )
+  })
+
+  it("still renders the aggregate food workspace from the food category icon", () => {
+    renderRouter({
+      selectedNode: {
+        id: "category:food",
+        groupId: "categories",
+        label: "Food",
+        nodeType: "category",
+        sourceRef: { kind: "category", categoryId: "food" },
       },
     })
 

@@ -1,6 +1,6 @@
 import { db } from "../index.js"
 import type { AppDatabase } from "../factory.js"
-import { events, timeblocks, tournamentDetails, cartDetails } from "../schema.js"
+import { events, foodItems, timeblocks, tournamentDetails, cartDetails } from "../schema.js"
 import { and, eq } from "drizzle-orm"
 import { v4 as uuidv4 } from "uuid"
 
@@ -11,6 +11,15 @@ import type {
   TimelineMeta,
   TimelineTimeblock,
 } from "../../../definitions/timeblocks/timeblocks-types.js"
+import type { UpdateTimeblock } from "../../../definitions/database.js"
+import {
+  assertConvertibleTimeblockType,
+  buildConversionImpact,
+  type ConversionImpact,
+  type ConvertTimeblockInput,
+  type ConvertTimeblockResult,
+  type InspectConversionInput,
+} from "../../../definitions/timeblocks/timeblock-conversion.js"
 import { getSectionDefaultPrefill } from "../../../definitions/timeblocks/setupInstructionPrefill.js"
 import type { BeverageItem } from "../../../definitions/database.js"
 
@@ -125,7 +134,39 @@ function addTime(timeStr: string, timeToAdd: string): string | null {
   return isValidHHmm(nextTime) ? nextTime : null
 }
 
+function pickAllowlistedUpdates(updates: UpdateTimeblock): UpdateTimeblock {
+  const next: UpdateTimeblock = {}
+  if (updates.title !== undefined) next.title = updates.title
+  if (updates.time !== undefined) next.time = updates.time
+  if (updates.details !== undefined) next.details = updates.details
+  if (updates.assignedTo !== undefined) next.assignedTo = updates.assignedTo
+  return next
+}
+
+const TIMEBLOCK_WITH_ITEMS_RELATIONS = {
+  foodItems: true,
+  beverageItemTimeblocks: {
+    with: {
+      beverageItem: true,
+    },
+  },
+  vendorItem: true,
+} as const
+
 export function createTimeblocksRepository(database: AppDatabase) {
+  const loadTimeblockWithItems = async (id: string): Promise<TimeblockWithItems> => {
+    if (!id) throw new Error("getTimeblockById: ID is required")
+
+    const row = await database.query.timeblocks.findFirst({
+      where: eq(timeblocks.id, id),
+      with: TIMEBLOCK_WITH_ITEMS_RELATIONS,
+    })
+
+    if (!row) throw new Error(`Timeblock not found for id ${id}`)
+
+    return mapTimeblockWithBeverageItems(row)
+  }
+
   const timeblockQueries = {
     getById: (id: string) => {
       if (!id) throw new Error("getTimeblockById: ID is required")
@@ -134,6 +175,10 @@ export function createTimeblocksRepository(database: AppDatabase) {
       if (!timeblock) throw new Error(`Timeblock not found for id ${id}`)
 
       return timeblock
+    },
+
+    getByIdWithItems: async (id: string): Promise<TimeblockWithItems> => {
+      return loadTimeblockWithItems(id)
     },
 
     insert: (data: CreateTimeblockInput) => {
@@ -152,14 +197,18 @@ export function createTimeblocksRepository(database: AppDatabase) {
       }).returning().get()!
     },
 
-    update: (id: string, updates: { title?: string; time?: string | null; details?: string | null; displayOrder?: number | null }) => {
+    update: (id: string, updates: UpdateTimeblock) => {
       if (!id) throw new Error("updateTimeblock: ID is required")
-      if (Object.keys(updates).length === 0) {
+      const allowlisted = pickAllowlistedUpdates(updates)
+      if (Object.keys(allowlisted).length === 0) {
         throw new Error("updateTimeblock: updates are required")
       }
 
       const updatedTimeblock = database.update(timeblocks)
-        .set(updates)
+        .set({
+          ...allowlisted,
+          updatedAt: Date.now().toString(),
+        })
         .where(eq(timeblocks.id, id))
         .returning()
         .get()
@@ -167,6 +216,73 @@ export function createTimeblocksRepository(database: AppDatabase) {
       if (!updatedTimeblock) throw new Error(`Timeblock not found for id ${id}`)
 
       return updatedTimeblock
+    },
+
+    inspectConversion: async (input: InspectConversionInput): Promise<ConversionImpact> => {
+      if (!input.timeblockId) throw new Error("inspectConversion: timeblockId is required")
+      const current = await loadTimeblockWithItems(input.timeblockId)
+      assertConvertibleTimeblockType(current.sectionType)
+      assertConvertibleTimeblockType(input.toType)
+
+      return buildConversionImpact({
+        timeblockId: current.id,
+        title: current.title,
+        fromType: current.sectionType,
+        toType: input.toType,
+        foodItemCount: current.foodItems?.length ?? 0,
+      })
+    },
+
+    convertSectionType: (input: ConvertTimeblockInput): ConvertTimeblockResult => {
+      if (!input.timeblockId) throw new Error("convertSectionType: timeblockId is required")
+      assertConvertibleTimeblockType(input.toType)
+
+      return database.transaction((tx) => {
+        const current = tx.select().from(timeblocks).where(eq(timeblocks.id, input.timeblockId)).get()
+        if (!current) throw new Error(`Timeblock not found for id ${input.timeblockId}`)
+
+        assertConvertibleTimeblockType(current.sectionType)
+
+        const foodItemCount = tx.select().from(foodItems)
+          .where(eq(foodItems.timeblockId, current.id))
+          .all()
+          .length
+
+        const impact = buildConversionImpact({
+          timeblockId: current.id,
+          title: current.title,
+          fromType: current.sectionType,
+          toType: input.toType,
+          foodItemCount,
+        })
+
+        if (impact.requiresConfirmation && !input.confirmDestructive) {
+          throw new Error(
+            "convertSectionType: destructive conversion requires confirmDestructive=true",
+          )
+        }
+
+        if (current.sectionType === "food" && input.toType !== "food") {
+          tx.delete(foodItems).where(eq(foodItems.timeblockId, current.id)).run()
+        }
+
+        const detailsForTarget =
+          current.details ?? getBlankDetailsFallback(input.toType)
+
+        const updated = tx.update(timeblocks)
+          .set({
+            sectionType: input.toType,
+            details: detailsForTarget,
+            updatedAt: Date.now().toString(),
+          })
+          .where(eq(timeblocks.id, current.id))
+          .returning()
+          .get()
+
+        if (!updated) throw new Error(`Timeblock not found for id ${current.id}`)
+
+        return { timeblock: updated, impact }
+      })
     },
 
     delete: (id: string): boolean => {
@@ -186,15 +302,7 @@ export function createTimeblocksRepository(database: AppDatabase) {
           eq(timeblocks.eventId, eventId),
           eq(timeblocks.sectionType, sectionType),
         ),
-        with: {
-          foodItems: true,
-          beverageItemTimeblocks: {
-            with: {
-              beverageItem: true,
-            },
-          },
-          vendorItem: true,
-        },
+        with: TIMEBLOCK_WITH_ITEMS_RELATIONS,
       }).then((rows) => rows.map(mapTimeblockWithBeverageItems))
     },
 
@@ -205,15 +313,7 @@ export function createTimeblocksRepository(database: AppDatabase) {
         database.select().from(events).where(eq(events.id, eventId)).get(),
         database.query.timeblocks.findMany({
           where: eq(timeblocks.eventId, eventId),
-          with: {
-            foodItems: true,
-            beverageItemTimeblocks: {
-              with: {
-                beverageItem: true,
-              },
-            },
-            vendorItem: true,
-          },
+          with: TIMEBLOCK_WITH_ITEMS_RELATIONS,
         }),
         database.query.tournamentDetails.findFirst({
           where: eq(tournamentDetails.eventId, eventId),

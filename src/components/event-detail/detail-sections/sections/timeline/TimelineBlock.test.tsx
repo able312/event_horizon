@@ -67,4 +67,30 @@ describe("TimelineBlock", () => {
       updates: { time: "10:00" },
     })
   })
+
+  it("renders food overview notes before menu items", () => {
+    render(
+      <TimelineBlock
+        timeblock={makeTimeblock({
+          sectionType: "food",
+          details: "Serve from the pavilion",
+          foodItems: [
+            {
+              id: "item-1",
+              timeblockId: "timeblock-1",
+              name: "Steak",
+              quantity: 40,
+              serviceStyle: "Plated",
+              includes: "Medium",
+              unitPriceCents: 4500,
+            },
+          ],
+        })}
+        updateTimeblock={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText("Serve from the pavilion")).toBeTruthy()
+    expect(screen.getByText("40 x Steak")).toBeTruthy()
+  })
 })

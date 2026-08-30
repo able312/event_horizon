@@ -5,13 +5,13 @@ import FinancialWorkspaceSection from "./FinancialWorkspaceSection"
 import FoodWorkspaceSection from "~/features/event-detail/sections/food-beverage-workspaces/FoodWorkspaceSection"
 import BeverageWorkspaceSection from "~/features/event-detail/sections/food-beverage-workspaces/BeverageWorkspaceSection"
 import VendorWorkspaceSection from "../../sections/vendor-workspace/VendorWorkspaceSection"
-import NoteEditorWorkspace from "../../sections/setup-notes-workspaces/NoteEditorWorkspace"
+import FocusedTimeblockWorkspace from "../../sections/FocusedTimeblockWorkspace"
 
 import type { EventResource } from "~/features/event-detail/types"
 import {
   getNavigationTarget,
   getTimeblockIdFromNode,
-  isIndividualNoteSectionType,
+  isFocusedTimeblockSectionType,
 } from "../lib/navPolicy"
 import type { WorkspaceCategoryId, WorkspaceNavNode } from "../types"
 
@@ -97,19 +97,20 @@ const EventWorkspaceBodyRouter: React.FC<EventWorkspaceBodyRouterProps> = ({
     )
   }
 
-  // Individual note editor — driven by the note route timeblock id when present,
-  // or by a selected note/setup timeblock node.
-  const noteTimeblockId =
+  const focusedTimeblockId =
     selectedTimeblockId ??
-    (selectedNode && isIndividualNoteSectionType(selectedNode.sectionType)
+    (selectedNode && isFocusedTimeblockSectionType(selectedNode.sectionType)
       ? getTimeblockIdFromNode(selectedNode)
       : null)
 
-  if (noteTimeblockId && (!selectedNode || isIndividualNoteSectionType(selectedNode.sectionType))) {
+  if (
+    focusedTimeblockId &&
+    (!selectedNode || isFocusedTimeblockSectionType(selectedNode.sectionType))
+  ) {
     return (
-      <NoteEditorWorkspace
-        key={noteTimeblockId}
-        timeblockId={noteTimeblockId}
+      <FocusedTimeblockWorkspace
+        key={focusedTimeblockId}
+        timeblockId={focusedTimeblockId}
         onDeleted={onNavigateToOverview}
         onNotFound={onNavigateToOverview}
       />
@@ -126,9 +127,9 @@ const EventWorkspaceBodyRouter: React.FC<EventWorkspaceBodyRouterProps> = ({
 
   const target = getNavigationTarget(selectedNode)
 
-  if (target.kind === "individual-note") {
+  if (target.kind === "focused-timeblock") {
     return (
-      <NoteEditorWorkspace
+      <FocusedTimeblockWorkspace
         key={target.timeblockId}
         timeblockId={target.timeblockId}
         onDeleted={onNavigateToOverview}

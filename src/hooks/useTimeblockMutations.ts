@@ -12,6 +12,7 @@ import {
   removeTimeblockFromBeverageSection,
   updateBeverageTimeblock,
 } from "./util/optimisticBeverageSectionCache"
+import { focusedTimeblockQueryKey } from "./useFocusedTimeblock"
 
 interface UseTimeblockMutationsOptions {
   queryKey: readonly [string, string | undefined]
@@ -165,18 +166,12 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheSha
     onSettled: (data, _error, variables) => {
       const type = data?.sectionType ?? sectionType
       const updates = variables.updates
-      const sectionTypeChanged = updates.sectionType !== undefined
       const shouldRefreshTimeline =
-        sectionTypeChanged || updates.time !== undefined || updates.title !== undefined || updates.assignedTo !== undefined
+        updates.time !== undefined || updates.title !== undefined || updates.assignedTo !== undefined
 
       queryClient.invalidateQueries({ queryKey })
       queryClient.invalidateQueries({ queryKey: [type, eventId] })
-
-      // Note ↔ setup conversion must refresh both section caches and the shared sidebar labels.
-      if (sectionTypeChanged) {
-        queryClient.invalidateQueries({ queryKey: ["note", eventId] })
-        queryClient.invalidateQueries({ queryKey: ["setupInstructions", eventId] })
-      }
+      queryClient.invalidateQueries({ queryKey: focusedTimeblockQueryKey(variables.id) })
 
       if (shouldRefreshTimeline) {
         queryClient.invalidateQueries({ queryKey: ["timeblocks", eventId] })
@@ -225,7 +220,15 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheSha
     addTimeblock,
     addTimeblockAsync,
     updateTimeblock: updateTimeblockMutation.mutate,
+    updateTimeblockAsync: updateTimeblockMutation.mutateAsync,
     removeTimeblock: deleteTimeblockMutation.mutate,
+    removeTimeblockAsync: deleteTimeblockMutation.mutateAsync,
     isCreating: addTimeblockMutation.isPending,
+    isUpdating: updateTimeblockMutation.isPending,
+    isDeleting: deleteTimeblockMutation.isPending,
+    isMutating:
+      addTimeblockMutation.isPending ||
+      updateTimeblockMutation.isPending ||
+      deleteTimeblockMutation.isPending,
   }
 }

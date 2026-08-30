@@ -106,11 +106,11 @@ function buildNavModel(overrides?: Partial<WorkspaceNavModel>): WorkspaceNavMode
 }
 
 describe("eventDetailRouteState", () => {
-  it("keeps note and setup selections individual while remapping aggregates", () => {
+  it("keeps note, setup, and food selections focused while remapping other aggregates", () => {
     const navModel = buildNavModel()
     const allNodes = [...navModel.scheduled, ...navModel.unscheduled, ...navModel.categories]
 
-    expect(resolveSelectedNodeId("scheduled:food", navModel, allNodes)).toBe("category:food")
+    expect(resolveSelectedNodeId("scheduled:food", navModel, allNodes)).toBe("scheduled:food")
     expect(resolveSelectedNodeId("unscheduled:note", navModel, allNodes)).toBe("unscheduled:note")
     expect(resolveSelectedNodeId("unscheduled:setup", navModel, allNodes)).toBe("unscheduled:setup")
     expect(resolveSelectedNodeId("scheduled:fake_timeblock_id_start", navModel, allNodes)).toBe(
@@ -118,7 +118,7 @@ describe("eventDetailRouteState", () => {
     )
   })
 
-  it("builds note editor paths with stable timeblock ids", () => {
+  it("builds focused timeblock paths with stable timeblock ids", () => {
     const navModel = buildNavModel()
 
     expect(
@@ -127,7 +127,7 @@ describe("eventDetailRouteState", () => {
         selectedNodeId: "unscheduled:note",
         navModel,
       }),
-    ).toBe("/events/evt_1/note/tb-note")
+    ).toBe("/events/evt_1/timeblock/tb-note")
 
     expect(
       toEventDetailPath({
@@ -135,7 +135,15 @@ describe("eventDetailRouteState", () => {
         selectedNodeId: "scheduled:note",
         navModel,
       }),
-    ).toBe("/events/evt_1/note/tb-note-scheduled")
+    ).toBe("/events/evt_1/timeblock/tb-note-scheduled")
+
+    expect(
+      toEventDetailPath({
+        eventId: "evt_1",
+        selectedNodeId: "scheduled:food",
+        navModel,
+      }),
+    ).toBe("/events/evt_1/timeblock/tb-food")
 
     expect(
       toEventDetailPath({
@@ -144,7 +152,7 @@ describe("eventDetailRouteState", () => {
         navModel,
         returnTo: "/events?date=2026-04",
       }),
-    ).toBe("/events/evt_1/note/tb-setup?returnTo=%2Fevents%3Fdate%3D2026-04")
+    ).toBe("/events/evt_1/timeblock/tb-setup?returnTo=%2Fevents%3Fdate%3D2026-04")
   })
 
   it("builds category paths without node query params", () => {
@@ -228,7 +236,7 @@ describe("eventDetailRouteState", () => {
     ).toBe("/events/evt_1/overview")
   })
 
-  it("redirects stale note ids to overview", () => {
+  it("keeps unknown focused timeblock ids on the focused route for body-level not-found handling", () => {
     const navModel = buildNavModel()
 
     expect(
@@ -238,7 +246,17 @@ describe("eventDetailRouteState", () => {
         searchParams: new URLSearchParams(),
         navModel,
       }),
-    ).toBe("/events/evt_1/overview")
+    ).toBeNull()
+
+    expect(
+      getCanonicalEventDetailPath({
+        eventId: "evt_1",
+        params: { id: "evt_1", timeblockId: "tb-note" },
+        searchParams: new URLSearchParams(),
+        navModel,
+        pathname: "/events/evt_1/note/tb-note",
+      }),
+    ).toBe("/events/evt_1/timeblock/tb-note")
   })
 
   it("builds navigation paths for calendar entry points", () => {

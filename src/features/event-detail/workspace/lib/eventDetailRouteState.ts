@@ -1,6 +1,7 @@
 import type { WorkspaceCategoryId, WorkspaceNavModel, WorkspaceNavNode } from "../types"
 import {
   buildCategoryNodeId,
+  buildScheduledNodeId,
   findCategoryNode,
   findNodeByTimeblockId,
   getNavigationTarget,
@@ -35,7 +36,7 @@ export function findNodeById(nodeId: string, allNodes: WorkspaceNavNode[]) {
 
 /**
  * Resolve a clicked/selected nav node into the node id that should drive the URL.
- * Note/setup keep their individual identity; aggregate types remap to a category node.
+ * Focused types keep their individual identity; aggregate types remap to a category node.
  */
 export function resolveSelectedNodeId(
   nodeId: string,
@@ -47,7 +48,7 @@ export function resolveSelectedNodeId(
 
   const navigationTarget = getNavigationTarget(targetNode)
 
-  if (navigationTarget.kind === "individual-note") {
+  if (navigationTarget.kind === "focused-timeblock") {
     // Prefer the live node (scheduled/unscheduled) so sidebar highlight matches placement.
     const liveNode = findNodeByTimeblockId(navigationTarget.timeblockId, navModel)
     return liveNode?.id ?? nodeId
@@ -67,7 +68,7 @@ export function normalizeReturnTo(value: unknown): string {
 function normalizeSection(value: unknown): WorkspaceCategoryId | null {
   if (typeof value !== "string") return null
   // Legacy slugs that no longer exist — treat as invalid so they canonicalize to overview.
-  if (value === "notes" || value === "setup" || value === "system" || value === "note") {
+  if (value === "notes" || value === "setup" || value === "system" || value === "note" || value === "timeblock") {
     return null
   }
   return isWorkspaceCategoryId(value) ? value : null
@@ -85,37 +86,62 @@ function isCategoryAvailable(categoryId: WorkspaceCategoryId, navModel: Workspac
   return findCategoryNode(categoryId, navModel) !== null
 }
 
+export function toFocusedTimeblockPath(
+  eventId: string,
+  timeblockId: string,
+  returnTo: string = DEFAULT_EVENT_DETAIL_RETURN_TO,
+): string {
+  return appendReturnToQuery(
+    `/events/${eventId}/timeblock/${timeblockId}`,
+    normalizeReturnTo(returnTo),
+  )
+}
+
+/** @deprecated Prefer toFocusedTimeblockPath — legacy note URLs canonicalize to timeblock. */
+export function toNoteEditorPath(
+  eventId: string,
+  timeblockId: string,
+  returnTo: string = DEFAULT_EVENT_DETAIL_RETURN_TO,
+): string {
+  return toFocusedTimeblockPath(eventId, timeblockId, returnTo)
+}
+
 export function toEventDetailPath({
   eventId,
   selectedNodeId,
+  selectedTimeblockId,
   navModel,
   returnTo = DEFAULT_EVENT_DETAIL_RETURN_TO,
 }: {
   eventId: string
-  selectedNodeId: string
+  selectedNodeId: string | null
+  selectedTimeblockId?: string | null
   navModel: WorkspaceNavModel
   returnTo?: string
 }): string {
   const allNodes = flattenNav(navModel)
   const normalizedReturnTo = normalizeReturnTo(returnTo)
+
+  // Focused routes stay focused even when the nav row is briefly missing during
+  // loading or section-cache transitions after a type conversion.
+  if (selectedTimeblockId) {
+    return toFocusedTimeblockPath(eventId, selectedTimeblockId, normalizedReturnTo)
+  }
+
+  if (!selectedNodeId) {
+    return appendReturnToQuery(`/events/${eventId}/overview`, normalizedReturnTo)
+  }
+
   const targetNode = findNodeById(selectedNodeId, allNodes)
 
   if (!targetNode) {
-    // May be a note whose nav row is temporarily missing — try timeblock extraction from id.
-    const fallbackOverview = appendReturnToQuery(
-      `/events/${eventId}/overview`,
-      normalizedReturnTo,
-    )
-    return fallbackOverview
+    return appendReturnToQuery(`/events/${eventId}/overview`, normalizedReturnTo)
   }
 
   const navigationTarget = getNavigationTarget(targetNode)
 
-  if (navigationTarget.kind === "individual-note") {
-    return appendReturnToQuery(
-      `/events/${eventId}/note/${navigationTarget.timeblockId}`,
-      normalizedReturnTo,
-    )
+  if (navigationTarget.kind === "focused-timeblock") {
+    return toFocusedTimeblockPath(eventId, navigationTarget.timeblockId, normalizedReturnTo)
   }
 
   if (!isCategoryAvailable(navigationTarget.categoryId, navModel)) {
@@ -125,17 +151,6 @@ export function toEventDetailPath({
   return appendReturnToQuery(
     `/events/${eventId}/${navigationTarget.categoryId}`,
     normalizedReturnTo,
-  )
-}
-
-export function toNoteEditorPath(
-  eventId: string,
-  timeblockId: string,
-  returnTo: string = DEFAULT_EVENT_DETAIL_RETURN_TO,
-): string {
-  return appendReturnToQuery(
-    `/events/${eventId}/note/${timeblockId}`,
-    normalizeReturnTo(returnTo),
   )
 }
 
@@ -158,37 +173,29 @@ export function parseEventDetailRoute(
   const returnTo = normalizeReturnTo(searchParams.get("returnTo"))
   const allNodes = flattenNav(navModel)
 
-  if (allNodes.length === 0) {
+  // Dedicated focused routes: /events/:id/timeblock|:note/:timeblockId
+  // Keep the focused timeblock id even when the nav model is empty or the row
+  // is temporarily missing so conversion/loading does not bounce to overview.
+  const focusedTimeblockId =
+    typeof params.timeblockId === "string" && params.timeblockId.trim().length > 0
+      ? params.timeblockId.trim()
+      : null
+
+  if (focusedTimeblockId) {
+    const focusedNode = findNodeByTimeblockId(focusedTimeblockId, navModel)
     return {
-      selectedNodeId: null,
-      selectedTimeblockId: null,
+      selectedNodeId: focusedNode?.id ?? buildScheduledNodeId(focusedTimeblockId),
+      selectedTimeblockId: focusedTimeblockId,
       selectedCategoryId: null,
       returnTo,
     }
   }
 
-  // Dedicated note route: /events/:id/note/:timeblockId
-  const noteTimeblockId =
-    typeof params.timeblockId === "string" && params.timeblockId.trim().length > 0
-      ? params.timeblockId.trim()
-      : null
-
-  if (noteTimeblockId) {
-    const noteNode = findNodeByTimeblockId(noteTimeblockId, navModel)
-    if (noteNode) {
-      return {
-        selectedNodeId: noteNode.id,
-        selectedTimeblockId: noteTimeblockId,
-        selectedCategoryId: null,
-        returnTo,
-      }
-    }
-
-    // Stale / deleted note — fall back to overview (canonicalization will redirect).
+  if (allNodes.length === 0) {
     return {
-      selectedNodeId: buildCategoryNodeId("overview"),
+      selectedNodeId: null,
       selectedTimeblockId: null,
-      selectedCategoryId: "overview",
+      selectedCategoryId: null,
       returnTo,
     }
   }
@@ -220,18 +227,21 @@ export function getCanonicalEventDetailPath({
   params,
   searchParams,
   navModel,
+  pathname,
 }: {
   eventId: string
   params: EventDetailRouteParams
   searchParams: URLSearchParams
   navModel: WorkspaceNavModel
+  pathname?: string
 }): string | null {
   const parsed = parseEventDetailRoute(params, searchParams, navModel)
-  if (!parsed.selectedNodeId) return null
+  if (!parsed.selectedNodeId && !parsed.selectedTimeblockId) return null
 
   const canonicalPath = toEventDetailPath({
     eventId,
     selectedNodeId: parsed.selectedNodeId,
+    selectedTimeblockId: parsed.selectedTimeblockId,
     navModel,
     returnTo: parsed.returnTo,
   })
@@ -244,9 +254,10 @@ export function getCanonicalEventDetailPath({
 
   let currentPath: string
   if (params.timeblockId) {
-    currentPath = `/events/${eventId}/note/${params.timeblockId}${returnToSuffix}`
+    const focusSegment = pathname?.includes("/note/") ? "note" : "timeblock"
+    // Legacy /note/ paths always canonicalize to /timeblock/.
+    currentPath = `/events/${eventId}/${focusSegment}/${params.timeblockId}${returnToSuffix}`
   } else if (params.section) {
-    // Rebuild without other query params; only returnTo is meaningful now.
     currentPath = `/events/${eventId}/${params.section}${returnToSuffix}`
   } else {
     currentPath = `/events/${eventId}${returnToSuffix}`

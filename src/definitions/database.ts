@@ -78,7 +78,13 @@ export type IncompleteTouchpointWithEvent = Touchpoint & {
 
 export type Timeblock = InferSelectModel<typeof timeblocks>
 export type NewTimeblock = InferInsertModel<typeof timeblocks>
-export type UpdateTimeblock = Partial<Omit<Timeblock, "id" | "createdAt">>
+/** Allowlisted fields for ordinary timeblock patches from the renderer. */
+export type UpdateTimeblock = {
+  title?: string
+  time?: string | null
+  details?: string | null
+  assignedTo?: string | null
+}
 
 // ============================================================================
 // Food Items

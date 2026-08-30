@@ -22,6 +22,12 @@ export const FoodDetails = () => {
                     <dt className="text-muted-foreground">Assigned to</dt>
                     <dd className="font-medium">{timeblock.assignedTo}</dd>
                 </dl>
+                {timeblock.details ? (
+                    <div className="mb-3 text-sm">
+                        <p className="text-muted-foreground mb-1">Notes</p>
+                        <pre className="font-sans whitespace-pre-wrap">{timeblock.details}</pre>
+                    </div>
+                ) : null}
                 <div className="grid grid-cols-2 gap-2">
                 {timeblock?.foodItems?.map((food) => (
                     <div className="border-1 mt-3 px-2 py-1" key={food.id}>

@@ -1,5 +1,6 @@
-import { useEffect, useMemo } from "react"
-import { ArrowLeftRight, Trash2 } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { Trash2 } from "lucide-react"
+import { useParams } from "react-router"
 
 import { Button } from "~/components/atoms/button"
 import TimeblockHeader from "~/components/organisms/TimeblockHeader"
@@ -7,12 +8,14 @@ import DocumentStyleTextArea from "~/components/molecules/DocumentStyleTextarea"
 import { SECTION_TYPE } from "~/definitions/timeblocks/timeblock-constants"
 import type { UpdateTimeblock } from "~/definitions/database"
 import type { TimeblockType } from "~/definitions/timeblocks/timeblocks-types"
+import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import { useNoteSection } from "~/hooks/useNoteSection"
 import { useSetupInstructionSection } from "~/hooks/useSetupInstrucionSection"
-import { getSectionTypeLabel } from "~/features/event-detail/workspace/lib/navPolicy"
+import TimeblockTypeConvertControl from "./TimeblockTypeConvertControl"
 
 interface NoteEditorWorkspaceProps {
   timeblockId: string
+  timeblock?: TimeblockWithItems | null
   onDeleted: () => void
   onNotFound: () => void
 }
@@ -23,8 +26,6 @@ function getEditorCopy(sectionType: TimeblockType) {
       sectionTitle: "Setup Instruction",
       titlePlaceholder: "e.g. Pavilion Setup, Buffet Setup",
       contentPlaceholder: "What does staff need to know?",
-      toggleLabel: "Convert to Note",
-      toggleTarget: SECTION_TYPE.NOTE as TimeblockType,
     }
   }
 
@@ -32,32 +33,40 @@ function getEditorCopy(sectionType: TimeblockType) {
     sectionTitle: "Note",
     titlePlaceholder: "e.g. Client preferences, day-of reminders",
     contentPlaceholder: "Capture anything else about this event…",
-    toggleLabel: "Convert to Setup Instruction",
-    toggleTarget: SECTION_TYPE.SETUP_INSTRUCTION as TimeblockType,
   }
 }
 
 const NoteEditorWorkspace: React.FC<NoteEditorWorkspaceProps> = ({
   timeblockId,
+  timeblock: providedTimeblock,
   onDeleted,
   onNotFound,
 }) => {
+  const { id: eventId } = useParams()
   const noteQuery = useNoteSection()
   const setupQuery = useSetupInstructionSection()
+  const [draftDetails, setDraftDetails] = useState<string | null>(null)
+  const draftDirtyRef = useRef(false)
 
   const timeblock = useMemo(() => {
+    if (providedTimeblock) return providedTimeblock
     const notes = noteQuery.data ?? []
     const setups = setupQuery.data ?? []
     return notes.find((row) => row.id === timeblockId) ?? setups.find((row) => row.id === timeblockId) ?? null
-  }, [noteQuery.data, setupQuery.data, timeblockId])
+  }, [noteQuery.data, providedTimeblock, setupQuery.data, timeblockId])
 
-  const isLoading = noteQuery.isLoading || setupQuery.isLoading
+  const isLoading = providedTimeblock
+    ? false
+    : noteQuery.isLoading || setupQuery.isLoading
   const updateTimeblock = timeblock?.sectionType === SECTION_TYPE.SETUP_INSTRUCTION
     ? setupQuery.updateTimeblock
     : noteQuery.updateTimeblock
   const removeTimeblock = timeblock?.sectionType === SECTION_TYPE.SETUP_INSTRUCTION
     ? setupQuery.removeTimeblock
     : noteQuery.removeTimeblock
+  const isMutating = timeblock?.sectionType === SECTION_TYPE.SETUP_INSTRUCTION
+    ? Boolean(setupQuery.isMutating)
+    : Boolean(noteQuery.isMutating)
 
   useEffect(() => {
     if (isLoading) return
@@ -65,6 +74,11 @@ const NoteEditorWorkspace: React.FC<NoteEditorWorkspaceProps> = ({
       onNotFound()
     }
   }, [isLoading, onNotFound, timeblock])
+
+  useEffect(() => {
+    draftDirtyRef.current = false
+    setDraftDetails(null)
+  }, [timeblockId, timeblock?.sectionType, timeblock?.updatedAt])
 
   if (isLoading) {
     return (
@@ -83,16 +97,16 @@ const NoteEditorWorkspace: React.FC<NoteEditorWorkspaceProps> = ({
   }
 
   const copy = getEditorCopy(timeblock.sectionType)
+  const detailsValue = draftDetails ?? timeblock.details ?? ""
 
   const handleUpdate = (payload: { id: string; updates: UpdateTimeblock }) => {
     updateTimeblock(payload)
   }
 
-  const handleToggleType = () => {
-    updateTimeblock({
-      id: timeblockId,
-      updates: { sectionType: copy.toggleTarget },
-    })
+  const flushDetailsIfDirty = () => {
+    if (!draftDirtyRef.current || draftDetails === null) return
+    draftDirtyRef.current = false
+    handleUpdate({ id: timeblockId, updates: { details: draftDetails } })
   }
 
   const handleDelete = () => {
@@ -115,17 +129,17 @@ const NoteEditorWorkspace: React.FC<NoteEditorWorkspaceProps> = ({
           titlePlaceholder={copy.titlePlaceholder}
           tail={
             <>
-              <Button
-                type="button"
-                variant="darkSecondary"
-                aria-label={copy.toggleLabel}
-                title={copy.toggleLabel}
-                className="rounded-none h-full m-0 border-r border-stone-600 hover:bg-stone-600 hover:text-orange-400"
-                onClick={handleToggleType}
-              >
-                <ArrowLeftRight className="h-4 w-4" />
-                <span className="sr-only">{getSectionTypeLabel(timeblock.sectionType)}</span>
-              </Button>
+              {eventId ? (
+                <TimeblockTypeConvertControl
+                  eventId={eventId}
+                  timeblockId={timeblockId}
+                  currentType={timeblock.sectionType}
+                  disabled={isMutating}
+                  onConverted={() => {
+                    flushDetailsIfDirty()
+                  }}
+                />
+              ) : null}
               <Button
                 variant="darkSecondary"
                 aria-label={`Delete ${copy.sectionTitle.toLowerCase()}`}
@@ -141,12 +155,15 @@ const NoteEditorWorkspace: React.FC<NoteEditorWorkspaceProps> = ({
 
         <div className="border border-stone-300 flex-1 min-h-0 bg-white">
           <DocumentStyleTextArea
+            key={`${timeblockId}-${timeblock.sectionType}-${timeblock.updatedAt ?? "new"}`}
             className="min-h-[calc(100vh-220px)]"
             placeholderText={copy.contentPlaceholder}
-            content={timeblock.details ?? ""}
-            updateContentSource={(content: string) =>
+            content={detailsValue}
+            updateContentSource={(content: string) => {
+              draftDirtyRef.current = true
+              setDraftDetails(content)
               handleUpdate({ id: timeblockId, updates: { details: content } })
-            }
+            }}
           />
         </div>
       </div>

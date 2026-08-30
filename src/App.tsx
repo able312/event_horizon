@@ -51,6 +51,15 @@ function App() {
         <Route path="/events" element={<EventsRoute />} />
 
         <Route
+          path="events/:id/timeblock/:timeblockId"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <EventDetail />
+            </Suspense>
+          }
+        />
+
+        <Route
           path="events/:id/note/:timeblockId"
           element={
             <Suspense fallback={<RouteFallback />}>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo } from "react"
-import { useNavigate, useParams, useSearchParams } from "react-router"
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router"
 
 import {
   findNodeById,
@@ -8,6 +8,7 @@ import {
   parseEventDetailRoute,
   resolveSelectedNodeId,
   toEventDetailPath,
+  toFocusedTimeblockPath,
   type EventDetailRouteParams,
 } from "../lib/eventDetailRouteState"
 import type { WorkspaceCategoryId, WorkspaceNavModel, WorkspaceNavNode } from "../types"
@@ -21,11 +22,13 @@ export interface UseEventDetailRouteStateReturn {
   selectNode: (nodeId: string) => void
   selectCategory: (categoryId: WorkspaceCategoryId) => void
   navigateToNote: (timeblockId: string) => void
+  navigateToTimeblock: (timeblockId: string) => void
   navigateToOverview: () => void
 }
 
 export function useEventDetailRouteState(navModel: WorkspaceNavModel): UseEventDetailRouteStateReturn {
   const navigate = useNavigate()
+  const location = useLocation()
   const params = useParams<EventDetailRouteParams>()
   const [searchParams] = useSearchParams()
 
@@ -47,19 +50,31 @@ export function useEventDetailRouteState(navModel: WorkspaceNavModel): UseEventD
   )
 
   useEffect(() => {
-    if (!eventId || allNodes.length === 0) return
+    if (!eventId) return
+    // Allow focused routes to stay put while nav is still loading.
+    if (allNodes.length === 0 && !selectedTimeblockId) return
 
     const canonicalPath = getCanonicalEventDetailPath({
       eventId,
       params,
       searchParams,
       navModel,
+      pathname: location.pathname,
     })
 
     if (!canonicalPath) return
 
     navigate(canonicalPath, { replace: true })
-  }, [allNodes.length, eventId, navModel, navigate, params, searchParams])
+  }, [
+    allNodes.length,
+    eventId,
+    location.pathname,
+    navModel,
+    navigate,
+    params,
+    searchParams,
+    selectedTimeblockId,
+  ])
 
   const selectNode = useCallback(
     (nodeId: string) => {
@@ -85,21 +100,15 @@ export function useEventDetailRouteState(navModel: WorkspaceNavModel): UseEventD
     [selectNode],
   )
 
-  const navigateToNote = useCallback(
+  const navigateToTimeblock = useCallback(
     (timeblockId: string) => {
       if (!eventId) return
-      const params = new URLSearchParams()
-      if (routeState.returnTo !== "/events") {
-        params.set("returnTo", routeState.returnTo)
-      }
-      const query = params.toString()
-      const path = query.length > 0
-        ? `/events/${eventId}/note/${timeblockId}?${query}`
-        : `/events/${eventId}/note/${timeblockId}`
-      navigate(path, { replace: true })
+      navigate(toFocusedTimeblockPath(eventId, timeblockId, routeState.returnTo), { replace: true })
     },
     [eventId, navigate, routeState.returnTo],
   )
+
+  const navigateToNote = navigateToTimeblock
 
   const navigateToOverview = useCallback(() => {
     selectCategory("overview")
@@ -114,6 +123,7 @@ export function useEventDetailRouteState(navModel: WorkspaceNavModel): UseEventD
     selectNode,
     selectCategory,
     navigateToNote,
+    navigateToTimeblock,
     navigateToOverview,
   }
 }

@@ -23,15 +23,24 @@ const TimelineBlock: React.FC<TimelineBlocksProps> = ({ timeblock, updateTimeblo
     >
 
       {timeblock.sectionType === SECTION_TYPE.FOOD &&
-        timeblock.foodItems?.map(item => (
-          <GenericDetailsBlock
-            key={"foodItem_" + item.id}
-            blockHeader={ (item.quantity ? item.quantity + " x " : "") + item.name }
-            blockSubtitle={ item.serviceStyle }
-            blockNotes={ item.includes }
-            borderColor='amber'
-          />
-        ))
+        <>
+          {timeblock.details ? (
+            <GenericDetailsBlock
+              key={`food_notes_${timeblock.id}`}
+              blockNotes={timeblock.details}
+              borderColor='amber'
+            />
+          ) : null}
+          {timeblock.foodItems?.map(item => (
+            <GenericDetailsBlock
+              key={"foodItem_" + item.id}
+              blockHeader={ (item.quantity ? item.quantity + " x " : "") + item.name }
+              blockSubtitle={ item.serviceStyle }
+              blockNotes={ item.includes }
+              borderColor='amber'
+            />
+          ))}
+        </>
       }
 
       {timeblock.sectionType === SECTION_TYPE.BEVERAGE && (

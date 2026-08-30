@@ -32,7 +32,7 @@ export function useFoodSection() {
     enabled: !!eventId,
   })
 
-  const { addTimeblock, updateTimeblock, removeTimeblock } = useTimeblockMutations({
+  const { addTimeblock, updateTimeblock, removeTimeblock, isMutating: isTimeblockMutating } = useTimeblockMutations({
     queryKey,
     eventId: eventId!,
     sectionType: "food",
@@ -149,5 +149,13 @@ export function useFoodSection() {
     addItem: addItemMutation.mutate,
     updateItem: updateItemMutation.mutate,
     removeItem: deleteItemMutation.mutate,
+    isMutating:
+      isTimeblockMutating ||
+      addItemMutation.isPending ||
+      updateItemMutation.isPending ||
+      deleteItemMutation.isPending,
+    isUpdatingItem: updateItemMutation.isPending,
+    isAddingItem: addItemMutation.isPending,
+    isRemovingItem: deleteItemMutation.isPending,
   }
 }

@@ -45,7 +45,7 @@ export function useSetupInstructionSection() {
     enabled: !!eventId,
   })
 
-  const { addTimeblock, removeTimeblock, updateTimeblock } = useTimeblockMutations({
+  const { addTimeblock, removeTimeblock, updateTimeblock, isMutating } = useTimeblockMutations({
     queryKey,
     eventId: eventId!,
     sectionType: "setup_instruction",
@@ -60,5 +60,6 @@ export function useSetupInstructionSection() {
     addSetupInstruction,
     removeTimeblock,
     updateTimeblock,
+    isMutating,
   }
 }

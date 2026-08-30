@@ -118,9 +118,20 @@ export function isIndividualNoteSectionType(
   )
 }
 
+/** Timeblock types that open a focused single-record editor from the sidebar. */
+export function isFocusedTimeblockSectionType(
+  sectionType: TimeblockType | undefined,
+): boolean {
+  return (
+    isIndividualNoteSectionType(sectionType) || sectionType === SECTION_TYPE.FOOD
+  )
+}
+
 /**
  * Aggregate category for timeblock section types that open a workspace.
  * Notes/setup return null because they open individual editors.
+ * Food returns "food" for the category icon aggregate workspace; sidebar food
+ * nodes still open focused editors via isFocusedTimeblockSectionType.
  */
 export function getAggregateCategoryIdForSectionType(
   sectionType: TimeblockType | undefined,
@@ -157,8 +168,11 @@ function getCategoryIdForSystemSource(source: string): WorkspaceCategoryId {
 }
 
 export type NavigationTarget =
-  | { kind: "individual-note"; timeblockId: string }
+  | { kind: "focused-timeblock"; timeblockId: string }
   | { kind: "category"; categoryId: WorkspaceCategoryId }
+
+/** @deprecated Use focused-timeblock — kept as a type alias for gradual migration */
+export type LegacyIndividualNoteTarget = { kind: "individual-note"; timeblockId: string }
 
 export function getNavigationTarget(node: WorkspaceNavNode): NavigationTarget {
   if (node.nodeType === "system" && node.sourceRef.kind === "system") {
@@ -177,8 +191,8 @@ export function getNavigationTarget(node: WorkspaceNavNode): NavigationTarget {
   }
 
   if (node.nodeType === "timeblock") {
-    if (isIndividualNoteSectionType(node.sectionType) && node.sourceRef.kind === "timeblock") {
-      return { kind: "individual-note", timeblockId: node.sourceRef.timeblockId }
+    if (isFocusedTimeblockSectionType(node.sectionType) && node.sourceRef.kind === "timeblock") {
+      return { kind: "focused-timeblock", timeblockId: node.sourceRef.timeblockId }
     }
 
     const categoryId = getAggregateCategoryIdForSectionType(node.sectionType)

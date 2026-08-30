@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { MemoryRouter, Route, Routes } from "react-router"
 
 import NoteEditorWorkspace from "./NoteEditorWorkspace"
 import { SECTION_TYPE } from "~/definitions/timeblocks/timeblock-constants"
@@ -19,13 +20,42 @@ vi.mock("~/hooks/useSetupInstrucionSection", () => ({
   useSetupInstructionSection: () => useSetupSectionMock(),
 }))
 
+vi.mock("~/hooks/useTimeblockConversion", () => ({
+  useTimeblockConversion: () => ({
+    inspectConversion: vi.fn(),
+    convertSectionType: vi.fn(),
+    isInspecting: false,
+    isConverting: false,
+    isBusy: false,
+  }),
+}))
+
+function renderNoteEditor(timeblockId = "tb-1") {
+  return render(
+    <MemoryRouter initialEntries={[`/events/event-1/timeblock/${timeblockId}`]}>
+      <Routes>
+        <Route
+          path="/events/:id/timeblock/:timeblockId"
+          element={
+            <NoteEditorWorkspace
+              timeblockId={timeblockId}
+              onDeleted={vi.fn()}
+              onNotFound={vi.fn()}
+            />
+          }
+        />
+      </Routes>
+    </MemoryRouter>,
+  )
+}
+
 describe("NoteEditorWorkspace", () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
   })
 
-  it("renders a note and converts it to a setup instruction", () => {
+  it("renders a note with a type conversion control", () => {
     useNoteSectionMock.mockReturnValue({
       data: [
         {
@@ -48,20 +78,10 @@ describe("NoteEditorWorkspace", () => {
       removeTimeblock: removeSetupMock,
     })
 
-    render(
-      <NoteEditorWorkspace
-        timeblockId="tb-1"
-        onDeleted={vi.fn()}
-        onNotFound={vi.fn()}
-      />,
-    )
+    renderNoteEditor()
 
     expect(screen.getByDisplayValue("Doors")).toBeTruthy()
-    fireEvent.click(screen.getByRole("button", { name: "Convert to Setup Instruction" }))
-    expect(updateNoteMock).toHaveBeenCalledWith({
-      id: "tb-1",
-      updates: { sectionType: SECTION_TYPE.SETUP_INSTRUCTION },
-    })
+    expect(screen.getByRole("button", { name: "Convert timeblock type" })).toBeTruthy()
   })
 
   it("deletes the selected note and notifies the parent", () => {
@@ -93,11 +113,20 @@ describe("NoteEditorWorkspace", () => {
     })
 
     render(
-      <NoteEditorWorkspace
-        timeblockId="tb-1"
-        onDeleted={onDeleted}
-        onNotFound={vi.fn()}
-      />,
+      <MemoryRouter initialEntries={["/events/event-1/timeblock/tb-1"]}>
+        <Routes>
+          <Route
+            path="/events/:id/timeblock/:timeblockId"
+            element={
+              <NoteEditorWorkspace
+                timeblockId="tb-1"
+                onDeleted={onDeleted}
+                onNotFound={vi.fn()}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
     )
 
     fireEvent.click(screen.getByRole("button", { name: "Delete note" }))
@@ -122,11 +151,20 @@ describe("NoteEditorWorkspace", () => {
     })
 
     render(
-      <NoteEditorWorkspace
-        timeblockId="missing"
-        onDeleted={vi.fn()}
-        onNotFound={onNotFound}
-      />,
+      <MemoryRouter initialEntries={["/events/event-1/timeblock/missing"]}>
+        <Routes>
+          <Route
+            path="/events/:id/timeblock/:timeblockId"
+            element={
+              <NoteEditorWorkspace
+                timeblockId="missing"
+                onDeleted={vi.fn()}
+                onNotFound={onNotFound}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
     )
 
     expect(onNotFound).toHaveBeenCalledTimes(1)

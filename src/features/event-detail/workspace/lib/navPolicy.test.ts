@@ -12,6 +12,7 @@ import {
   getNavigationTarget,
   getSectionTypeLabel,
   isIndividualNoteSectionType,
+  isFocusedTimeblockSectionType,
   isWorkspaceCategoryId,
   parseNodeId,
   WORKSPACE_CATEGORIES,
@@ -57,13 +58,15 @@ describe("navPolicy", () => {
     expect(getSectionTypeLabel(SECTION_TYPE.CART_DETAIL)).toBe("Cart Details")
   })
 
-  it("treats notes and setup as individual editors", () => {
+  it("treats notes, setup, and food as focused editors", () => {
     expect(isIndividualNoteSectionType(SECTION_TYPE.NOTE)).toBe(true)
     expect(isIndividualNoteSectionType(SECTION_TYPE.SETUP_INSTRUCTION)).toBe(true)
     expect(isIndividualNoteSectionType(SECTION_TYPE.FOOD)).toBe(false)
+    expect(isFocusedTimeblockSectionType(SECTION_TYPE.FOOD)).toBe(true)
     expect(getAggregateCategoryIdForSectionType(SECTION_TYPE.NOTE)).toBeNull()
     expect(getAggregateCategoryIdForSectionType(SECTION_TYPE.CART_DETAIL)).toBe("tournament")
     expect(getAggregateCategoryIdForSectionType(SECTION_TYPE.VENDOR)).toBe("logistics")
+    expect(getAggregateCategoryIdForSectionType(SECTION_TYPE.FOOD)).toBe("food")
   })
 
   it("routes navigation targets per section and system source", () => {
@@ -71,13 +74,13 @@ describe("navPolicy", () => {
       getNavigationTarget(
         makeTimeblockNode({ timeblockId: "n1", sectionType: SECTION_TYPE.NOTE }),
       ),
-    ).toEqual({ kind: "individual-note", timeblockId: "n1" })
+    ).toEqual({ kind: "focused-timeblock", timeblockId: "n1" })
 
     expect(
       getNavigationTarget(
         makeTimeblockNode({ timeblockId: "f1", sectionType: SECTION_TYPE.FOOD }),
       ),
-    ).toEqual({ kind: "category", categoryId: "food" })
+    ).toEqual({ kind: "focused-timeblock", timeblockId: "f1" })
 
     expect(
       getNavigationTarget(
