@@ -20,6 +20,20 @@ export const registerBeverageItemsIpcHandlers = () => {
     }
   })
 
+  ipcMain.handle(
+    "beverage-items:post-assigned",
+    async (
+      _event,
+      data: NewBeverageItem & { timeblockId: string },
+    ) => {
+      try {
+        return beverageItemQueries.insertAssignedToTimeblock(data)
+      } catch (err) {
+        logAndThrow("Error creating assigned beverage item:", err)
+      }
+    },
+  )
+
   ipcMain.handle("beverage-items:patch", async (_event, id: string, updates: UpdateBeverageItem) => {
     try {
       return beverageItemQueries.update(id, updates)

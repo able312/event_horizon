@@ -10,6 +10,7 @@ function invalidateConversionCaches(queryClient: ReturnType<typeof useQueryClien
   queryClient.invalidateQueries({ queryKey: ["note", eventId] })
   queryClient.invalidateQueries({ queryKey: ["setupInstructions", eventId] })
   queryClient.invalidateQueries({ queryKey: ["foodSection", eventId] })
+  queryClient.invalidateQueries({ queryKey: ["beverageSection", eventId] })
   queryClient.invalidateQueries({ queryKey: ["timeblocks", eventId] })
   queryClient.invalidateQueries({ queryKey: focusedTimeblockQueryKey(timeblockId) })
 }
@@ -37,6 +38,7 @@ export function useTimeblockConversion(eventId: string | undefined) {
           ...(old ?? (result.timeblock as TimeblockWithItems)),
           ...result.timeblock,
           foodItems: result.timeblock.sectionType === "food" ? old?.foodItems ?? [] : [],
+          beverageItems: result.timeblock.sectionType === "beverage" ? old?.beverageItems ?? [] : [],
         }),
       )
 

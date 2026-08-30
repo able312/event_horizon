@@ -1,5 +1,5 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
-import { ChevronDown, Plus, Trash2 } from "lucide-react"
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { ChevronDown, Info, Plus, Trash2 } from "lucide-react"
 
 import type { BeverageItemType, Timeblock, UpdateTimeblock } from "~/definitions/database"
 import type { BeverageItemWithAssignments } from "~/definitions/beverage/beverage-types"
@@ -23,6 +23,7 @@ import {
   SECTION_TABLE_HEAD_CELL_CLASS_RIGHT,
   SECTION_TABLE_HEAD_ROW_CLASS,
 } from "~/components/event-detail/detail-sections/sections/tableStyles"
+import { PlanningTimeblockItemNoteRow } from "./PlanningWorkspaceTimeblocks/PlanningTimeblockItemNoteRow"
 import { getVisibleBeverageTypeSections } from "./beverage/beverageTypeSections"
 import { BeverageTimeblockHeaderTail } from "./beverage/BeverageTimeblockHeaderTail"
 import { BeverageTimeblockNoteRow } from "./beverage/BeverageTimeblockNoteRow"
@@ -58,6 +59,7 @@ const BeverageWorkspaceSection: React.FC = () => {
   } = useBeverageSection()
 
   const [lastChosenType, setLastChosenType] = useState<BeverageItemType>("Beer")
+  const [expandedNoteItemIds, setExpandedNoteItemIds] = useState<ReadonlySet<string>>(() => new Set())
   const pendingFocusItemIdRef = useRef<string | null>(null)
 
   const typeSections = useMemo(
@@ -126,6 +128,15 @@ const BeverageWorkspaceSection: React.FC = () => {
 
     setItemTimeblocks({ itemId: item.id, timeblockIds: nextIds })
   }
+
+  const toggleItemNotes = useCallback((itemId: string) => {
+    setExpandedNoteItemIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(itemId)) next.delete(itemId)
+      else next.add(itemId)
+      return next
+    })
+  }, [])
 
   if (isLoading) {
     return <div className="w-full text-sm text-muted-foreground">Loading...</div>
@@ -204,80 +215,124 @@ const BeverageWorkspaceSection: React.FC = () => {
                           </td>
                         </tr>
                       ) : (
-                        section.items.map((item) => (
-                          <tr key={item.id} className={SECTION_TABLE_BODY_ROW_CLASS} data-beverage-item-id={item.id}>
-                            <td className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-0 align-top`}>
-                              <input
-                                data-cell="item"
-                                type="text"
-                                defaultValue={item.name}
-                                placeholder="Item name"
-                                onBlur={(e) => updateItem({ itemId: item.id, updates: { name: e.target.value } })}
-                                aria-label="Beverage item name"
-                                className="h-7 w-full min-w-0 truncate border-0 border-b border-border bg-transparent px-1 text-xs focus:border-primary focus:outline-none"
-                              />
-                            </td>
-                            <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-top text-right`}>
-                              <input
-                                type="number"
-                                min="0"
-                                defaultValue={item.quantity ?? 0}
-                                onBlur={(e) => updateItem({
-                                  itemId: item.id,
-                                  updates: { quantity: parseQuantity(e.target.value) },
-                                })}
-                                aria-label="Beverage quantity"
-                                className="h-7 w-full border-0 border-b border-border bg-transparent px-1 text-right text-xs focus:border-primary focus:outline-none"
-                              />
-                            </td>
-                            <td className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-0 align-top`}>
-                              <DropdownMenu modal={false}>
-                                <DropdownMenuTrigger asChild>
-                                  <button
-                                    type="button"
-                                    className="inline-flex h-7 w-full min-w-0 items-center justify-between gap-1 rounded-xs border border-border px-2 text-xs text-muted-foreground hover:bg-muted"
-                                  >
-                                    <span className="truncate">
-                                      {item.assignedTimeblockIds.length > 0
-                                        ? `${item.assignedTimeblockIds.length} selected`
-                                        : "Assign timeblocks"}
-                                    </span>
-                                    <ChevronDown size={12} className="shrink-0" />
-                                  </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="min-w-48">
-                                  {timeblocks.length === 0 ? (
-                                    <DropdownMenuItem disabled>No beverage timeblocks yet</DropdownMenuItem>
-                                  ) : (
-                                    timeblocks.map((timeblock) => (
-                                      <DropdownMenuCheckboxItem
-                                        key={timeblock.id}
-                                        checked={item.assignedTimeblockIds.includes(timeblock.id)}
-                                        onCheckedChange={(checked) =>
-                                          toggleTimeblockAssignment(item, timeblock.id, checked === true)
-                                        }
+                        section.items.map((item) => {
+                          const notesExpanded = expandedNoteItemIds.has(item.id)
+                          const hasNotes = Boolean(item.includes?.trim())
+
+                          return (
+                            <React.Fragment key={item.id}>
+                              <tr className={SECTION_TABLE_BODY_ROW_CLASS} data-beverage-item-id={item.id}>
+                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-0 align-top`}>
+                                  <input
+                                    data-cell="item"
+                                    type="text"
+                                    defaultValue={item.name}
+                                    placeholder="Item name"
+                                    onBlur={(e) => updateItem({ itemId: item.id, updates: { name: e.target.value } })}
+                                    aria-label="Beverage item name"
+                                    className="h-7 w-full min-w-0 truncate border-0 border-b border-border bg-transparent px-1 text-xs focus:border-primary focus:outline-none"
+                                  />
+                                </td>
+                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-top text-right`}>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    defaultValue={item.quantity ?? 0}
+                                    onBlur={(e) => updateItem({
+                                      itemId: item.id,
+                                      updates: { quantity: parseQuantity(e.target.value) },
+                                    })}
+                                    aria-label="Beverage quantity"
+                                    className="h-7 w-full border-0 border-b border-border bg-transparent px-1 text-right text-xs focus:border-primary focus:outline-none"
+                                  />
+                                </td>
+                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-0 align-top`}>
+                                  <DropdownMenu modal={false}>
+                                    <DropdownMenuTrigger asChild>
+                                      <button
+                                        type="button"
+                                        className="inline-flex h-7 w-full min-w-0 items-center justify-between gap-1 rounded-xs border border-border px-2 text-xs text-muted-foreground hover:bg-muted"
                                       >
-                                        {timeblock.title || "Untitled timeblock"}
-                                      </DropdownMenuCheckboxItem>
-                                    ))
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </td>
-                            <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-top text-right`}>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeItem({ itemId: item.id })}
-                                aria-label="Remove beverage item"
-                                className="h-8 px-2 text-muted-foreground hover:text-destructive"
-                              >
-                                <Trash2 />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))
+                                        <span className="truncate">
+                                          {item.assignedTimeblockIds.length > 0
+                                            ? `${item.assignedTimeblockIds.length} selected`
+                                            : "Assign timeblocks"}
+                                        </span>
+                                        <ChevronDown size={12} className="shrink-0" />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="min-w-48">
+                                      {timeblocks.length === 0 ? (
+                                        <DropdownMenuItem disabled>No beverage timeblocks yet</DropdownMenuItem>
+                                      ) : (
+                                        timeblocks.map((timeblock) => (
+                                          <DropdownMenuCheckboxItem
+                                            key={timeblock.id}
+                                            checked={item.assignedTimeblockIds.includes(timeblock.id)}
+                                            onCheckedChange={(checked) =>
+                                              toggleTimeblockAssignment(item, timeblock.id, checked === true)
+                                            }
+                                          >
+                                            {timeblock.title || "Untitled timeblock"}
+                                          </DropdownMenuCheckboxItem>
+                                        ))
+                                      )}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </td>
+                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-top text-right`}>
+                                  <div className="inline-flex items-center justify-end">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => toggleItemNotes(item.id)}
+                                      aria-label={notesExpanded ? "Hide item notes" : "Show item notes"}
+                                      aria-pressed={notesExpanded}
+                                      className={`h-8 px-2 ${
+                                        notesExpanded || hasNotes
+                                          ? "text-orange-600 hover:text-orange-700"
+                                          : "text-muted-foreground hover:text-foreground"
+                                      }`}
+                                    >
+                                      <Info />
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => removeItem({ itemId: item.id })}
+                                      aria-label="Remove beverage item"
+                                      className="h-8 px-2 text-muted-foreground hover:text-destructive"
+                                    >
+                                      <Trash2 />
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                              {notesExpanded ? (
+                                <tr className={SECTION_TABLE_BODY_ROW_CLASS}>
+                                  <td colSpan={4} className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-0 align-top`}>
+                                    <PlanningTimeblockItemNoteRow
+                                      key={`${item.id}_notesRow`}
+                                      timeblockID=""
+                                      itemID={item.id}
+                                      note={item.includes ?? ""}
+                                      updateItem={({ itemId, updates }) =>
+                                        updateItem({
+                                          itemId,
+                                          updates: {
+                                            includes: updates.includes ?? null,
+                                          },
+                                        })
+                                      }
+                                    />
+                                  </td>
+                                </tr>
+                              ) : null}
+                            </React.Fragment>
+                          )
+                        })
                       )}
                     </tbody>
                   </table>

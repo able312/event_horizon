@@ -248,6 +248,40 @@ describe("EventWorkspaceBodyRouter", () => {
     expect(screen.getByTestId("food-workspace-section")).toBeTruthy()
   })
 
+  it("renders beverage timeblocks with the focused timeblock workspace", () => {
+    renderRouter({
+      selectedNode: {
+        id: "scheduled:tb-bev",
+        groupId: "scheduled",
+        label: "Cocktail Hour",
+        nodeType: "timeblock",
+        time: "17:00",
+        sectionType: SECTION_TYPE.BEVERAGE,
+        sourceRef: { kind: "timeblock", timeblockId: "tb-bev" },
+      },
+      selectedTimeblockId: "tb-bev",
+    })
+
+    expect(screen.getByTestId("focused-timeblock-workspace")).toBeTruthy()
+    expect(focusedEditorMock).toHaveBeenCalledWith(
+      expect.objectContaining({ timeblockId: "tb-bev" }),
+    )
+  })
+
+  it("still renders the aggregate beverage workspace from the beverage category icon", () => {
+    renderRouter({
+      selectedNode: {
+        id: "category:beverage",
+        groupId: "categories",
+        label: "Beverage",
+        nodeType: "category",
+        sourceRef: { kind: "category", categoryId: "beverage" },
+      },
+    })
+
+    expect(screen.getByTestId("beverage-workspace-section")).toBeTruthy()
+  })
+
   it("renders cart detail timeblocks using the tournament workspace", () => {
     renderRouter({
       selectedNode: {

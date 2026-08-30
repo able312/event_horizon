@@ -3,7 +3,7 @@ import { tmpdir } from "node:os"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { eq } from "drizzle-orm"
 import { v4 as uuidv4 } from "uuid"
-import { events, foodItems, timeblocks } from "../schema.js"
+import { beverageItemTimeblocks, beverageItems, events, foodItems, timeblocks } from "../schema.js"
 import { createTestDb, type TestDb } from "../test/testDb.js"
 import { createTimeblocksRepository } from "./timeblocks.js"
 import { createSqliteConnection } from "../factory.js"
@@ -228,5 +228,150 @@ describe("timeblocks conversion + foreign keys", () => {
 
     const stillFood = testDb.db.select().from(timeblocks).where(eq(timeblocks.id, created.id)).get()
     expect(stillFood?.sectionType).toBe("food")
+  })
+
+  it("refuses destructive beverage conversion without confirmation", async () => {
+    if (!testDb || !repo) throw new Error("Expected test DB to be initialized")
+
+    const eventId = uuidv4()
+    const itemId = uuidv4()
+
+    testDb.db.insert(events).values({
+      id: eventId,
+      title: "Beverage Event",
+      createdAt: new Date().toISOString(),
+    }).run()
+
+    const created = repo.insert({
+      eventId,
+      sectionType: "beverage",
+      title: "Cocktail Hour",
+    })
+
+    testDb.db.insert(beverageItems).values({
+      id: itemId,
+      eventId,
+      name: "House Red",
+      type: "Wine",
+    }).run()
+
+    testDb.db.insert(beverageItemTimeblocks).values({
+      beverageItemId: itemId,
+      timeblockId: created.id,
+    }).run()
+
+    expect(() =>
+      repo!.convertSectionType({
+        timeblockId: created.id,
+        toType: "note",
+      }),
+    ).toThrow(/confirmDestructive=true/)
+
+    const remainingAssignments = testDb.db.select()
+      .from(beverageItemTimeblocks)
+      .where(eq(beverageItemTimeblocks.timeblockId, created.id))
+      .all()
+    expect(remainingAssignments).toHaveLength(1)
+
+    const remainingItems = testDb.db.select().from(beverageItems).where(eq(beverageItems.id, itemId)).all()
+    expect(remainingItems).toHaveLength(1)
+  })
+
+  it("removes beverage assignments but keeps items when converting beverage to note", async () => {
+    if (!testDb || !repo) throw new Error("Expected test DB to be initialized")
+
+    const eventId = uuidv4()
+    const itemId = uuidv4()
+    const otherTimeblockId = uuidv4()
+
+    testDb.db.insert(events).values({
+      id: eventId,
+      title: "Beverage Event",
+      createdAt: new Date().toISOString(),
+    }).run()
+
+    const created = repo.insert({
+      eventId,
+      sectionType: "beverage",
+      title: "Cocktail Hour",
+      details: "Bar overview",
+      time: "17:00",
+    })
+
+    testDb.db.insert(timeblocks).values({
+      id: otherTimeblockId,
+      eventId,
+      title: "Dinner Bar",
+      sectionType: "beverage",
+      createdAt: new Date().toISOString(),
+    }).run()
+
+    testDb.db.insert(beverageItems).values({
+      id: itemId,
+      eventId,
+      name: "House Red",
+      type: "Wine",
+      quantity: 12,
+    }).run()
+
+    testDb.db.insert(beverageItemTimeblocks).values([
+      { beverageItemId: itemId, timeblockId: created.id },
+      { beverageItemId: itemId, timeblockId: otherTimeblockId },
+    ]).run()
+
+    const result = repo.convertSectionType({
+      timeblockId: created.id,
+      toType: "note",
+      confirmDestructive: true,
+    })
+
+    expect(result.timeblock.sectionType).toBe("note")
+    expect(result.timeblock.title).toBe("Cocktail Hour")
+    expect(result.timeblock.details).toBe("Bar overview")
+    expect(result.impact.removedAssignmentCount).toBe(1)
+    expect(result.impact.deletedItemCount).toBe(0)
+
+    const assignmentsForConverted = testDb.db.select()
+      .from(beverageItemTimeblocks)
+      .where(eq(beverageItemTimeblocks.timeblockId, created.id))
+      .all()
+    expect(assignmentsForConverted).toHaveLength(0)
+
+    const remainingItems = testDb.db.select().from(beverageItems).where(eq(beverageItems.id, itemId)).all()
+    expect(remainingItems).toHaveLength(1)
+
+    const otherAssignments = testDb.db.select()
+      .from(beverageItemTimeblocks)
+      .where(eq(beverageItemTimeblocks.timeblockId, otherTimeblockId))
+      .all()
+    expect(otherAssignments).toHaveLength(1)
+  })
+
+  it("converts note to beverage without confirmation", async () => {
+    if (!testDb || !repo) throw new Error("Expected test DB to be initialized")
+
+    const eventId = uuidv4()
+    testDb.db.insert(events).values({
+      id: eventId,
+      title: "Conversion Event",
+      createdAt: new Date().toISOString(),
+    }).run()
+
+    const created = repo.insert({
+      eventId,
+      sectionType: "note",
+      title: "Bar notes",
+      details: "Toast timing",
+      time: "18:00",
+    })
+
+    const result = repo.convertSectionType({
+      timeblockId: created.id,
+      toType: "beverage",
+    })
+
+    expect(result.timeblock.sectionType).toBe("beverage")
+    expect(result.timeblock.title).toBe("Bar notes")
+    expect(result.impact.requiresConfirmation).toBe(false)
   })
 })

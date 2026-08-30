@@ -100,4 +100,48 @@ describe("TimeblockTypeConvertControl", () => {
       })
     })
   })
+
+  it("asks for confirmation before removing beverage assignments", async () => {
+    inspectConversionMock.mockResolvedValue({
+      requiresConfirmation: true,
+      isDestructive: true,
+      toType: SECTION_TYPE.NOTE,
+      summary:
+        "Converting Cocktail Hour to a Note will remove 3 beverage assignments from this timeblock. The beverage menu items will remain available elsewhere in this event.",
+      deletedItemCount: 0,
+      removedAssignmentCount: 3,
+    })
+    convertSectionTypeMock.mockResolvedValue({
+      timeblock: { id: "tb-bev", sectionType: SECTION_TYPE.NOTE },
+      impact: { requiresConfirmation: true },
+    })
+
+    render(
+      <TimeblockTypeConvertControl
+        eventId="event-1"
+        timeblockId="tb-bev"
+        currentType={SECTION_TYPE.BEVERAGE}
+      />,
+    )
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Convert timeblock type" }))
+    fireEvent.click(screen.getByRole("button", { name: "Convert timeblock type" }))
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Convert to Note" }))
+
+    expect(
+      await screen.findByText(
+        "Converting Cocktail Hour to a Note will remove 3 beverage assignments from this timeblock. The beverage menu items will remain available elsewhere in this event.",
+      ),
+    ).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "Convert and delete data" }))
+
+    await waitFor(() => {
+      expect(convertSectionTypeMock).toHaveBeenCalledWith({
+        timeblockId: "tb-bev",
+        toType: SECTION_TYPE.NOTE,
+        confirmDestructive: true,
+      })
+    })
+  })
 })

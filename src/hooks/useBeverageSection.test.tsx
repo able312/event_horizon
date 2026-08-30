@@ -24,6 +24,7 @@ vi.mock("./useTimeblockMutations", () => ({
 vi.mock("~/lib/ipc/beverageItems", () => ({
   getBeverageSectionWithItems: vi.fn(),
   createBeverageItem: vi.fn(),
+  createBeverageItemAssignedToTimeblock: vi.fn(),
   updateBeverageItem: vi.fn(),
   deleteBeverageItem: vi.fn(),
   setBeverageItemTimeblocks: vi.fn(),
@@ -303,6 +304,111 @@ describe("useBeverageSection optimistic cache", () => {
     await waitFor(() => {
       const cached = queryClient.getQueryData<BeverageSectionPayload>(["beverageSection", "event-1"])
       expect(cached).toEqual(initialData)
+    })
+  })
+
+  it("optimistic assigned create inserts with the focused timeblock checked", async () => {
+    const getSectionMock = vi.mocked(beverageItemsIpc.getBeverageSectionWithItems)
+    const createAssignedMock = vi.mocked(beverageItemsIpc.createBeverageItemAssignedToTimeblock)
+
+    const createdItem = {
+      id: "bev-assigned",
+      eventId: "event-1",
+      name: "Prosecco",
+      quantity: null,
+      type: "Wine" as const,
+      serviceStyle: null,
+      includes: null,
+      unitPriceCents: null,
+      assignedTimeblockIds: ["tb-1"],
+    }
+
+    getSectionMock
+      .mockResolvedValueOnce(makeSection())
+      .mockResolvedValue(makeSection({
+        items: [makeSection().items[0], createdItem],
+      }))
+    const deferredCreate = createDeferred<typeof createdItem>()
+    createAssignedMock.mockReturnValue(deferredCreate.promise)
+
+    const { result, queryClient } = renderHookWithProviders(() => useBeverageSection())
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    act(() => {
+      result.current.addItemAssignedToTimeblock({
+        id: "bev-assigned",
+        type: "Wine",
+        timeblockId: "tb-1",
+        newItem: { name: "Prosecco" },
+      })
+    })
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData<BeverageSectionPayload>(["beverageSection", "event-1"])
+      expect(cached?.items.find((item) => item.id === "bev-assigned")?.assignedTimeblockIds).toEqual(["tb-1"])
+    })
+
+    await act(async () => {
+      deferredCreate.resolve(createdItem)
+      await deferredCreate.promise
+    })
+
+    expect(createAssignedMock).toHaveBeenCalledWith(expect.objectContaining({
+      id: "bev-assigned",
+      timeblockId: "tb-1",
+      type: "Wine",
+    }))
+  })
+
+  it("forwards serviceStyle and includes on item update", async () => {
+    const getSectionMock = vi.mocked(beverageItemsIpc.getBeverageSectionWithItems)
+    const updateItemMock = vi.mocked(beverageItemsIpc.updateBeverageItem)
+
+    getSectionMock.mockResolvedValue(makeSection())
+    const deferredUpdate = createDeferred<ReturnType<typeof beverageItemsIpc.updateBeverageItem> extends Promise<infer R> ? R : never>()
+    updateItemMock.mockReturnValue(deferredUpdate.promise)
+
+    const { result, queryClient } = renderHookWithProviders(() => useBeverageSection())
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    act(() => {
+      result.current.updateItem({
+        itemId: "bev-1",
+        updates: {
+          serviceStyle: "Open Bar",
+          includes: "Extra ice",
+          unitPriceCents: 450,
+        },
+      })
+    })
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData<BeverageSectionPayload>(["beverageSection", "event-1"])
+      expect(cached?.items[0]).toEqual(expect.objectContaining({
+        serviceStyle: "Open Bar",
+        includes: "Extra ice",
+        unitPriceCents: 450,
+      }))
+    })
+
+    expect(updateItemMock).toHaveBeenCalledWith("bev-1", expect.objectContaining({
+      serviceStyle: "Open Bar",
+      includes: "Extra ice",
+      unitPriceCents: 450,
+    }))
+
+    await act(async () => {
+      deferredUpdate.resolve({
+        id: "bev-1",
+        eventId: "event-1",
+        name: "Coffee",
+        quantity: 1,
+        type: "Beer",
+        serviceStyle: "Open Bar",
+        includes: "Extra ice",
+        unitPriceCents: 450,
+      })
+      await deferredUpdate.promise
     })
   })
 })

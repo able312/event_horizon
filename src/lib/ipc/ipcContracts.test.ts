@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import * as beverageItemsIpc from "./beverageItems"
 import * as cartDetailsIpc from "./cartDetails"
 import * as eventsIpc from "./ipcEventsQueries"
 import * as timeblocksIpc from "./timeblocks"
@@ -251,6 +252,44 @@ const wrapperCases: WrapperCase[] = [
     channel: "tournament-details:delete",
     args: [recordId],
     invokeWrapper: tournamentDetailsIpc.deleteTournamentDetails as unknown as (...args: unknown[]) => Promise<unknown>,
+  },
+  {
+    name: "beverageItems.getBeverageSectionWithItems",
+    channel: "beverage-items:get-by-event",
+    args: [eventId],
+    invokeWrapper: beverageItemsIpc.getBeverageSectionWithItems as unknown as (...args: unknown[]) => Promise<unknown>,
+  },
+  {
+    name: "beverageItems.createBeverageItem",
+    channel: "beverage-items:post",
+    args: [{ eventId, name: "Lager", type: "Beer" }],
+    invokeWrapper: beverageItemsIpc.createBeverageItem as unknown as (...args: unknown[]) => Promise<unknown>,
+  },
+  {
+    name: "beverageItems.createBeverageItemAssignedToTimeblock",
+    channel: "beverage-items:post-assigned",
+    args: [{ eventId, name: "Lager", type: "Beer", timeblockId }],
+    invokeWrapper: beverageItemsIpc.createBeverageItemAssignedToTimeblock as unknown as (
+      ...args: unknown[]
+    ) => Promise<unknown>,
+  },
+  {
+    name: "beverageItems.updateBeverageItem",
+    channel: "beverage-items:patch",
+    args: [recordId, { name: "Updated Lager", includes: "Chilled" }],
+    invokeWrapper: beverageItemsIpc.updateBeverageItem as unknown as (...args: unknown[]) => Promise<unknown>,
+  },
+  {
+    name: "beverageItems.deleteBeverageItem",
+    channel: "beverage-items:delete",
+    args: [recordId],
+    invokeWrapper: beverageItemsIpc.deleteBeverageItem as unknown as (...args: unknown[]) => Promise<unknown>,
+  },
+  {
+    name: "beverageItems.setBeverageItemTimeblocks",
+    channel: "beverage-items:set-timeblocks",
+    args: [recordId, [timeblockId]],
+    invokeWrapper: beverageItemsIpc.setBeverageItemTimeblocks as unknown as (...args: unknown[]) => Promise<unknown>,
   },
 ]
 

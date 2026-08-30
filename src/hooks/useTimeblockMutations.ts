@@ -120,7 +120,7 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheSha
           return {
             ...old,
             timeblocks: old.timeblocks.map((tb) =>
-              tb.id === context.tempId ? { ...created, beverageItems: tb.beverageItems } : tb,
+              tb.id === context.tempId ? created : tb,
             ),
           }
         })

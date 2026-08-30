@@ -1,4 +1,4 @@
-import type { TimeblockType } from '~/definitions/timeblocks/timeblocks-types'
+import type { TimeblockType } from "./timeblocks-types.js"
 
 type TimeblockTypeMapping = {
   [K in Uppercase<TimeblockType>]: TimeblockType;

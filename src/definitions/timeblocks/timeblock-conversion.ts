@@ -9,6 +9,7 @@ export const CONVERTIBLE_TIMEBLOCK_TYPES = [
   SECTION_TYPE.NOTE,
   SECTION_TYPE.SETUP_INSTRUCTION,
   SECTION_TYPE.FOOD,
+  SECTION_TYPE.BEVERAGE,
 ] as const satisfies readonly TimeblockType[]
 
 export type ConvertibleTimeblockType = (typeof CONVERTIBLE_TIMEBLOCK_TYPES)[number]
@@ -19,6 +20,7 @@ export type ConversionLossField =
   | "prices"
   | "service_styles"
   | "item_notes"
+  | "beverage_assignments"
 
 export type ConversionImpact = {
   fromType: TimeblockType
@@ -28,6 +30,7 @@ export type ConversionImpact = {
   isDestructive: boolean
   requiresConfirmation: boolean
   deletedItemCount: number
+  removedAssignmentCount: number
   lostFields: ConversionLossField[]
   summary: string
 }
@@ -66,27 +69,46 @@ export function assertConvertibleTimeblockType(value: string): ConvertibleTimebl
  * Data-driven cleanup/impact rules keyed by leaving a specialized source type.
  * Add entries here as more specialized types become convertible.
  */
+type SourceCleanupContext = {
+  foodItemCount: number
+  beverageAssignmentCount: number
+}
+
 type SourceCleanupRule = {
-  countItems: (ctx: { foodItemCount: number }) => number
-  lostFields: (ctx: { foodItemCount: number }) => ConversionLossField[]
+  countDeletedItems: (ctx: SourceCleanupContext) => number
+  countRemovedAssignments: (ctx: SourceCleanupContext) => number
+  lostFields: (ctx: SourceCleanupContext) => ConversionLossField[]
   buildSummary: (params: {
     title: string
-    itemCount: number
+    deletedItemCount: number
+    removedAssignmentCount: number
     toType: TimeblockType
   }) => string
 }
 
 const SOURCE_CLEANUP_RULES: Partial<Record<TimeblockType, SourceCleanupRule>> = {
   food: {
-    countItems: ({ foodItemCount }) => foodItemCount,
+    countDeletedItems: ({ foodItemCount }) => foodItemCount,
+    countRemovedAssignments: () => 0,
     lostFields: ({ foodItemCount }) =>
       foodItemCount > 0
         ? ["food_items", "quantities", "prices", "service_styles", "item_notes"]
         : [],
-    buildSummary: ({ title, itemCount, toType }) => {
+    buildSummary: ({ title, deletedItemCount, toType }) => {
       const destinationLabel = getConversionTypeLabel(toType)
       const displayTitle = title.trim() || "Untitled"
-      return `Converting ${displayTitle} to a ${destinationLabel} will permanently delete ${itemCount} food item${itemCount === 1 ? "" : "s"}, including quantities, prices, service styles, and item notes.`
+      return `Converting ${displayTitle} to a ${destinationLabel} will permanently delete ${deletedItemCount} food item${deletedItemCount === 1 ? "" : "s"}, including quantities, prices, service styles, and item notes.`
+    },
+  },
+  beverage: {
+    countDeletedItems: () => 0,
+    countRemovedAssignments: ({ beverageAssignmentCount }) => beverageAssignmentCount,
+    lostFields: ({ beverageAssignmentCount }) =>
+      beverageAssignmentCount > 0 ? ["beverage_assignments"] : [],
+    buildSummary: ({ title, removedAssignmentCount, toType }) => {
+      const destinationLabel = getConversionTypeLabel(toType)
+      const displayTitle = title.trim() || "Untitled"
+      return `Converting ${displayTitle} to a ${destinationLabel} will remove ${removedAssignmentCount} beverage assignment${removedAssignmentCount === 1 ? "" : "s"} from this timeblock. The beverage menu items will remain available elsewhere in this event.`
     },
   },
 }
@@ -114,8 +136,16 @@ export function buildConversionImpact(params: {
   fromType: TimeblockType
   toType: TimeblockType
   foodItemCount: number
+  beverageAssignmentCount?: number
 }): ConversionImpact {
-  const { timeblockId, title, fromType, toType, foodItemCount } = params
+  const {
+    timeblockId,
+    title,
+    fromType,
+    toType,
+    foodItemCount,
+    beverageAssignmentCount = 0,
+  } = params
 
   if (fromType === toType) {
     throw new Error(`Timeblock is already type ${toType}`)
@@ -124,10 +154,12 @@ export function buildConversionImpact(params: {
   assertConvertibleTimeblockType(fromType)
   assertConvertibleTimeblockType(toType)
 
+  const ctx: SourceCleanupContext = { foodItemCount, beverageAssignmentCount }
   const rule = SOURCE_CLEANUP_RULES[fromType]
-  const deletedItemCount = rule?.countItems({ foodItemCount }) ?? 0
-  const lostFields = rule?.lostFields({ foodItemCount }) ?? []
-  const isDestructive = deletedItemCount > 0 || lostFields.length > 0
+  const deletedItemCount = rule?.countDeletedItems(ctx) ?? 0
+  const removedAssignmentCount = rule?.countRemovedAssignments(ctx) ?? 0
+  const lostFields = rule?.lostFields(ctx) ?? []
+  const isDestructive = deletedItemCount > 0 || removedAssignmentCount > 0 || lostFields.length > 0
 
   return {
     fromType,
@@ -137,9 +169,10 @@ export function buildConversionImpact(params: {
     isDestructive,
     requiresConfirmation: isDestructive,
     deletedItemCount,
+    removedAssignmentCount,
     lostFields,
     summary: isDestructive && rule
-      ? rule.buildSummary({ title, itemCount: deletedItemCount, toType })
+      ? rule.buildSummary({ title, deletedItemCount, removedAssignmentCount, toType })
       : `Convert ${title.trim() || "Untitled"} to ${getConversionTypeLabel(toType)}.`,
   }
 }

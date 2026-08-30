@@ -84,9 +84,10 @@ export function getWorkspaceCategoryDefinition(
 export function getAvailableWorkspaceCategories(
   eventType: string | undefined,
 ): WorkspaceCategoryDefinition[] {
-  return WORKSPACE_CATEGORIES.filter(
-    (category) => !category.tournamentOnly || eventType === "tournament",
-  )
+  return WORKSPACE_CATEGORIES.filter((category) => {
+    const definition = category as WorkspaceCategoryDefinition
+    return !definition.tournamentOnly || eventType === "tournament"
+  })
 }
 
 export function getSectionTypeLabel(sectionType: TimeblockType | undefined): string {
@@ -123,15 +124,17 @@ export function isFocusedTimeblockSectionType(
   sectionType: TimeblockType | undefined,
 ): boolean {
   return (
-    isIndividualNoteSectionType(sectionType) || sectionType === SECTION_TYPE.FOOD
+    isIndividualNoteSectionType(sectionType) ||
+    sectionType === SECTION_TYPE.FOOD ||
+    sectionType === SECTION_TYPE.BEVERAGE
   )
 }
 
 /**
  * Aggregate category for timeblock section types that open a workspace.
  * Notes/setup return null because they open individual editors.
- * Food returns "food" for the category icon aggregate workspace; sidebar food
- * nodes still open focused editors via isFocusedTimeblockSectionType.
+ * Food/beverage return their category for the icon-menu aggregate workspace;
+ * sidebar food/beverage nodes still open focused editors via isFocusedTimeblockSectionType.
  */
 export function getAggregateCategoryIdForSectionType(
   sectionType: TimeblockType | undefined,

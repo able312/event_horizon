@@ -49,6 +49,54 @@ export function createBeverageItemsRepository(database: AppDatabase) {
       }).returning().get()!
     },
 
+    /**
+     * Atomically create a beverage item and assign it to a beverage timeblock.
+     * Returns the item with its initial assignment list.
+     */
+    insertAssignedToTimeblock: (data: NewBeverageItem & { timeblockId: string }): BeverageItemWithAssignments => {
+      if (!data.eventId) throw new Error("insertAssignedToTimeblock: eventId is required")
+      if (!data.type) throw new Error("insertAssignedToTimeblock: type is required")
+      if (!data.timeblockId) throw new Error("insertAssignedToTimeblock: timeblockId is required")
+
+      const timeblock = database.select()
+        .from(timeblocks)
+        .where(and(
+          eq(timeblocks.id, data.timeblockId),
+          eq(timeblocks.eventId, data.eventId),
+          eq(timeblocks.sectionType, "beverage"),
+        ))
+        .get()
+
+      if (!timeblock) {
+        throw new Error("insertAssignedToTimeblock: timeblock is invalid for this event")
+      }
+
+      const id = data.id?.trim() ? data.id : uuidv4()
+
+      return database.transaction((tx) => {
+        const created = tx.insert(beverageItems).values({
+          id,
+          eventId: data.eventId,
+          name: data.name,
+          quantity: data.quantity ?? null,
+          type: data.type,
+          serviceStyle: data.serviceStyle ?? null,
+          includes: data.includes ?? null,
+          unitPriceCents: data.unitPriceCents ?? null,
+        }).returning().get()!
+
+        tx.insert(beverageItemTimeblocks).values({
+          beverageItemId: created.id,
+          timeblockId: data.timeblockId,
+        }).run()
+
+        return {
+          ...created,
+          assignedTimeblockIds: [data.timeblockId],
+        }
+      })
+    },
+
     update: (id: string, updates: UpdateBeverageItem) => {
       if (!id) throw new Error("updateBeverageItem: ID is required")
       if (Object.keys(updates).length === 0) {

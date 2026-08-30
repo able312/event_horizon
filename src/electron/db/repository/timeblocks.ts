@@ -1,6 +1,6 @@
 import { db } from "../index.js"
 import type { AppDatabase } from "../factory.js"
-import { events, foodItems, timeblocks, tournamentDetails, cartDetails } from "../schema.js"
+import { beverageItemTimeblocks, events, foodItems, timeblocks, tournamentDetails, cartDetails } from "../schema.js"
 import { and, eq } from "drizzle-orm"
 import { v4 as uuidv4 } from "uuid"
 
@@ -224,12 +224,19 @@ export function createTimeblocksRepository(database: AppDatabase) {
       assertConvertibleTimeblockType(current.sectionType)
       assertConvertibleTimeblockType(input.toType)
 
+      const beverageAssignmentCount = database.select()
+        .from(beverageItemTimeblocks)
+        .where(eq(beverageItemTimeblocks.timeblockId, current.id))
+        .all()
+        .length
+
       return buildConversionImpact({
         timeblockId: current.id,
         title: current.title,
         fromType: current.sectionType,
         toType: input.toType,
         foodItemCount: current.foodItems?.length ?? 0,
+        beverageAssignmentCount,
       })
     },
 
@@ -248,12 +255,19 @@ export function createTimeblocksRepository(database: AppDatabase) {
           .all()
           .length
 
+        const beverageAssignmentCount = tx.select()
+          .from(beverageItemTimeblocks)
+          .where(eq(beverageItemTimeblocks.timeblockId, current.id))
+          .all()
+          .length
+
         const impact = buildConversionImpact({
           timeblockId: current.id,
           title: current.title,
           fromType: current.sectionType,
           toType: input.toType,
           foodItemCount,
+          beverageAssignmentCount,
         })
 
         if (impact.requiresConfirmation && !input.confirmDestructive) {
@@ -264,6 +278,12 @@ export function createTimeblocksRepository(database: AppDatabase) {
 
         if (current.sectionType === "food" && input.toType !== "food") {
           tx.delete(foodItems).where(eq(foodItems.timeblockId, current.id)).run()
+        }
+
+        if (current.sectionType === "beverage" && input.toType !== "beverage") {
+          tx.delete(beverageItemTimeblocks)
+            .where(eq(beverageItemTimeblocks.timeblockId, current.id))
+            .run()
         }
 
         const detailsForTarget =

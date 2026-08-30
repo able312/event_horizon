@@ -180,4 +180,94 @@ describe("beverage item repository integration", () => {
     const section = await repo.getByEventId(eventId)
     expect(section.items[0]?.assignedTimeblockIds).toEqual([])
   })
+
+  it("atomically creates an item already assigned to a beverage timeblock", async () => {
+    if (!testDb) throw new Error("Expected test DB to be initialized")
+
+    const { createBeverageItemsRepository } = await import("./beverageItems.js")
+    const repo = createBeverageItemsRepository(testDb.db)
+
+    const eventId = uuidv4()
+    const timeblockId = uuidv4()
+    const clientId = uuidv4()
+
+    testDb.db.insert(events).values({
+      id: eventId,
+      title: "Assigned Create Event",
+      createdAt: new Date().toISOString(),
+    }).run()
+
+    testDb.db.insert(timeblocks).values({
+      id: timeblockId,
+      eventId,
+      title: "Cocktail Hour",
+      time: "17:00",
+      sectionType: "beverage",
+      createdAt: new Date().toISOString(),
+    }).run()
+
+    const created = repo.insertAssignedToTimeblock({
+      id: clientId,
+      eventId,
+      name: "Prosecco",
+      type: "Wine",
+      timeblockId,
+      quantity: 8,
+      serviceStyle: "Open Bar",
+      includes: "Chilled",
+      unitPriceCents: 1800,
+    })
+
+    expect(created).toEqual(expect.objectContaining({
+      id: clientId,
+      eventId,
+      name: "Prosecco",
+      type: "Wine",
+      assignedTimeblockIds: [timeblockId],
+    }))
+
+    const section = await repo.getByEventId(eventId)
+    expect(section.items).toEqual([
+      expect.objectContaining({
+        id: clientId,
+        assignedTimeblockIds: [timeblockId],
+      }),
+    ])
+  })
+
+  it("rejects assigned create when the timeblock is not a beverage block for the event", async () => {
+    if (!testDb) throw new Error("Expected test DB to be initialized")
+
+    const { createBeverageItemsRepository } = await import("./beverageItems.js")
+    const repo = createBeverageItemsRepository(testDb.db)
+
+    const eventId = uuidv4()
+    const foodTimeblockId = uuidv4()
+
+    testDb.db.insert(events).values({
+      id: eventId,
+      title: "Invalid Assign Event",
+      createdAt: new Date().toISOString(),
+    }).run()
+
+    testDb.db.insert(timeblocks).values({
+      id: foodTimeblockId,
+      eventId,
+      title: "Dinner",
+      sectionType: "food",
+      createdAt: new Date().toISOString(),
+    }).run()
+
+    expect(() =>
+      repo.insertAssignedToTimeblock({
+        eventId,
+        name: "Beer",
+        type: "Beer",
+        timeblockId: foodTimeblockId,
+      }),
+    ).toThrow(/timeblock is invalid/)
+
+    const remainingItems = testDb.db.select().from(beverageItems).where(eq(beverageItems.eventId, eventId)).all()
+    expect(remainingItems).toHaveLength(0)
+  })
 })

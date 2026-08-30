@@ -6,6 +6,7 @@ import { isConvertibleTimeblockType } from "~/definitions/timeblocks/timeblock-c
 import { useFocusedTimeblock } from "~/hooks/useFocusedTimeblock"
 import NoteEditorWorkspace from "~/features/event-detail/sections/setup-notes-workspaces/NoteEditorWorkspace"
 import FoodEditorWorkspace from "~/features/event-detail/sections/food-beverage-workspaces/FoodEditorWorkspace"
+import BeverageEditorWorkspace from "~/features/event-detail/sections/food-beverage-workspaces/BeverageEditorWorkspace"
 
 interface FocusedTimeblockWorkspaceProps {
   timeblockId: string
@@ -74,6 +75,16 @@ const FocusedTimeblockWorkspace: React.FC<FocusedTimeblockWorkspaceProps> = ({
     return (
       <FoodEditorWorkspace
         key={`${timeblock.id}-food-${timeblock.updatedAt ?? "new"}`}
+        timeblock={timeblock}
+        onDeleted={onDeleted}
+      />
+    )
+  }
+
+  if (timeblock.sectionType === SECTION_TYPE.BEVERAGE) {
+    return (
+      <BeverageEditorWorkspace
+        key={`${timeblock.id}-beverage-${timeblock.updatedAt ?? "new"}`}
         timeblock={timeblock}
         onDeleted={onDeleted}
       />
