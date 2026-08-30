@@ -167,7 +167,10 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheSha
       const type = data?.sectionType ?? sectionType
       const updates = variables.updates
       const shouldRefreshTimeline =
-        updates.time !== undefined || updates.title !== undefined || updates.assignedTo !== undefined
+        updates.time !== undefined ||
+        updates.title !== undefined ||
+        updates.assignedTo !== undefined ||
+        updates.details !== undefined
 
       queryClient.invalidateQueries({ queryKey })
       queryClient.invalidateQueries({ queryKey: [type, eventId] })

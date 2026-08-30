@@ -287,4 +287,32 @@ describe("useTimeblockMutations", () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["foodSection", "event-1"] })
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
   })
+
+  it("invalidates the timeline after a details (overview note) update", async () => {
+    vi.mocked(timeblocksIpc.updateTimeblock).mockResolvedValue(
+      makeCreatedTimeblock({ details: "Served buffet style", sectionType: "food" })
+    )
+
+    const { result, queryClient } = renderHookWithProviders(() =>
+      useTimeblockMutations({
+        queryKey: ["foodSection", "event-1"],
+        eventId: "event-1",
+        sectionType: "food",
+      })
+    )
+
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
+
+    act(() => {
+      result.current.updateTimeblock({
+        id: "tb-1",
+        updates: { details: "Served buffet style" },
+      })
+    })
+
+    await waitFor(() => expect(timeblocksIpc.updateTimeblock).toHaveBeenCalledTimes(1))
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["foodSection", "event-1"] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
+  })
 })
