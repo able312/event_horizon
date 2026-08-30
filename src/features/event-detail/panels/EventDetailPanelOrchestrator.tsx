@@ -65,8 +65,8 @@ const EventDetailPanelOrchestrator: React.FC<EventDetailPanelOrchestratorProps> 
   return (
     <>
       <Panel.Header>
-        <div className="flex w-full items-center gap-2 min-w-0">
-          <div className="relative flex-1 min-w-0">
+        <div className="flex w-full items-center justify-end gap-2 min-w-0">
+          <div className="relative flex-1 min-w-0 max-w-50">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400" />
             <input
               ref={searchInputRef}
