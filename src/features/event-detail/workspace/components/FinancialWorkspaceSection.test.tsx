@@ -117,6 +117,6 @@ describe("FinancialWorkspaceSection", () => {
     expect(onSelectWorkspaceNode).toHaveBeenCalledWith("category:beverage")
 
     screen.getByRole("button", { name: "Payments Table" }).click()
-    expect(navigateMock).toHaveBeenCalledWith("/preview/financial-report/event-1")
+    expect(navigateMock).toHaveBeenCalledWith("/preview/event-1?type=financial-report")
   })
 })

@@ -3,11 +3,18 @@ import { matchPath, useLocation } from "react-router"
 import type { GenerateMenuContext } from "~/definitions/ipc"
 
 function getGenerateMenuContext(pathname: string): GenerateMenuContext {
-  const match = matchPath({ path: "/events/:id/*", end: false }, pathname)
-  const eventId = match?.params.id ?? null
+  const eventDetailMatch = matchPath({ path: "/events/:id/*", end: false }, pathname)
+  const eventIdFromDetail = eventDetailMatch?.params.id ?? null
 
-  if (eventId) {
-    return { view: "event-details", eventId }
+  if (eventIdFromDetail) {
+    return { view: "event-details", eventId: eventIdFromDetail }
+  }
+
+  const previewMatch = matchPath({ path: "/preview/:id", end: false }, pathname)
+  const eventIdFromPreview = previewMatch?.params.id ?? null
+
+  if (eventIdFromPreview) {
+    return { view: "event-details", eventId: eventIdFromPreview }
   }
 
   return { view: "other", eventId: null }

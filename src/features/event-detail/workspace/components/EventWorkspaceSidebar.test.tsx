@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
+import { createRef } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import EventWorkspaceSidebar from "./EventWorkspaceSidebar"
@@ -11,6 +12,8 @@ const baseProps = {
   onSelectNode: vi.fn(),
   onSelectCategory: vi.fn(),
   searchQuery: "",
+  searchInputRef: createRef<HTMLInputElement>(),
+  onSearchQueryChange: vi.fn(),
 }
 
 describe("EventWorkspaceSidebar", () => {
@@ -138,6 +141,22 @@ describe("EventWorkspaceSidebar", () => {
     expect(within(scrollRegion).getByText("No unscheduled matches")).toBeTruthy()
     expect(within(bottomRegion).queryByRole("button", { name: "Tournament" })).toBeNull()
     expect(within(bottomRegion).getByRole("button", { name: "Overview" })).toBeTruthy()
+  })
+
+  it("renders the search field in the scroll region", () => {
+    render(
+      <EventWorkspaceSidebar
+        {...baseProps}
+        navModel={{
+          scheduled: [],
+          unscheduled: [],
+          categories: [],
+        }}
+      />,
+    )
+
+    const scrollRegion = screen.getByTestId("event-workspace-sidebar-scroll-region")
+    expect(within(scrollRegion).getByRole("searchbox", { name: "Search timeline nodes" })).toBeTruthy()
   })
 
   it("marks the selected note with aria-current via timeblock id", () => {

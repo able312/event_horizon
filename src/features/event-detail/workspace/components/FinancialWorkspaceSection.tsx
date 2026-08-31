@@ -8,6 +8,7 @@ import { useFoodSection } from "~/hooks/useFoodSection"
 import { useMenuOfChargeItemsSection } from "~/hooks/useMenuOfChargeSection"
 import { usePaymentsSection } from "~/hooks/usePaymentsSection"
 import { HST_RATE, GRATUITY_RATE, computeFinancialSummaryAllSources, toCurrency } from "~/features/event-detail/workspace/lib/financial"
+import { buildPreviewPath } from "~/features/preview/lib/previewTypes"
 
 interface FinancialWorkspaceSectionProps {
   eventId: string
@@ -36,7 +37,7 @@ const FinancialWorkspaceSection: React.FC<FinancialWorkspaceSectionProps> = ({ e
 
   const handleGenerateEstimate = () => {
     if (!eventId) return
-    navigate(`/preview/financial-report/${eventId}`)
+    navigate(buildPreviewPath(eventId, "financial-report"))
   }
 
   return (

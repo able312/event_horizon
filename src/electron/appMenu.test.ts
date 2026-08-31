@@ -203,10 +203,10 @@ describe("appMenu Generate visibility", () => {
     foodBeoItem.click({} as never, win as never, {} as never)
     financialItem.click({} as never, win as never, {} as never)
 
-    expect(win.webContents.send).toHaveBeenNthCalledWith(1, "navigate", "/preview/timeline/evt_1")
-    expect(win.webContents.send).toHaveBeenNthCalledWith(2, "navigate", "/preview/beo/evt_1")
-    expect(win.webContents.send).toHaveBeenNthCalledWith(3, "navigate", "/preview/beo-food/evt_1")
-    expect(win.webContents.send).toHaveBeenNthCalledWith(4, "navigate", "/preview/financial-report/evt_1")
+    expect(win.webContents.send).toHaveBeenNthCalledWith(1, "navigate", "/preview/evt_1?type=timeline")
+    expect(win.webContents.send).toHaveBeenNthCalledWith(2, "navigate", "/preview/evt_1?type=beo")
+    expect(win.webContents.send).toHaveBeenNthCalledWith(3, "navigate", "/preview/evt_1?type=beo-food")
+    expect(win.webContents.send).toHaveBeenNthCalledWith(4, "navigate", "/preview/evt_1?type=financial-report")
   })
 
   it("keeps Generate when focused window is null but last active window is event-details", async () => {

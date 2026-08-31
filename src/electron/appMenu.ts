@@ -25,10 +25,10 @@ function toGenerateMenuContext(value: unknown): GenerateMenuContext {
   return { view, eventId }
 }
 
-function navigateToPreview(browserWindow: BrowserWindow, pathPrefix: string) {
+function navigateToPreview(browserWindow: BrowserWindow, previewType: string) {
   const state = windowState.get(browserWindow.id)
   if (!state?.eventId) return
-  browserWindow.webContents.send("navigate", `${pathPrefix}/${state.eventId}`)
+  browserWindow.webContents.send("navigate", `/preview/${state.eventId}?type=${previewType}`)
 }
 
 ipcMain.on("generate:active", async (event, data) => {
@@ -138,28 +138,28 @@ export function rebuildAppMenu(targetWindowId?: number) {
               label: "Generate Timeline",
               click: (_menuItem, browserWindow) => {
                 if (!browserWindow || !(browserWindow instanceof BrowserWindow)) return
-                navigateToPreview(browserWindow, "/preview/timeline")
+                navigateToPreview(browserWindow, "timeline")
               },
             },
             {
               label: "Generate BEO",
               click: (_menuItem, browserWindow) => {
                 if (!browserWindow || !(browserWindow instanceof BrowserWindow)) return
-                navigateToPreview(browserWindow, "/preview/beo")
+                navigateToPreview(browserWindow, "beo")
               },
             },
             {
               label: "Generate Food BEO",
               click: (_menuItem, browserWindow) => {
                 if (!browserWindow || !(browserWindow instanceof BrowserWindow)) return
-                navigateToPreview(browserWindow, "/preview/beo-food")
+                navigateToPreview(browserWindow, "beo-food")
               },
             },
             {
               label: "Generate Financial Report",
               click: (_menuItem, browserWindow) => {
                 if (!browserWindow || !(browserWindow instanceof BrowserWindow)) return
-                navigateToPreview(browserWindow, "/preview/financial-report")
+                navigateToPreview(browserWindow, "financial-report")
               },
             },
           ],

@@ -11,19 +11,7 @@ import { useIpcNavigation } from './hooks/useIpcNavigation'
 import { useGenerateMenuState } from './hooks/useGenerateMenuState'
 
 const EventDetail = lazy(() => import('~/routes/EventDetail'))
-const PreviewLayout = lazy(() => import('./components/layouts/PreviewLayout'))
-const TimelinePreview = lazy(() => import('./routes/previews/TimelinePreview'))
-const EventOverviewPreview = lazy(() =>
-  import('./routes/previews/beo/EventOverviewPreview').then((module) => ({
-    default: module.EventOverviewPreview,
-  })),
-)
-const FoodOnlyPreview = lazy(() =>
-  import('./routes/previews/beo/FoodOnlyPreview').then((module) => ({
-    default: module.FoodOnlyPreview,
-  })),
-)
-const FinancialPreview = lazy(() => import('./routes/previews/FinancialPreview'))
+const Preview = lazy(() => import('~/routes/Preview'))
 const NotFound = lazy(() =>
   import('./routes/NotFound').then((module) => ({
     default: module.NotFound,
@@ -78,46 +66,13 @@ function App() {
         />
 
         <Route
-          path="/preview"
+          path="/preview/:id"
           element={
             <Suspense fallback={<RouteFallback />}>
-              <PreviewLayout />
+              <Preview />
             </Suspense>
           }
-        >
-          <Route
-            path="timeline/:id"
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <TimelinePreview />
-              </Suspense>
-            }
-          />
-          <Route
-            path="beo/:id"
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <EventOverviewPreview />
-              </Suspense>
-            }
-          />
-          <Route
-            path="beo-food/:id"
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <FoodOnlyPreview />
-              </Suspense>
-            }
-          />
-          <Route
-            path="financial-report/:id"
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <FinancialPreview />
-              </Suspense>
-            }
-          />
-        </Route>
+        />
 
         <Route
           path="*"

@@ -1,10 +1,12 @@
-import { Plus, Search } from "lucide-react"
+import { FileText, Plus } from "lucide-react"
 import { useCallback, useRef, useState } from "react"
+import { useNavigate, useParams } from "react-router"
 
 import { Panel } from "~/components/layouts/SplitLayout"
 import { Button } from "~/components/atoms/button"
 import { useHotkey } from "~/lib/hotKeys"
 import { useNoteSection } from "~/hooks/useNoteSection"
+import { buildPreviewPath } from "~/features/preview/lib/previewTypes"
 import EventWorkspaceSidebar from "../workspace/components/EventWorkspaceSidebar"
 import { useWorkspaceNavFilter } from "../workspace/hooks/useWorkspaceNavFilter"
 import type { WorkspaceCategoryId, WorkspaceNavModel } from "../workspace/types"
@@ -32,6 +34,8 @@ const EventDetailPanelOrchestrator: React.FC<EventDetailPanelOrchestratorProps> 
   onNavigateToNote,
   onNavigateToOverview,
 }) => {
+  const navigate = useNavigate()
+  const { id: eventId } = useParams()
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const { addNoteAsync, isCreating } = useNoteSection()
@@ -65,19 +69,21 @@ const EventDetailPanelOrchestrator: React.FC<EventDetailPanelOrchestratorProps> 
   return (
     <>
       <Panel.Header>
-        <div className="flex w-full items-center justify-end gap-2 min-w-0">
-          <div className="relative flex-1 min-w-0 max-w-50">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400" />
-            <input
-              ref={searchInputRef}
-              type="search"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search…"
-              aria-label="Search timeline nodes"
-              className="h-7 w-full rounded-full border border-white/15 bg-white/5 py-1 pl-8 pr-3 text-xs text-stone-100 placeholder:text-stone-400 focus:border-white/30 focus:outline-none"
-            />
-          </div>
+        <div className="flex w-full min-w-0 items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Open preview workspace"
+            disabled={!eventId}
+            onClick={() => {
+              if (!eventId) return
+              navigate(buildPreviewPath(eventId))
+            }}
+            className="shrink-0 text-stone-300 hover:text-stone-100"
+          >
+            <FileText className="h-5 w-5" />
+          </Button>
           <Button
             type="button"
             variant="ghost"
@@ -108,6 +114,8 @@ const EventDetailPanelOrchestrator: React.FC<EventDetailPanelOrchestratorProps> 
           onSelectNode={onSelectNode}
           onSelectCategory={onSelectCategory}
           searchQuery={searchQuery}
+          searchInputRef={searchInputRef}
+          onSearchQueryChange={setSearchQuery}
         />
       </Panel.Content>
     </>
