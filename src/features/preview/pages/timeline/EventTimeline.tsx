@@ -1,16 +1,9 @@
 import { useTimeline } from "~/hooks/useTimeline"
 import TimelineBlock from "./TimelineBlock"
-
+import { sortTimelineTimeblocks } from "./sortTimelineTimeblocks"
 
 const EventTimeline = () => {
-
-  const {
-    data: allTimeblocks,
-    isLoading,
-    updateTimeblock,
-  } = useTimeline()
-
-
+  const { data: allTimeblocks, isLoading } = useTimeline()
 
   if (isLoading) {
     return <div className="w-full">Loading...</div>
@@ -18,19 +11,7 @@ const EventTimeline = () => {
 
   if (!allTimeblocks) return null
 
-  const renderableTimeblocks = allTimeblocks.filter(
-    (timeblock) => typeof timeblock.time === "string" && timeblock.time.trim().length > 0,
-  )
-
-  const sortedTimeblocks = [...renderableTimeblocks].sort((a, b) => {
-    const timeCompare = a.time!.localeCompare(b.time!)
-    if (timeCompare !== 0) return timeCompare
-
-    const titleCompare = a.title.localeCompare(b.title)
-    if (titleCompare !== 0) return titleCompare
-
-    return a.id.localeCompare(b.id)
-  })
+  const sortedTimeblocks = sortTimelineTimeblocks(allTimeblocks)
 
   if (sortedTimeblocks.length === 0) {
     return (
@@ -42,17 +23,12 @@ const EventTimeline = () => {
     )
   }
 
-
   return (
     <div className="space-y-3 print:bg-white">
       <h4 className="font-medium text-sm mb-3">Event Timeline</h4>
       <div className="print:bg-white">
         {sortedTimeblocks.map((timeblock) => (
-          <TimelineBlock
-            key={timeblock.id}
-            timeblock={timeblock}
-            updateTimeblock={updateTimeblock}
-          />
+          <TimelineBlock key={timeblock.id} timeblock={timeblock} />
         ))}
       </div>
     </div>

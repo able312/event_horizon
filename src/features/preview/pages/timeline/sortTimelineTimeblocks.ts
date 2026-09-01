@@ -2,11 +2,13 @@ import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-typ
 
 type TimeblockWithStringTime = TimeblockWithItems & { time: string }
 
-function hasNonBlankTime(timeblock: TimeblockWithItems): timeblock is TimeblockWithStringTime {
+function hasNonBlankTime<T extends TimeblockWithItems>(
+  timeblock: T,
+): timeblock is T & TimeblockWithStringTime {
   return typeof timeblock.time === "string" && timeblock.time.trim().length > 0
 }
 
-export function sortTimelineTimeblocks(timeblocks: TimeblockWithItems[]): TimeblockWithItems[] {
+export function sortTimelineTimeblocks<T extends TimeblockWithItems>(timeblocks: T[]): T[] {
   return [...timeblocks]
     .filter(hasNonBlankTime)
     .sort((a, b) => {

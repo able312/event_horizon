@@ -120,14 +120,17 @@ Background/context gathering for this effort was done in a prior chat session. S
 
 ### Phase 4 — Timeline Preview Rendering
 
-**Status:** Not started
+**Status:** Complete
 
 **Scope:**
 - Replace `parseBlock`/`GenericDetailsBlock` custom parsing in `TimelineBlock.tsx` with the shared renderer.
 - Decide whether the print/preview timeline should use read-only blocks instead of the current editable workspace components (`TimelineBlock` currently has editable time inputs).
 
 **Notes for next phase:**
-- _(fill in during/after implementation)_
+- Timeline renderer now lives under `src/features/preview/pages/timeline/` (moved out of `src/components/event-detail/.../timeline/`). Legacy editable `<input type="time">` + `updateTimeblock` plumbing removed; all rows render time as read-only text.
+- `parseBlock` removed. Markdown-capable fields use `<PreviewMarkdownContent>`: `timeblocks.details` (food/beverage/vendor/setup/note/tournament) and `cartDetails.whatGoesOnCarts`. Plain-only fields stay `<pre>`: food-item `includes`, beverage item-name lists.
+- Sorting uses `sortTimelineTimeblocks` (moved with the renderer). `useTimeline()` still provides query data; mutations remain for event-detail workspace via `useEventWorkspaceData`, not preview.
+- Phase 5 timeline prefs should treat the preview as always read-only (no editability toggle). Remaining timeline options: show internal notes, include system rows.
 
 ---
 
@@ -139,7 +142,7 @@ Background/context gathering for this effort was done in a prior chat session. S
 - Wire sidebar controls (from Phase 1 shell) to actual section/content toggles per preview type:
   - Full BEO: show contact info, toggle individual sections, tournament sections auto-hidden for non-tournament events.
   - Food BEO: show contact info, show internal notes.
-  - Timeline: show internal notes, include system rows, read-only vs editable.
+  - Timeline: show internal notes, include system rows (preview is always read-only after Phase 4).
   - Financial: show payments table, show gratuity line, category visibility.
 - Decide state scope: session-only (URL params/React context) vs persisted (would require schema change — currently a non-goal).
 
@@ -180,6 +183,7 @@ Track unresolved questions here. Move resolved items to "Decisions Log" with the
 - **2026-08-31 — Legacy migration:** Synth tournament string fixed in repository code to `# Details`. One-time heading-swap script removed after review (non-idempotent; cannot distinguish legacy from new syntax).
 - **2026-08-31 — Preview editability:** Previews are read-only display output; no editing in preview mode.
 - **2026-08-31 — Preview preferences:** Session-only (Phase 5); no DB persistence this iteration.
+- **2026-09-01 — Timeline preview ownership:** Legacy timeline components under event-detail were preview-only; relocated to `src/features/preview/pages/timeline/` and made fully read-only (no time inputs / mutations).
 
 ---
 
@@ -192,3 +196,4 @@ Append a brief entry each session so future agents know what happened and why, e
 - **2026-08-31** — Phase 2 complete: shared markdown module at `src/lib/markdown/` (parser, renderer). Field classification documented for Phase 3/4. No preview render call sites changed yet.
 - **2026-08-31** — Phase 3 complete: BEO preview sections use `PreviewMarkdownContent` for markdown-capable fields; plain-only fields (`food.includes`, `event.internalNotes`) remain `<pre>`. Legacy migration skipped by choice. Manual visual check pending from user.
 - **2026-08-31** — Phase 2 follow-up: removed legacy migration util/script; fixed parser to line-scan mid-block headings/hr/lists; tightened inline emphasis rules; renderer uses `useMemo` + semantic heading tags.
+- **2026-09-01** — Phase 4 complete: timeline renderer moved to `src/features/preview/pages/timeline/`, made fully read-only, `parseBlock` replaced with shared markdown for capable fields; plain-only item notes unchanged. Focused tests + lint + build passed.

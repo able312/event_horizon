@@ -50,7 +50,6 @@ describe("EventTimeline", () => {
     mockUseTimeline.mockReturnValue({
       data: undefined,
       isLoading: true,
-      updateTimeblock: vi.fn(),
     })
 
     render(<EventTimeline />)
@@ -65,7 +64,6 @@ describe("EventTimeline", () => {
         makeTimeblock({ id: "spaces", title: "Spaces", time: "   " }),
       ],
       isLoading: false,
-      updateTimeblock: vi.fn(),
     })
 
     render(<EventTimeline />)
@@ -83,7 +81,6 @@ describe("EventTimeline", () => {
         makeTimeblock({ id: "b", time: "10:00", title: "Ceremony" }),
       ],
       isLoading: false,
-      updateTimeblock: vi.fn(),
     })
 
     render(<EventTimeline />)
