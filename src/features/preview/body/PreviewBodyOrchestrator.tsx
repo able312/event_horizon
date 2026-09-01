@@ -68,7 +68,7 @@ const PreviewBodyOrchestrator: React.FC = () => {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-neutral-300 print:bg-white">
-      <div className="print:hidden sticky top-0 z-10 flex items-center justify-between border-b border-neutral-200 bg-white px-6 py-1 shadow-sm">
+      <div className="print:hidden z-10 flex shrink-0 items-center justify-between border-b border-neutral-200 bg-white px-6 py-1 shadow-sm">
         <Button
           variant="ghost"
           size="sm"
@@ -99,7 +99,11 @@ const PreviewBodyOrchestrator: React.FC = () => {
         </div>
       </div>
 
-      <div className="print:contents flex flex-1 items-start justify-center py-10 print:p-0">
+      {/*
+        SplitLayout root is h-screen + overflow-hidden, so the stage must be the
+        scroll viewport. print:contents keeps this wrapper out of the print box tree.
+      */}
+      <div className="print:contents flex min-h-0 flex-1 items-start justify-center overflow-y-auto py-10 print:p-0">
         <div
           className="
             relative min-h-[1056px] w-[816px] bg-white
