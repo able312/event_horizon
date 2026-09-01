@@ -410,7 +410,7 @@ export function createTimeblocksRepository(database: AppDatabase) {
           time: rawTournamentDetails.time,
           sectionType: "tournament_detail",
           assignedTo: `Lead Carts: ${rawTournamentDetails.leadCarts ?? "Not Specified"}`,
-          details: `## Details\n${rawTournamentDetails.numberOfPlayers} Players\n${rawTournamentDetails.playFormat ?? ""}\n\n${rawTournamentDetails.notes ?? ""}`,
+          details: `# Details\n${rawTournamentDetails.numberOfPlayers} Players\n${rawTournamentDetails.playFormat ?? ""}\n\n${rawTournamentDetails.notes ?? ""}`,
           timelineMeta: {
             source: "tournament_start",
             isSystem: true,

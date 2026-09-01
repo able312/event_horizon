@@ -69,7 +69,7 @@ const EventDetailPanelOrchestrator: React.FC<EventDetailPanelOrchestratorProps> 
   return (
     <>
       <Panel.Header>
-        <div className="flex w-full min-w-0 items-center justify-end gap-2">
+        <div className="flex w-full min-w-0 items-center justify-end gap-0">
           <Button
             type="button"
             variant="ghost"
