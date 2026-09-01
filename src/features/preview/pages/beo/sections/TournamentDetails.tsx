@@ -1,4 +1,5 @@
 import { useTournamentDetailsSection } from "~/hooks/useTournamentDetailsSection"
+import { PreviewMarkdownContent } from "~/lib/markdown/PreviewMarkdownContent"
 
 export const TournamentDetails = () => {
     const { data: details } = useTournamentDetailsSection()
@@ -32,7 +33,7 @@ export const TournamentDetails = () => {
             {details?.notes && (
             <div className="mt-3 pt-3 border-t text-sm">
                 <p className="text-muted-foreground mb-1">Notes</p>
-                <pre className="font-sans whitespace-pre-wrap">{details.notes}</pre>
+                <PreviewMarkdownContent source={details.notes} />
             </div>
             )}
         </div>

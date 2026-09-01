@@ -1,4 +1,5 @@
 import { useVendorSection } from "~/hooks/useVendorSection"
+import { PreviewMarkdownContent } from "~/lib/markdown/PreviewMarkdownContent"
 
 export const VendorDetails = () => {
     
@@ -40,7 +41,7 @@ export const VendorDetails = () => {
                 {vendor.details && (
                     <div className="text-sm pb-4">
                         <p className="text-muted-foreground mb-1">Notes</p>
-                        <pre className="font-sans whitespace-pre-wrap">{vendor.details}</pre>
+                        <PreviewMarkdownContent source={vendor.details} />
                     </div>
                 )}    
 

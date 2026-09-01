@@ -1,5 +1,6 @@
 import React from 'react'
 import { useCartDetailsSection } from "~/hooks/useCartDetailsSection"
+import { PreviewMarkdownContent } from "~/lib/markdown/PreviewMarkdownContent"
 
 export const CartDetails = () => {
     const { data: details } = useCartDetailsSection()
@@ -31,7 +32,7 @@ export const CartDetails = () => {
             {details?.whatGoesOnCarts && (
               <div className="mt-3 pt-3 border-t text-sm">
                     <p className="text-muted-foreground mb-1">Goes on carts</p>
-                    <pre className="font-sans whitespace-pre-wrap">{details.whatGoesOnCarts}</pre>
+                    <PreviewMarkdownContent source={details.whatGoesOnCarts} />
                 </div>
             )}
 

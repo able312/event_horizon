@@ -1,4 +1,5 @@
 import { useFoodSection } from "~/hooks/useFoodSection"
+import { PreviewMarkdownContent } from "~/lib/markdown/PreviewMarkdownContent"
 
 export const FoodDetails = () => {
     
@@ -25,7 +26,7 @@ export const FoodDetails = () => {
                 {timeblock.details ? (
                     <div className="mb-3 text-sm">
                         <p className="text-muted-foreground mb-1">Notes</p>
-                        <pre className="font-sans whitespace-pre-wrap">{timeblock.details}</pre>
+                        <PreviewMarkdownContent source={timeblock.details} />
                     </div>
                 ) : null}
                 <div className="grid grid-cols-2 gap-2">

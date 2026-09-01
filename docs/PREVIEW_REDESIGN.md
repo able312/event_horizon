@@ -83,29 +83,38 @@ Background/context gathering for this effort was done in a prior chat session. S
 - Module lives at `src/lib/markdown/`:
   - `previewMarkdown.ts` — `parsePreviewMarkdown()` + `parseInlines()`
   - `PreviewMarkdownContent.tsx` — read-only renderer (`<PreviewMarkdownContent source={...} />`)
-  - `legacyMarkdownMigration.ts` — `migrateLegacyHeadingSyntax()` for one-time DB migration
-  - `previewMarkdown.test.ts` — parser + migration unit tests
+  - `previewMarkdown.test.ts` — parser unit tests
 - **Supported subset:** `#`/`##` headings, `**bold**`, `*italic*`, `***bold+italic***`, `---`/`***` hr, `* `/`- ` unordered lists, `1. ` ordered lists. No tables/images/links/quotes/code.
-- **Heading scale:** print-appropriate, subtle hierarchy (h1: `text-sm font-bold uppercase`; h2: `text-xs font-bold`). One universal scale for all preview types for now.
-- **Parser compat:** a heading line followed by body lines without a blank line (legacy `parseBlock` pattern) is split into heading + paragraph blocks automatically.
+- **Heading scale:** print-appropriate, subtle hierarchy (h1: `text-sm font-bold uppercase`; h2: `text-xs font-bold`). One universal scale for all preview types for now. Rendered as `<h3>`/`<h4>` with those classes.
+- **Parser:** line-scans within blank-line-separated blocks so headings, hr, and list runs are recognized mid-block (e.g. `Items:\n* a\n* b`). Heading-then-body without a blank line still splits into heading + paragraph. Emphasis markers require non-space open/close (CommonMark-style). `###+` treated as plain text. `\r\n` normalized.
 - **Field classification for Phase 3/4 rollout:**
   - **Markdown-capable:** `timeblocks.details`, `tournament_details.notes`, `cart_details.whatGoesOnCarts`
   - **Plain paragraph only (keep `<pre>`):** `food_items.includes`, `beverage_items.includes`, `menu_of_charge_items.includes`, `payments.notes`, `events.clientNotes`, `events.internalNotes`
-- **Legacy migration:** tournament synth string in `timeblocks.ts` updated to `# Details\n...`. One-time script: `scripts/migrate-legacy-timeblock-markdown.ts` (dry-run by default, `--write` to persist). **Run once only** — back up DB first. Scoped to `timeblocks.details` only.
-- **No render call sites changed yet** — BEO/Timeline still use `<pre>` / `parseBlock`. Phase 3 replaces BEO; Phase 4 replaces Timeline.
+- **Legacy migration:** tournament synth string in `timeblocks.ts` updated to `# Details\n...`. The one-time swap script/`legacyMarkdownMigration.ts` was **removed** — it was not idempotent and could not distinguish legacy from new headings, so it would corrupt post-fix tournament rows. Phase 3 confirmed no meaningful legacy heading content in the DB.
+- **No render call sites changed in Phase 2** — BEO/Timeline still used `<pre>` / `parseBlock` until Phase 3/4.
 
 ---
 
 ### Phase 3 — Roll Out Shared Rendering to BEO Sections
 
-**Status:** Not started
+**Status:** Complete
 
 **Scope:**
 - Replace `<pre className="whitespace-pre-wrap">` usages in `src/routes/previews/beo/sections/*` and `EventOverviewHeader.tsx` with the shared renderer from Phase 2.
 - Confirm visual output for all free-text fields listed in "Current State Snapshot."
 
 **Notes for next phase:**
-- _(fill in during/after implementation)_
+- BEO sections now live under `src/features/preview/pages/beo/` (not the old `src/routes/previews/...` path from the original scope wording).
+- Markdown-capable fields swapped to `<PreviewMarkdownContent source={...} />`:
+  - `timeblocks.details` in FoodDetails, BeverageDetails, SetupInstructionDetails, NoteDetails, VendorDetails
+  - `tournament_details.notes` in TournamentDetails
+  - `cart_details.whatGoesOnCarts` in CartDetails
+- Plain-only fields left as `<pre>` (intentionally):
+  - `food_items.includes` in FoodDetails
+  - `events.internalNotes` in EventOverviewHeader
+- Legacy migration tooling removed (not run; no meaningful legacy heading content in the DB).
+- Visual confirmation left to manual app check by the user.
+- Phase 4 should replace `parseBlock` / `GenericDetailsBlock` in Timeline preview with the same shared renderer.
 
 ---
 
@@ -159,7 +168,7 @@ Track unresolved questions here. Move resolved items to "Decisions Log" with the
 
 - [x] **Routing shape:** single route `/preview/:eventId?type=beo` — implemented in Phase 1.
 - [x] **Markdown subset:** `#`/`##` headings, bold/italic/bold+italic, hr (`---`/`***`), unordered (`* `/`- `) and ordered lists. No tables/images/links/quotes/code.
-- [x] **Legacy syntax migration:** one-time data migration script for `timeblocks.details` (swap old `## `↔`# ` meaning); tournament synth string fixed in code. Run migration once with DB backup.
+- [x] **Legacy syntax migration:** tournament synth string fixed in code to new `# Details` syntax. Planned one-time swap script removed — not idempotent and indistinguishable from new headings (would corrupt new rows).
 - [x] **Markdown library vs hand-rolled parser:** hand-rolled in `src/lib/markdown/` — zero new dependencies, full control over print-appropriate heading scale.
 - [x] **Preview preferences persistence:** session-only for Phase 5 (React context). Planned prefs: contact-info visibility, internal-notes visibility, tournament-section auto-hide, timeline include-system-rows, financial payments/gratuity/category toggles. No schema change.
 - [x] **Timeline preview editability:** read-only in preview/print output (Phase 4).
@@ -168,7 +177,7 @@ Track unresolved questions here. Move resolved items to "Decisions Log" with the
 
 - **2026-08-31 — Routing shape:** Single route `/preview/:id?type=<slug>`, default `beo`. Rationale: shell mounts once, type switching is a query-param change without remounting workspace chrome.
 - **2026-08-31 — Markdown subset:** Hand-rolled parser supporting headings, inline styles, lists, hr. Sub-item notes and event-level notes stay plain text.
-- **2026-08-31 — Legacy migration:** One-time script swaps inverted `#`/`##` prefixes in `timeblocks.details`; synth tournament string fixed in repository code.
+- **2026-08-31 — Legacy migration:** Synth tournament string fixed in repository code to `# Details`. One-time heading-swap script removed after review (non-idempotent; cannot distinguish legacy from new syntax).
 - **2026-08-31 — Preview editability:** Previews are read-only display output; no editing in preview mode.
 - **2026-08-31 — Preview preferences:** Session-only (Phase 5); no DB persistence this iteration.
 
@@ -180,4 +189,6 @@ Append a brief entry each session so future agents know what happened and why, e
 
 - **2026-08-31** — Initial context-gathering completed (routes, hooks, DB tables per preview type, existing `parseBlock` syntax audited). This tracking doc created. No implementation started yet.
 - **2026-08-31** — Phase 1 complete: `PreviewWorkspace` shell with sidebar type switching, preview pages moved to `src/features/preview/pages/`, thin `src/routes/Preview.tsx` route, Generate menu + Event Detail preview entry updated, search moved in event sidebar.
-- **2026-08-31** — Phase 2 complete: shared markdown module at `src/lib/markdown/` (parser, renderer, legacy migration util + script). Field classification documented for Phase 3/4. No preview render call sites changed yet.
+- **2026-08-31** — Phase 2 complete: shared markdown module at `src/lib/markdown/` (parser, renderer). Field classification documented for Phase 3/4. No preview render call sites changed yet.
+- **2026-08-31** — Phase 3 complete: BEO preview sections use `PreviewMarkdownContent` for markdown-capable fields; plain-only fields (`food.includes`, `event.internalNotes`) remain `<pre>`. Legacy migration skipped by choice. Manual visual check pending from user.
+- **2026-08-31** — Phase 2 follow-up: removed legacy migration util/script; fixed parser to line-scan mid-block headings/hr/lists; tightened inline emphasis rules; renderer uses `useMemo` + semantic heading tags.

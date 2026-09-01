@@ -6,6 +6,7 @@ import {
   formatBeverageItemLine,
   getVisibleBeverageTypeSections,
 } from "~/features/event-detail/sections/food-beverage-workspaces/beverage/beverageTypeSections"
+import { PreviewMarkdownContent } from "~/lib/markdown/PreviewMarkdownContent"
 
 export const BeverageDetails = () => {
   const { timeblocks, items } = useBeverageSection()
@@ -53,7 +54,7 @@ export const BeverageDetails = () => {
             {timeblock.details ? (
               <div className="mt-3 text-sm">
                 <p className="text-muted-foreground mb-1">Notes</p>
-                <pre className="font-sans whitespace-pre-wrap">{timeblock.details}</pre>
+                <PreviewMarkdownContent source={timeblock.details} />
               </div>
             ) : null}
 

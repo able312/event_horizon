@@ -1,3 +1,5 @@
+import { useMemo } from "react"
+
 import type { InlineSpan, PreviewMarkdownBlock } from "./previewMarkdown"
 import { parsePreviewMarkdown } from "./previewMarkdown"
 
@@ -6,7 +8,7 @@ type PreviewMarkdownContentProps = {
 }
 
 export function PreviewMarkdownContent({ source }: PreviewMarkdownContentProps) {
-  const blocks = parsePreviewMarkdown(source)
+  const blocks = useMemo(() => parsePreviewMarkdown(source), [source])
 
   if (blocks.length === 0) {
     return null
@@ -30,16 +32,16 @@ function PreviewMarkdownBlockView({ block }: PreviewMarkdownBlockViewProps) {
     case "heading":
       if (block.level === 1) {
         return (
-          <p className="text-sm font-bold uppercase tracking-wide text-stone-800 mt-2 mb-1">
+          <h3 className="text-sm font-bold uppercase tracking-wide text-stone-800 mt-2 mb-1">
             <InlineSpans spans={block.inlines} />
-          </p>
+          </h3>
         )
       }
 
       return (
-        <p className="text-xs font-bold text-stone-600 mt-2 mb-1">
+        <h4 className="text-xs font-bold text-stone-600 mt-2 mb-1">
           <InlineSpans spans={block.inlines} />
-        </p>
+        </h4>
       )
 
     case "paragraph":

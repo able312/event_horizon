@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest"
 
-import {
-  hasLegacyHeadingSyntax,
-  migrateLegacyHeadingSyntax,
-} from "./legacyMarkdownMigration"
 import { parseInlines, parsePreviewMarkdown } from "./previewMarkdown"
 
 describe("parsePreviewMarkdown", () => {
@@ -26,6 +22,15 @@ describe("parsePreviewMarkdown", () => {
         type: "heading",
         level: 2,
         inlines: [{ text: "Subtitle" }],
+      },
+    ])
+  })
+
+  it("treats ###+ headings as plain paragraph text", () => {
+    expect(parsePreviewMarkdown("### Section")).toEqual([
+      {
+        type: "paragraph",
+        lines: [[{ text: "### Section" }]],
       },
     ])
   })
@@ -165,6 +170,54 @@ describe("parsePreviewMarkdown", () => {
     ])
   })
 
+  it("parses a label then list without a blank line", () => {
+    expect(parsePreviewMarkdown("Items:\n* First\n* Second")).toEqual([
+      {
+        type: "paragraph",
+        lines: [[{ text: "Items:" }]],
+      },
+      {
+        type: "list",
+        ordered: false,
+        items: [
+          [{ text: "First" }],
+          [{ text: "Second" }],
+        ],
+      },
+    ])
+  })
+
+  it("parses a mid-block horizontal rule", () => {
+    expect(parsePreviewMarkdown("Before\n---\nAfter")).toEqual([
+      {
+        type: "paragraph",
+        lines: [[{ text: "Before" }]],
+      },
+      { type: "hr" },
+      {
+        type: "paragraph",
+        lines: [[{ text: "After" }]],
+      },
+    ])
+  })
+
+  it("normalizes CRLF line endings", () => {
+    expect(parsePreviewMarkdown("# Title\r\n\r\nLine one\r\nLine two")).toEqual([
+      {
+        type: "heading",
+        level: 1,
+        inlines: [{ text: "Title" }],
+      },
+      {
+        type: "paragraph",
+        lines: [
+          [{ text: "Line one" }],
+          [{ text: "Line two" }],
+        ],
+      },
+    ])
+  })
+
   it("treats plain text as a paragraph", () => {
     expect(parsePreviewMarkdown("Just a note.")).toEqual([
       {
@@ -190,19 +243,21 @@ describe("parseInlines", () => {
       { text: "unclosed" },
     ])
   })
-})
 
-describe("migrateLegacyHeadingSyntax", () => {
-  it("swaps legacy heading prefixes", () => {
-    const legacy = "## Details\n# Setup Notes\nPlain line"
-    expect(migrateLegacyHeadingSyntax(legacy)).toBe(
-      "# Details\n## Setup Notes\nPlain line",
-    )
+  it("does not italicize spaced asterisk prose", () => {
+    expect(parseInlines("Par 3 * closest to pin * longest drive")).toEqual([
+      { text: "Par 3 " },
+      { text: "*" },
+      { text: " closest to pin " },
+      { text: "*" },
+      { text: " longest drive" },
+    ])
   })
 
-  it("detects legacy heading syntax", () => {
-    expect(hasLegacyHeadingSyntax("## Details")).toBe(true)
-    expect(hasLegacyHeadingSyntax("# Details")).toBe(true)
-    expect(hasLegacyHeadingSyntax("Plain text")).toBe(false)
+  it("skips empty emphasis from ****", () => {
+    expect(parseInlines("****")).toEqual([
+      { text: "**" },
+      { text: "**" },
+    ])
   })
 })

@@ -1,4 +1,5 @@
 import { useNoteSection } from "~/hooks/useNoteSection"
+import { PreviewMarkdownContent } from "~/lib/markdown/PreviewMarkdownContent"
 
 export const NoteDetails = () => {
     
@@ -24,7 +25,7 @@ export const NoteDetails = () => {
 
                 {timeblock.details && (
                     <div className="mt-3 pt-3 border-t text-sm">
-                        <pre className="font-sans whitespace-pre-wrap">{timeblock.details}</pre>
+                        <PreviewMarkdownContent source={timeblock.details} />
                     </div>
                 )}
             </div>

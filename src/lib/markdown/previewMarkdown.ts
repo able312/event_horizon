@@ -17,11 +17,13 @@ const ORDERED_LIST = /^\d+\. (.+)$/
 const HORIZONTAL_RULE = /^(?:---|\*\*\*)$/
 
 export function parsePreviewMarkdown(source: string): PreviewMarkdownBlock[] {
-  if (!source.trim()) {
+  const normalized = source.replace(/\r\n/g, "\n")
+
+  if (!normalized.trim()) {
     return []
   }
 
-  const rawBlocks = source.split(/\n{2,}/)
+  const rawBlocks = normalized.split(/\n{2,}/)
   const blocks: PreviewMarkdownBlock[] = []
 
   for (const rawBlock of rawBlocks) {
@@ -38,41 +40,69 @@ function parseBlock(rawBlock: string): PreviewMarkdownBlock[] {
   }
 
   const lines = trimmed.split("\n")
+  const blocks: PreviewMarkdownBlock[] = []
+  let paragraphLines: string[] = []
+  let listBuffer: string[] = []
 
-  if (lines.length === 1) {
-    if (HORIZONTAL_RULE.test(lines[0] ?? "")) {
-      return [{ type: "hr" }]
+  const flushParagraph = () => {
+    if (paragraphLines.length === 0) {
+      return
     }
 
-    const heading = parseHeadingLine(lines[0] ?? "")
+    blocks.push({
+      type: "paragraph",
+      lines: paragraphLines.map((line) => parseInlines(line)),
+    })
+    paragraphLines = []
+  }
+
+  const flushList = () => {
+    if (listBuffer.length === 0) {
+      return
+    }
+
+    blocks.push(parseListBlock(listBuffer))
+    listBuffer = []
+  }
+
+  for (const line of lines) {
+    if (HORIZONTAL_RULE.test(line)) {
+      flushParagraph()
+      flushList()
+      blocks.push({ type: "hr" })
+      continue
+    }
+
+    const heading = parseHeadingLine(line)
     if (heading) {
-      return [heading]
+      flushParagraph()
+      flushList()
+      blocks.push(heading)
+      continue
     }
-  }
 
-  if (lines.length > 1) {
-    const firstHeading = parseHeadingLine(lines[0] ?? "")
-    if (firstHeading) {
-      const remainder = lines.slice(1).join("\n").trim()
-      if (!remainder) {
-        return [firstHeading]
-      }
-
-      return [firstHeading, ...parseBlock(remainder)]
+    if (isListLine(line)) {
+      flushParagraph()
+      listBuffer.push(line)
+      continue
     }
+
+    flushList()
+    paragraphLines.push(line)
   }
 
-  if (isListBlock(lines)) {
-    return [parseListBlock(lines)]
-  }
+  flushParagraph()
+  flushList()
 
-  return [{
-    type: "paragraph",
-    lines: lines.map((line) => parseInlines(line)),
-  }]
+  return blocks
 }
 
 function parseHeadingLine(line: string): PreviewMarkdownBlock | null {
+  // Treat ###+ as plain text so ### Section is not h2 with a leading "# ".
+  if (/^#{3,}/.test(line)) {
+    return null
+  }
+
   const level2Match = line.match(HEADING_LEVEL_2)
   if (level2Match) {
     return {
@@ -94,8 +124,8 @@ function parseHeadingLine(line: string): PreviewMarkdownBlock | null {
   return null
 }
 
-function isListBlock(lines: string[]): boolean {
-  return lines.every((line) => UNORDERED_LIST.test(line) || ORDERED_LIST.test(line))
+function isListLine(line: string): boolean {
+  return UNORDERED_LIST.test(line) || ORDERED_LIST.test(line)
 }
 
 function parseListBlock(lines: string[]): PreviewMarkdownBlock {
@@ -115,33 +145,74 @@ function parseListBlock(lines: string[]): PreviewMarkdownBlock {
   return { type: "list", ordered, items }
 }
 
+function isNonSpace(char: string | undefined): boolean {
+  return char !== undefined && char !== " " && char !== "\t"
+}
+
+function findClosingMarker(
+  text: string,
+  openIndex: number,
+  marker: string,
+): number {
+  const contentStart = openIndex + marker.length
+  let searchFrom = contentStart
+
+  while (searchFrom < text.length) {
+    const end = text.indexOf(marker, searchFrom)
+    if (end === -1) {
+      return -1
+    }
+
+    // Empty emphasis (e.g. ****) — skip; do not treat as a match.
+    if (end === contentStart) {
+      searchFrom = end + marker.length
+      continue
+    }
+
+    const charBeforeClose = text[end - 1]
+    if (isNonSpace(charBeforeClose)) {
+      return end
+    }
+
+    searchFrom = end + marker.length
+  }
+
+  return -1
+}
+
 export function parseInlines(text: string): InlineSpan[] {
   const spans: InlineSpan[] = []
   let index = 0
 
   while (index < text.length) {
     if (text.startsWith("***", index)) {
-      const end = text.indexOf("***", index + 3)
-      if (end !== -1) {
-        spans.push({
-          text: text.slice(index + 3, end),
-          bold: true,
-          italic: true,
-        })
-        index = end + 3
-        continue
+      if (isNonSpace(text[index + 3])) {
+        const end = findClosingMarker(text, index, "***")
+        if (end !== -1) {
+          spans.push({
+            text: text.slice(index + 3, end),
+            bold: true,
+            italic: true,
+          })
+          index = end + 3
+          continue
+        }
       }
+
+      // Cannot open *** (or unmatched) — fall through to ** / * handling.
     }
 
     if (text.startsWith("**", index)) {
-      const end = text.indexOf("**", index + 2)
-      if (end !== -1) {
-        spans.push({
-          text: text.slice(index + 2, end),
-          bold: true,
-        })
-        index = end + 2
-        continue
+      if (isNonSpace(text[index + 2])) {
+        const end = findClosingMarker(text, index, "**")
+        if (end !== -1) {
+          spans.push({
+            text: text.slice(index + 2, end),
+            bold: true,
+          })
+          index = end + 2
+          continue
+        }
       }
 
       spans.push({ text: "**" })
@@ -150,14 +221,16 @@ export function parseInlines(text: string): InlineSpan[] {
     }
 
     if (text[index] === "*") {
-      const end = text.indexOf("*", index + 1)
-      if (end !== -1) {
-        spans.push({
-          text: text.slice(index + 1, end),
-          italic: true,
-        })
-        index = end + 1
-        continue
+      if (isNonSpace(text[index + 1])) {
+        const end = findClosingMarker(text, index, "*")
+        if (end !== -1) {
+          spans.push({
+            text: text.slice(index + 1, end),
+            italic: true,
+          })
+          index = end + 1
+          continue
+        }
       }
 
       spans.push({ text: "*" })

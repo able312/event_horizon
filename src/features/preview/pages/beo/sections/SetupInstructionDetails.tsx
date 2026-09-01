@@ -1,4 +1,5 @@
 import { useSetupInstructionSection } from "~/hooks/useSetupInstrucionSection"
+import { PreviewMarkdownContent } from "~/lib/markdown/PreviewMarkdownContent"
 
 export const SetupInstructionDetails = () => {
     
@@ -23,7 +24,7 @@ export const SetupInstructionDetails = () => {
                 {timeblock.details && (
                     <div className="mt-3 pt-3 border-t text-sm">
                         <p className="text-muted-foreground mb-1">Instructions</p>
-                        <pre className="font-sans whitespace-pre-wrap">{timeblock.details}</pre>
+                        <PreviewMarkdownContent source={timeblock.details} />
                     </div>
                 )}
             </div>
