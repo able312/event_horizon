@@ -1,52 +1,37 @@
-import { useVendorSection } from "~/hooks/useVendorSection"
+import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
+import { sortTimeblocksByTime } from "~/features/preview/preferences/selectors"
 import { PreviewMarkdownContent } from "~/lib/markdown/PreviewMarkdownContent"
 
-export const VendorDetails = () => {
-    
-    const { data: vendors } = useVendorSection()
-    const sortedTimeblocks = vendors?.sort((a, b) => {
-        const timeA = a.time ?? ""
-        const timeB = b.time ?? ""
-        return timeA.localeCompare(timeB)
-    })
-    
-    return (
-        <>
-           {sortedTimeblocks?.map((vendor) => (<div key={vendor.id}>
-                
-                <div className="flex justify-between border-b-1 pb-2">
-                    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm pb-2">
-                        <dd className="font-medium col-span-2">{vendor.title}</dd>
+type VendorDetailsProps = {
+  vendors?: TimeblockWithItems[] | null
+  selectedIds?: string[]
+}
 
-                        <dt className="text-muted-foreground">Time of Arrival</dt>
-                        <dd className="font-medium">{vendor.time}</dd>
+export const VendorDetails = ({ vendors, selectedIds }: VendorDetailsProps) => {
+  const selectedSet = selectedIds ? new Set(selectedIds) : null
+  const sorted = sortTimeblocksByTime(vendors).filter((vendor) =>
+    selectedSet ? selectedSet.has(vendor.id) : true,
+  )
 
-                        <dt className="text-muted-foreground">Assigned to</dt>
-                        <dd className="font-medium">{vendor.assignedTo}</dd>
-                    </dl>
+  if (sorted.length === 0) return null
 
-                    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-
-                        <dt className="text-muted-foreground">Contact Name</dt>
-                        <dd className="font-medium">{vendor.vendorItem?.contactName}</dd>
-
-                        <dt className="text-muted-foreground">Contact Phone</dt>
-                        <dd className="font-medium">{vendor.vendorItem?.contactPhone}</dd>
-
-                        <dt className="text-muted-foreground">Contact Email</dt>
-                        <dd className="font-medium">{vendor.vendorItem?.contactEmail}</dd>
-                    </dl>  
-                </div>
-
-                {vendor.details && (
-                    <div className="text-sm pb-4">
-                        <p className="text-muted-foreground mb-1">Notes</p>
-                        <PreviewMarkdownContent source={vendor.details} />
-                    </div>
-                )}    
-
-                  
-            </div>))}
-        </>
-    )
+  return (
+    <>
+      {sorted.map((vendor) => (
+        <div key={vendor.id} className="mb-3 border-b border-stone-200 pb-3 last:mb-0 last:border-b-0 last:pb-0">
+          <div className="grid grid-cols-[minmax(0,1.4fr)_1fr_1fr_1.4fr] gap-x-3 text-sm">
+            <p className="font-semibold">{vendor.title}</p>
+            <p>{vendor.vendorItem?.contactName ?? ""}</p>
+            <p>{vendor.vendorItem?.contactPhone ?? ""}</p>
+            <p className="truncate">{vendor.vendorItem?.contactEmail ?? ""}</p>
+          </div>
+          {vendor.details?.trim() ? (
+            <div className="mt-1 text-sm text-stone-700">
+              <PreviewMarkdownContent source={vendor.details} />
+            </div>
+          ) : null}
+        </div>
+      ))}
+    </>
+  )
 }

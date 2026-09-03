@@ -93,4 +93,32 @@ describe("EventTimeline", () => {
       "10:00 | Ceremony | c",
     ])
   })
+
+  it("can hide system tournament and cart rows", () => {
+    mockUseTimeline.mockReturnValue({
+      data: [
+        makeTimeblock({ id: "note-1", time: "09:00", title: "Arrival", sectionType: "note" }),
+        makeTimeblock({
+          id: "sys-tournament",
+          time: "08:00",
+          title: "Tournament",
+          sectionType: "tournament_detail",
+        }),
+        makeTimeblock({
+          id: "sys-cart",
+          time: "07:30",
+          title: "Cart Details",
+          sectionType: "cart_detail",
+        }),
+      ],
+      isLoading: false,
+    })
+
+    render(<EventTimeline includeSystemRows={false} />)
+
+    const timelineBlocks = screen.getAllByTestId("timeline-block")
+    expect(timelineBlocks.map((block) => block.textContent)).toEqual([
+      "09:00 | Arrival | note-1",
+    ])
+  })
 })

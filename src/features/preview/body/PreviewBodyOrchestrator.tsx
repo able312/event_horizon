@@ -102,29 +102,20 @@ const PreviewBodyOrchestrator: React.FC = () => {
       {/*
         SplitLayout root is h-screen + overflow-hidden, so the stage must be the
         scroll viewport. print:contents keeps this wrapper out of the print box tree.
+        Pages are composed by PreviewDocument inside each preview type.
       */}
       <div className="print:contents flex min-h-0 flex-1 items-start justify-center overflow-y-auto py-10 print:p-0">
-        <div
-          className="
-            relative min-h-[1056px] w-[816px] bg-white
-            p-[0.75in] shadow-[0_4px_32px_rgba(0,0,0,0.18)]
-            print:min-h-0 print:w-full print:p-0 print:shadow-none
-          "
+        <ErrorBoundary
+          fallback={
+            <div className="p-8 text-sm text-red-500">
+              Something went wrong rendering this document.
+            </div>
+          }
         >
-          <div className="absolute inset-x-0 top-0 h-px bg-neutral-200 print:hidden" />
-
-          <ErrorBoundary
-            fallback={
-              <div className="p-8 text-sm text-red-500">
-                Something went wrong rendering this document.
-              </div>
-            }
-          >
-            <Suspense fallback={<PreviewPageFallback />}>
-              {renderPreviewPage(previewType)}
-            </Suspense>
-          </ErrorBoundary>
-        </div>
+          <Suspense fallback={<PreviewPageFallback />}>
+            {renderPreviewPage(previewType)}
+          </Suspense>
+        </ErrorBoundary>
       </div>
     </div>
   )

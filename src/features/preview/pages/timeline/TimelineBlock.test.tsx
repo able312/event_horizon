@@ -148,8 +148,14 @@ describe("TimelineBlock", () => {
     expect(screen.getByRole("heading", { level: 3, name: "Goes on carts" })).toBeTruthy()
     expect(screen.getByText("Water bottles")).toBeTruthy()
     expect(screen.getByText("Requires 6 carts.")).toBeTruthy()
+    expect(screen.getByText("Cart Details")).toBeTruthy()
     expect(
       screen.getByText("⚠️ DO NOT leave keys in carts or hand out keys before tournament start time"),
     ).toBeTruthy()
+  })
+
+  it("does not render a clock icon beside the time", () => {
+    const { container } = render(<TimelineBlock timeblock={makeTimeblock()} />)
+    expect(container.querySelector("svg.lucide-clock")).toBeNull()
   })
 })

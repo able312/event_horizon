@@ -1,34 +1,50 @@
-import { render, screen } from "@testing-library/react"
+import { cleanup, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { PreviewPreferencesProvider } from "~/features/preview/preferences/PreviewPreferencesContext"
 import { FoodOnlyPreview } from "./FoodOnlyPreview"
 
 const hooksMock = vi.hoisted(() => ({
   useEvent: vi.fn(),
+  useFoodSection: vi.fn(),
 }))
 
 vi.mock("~/hooks/useEvent", () => ({
   useEvent: hooksMock.useEvent,
 }))
 
+vi.mock("~/hooks/useFoodSection", () => ({
+  useFoodSection: hooksMock.useFoodSection,
+}))
+
 vi.mock("./sections/FoodDetails", () => ({
   FoodDetails: () => <div>Food details body</div>,
 }))
 
+function renderFoodOnly() {
+  return render(
+    <PreviewPreferencesProvider>
+      <FoodOnlyPreview />
+    </PreviewPreferencesProvider>,
+  )
+}
+
 afterEach(() => {
+  cleanup()
   vi.clearAllMocks()
 })
 
 describe("FoodOnlyPreview", () => {
   it("renders an empty state when no event data exists", () => {
     hooksMock.useEvent.mockReturnValue({ data: undefined })
+    hooksMock.useFoodSection.mockReturnValue({ data: [] })
 
-    render(<FoodOnlyPreview />)
+    renderFoodOnly()
 
     expect(screen.getByText("No event data found.")).toBeTruthy()
   })
 
-  it("renders only the event overview header and food section", () => {
+  it("renders only the event overview header and food section", async () => {
     hooksMock.useEvent.mockReturnValue({
       data: {
         id: "evt_1",
@@ -46,10 +62,16 @@ describe("FoodOnlyPreview", () => {
         clientEmail: "alex@example.com",
       },
     })
+    hooksMock.useFoodSection.mockReturnValue({
+      data: [{ id: "food-1", title: "Dinner", time: "18:00", foodItems: [] }],
+    })
 
-    render(<FoodOnlyPreview />)
+    renderFoodOnly()
 
-    expect(screen.getByText("Event Overview")).toBeTruthy()
+    await waitFor(() => {
+      expect(screen.getByText("Event Overview")).toBeTruthy()
+    })
+
     expect(screen.getByText("Spring Banquet")).toBeTruthy()
     expect(screen.getByText("Food")).toBeTruthy()
     expect(screen.getByText("Food details body")).toBeTruthy()

@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react"
+import { cleanup, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("~/assets/Westlinks-SM-RGB.png", () => ({
@@ -9,6 +9,7 @@ vi.mock("~/assets/SILO-SM-RGB.png", () => ({
   default: "/test-silo-logo.png",
 }))
 
+import { PreviewPreferencesProvider } from "~/features/preview/preferences/PreviewPreferencesContext"
 import FinancialPreview from "./FinancialPreview"
 
 const hooksMock = vi.hoisted(() => ({
@@ -39,13 +40,21 @@ vi.mock("~/hooks/usePaymentsSection", () => ({
   usePaymentsSection: hooksMock.usePaymentsSection,
 }))
 
+function renderFinancial() {
+  return render(
+    <PreviewPreferencesProvider>
+      <FinancialPreview />
+    </PreviewPreferencesProvider>,
+  )
+}
+
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
 })
 
 describe("FinancialPreview", () => {
-  it("renders combined menu/food/beverage totals using shared workspace model", () => {
+  it("renders combined menu/food/beverage totals using shared workspace model", async () => {
     hooksMock.useEvent.mockReturnValue({
       data: {
         clientName: "Alex Doe",
@@ -72,18 +81,53 @@ describe("FinancialPreview", () => {
       data: [{ id: "p1", date: "2026-05-01T00:00:00.000Z", amountCents: 2500, notes: "", recieptNumber: "" }],
     })
 
-    render(<FinancialPreview />)
+    renderFinancial()
 
-    expect(screen.getByText("Event Estimate")).toBeTruthy()
+    await waitFor(() => {
+      expect(screen.getByText("Event Estimate")).toBeTruthy()
+    })
+
     expect(screen.getByText("The Club at Westlinks")).toBeTruthy()
-    expect(screen.getAllByText("$145.00").length).toBeGreaterThan(0)
-    expect(screen.getByText("$18.85")).toBeTruthy()
-    expect(screen.getAllByText("$163.85").length).toBeGreaterThan(0)
-    expect(screen.getByText("$6.30")).toBeTruthy()
+    expect(screen.queryByText("Estimate Total")).toBeNull()
+    expect(screen.queryByText("Charges Total")).toBeNull()
+    expect(screen.getByText("Grand Total")).toBeTruthy()
     expect(screen.getAllByText("$170.15").length).toBeGreaterThan(0)
-    expect(screen.getAllByText("$25.00").length).toBeGreaterThan(0)
-    expect(screen.getByText("$145.15")).toBeTruthy()
-
+    expect(screen.getByText("Payments Made")).toBeTruthy()
     expect(screen.queryByText("$14,500.00")).toBeNull()
+  })
+
+  it("does not render literal zero rows for incomplete food or beverage lines", async () => {
+    hooksMock.useEvent.mockReturnValue({
+      data: {
+        clientName: "Alex Doe",
+        startDateTime: "2026-06-01T16:00:00.000Z",
+      },
+    })
+    hooksMock.useMenuOfChargeItemsSection.mockReturnValue({ data: [] })
+    hooksMock.useFoodSection.mockReturnValue({
+      data: [
+        {
+          id: "f-tb",
+          foodItems: [
+            { id: "f1", name: "Dinner", quantity: 0, unitPriceCents: 1000 },
+            { id: "f2", name: "Dessert", quantity: 2, unitPriceCents: null },
+          ],
+        },
+      ],
+    })
+    hooksMock.useBeverageSection.mockReturnValue({
+      items: [{ id: "b1", name: "Wine", quantity: null, unitPriceCents: 2500, type: "Wine", eventId: "e1" }],
+    })
+    hooksMock.usePaymentsSection.mockReturnValue({ data: [] })
+
+    renderFinancial()
+
+    await waitFor(() => {
+      expect(screen.getByText("Event Estimate")).toBeTruthy()
+    })
+
+    expect(screen.queryByText("Dinner")).toBeNull()
+    expect(screen.queryByText("Dessert")).toBeNull()
+    expect(screen.queryByText("Wine")).toBeNull()
   })
 })

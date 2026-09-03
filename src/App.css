@@ -11,15 +11,16 @@
 
 
 /* ─── Print page setup ─────────────────────────── */
+/* Margins live on .preview-page wrappers (0.75in) so screen and print match. */
 @page {
   size: letter portrait;
-  margin: 0.75in;
+  margin: 0;
 }
 
 @media print {
   /* Kill the grey stage; let the paper card fill the page */
   body, html {
-    background: #F7F6F3 !important;
+    background: white !important;
     min-height: 0 !important;
     height: auto !important;
   }
@@ -39,6 +40,17 @@
   .preview-container,
   [class*="min-h-screen"][class*="flex-col"] {
     background: white !important;
+  }
+
+  .preview-page {
+    box-shadow: none !important;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .preview-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
   }
 }
 

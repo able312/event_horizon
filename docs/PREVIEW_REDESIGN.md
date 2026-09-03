@@ -136,7 +136,7 @@ Background/context gathering for this effort was done in a prior chat session. S
 
 ### Phase 5 — Per-Preview-Type Sidebar Options
 
-**Status:** Not started
+**Status:** Complete
 
 **Scope:**
 - Wire sidebar controls (from Phase 1 shell) to actual section/content toggles per preview type:
@@ -147,7 +147,16 @@ Background/context gathering for this effort was done in a prior chat session. S
 - Decide state scope: session-only (URL params/React context) vs persisted (would require schema change — currently a non-goal).
 
 **Notes for next phase:**
-- _(fill in during/after implementation)_
+- Expanded beyond original toggle-only scope into layout + pagination work that was previously Phase 6.
+- Preferences: mounted-session React context under `src/features/preview/preferences/` (reducer + provider). Per-preview-type isolation; resets when `PreviewWorkspace` unmounts. One-time data-derived defaults for timeblock selection and financial payment-status.
+- Sidebar options rendered in `PreviewPanelOrchestrator` (omit empty/unavailable controls rather than disable).
+- Deterministic US Letter pagination via `PreviewDocument` + `packBlocksIntoPages` (`src/features/preview/pagination/`). Screen pages match print/PDF DOM. Native Electron/macOS print dialog still has no app-controlled preview pane — in-app pages are the source of truth.
+- Full BEO order: Overview → Contact → Vendors → (fresh) Tournament+Cart → (fresh) Food → (fresh) Beverage → Setup → Notes. Compact full-width food rows; beverage timeblocks without assigned drinks + consolidated event bar list.
+- Shared `CartPreview` for BEO + Timeline; Lead carts count toward required total; diagram-only `break-inside-avoid`.
+- Financial: removed Estimate Total banner and Charges Total UI line; grouped charge-breakdown / payment-status toggles; always-on payments detail table when payments exist; optional beverage availability appendix on a fresh page.
+- Timeline: clock/refresh icons removed; “Generated [date]” label; internal-notes + system-rows toggles; cart badge fixed to “Cart Details”.
+- Client-facing BEO / proposal view deferred to a later iteration.
+- Remaining Phase 6 cleanup: consolidate duplicated sort helpers further if needed; any pagination polish after real-world print checks.
 
 ---
 
@@ -156,9 +165,10 @@ Background/context gathering for this effort was done in a prior chat session. S
 **Status:** Not started
 
 **Scope:**
-- Consolidate duplicated sort-by-time logic across BEO sections into a shared util.
-- Revisit pagination / page-break handling for print output.
+- Consolidate remaining duplicated helpers across preview sections if any remain after Phase 5.
+- Field-test pagination / page-break handling against multi-page events and tune packing if needed.
 - Confirm the shell makes it easy to add a new preview type/layout later (this was a stated future need).
+- Optional later: client-facing BEO / proposal preset.
 
 **Notes for next phase:**
 - _(fill in during/after implementation)_
@@ -173,17 +183,20 @@ Track unresolved questions here. Move resolved items to "Decisions Log" with the
 - [x] **Markdown subset:** `#`/`##` headings, bold/italic/bold+italic, hr (`---`/`***`), unordered (`* `/`- `) and ordered lists. No tables/images/links/quotes/code.
 - [x] **Legacy syntax migration:** tournament synth string fixed in code to new `# Details` syntax. Planned one-time swap script removed — not idempotent and indistinguishable from new headings (would corrupt new rows).
 - [x] **Markdown library vs hand-rolled parser:** hand-rolled in `src/lib/markdown/` — zero new dependencies, full control over print-appropriate heading scale.
-- [x] **Preview preferences persistence:** session-only for Phase 5 (React context). Planned prefs: contact-info visibility, internal-notes visibility, tournament-section auto-hide, timeline include-system-rows, financial payments/gratuity/category toggles. No schema change.
+- [x] **Preview preferences persistence:** session-only for Phase 5 (React context). Planned prefs evolved during implementation (see Decisions Log). No schema change.
 - [x] **Timeline preview editability:** read-only in preview/print output (Phase 4).
+- [x] **Phase 5 layout/pagination expansion:** deterministic measured pages shared by screen/print/PDF; BEO/Food/Financial/Timeline layout reorg implemented in Phase 5 rather than deferred entirely to Phase 6.
+- [x] **Native print-dialog preview:** not controllable in Electron/macOS; in-app paginated preview is the source of truth.
 
 ## Decisions Log
 
 - **2026-08-31 — Routing shape:** Single route `/preview/:id?type=<slug>`, default `beo`. Rationale: shell mounts once, type switching is a query-param change without remounting workspace chrome.
 - **2026-08-31 — Markdown subset:** Hand-rolled parser supporting headings, inline styles, lists, hr. Sub-item notes and event-level notes stay plain text.
-- **2026-08-31 — Legacy migration:** Synth tournament string fixed in repository code to `# Details`. One-time heading-swap script removed after review (non-idempotent; cannot distinguish legacy from new syntax).
+- **2026-08-31 — Legacy migration:** Synth tournament string fixed in repository code to `# Details`. One-time heading-swap script removed after review (non-idempotent; cannot distinguish legacy from new headings).
 - **2026-08-31 — Preview editability:** Previews are read-only display output; no editing in preview mode.
 - **2026-08-31 — Preview preferences:** Session-only (Phase 5); no DB persistence this iteration.
 - **2026-09-01 — Timeline preview ownership:** Legacy timeline components under event-detail were preview-only; relocated to `src/features/preview/pages/timeline/` and made fully read-only (no time inputs / mutations).
+- **2026-09-02 — Phase 5 product defaults:** BEO/Timeline remain internal; Financial is the only client-facing doc this iteration. Empty sections/controls omitted. Preferences reset on workspace unmount. Deterministic on-screen pages. Financial options: beverage appendix, beverage notes, charge breakdown, payment status (no category toggles; payments table always on when populated). Cart count includes Lead carts. Client-facing BEO deferred.
 
 ---
 
@@ -197,3 +210,4 @@ Append a brief entry each session so future agents know what happened and why, e
 - **2026-08-31** — Phase 3 complete: BEO preview sections use `PreviewMarkdownContent` for markdown-capable fields; plain-only fields (`food.includes`, `event.internalNotes`) remain `<pre>`. Legacy migration skipped by choice. Manual visual check pending from user.
 - **2026-08-31** — Phase 2 follow-up: removed legacy migration util/script; fixed parser to line-scan mid-block headings/hr/lists; tightened inline emphasis rules; renderer uses `useMemo` + semantic heading tags.
 - **2026-09-01** — Phase 4 complete: timeline renderer moved to `src/features/preview/pages/timeline/`, made fully read-only, `parseBlock` replaced with shared markdown for capable fields; plain-only item notes unchanged. Focused tests + lint + build passed.
+- **2026-09-02** — Phase 5 complete: session preferences + sidebar options; measured `PreviewDocument` pagination; Full/Food BEO layout reorder + compact food/beverage; shared cart preview; Financial beverage appendix + grouped totals; Timeline icon/label/system-row cleanup. Tests/lint/build passed. Client BEO deferred.

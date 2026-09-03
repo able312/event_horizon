@@ -1,80 +1,129 @@
-import { useMemo } from "react"
-
 import type { BeverageItem } from "~/definitions/database"
-import { useBeverageSection } from "~/hooks/useBeverageSection"
+import type { Timeblock } from "~/definitions/database"
 import {
-  formatBeverageItemLine,
   getVisibleBeverageTypeSections,
 } from "~/features/event-detail/sections/food-beverage-workspaces/beverage/beverageTypeSections"
+import { toCurrency } from "~/features/event-detail/workspace/lib/financial"
+import {
+  formatPreviewPrice,
+  formatPreviewQuantity,
+  sortTimeblocksByTime,
+} from "~/features/preview/preferences/selectors"
 import { PreviewMarkdownContent } from "~/lib/markdown/PreviewMarkdownContent"
 
-export const BeverageDetails = () => {
-  const { timeblocks, items } = useBeverageSection()
+type BeverageDetailsProps = {
+  timeblocks?: Timeblock[] | null
+  items?: BeverageItem[] | null
+  selectedTimeblockIds?: string[]
+  showPricing?: boolean
+}
 
-  const sortedTimeblocks = useMemo(() => {
-    return [...timeblocks].sort((a, b) => {
-      const timeA = a.time ?? ""
-      const timeB = b.time ?? ""
-      return timeA.localeCompare(timeB)
-    })
-  }, [timeblocks])
+export const BeverageDetails = ({
+  timeblocks = [],
+  items = [],
+  selectedTimeblockIds,
+  showPricing = false,
+}: BeverageDetailsProps) => {
+  const selectedSet = selectedTimeblockIds ? new Set(selectedTimeblockIds) : null
+  const sortedTimeblocks = sortTimeblocksByTime(timeblocks).filter((tb) =>
+    selectedSet ? selectedSet.has(tb.id) : true,
+  )
 
-  const itemsByTimeblockId = useMemo(() => {
-    const map = new Map<string, BeverageItem[]>()
+  const typeSections = getVisibleBeverageTypeSections(items ?? [], {
+    hideEmptySpecialOrders: true,
+  }).filter((section) => section.items.length > 0)
 
-    for (const item of items) {
-      for (const timeblockId of item.assignedTimeblockIds) {
-        const bucket = map.get(timeblockId) ?? []
-        bucket.push(item)
-        map.set(timeblockId, bucket)
-      }
-    }
+  const hasTimeblocks = sortedTimeblocks.length > 0
+  const hasBarList = typeSections.length > 0
 
-    return map
-  }, [items])
+  if (!hasTimeblocks && !hasBarList) return null
 
   return (
     <>
-      {sortedTimeblocks.map((timeblock) => {
-        const assignedItems = itemsByTimeblockId.get(timeblock.id) ?? []
-        const typeSections = getVisibleBeverageTypeSections(assignedItems, { hideEmptySpecialOrders: true })
-          .filter((section) => section.items.length > 0)
-
-        return (
-          <div key={timeblock.id} className="">
-            <h3 className="pb-1 font-bold text-sm">{timeblock.title}</h3>
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm border-b-1 pb-2">
-              <dt className="text-muted-foreground">Time</dt>
-              <dd className="font-medium">{timeblock.time}</dd>
-
-              <dt className="text-muted-foreground">Assigned to</dt>
-              <dd className="font-medium">{timeblock.assignedTo}</dd>
-            </dl>
-
-            {timeblock.details ? (
-              <div className="mt-3 text-sm">
-                <p className="text-muted-foreground mb-1">Notes</p>
-                <PreviewMarkdownContent source={timeblock.details} />
-              </div>
-            ) : null}
-
-            {typeSections.length > 0 ? (
-              <div className="mt-3 space-y-3">
-                {typeSections.map((section) => (
-                  <div key={section.type}>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{section.type}</p>
-                    <ul className="mt-1 space-y-0.5 text-sm">
-                      {section.items.map((item) => (
-                        <li key={item.id}>{formatBeverageItemLine(item)}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            ) : null}
+      {sortedTimeblocks.map((timeblock) => (
+        <div key={timeblock.id} className="mb-3 border-b border-stone-200 pb-3 last:border-b-0">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <h3 className="text-sm font-bold">{timeblock.title}</h3>
+            <div className="flex flex-wrap gap-x-4 text-xs text-stone-600">
+              {timeblock.time ? <span>Time: {timeblock.time}</span> : null}
+              {timeblock.assignedTo ? <span>Assigned: {timeblock.assignedTo}</span> : null}
+            </div>
           </div>
-        )
-      })}
+          {timeblock.details?.trim() ? (
+            <div className="mt-2 text-sm">
+              <PreviewMarkdownContent source={timeblock.details} />
+            </div>
+          ) : null}
+        </div>
+      ))}
+
+      {hasBarList ? (
+        <div className={hasTimeblocks ? "mt-4" : undefined}>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
+            Event Bar List
+          </h3>
+          {typeSections.map((section) => (
+            <div key={section.type} className="mb-3">
+              <p className="mb-1 bg-stone-50 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-stone-600">
+                {section.type}
+              </p>
+              <div
+                className={`grid gap-x-3 border-b border-dashed border-stone-300 px-2 py-1 text-[10px] uppercase tracking-wide text-stone-500 ${
+                  showPricing
+                    ? "grid-cols-[minmax(0,2fr)_auto_auto_auto]"
+                    : "grid-cols-[minmax(0,2fr)_auto]"
+                }`}
+              >
+                <span>Item</span>
+                <span className="text-end">Qty</span>
+                {showPricing ? (
+                  <>
+                    <span className="text-end">Price</span>
+                    <span className="text-end">Total</span>
+                  </>
+                ) : null}
+              </div>
+              {section.items.map((item) => {
+                const qty = formatPreviewQuantity(item.quantity)
+                const price = formatPreviewPrice(item.unitPriceCents, toCurrency)
+                const lineTotal =
+                  (item.quantity ?? 0) > 0 && (item.unitPriceCents ?? 0) > 0
+                    ? toCurrency((item.quantity ?? 0) * (item.unitPriceCents ?? 0))
+                    : ""
+
+                return (
+                  <div
+                    key={item.id}
+                    className="border-b border-dashed border-stone-200 px-2 py-1.5 last:border-b-0"
+                  >
+                    <div
+                      className={`grid items-baseline gap-x-3 text-sm ${
+                        showPricing
+                          ? "grid-cols-[minmax(0,2fr)_auto_auto_auto]"
+                          : "grid-cols-[minmax(0,2fr)_auto]"
+                      }`}
+                    >
+                      <p className="font-semibold">{item.name}</p>
+                      <p className="text-end tabular-nums">{qty}</p>
+                      {showPricing ? (
+                        <>
+                          <p className="text-end tabular-nums">{price}</p>
+                          <p className="text-end tabular-nums">{lineTotal}</p>
+                        </>
+                      ) : null}
+                    </div>
+                    {item.includes?.trim() ? (
+                      <pre className="mt-1 whitespace-pre-wrap font-sans text-xs text-stone-600">
+                        {item.includes}
+                      </pre>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      ) : null}
     </>
   )
 }
