@@ -65,6 +65,10 @@ const EventDetailPanelOrchestrator: React.FC<EventDetailPanelOrchestratorProps> 
   useHotkey("Cmd+N", () => {
     void handleCreateNote()
   })
+  useHotkey("Cmd+P", () => {
+    if (!eventId) return
+    navigate(buildPreviewPath(eventId))
+  })
 
   return (
     <>

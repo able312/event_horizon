@@ -37,10 +37,10 @@ const EventWorkspaceSidebar: React.FC<EventWorkspaceSidebarProps> = ({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div
-        className="flex-1 min-h-0 overflow-y-auto px-3 pt-4 pb-3 space-y-6"
+        className="flex-1 min-h-0 overflow-y-auto px-3 pt-0 pb-3 space-y-6"
         data-testid="event-workspace-sidebar-scroll-region"
       >
-        <div className="sticky top-0 z-10 -mx-3 bg-stone-900 px-3 pb-3">
+        <div className="sticky top-0 z-10 -mx-3 bg-stone-900 px-3 pt-3 pb-0.5">
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400" />
             <input

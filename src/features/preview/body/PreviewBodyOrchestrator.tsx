@@ -11,6 +11,7 @@ import {
   resolvePreviewType,
   type PreviewTypeId,
 } from "~/features/preview/lib/previewTypes"
+import { useHotkey } from "~/lib/hotKeys"
 
 const TimelinePreview = lazy(() => import("~/features/preview/pages/TimelinePreview"))
 const EventOverviewPreview = lazy(() =>
@@ -65,6 +66,10 @@ const PreviewBodyOrchestrator: React.FC = () => {
       console.error("Failed to save PDF:", err)
     }
   }
+
+  useHotkey("Cmd+P", () => window.print())
+  useHotkey("Cmd+S", () => void handleSavePDF())
+
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-neutral-300 print:bg-white">
