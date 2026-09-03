@@ -5,13 +5,15 @@ import { ArrowLeft, Printer, Save } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "~/components/atoms/button"
-import { callSavePDF } from "~/lib/ipc/savePDF"
+import { buildPdfFileName } from "~/features/preview/lib/buildPdfFileName"
 import {
   getPreviewTypeLabel,
   resolvePreviewType,
   type PreviewTypeId,
 } from "~/features/preview/lib/previewTypes"
+import { useEvent } from "~/hooks/useEvent"
 import { useHotkey } from "~/lib/hotKeys"
+import { callSavePDF } from "~/lib/ipc/savePDF"
 
 const TimelinePreview = lazy(() => import("~/features/preview/pages/TimelinePreview"))
 const EventOverviewPreview = lazy(() =>
@@ -54,10 +56,16 @@ const PreviewBodyOrchestrator: React.FC = () => {
   const { id: eventId } = useParams()
   const [searchParams] = useSearchParams()
   const previewType = resolvePreviewType(searchParams)
+  const { data: event } = useEvent()
 
   const handleSavePDF = async () => {
     try {
-      const saved = await callSavePDF()
+      const defaultFileName = buildPdfFileName({
+        clientName: event?.clientName,
+        startDateTime: event?.startDateTime,
+        previewType,
+      })
+      const saved = await callSavePDF({ defaultFileName })
       if (!saved) return
 
       toast.success("PDF saved")

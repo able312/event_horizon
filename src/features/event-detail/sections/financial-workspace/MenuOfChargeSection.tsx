@@ -100,6 +100,19 @@ interface BeveragePlanningBillingSectionProps {
 }
 
 const UNCATEGORIZED_KEY = "__uncategorized__"
+const PLANNING_BILLING_CARD_CLASS = "rounded-xs border border-border bg-background p-3 shadow-sm"
+const PLANNING_BILLING_TABLE_CLASS = `${SECTION_TABLE_CLASS} table-fixed min-w-[640px]`
+
+function PlanningBillingTableColgroup() {
+  return (
+    <colgroup>
+      <col />
+      <col className="w-16" />
+      <col className="w-28" />
+      <col className="w-24" />
+    </colgroup>
+  )
+}
 
 function renderPlanningCta(onNavigateToPlanning?: () => void, prefix = "Start planning") {
   if (!onNavigateToPlanning) return null
@@ -128,7 +141,7 @@ const PlanningBillingSection: React.FC<PlanningBillingSectionProps> = ({
   }, 0)
 
   return (
-    <div className="space-y-2">
+    <div className={`${PLANNING_BILLING_CARD_CLASS} space-y-2`}>
       <div className="flex items-center gap-2">
         <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h4>
         <span className="rounded-full border border-border bg-orange-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-orange-700">
@@ -160,7 +173,8 @@ const PlanningBillingSection: React.FC<PlanningBillingSectionProps> = ({
                   </div>
                 ) : (
                   <div className={SECTION_TABLE_CONTAINER_CLASS}>
-                    <table className={`${SECTION_TABLE_CLASS} min-w-[640px]`}>
+                    <table className={PLANNING_BILLING_TABLE_CLASS}>
+                      <PlanningBillingTableColgroup />
                       <thead>
                         <tr className={SECTION_TABLE_HEAD_ROW_CLASS}>
                           <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Item</th>
@@ -237,7 +251,7 @@ const BeveragePlanningBillingSection: React.FC<BeveragePlanningBillingSectionPro
   const subtotalCents = items.reduce((sum, item) => sum + computeBillableLineTotalCents(item), 0)
 
   return (
-    <div className="space-y-2">
+    <div className={`${PLANNING_BILLING_CARD_CLASS} space-y-2`}>
       <div className="flex items-center gap-2">
         <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Beverage</h4>
         <span className="rounded-full border border-border bg-orange-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-orange-700">
@@ -266,7 +280,8 @@ const BeveragePlanningBillingSection: React.FC<BeveragePlanningBillingSectionPro
                 </div>
               ) : (
                 <div className={SECTION_TABLE_CONTAINER_CLASS}>
-                  <table className={`${SECTION_TABLE_CLASS} min-w-[640px]`}>
+                  <table className={PLANNING_BILLING_TABLE_CLASS}>
+                    <PlanningBillingTableColgroup />
                     <thead>
                       <tr className={SECTION_TABLE_HEAD_ROW_CLASS}>
                         <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Item</th>

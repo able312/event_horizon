@@ -115,9 +115,20 @@ describe("MenuOfChargeSection", () => {
 
     const planningTables = screen.getAllByRole("table")
     const foodPlanningTable = planningTables.find((table) => within(table).queryByText("Steak"))
+    const beveragePlanningTable = planningTables.find(
+      (table) => within(table).queryByText("Wine") && !within(table).queryByText("Steak"),
+    )
     expect(foodPlanningTable).toBeTruthy()
+    expect(foodPlanningTable!.className).toContain("table-fixed")
+    expect(beveragePlanningTable).toBeTruthy()
+    expect(beveragePlanningTable!.className).toContain("table-fixed")
     expect(within(foodPlanningTable!).queryByTitle("Delete row")).toBeNull()
     expect(within(foodPlanningTable!).queryByPlaceholderText("Item name")).toBeNull()
+
+    const foodCard = screen.getByText("Food").closest(".rounded-xs.border")
+    const beverageCard = screen.getByText("Beverage").closest(".rounded-xs.border")
+    expect(foodCard?.className).toContain("shadow-sm")
+    expect(beverageCard?.className).toContain("shadow-sm")
 
     expect(screen.getByText("Charges Subtotal: $59.00")).toBeTruthy()
   })
