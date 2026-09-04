@@ -1,5 +1,6 @@
 import {
   Children,
+  Fragment,
   isValidElement,
   useCallback,
   useEffect,
@@ -38,16 +39,32 @@ function isPreviewBlockElement(node: ReactNode): node is PreviewBlockElement {
   return isValidElement(node) && node.type === PreviewBlock
 }
 
+function isFragmentElement(node: ReactNode): node is ReactElement<{ children?: ReactNode }> {
+  return isValidElement(node) && node.type === Fragment
+}
+
+/**
+ * Collect PreviewBlock elements from children, recursing into Fragments and arrays.
+ * Components that *return* PreviewBlocks are invisible — blocks must be direct
+ * (or Fragment-wrapped) JSX children of PreviewDocument.
+ */
 function collectBlocks(children: ReactNode): PreviewBlockElement[] {
   const blocks: PreviewBlockElement[] = []
 
-  Children.forEach(children, (child) => {
-    if (child == null || child === false) return
-    if (isPreviewBlockElement(child)) {
-      blocks.push(child)
-    }
-  })
+  const visit = (node: ReactNode) => {
+    Children.forEach(node, (child) => {
+      if (child == null || child === false) return
+      if (isPreviewBlockElement(child)) {
+        blocks.push(child)
+        return
+      }
+      if (isFragmentElement(child)) {
+        visit(child.props.children)
+      }
+    })
+  }
 
+  visit(children)
   return blocks
 }
 
@@ -66,8 +83,19 @@ export function PreviewDocument({
   const [pages, setPages] = useState<PackedPage[]>([])
   const [ready, setReady] = useState(false)
   const generationRef = useRef(0)
+  const previousSignatureRef = useRef<string | null>(null)
 
   const blocks = useMemo(() => collectBlocks(children), [children])
+  const blockSignature = useMemo(
+    () => blocks.map((block) => block.props.id).join("|"),
+    [blocks],
+  )
+  const continuationKeySignature = Object.keys(continuationHeadings).sort().join("|")
+  const continuationKeys = useMemo(
+    () => (continuationKeySignature.length > 0 ? continuationKeySignature.split("|") : []),
+    [continuationKeySignature],
+  )
+
   const blockById = useMemo(() => {
     const map = new Map<string, PreviewBlockElement>()
     for (const block of blocks) {
@@ -75,6 +103,10 @@ export function PreviewDocument({
     }
     return map
   }, [blocks])
+
+  // Keep latest block map in a ref so remeasure identity stays stable.
+  const blockByIdRef = useRef(blockById)
+  blockByIdRef.current = blockById
 
   const remeasure = useCallback(async () => {
     const generation = ++generationRef.current
@@ -96,11 +128,19 @@ export function PreviewDocument({
 
     if (generation !== generationRef.current) return
 
+    const headingHeights: Record<string, number> = {}
+    root.querySelectorAll<HTMLElement>("[data-preview-continuation-key]").forEach((node) => {
+      const key = node.dataset.previewContinuationKey
+      if (!key) return
+      headingHeights[key] = node.getBoundingClientRect().height
+    })
+
+    const latestBlockById = blockByIdRef.current
     const measuredNodes = root.querySelectorAll<HTMLElement>("[data-preview-block-id]")
     const measured = Array.from(measuredNodes)
       .map((node) => {
         const id = node.dataset.previewBlockId ?? ""
-        const source = blockById.get(id)
+        const source = latestBlockById.get(id)
         return {
           id,
           height: node.getBoundingClientRect().height,
@@ -113,14 +153,37 @@ export function PreviewDocument({
 
     if (generation !== generationRef.current) return
 
-    setPages(packBlocksIntoPages(measured, PAGE_CONTENT_HEIGHT_PX))
+    if (import.meta.env.DEV) {
+      for (const entry of measured) {
+        if (entry.height > PAGE_CONTENT_HEIGHT_PX) {
+          console.warn(
+            `[PreviewDocument] Block "${entry.id}" is ${Math.round(entry.height)}px tall ` +
+              `(page content is ${PAGE_CONTENT_HEIGHT_PX}px). It will sit alone and may clip.`,
+          )
+        }
+      }
+    }
+
+    setPages(
+      packBlocksIntoPages(measured, {
+        contentHeightPx: PAGE_CONTENT_HEIGHT_PX,
+        continuationHeadingHeights: headingHeights,
+      }),
+    )
     setReady(true)
-  }, [blockById])
+  }, [])
 
   useLayoutEffect(() => {
-    setReady(false)
+    const signatureChanged = previousSignatureRef.current !== blockSignature
+    previousSignatureRef.current = blockSignature
+
+    // Only hide pages when the set of block ids changes (structure change).
+    // Content-only remeasures keep the previous pages visible to avoid flash.
+    if (signatureChanged) {
+      setReady(false)
+    }
     void remeasure()
-  }, [remeasure])
+  }, [blockSignature, remeasure])
 
   useEffect(() => {
     const root = measureRef.current
@@ -141,6 +204,11 @@ export function PreviewDocument({
         style={{ width: PAGE_CONTENT_WIDTH_PX }}
       >
         <div ref={measureRef} className="flex flex-col">
+          {continuationKeys.map((key) => (
+            <div key={`measure-cont-${key}`} data-preview-continuation-key={key} className="mb-2">
+              {continuationHeadings[key]}
+            </div>
+          ))}
           {blocks.map((block) => (
             <div key={`measure-${block.props.id}`} data-preview-block-id={block.props.id}>
               {block.props.children}
@@ -187,7 +255,13 @@ export function PreviewDocument({
                 padding: PAGE_MARGIN_PX,
               }}
             >
-              <div className="flex flex-col" style={{ width: PAGE_CONTENT_WIDTH_PX }}>
+              <div
+                className="flex flex-col overflow-hidden"
+                style={{
+                  width: PAGE_CONTENT_WIDTH_PX,
+                  height: PAGE_CONTENT_HEIGHT_PX,
+                }}
+              >
                 {page.continuationKeys.map((key) => (
                   <div key={`cont-${pageIndex}-${key}`} className="mb-2">
                     {continuationHeadings[key] ?? null}
@@ -199,7 +273,10 @@ export function PreviewDocument({
                   return (
                     <div
                       key={`${pageIndex}-${id}`}
-                      className={block.props.keepTogether ? "break-inside-avoid" : undefined}
+                      className={cn(
+                        block.props.className,
+                        block.props.keepTogether ? "break-inside-avoid" : undefined,
+                      )}
                     >
                       {block.props.children}
                     </div>

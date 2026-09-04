@@ -1,11 +1,17 @@
-import { PrintHeader } from "./EventOverviewHeader"
-import { SectionFrame } from "~/features/preview/components/SectionFrame"
+import {
+  SectionFrameHeading,
+  SectionFrameItem,
+} from "~/features/preview/components/SectionFrame"
 import { PreviewBlock, PreviewDocument } from "~/features/preview/pagination/PreviewDocument"
 import { usePreviewPreferences } from "~/features/preview/preferences/PreviewPreferencesContext"
-import { filterSelectedIds } from "~/features/preview/preferences/selectors"
+import {
+  filterSelectedIds,
+  sortTimeblocksByTime,
+} from "~/features/preview/preferences/selectors"
 import { useEvent } from "~/hooks/useEvent"
 import { useFoodSection } from "~/hooks/useFoodSection"
-import { FoodDetails } from "./sections/FoodDetails"
+import { PrintHeader } from "./EventOverviewHeader"
+import { FoodTimeblockDetails } from "./sections/FoodDetails"
 
 export function FoodOnlyPreview() {
   const { data: event } = useEvent()
@@ -20,16 +26,15 @@ export function FoodOnlyPreview() {
     ? filterSelectedIds(prefs.selectedFoodTimeblockIds, availableFoodIds)
     : availableFoodIds
 
-  const showFood = (food ?? []).some((tb) => selectedFoodIds.includes(tb.id))
+  const selectedFood = sortTimeblocksByTime(food).filter((tb) =>
+    selectedFoodIds.includes(tb.id),
+  )
+  const showFood = selectedFood.length > 0
 
   return (
     <PreviewDocument
       continuationHeadings={{
-        food: (
-          <SectionFrame title="Food (continued)">
-            <span className="sr-only">continued</span>
-          </SectionFrame>
-        ),
+        food: <SectionFrameHeading title="Food (continued)" />,
       }}
     >
       <PreviewBlock id="food-beo-overview" keepTogether>
@@ -40,17 +45,27 @@ export function FoodOnlyPreview() {
         />
       </PreviewBlock>
 
-      {showFood ? (
-        <PreviewBlock id="food-beo-food" continuationKey="food">
-          <SectionFrame title="Food">
-            <FoodDetails
-              timeblocks={food}
-              selectedIds={selectedFoodIds}
-              showPricing={prefs.showPricing}
-            />
-          </SectionFrame>
-        </PreviewBlock>
-      ) : null}
+      {showFood
+        ? selectedFood.map((timeblock, index) => {
+            const isFirst = index === 0
+            const isLast = index === selectedFood.length - 1
+            return (
+              <PreviewBlock
+                key={`food-beo-food-${timeblock.id}`}
+                id={`food-beo-food-${timeblock.id}`}
+                continuationKey="food"
+              >
+                {isFirst ? <SectionFrameHeading title="Food" /> : null}
+                <SectionFrameItem isLast={isLast}>
+                  <FoodTimeblockDetails
+                    timeblock={timeblock}
+                    showPricing={prefs.showPricing}
+                  />
+                </SectionFrameItem>
+              </PreviewBlock>
+            )
+          })
+        : null}
     </PreviewDocument>
   )
 }

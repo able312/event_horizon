@@ -2,6 +2,36 @@ import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-typ
 import { sortTimeblocksByTime } from "~/features/preview/preferences/selectors"
 import { PreviewMarkdownContent } from "~/lib/markdown/PreviewMarkdownContent"
 
+export function NoteTimeblockDetails({ timeblock }: { timeblock: TimeblockWithItems }) {
+  return (
+    <div className="mb-3 last:mb-0">
+      <h3 className="pb-1 text-sm font-bold">{timeblock.title}</h3>
+      {timeblock.time || timeblock.assignedTo ? (
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+          {timeblock.time ? (
+            <>
+              <dt className="text-muted-foreground">Time</dt>
+              <dd className="font-medium">{timeblock.time}</dd>
+            </>
+          ) : null}
+          {timeblock.assignedTo ? (
+            <>
+              <dt className="text-muted-foreground">Assigned to</dt>
+              <dd className="font-medium">{timeblock.assignedTo}</dd>
+            </>
+          ) : null}
+        </dl>
+      ) : null}
+
+      {timeblock.details?.trim() ? (
+        <div className="mt-3 border-t pt-3 text-sm">
+          <PreviewMarkdownContent source={timeblock.details} />
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 type NoteDetailsProps = {
   timeblocks?: TimeblockWithItems[] | null
   selectedIds?: string[]
@@ -18,31 +48,7 @@ export const NoteDetails = ({ timeblocks, selectedIds }: NoteDetailsProps) => {
   return (
     <>
       {sorted.map((timeblock) => (
-        <div key={timeblock.id} className="mb-3 last:mb-0">
-          <h3 className="pb-1 text-sm font-bold">{timeblock.title}</h3>
-          {timeblock.time || timeblock.assignedTo ? (
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-              {timeblock.time ? (
-                <>
-                  <dt className="text-muted-foreground">Time</dt>
-                  <dd className="font-medium">{timeblock.time}</dd>
-                </>
-              ) : null}
-              {timeblock.assignedTo ? (
-                <>
-                  <dt className="text-muted-foreground">Assigned to</dt>
-                  <dd className="font-medium">{timeblock.assignedTo}</dd>
-                </>
-              ) : null}
-            </dl>
-          ) : null}
-
-          {timeblock.details?.trim() ? (
-            <div className="mt-3 border-t pt-3 text-sm">
-              <PreviewMarkdownContent source={timeblock.details} />
-            </div>
-          ) : null}
-        </div>
+        <NoteTimeblockDetails key={timeblock.id} timeblock={timeblock} />
       ))}
     </>
   )

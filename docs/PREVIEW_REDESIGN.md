@@ -162,7 +162,7 @@ Background/context gathering for this effort was done in a prior chat session. S
 
 ### Phase 6 — Polish / Extensibility Pass
 
-**Status:** Not started
+**Status:** Complete (pagination fix)
 
 **Scope:**
 - Consolidate remaining duplicated helpers across preview sections if any remain after Phase 5.
@@ -171,7 +171,14 @@ Background/context gathering for this effort was done in a prior chat session. S
 - Optional later: client-facing BEO / proposal preset.
 
 **Notes for next phase:**
-- _(fill in during/after implementation)_
+- Pagination now emits **one `PreviewBlock` per natural unit** (timeblock / charge table / timeline row / bar-list type), not one per section. The packer is atomic and never splits a block; oversized single units sit alone and may clip (`overflow-hidden` on the page content column).
+- `PreviewDocument` flattens Fragments/arrays when collecting blocks; blocks must still be direct (or Fragment-wrapped) JSX children — components that *return* `PreviewBlock`s are invisible to the collector.
+- Continuation headings (`SectionFrameHeading` / timeline label) are measured and subtracted from page capacity. A keyless block never inherits a prior section's `(continued)` heading.
+- Forced `breakBefore` kept on Tournament, Cart, Food, and Beverage in the full BEO (Phase 5 product decision).
+- `EventTimeline.tsx` removed; timeline data/sorting/filtering lives in `TimelinePreview`.
+- Splittable frame pieces: `SectionFrameHeading` + `SectionFrameItem` in `SectionFrame.tsx` (keep `SectionFrame` for single-block sections).
+- Remeasure no longer flashes "Preparing pages…" on content-only preference toggles (only when the block-id signature changes).
+- Still optional later: client-facing BEO / proposal preset; true intra-block splitting for a single unit taller than a page.
 
 ---
 
@@ -187,6 +194,8 @@ Track unresolved questions here. Move resolved items to "Decisions Log" with the
 - [x] **Timeline preview editability:** read-only in preview/print output (Phase 4).
 - [x] **Phase 5 layout/pagination expansion:** deterministic measured pages shared by screen/print/PDF; BEO/Food/Financial/Timeline layout reorg implemented in Phase 5 rather than deferred entirely to Phase 6.
 - [x] **Native print-dialog preview:** not controllable in Electron/macOS; in-app paginated preview is the source of truth.
+- [x] **Phase 6 forced BEO section breaks:** keep `breakBefore` on Tournament/Cart/Food/Beverage in the full BEO.
+- [x] **Phase 6 block granularity:** one `PreviewBlock` per natural unit; no true intra-block splitting (oversized unit alone + clip).
 
 ## Decisions Log
 
@@ -211,3 +220,4 @@ Append a brief entry each session so future agents know what happened and why, e
 - **2026-08-31** — Phase 2 follow-up: removed legacy migration util/script; fixed parser to line-scan mid-block headings/hr/lists; tightened inline emphasis rules; renderer uses `useMemo` + semantic heading tags.
 - **2026-09-01** — Phase 4 complete: timeline renderer moved to `src/features/preview/pages/timeline/`, made fully read-only, `parseBlock` replaced with shared markdown for capable fields; plain-only item notes unchanged. Focused tests + lint + build passed.
 - **2026-09-02** — Phase 5 complete: session preferences + sidebar options; measured `PreviewDocument` pagination; Full/Food BEO layout reorder + compact food/beverage; shared cart preview; Financial beverage appendix + grouped totals; Timeline icon/label/system-row cleanup. Tests/lint/build passed. Client BEO deferred.
+- **2026-09-03** — Phase 6 pagination fix: fine-grained `PreviewBlock`s per timeblock/table/row across all four preview types; packer budgets continuation heading height and does not inherit continuation keys across sections; `PreviewDocument` flattens fragments, clips page content, avoids remeasure flash; `SectionFrameHeading`/`SectionFrameItem` added; `EventTimeline` removed in favour of `TimelinePreview`. Forced BEO section breaks kept.

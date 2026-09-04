@@ -18,7 +18,7 @@ vi.mock("~/hooks/useFoodSection", () => ({
 }))
 
 vi.mock("./sections/FoodDetails", () => ({
-  FoodDetails: () => <div>Food details body</div>,
+  FoodTimeblockDetails: () => <div>Food details body</div>,
 }))
 
 function renderFoodOnly() {

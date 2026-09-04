@@ -1,24 +1,34 @@
-import { PrintHeader } from "./EventOverviewHeader"
-import { SectionFrame } from "~/features/preview/components/SectionFrame"
+import {
+  SectionFrame,
+  SectionFrameHeading,
+  SectionFrameItem,
+} from "~/features/preview/components/SectionFrame"
 import { PreviewBlock, PreviewDocument } from "~/features/preview/pagination/PreviewDocument"
 import { usePreviewPreferences } from "~/features/preview/preferences/PreviewPreferencesContext"
 import {
   filterSelectedIds,
   hasBeverageSectionContent,
+  sortTimeblocksByTime,
 } from "~/features/preview/preferences/selectors"
+import { getVisibleBeverageTypeSections } from "~/features/event-detail/sections/food-beverage-workspaces/beverage/beverageTypeSections"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
 import { useEvent } from "~/hooks/useEvent"
 import { useFoodSection } from "~/hooks/useFoodSection"
 import { useNoteSection } from "~/hooks/useNoteSection"
 import { useSetupInstructionSection } from "~/hooks/useSetupInstrucionSection"
 import { useVendorSection } from "~/hooks/useVendorSection"
-import { BeverageDetails } from "./sections/BeverageDetails"
+import { PrintHeader } from "./EventOverviewHeader"
+import {
+  BeverageBarListHeading,
+  BeverageTimeblockDetails,
+  BeverageTypeSectionList,
+} from "./sections/BeverageDetails"
 import { CartDetails } from "./sections/CartDetails"
-import { FoodDetails } from "./sections/FoodDetails"
-import { NoteDetails } from "./sections/NoteDetails"
-import { SetupInstructionDetails } from "./sections/SetupInstructionDetails"
+import { FoodTimeblockDetails } from "./sections/FoodDetails"
+import { NoteTimeblockDetails } from "./sections/NoteDetails"
+import { SetupInstructionTimeblockDetails } from "./sections/SetupInstructionDetails"
 import { TournamentDetails } from "./sections/TournamentDetails"
-import { VendorDetails } from "./sections/VendorDetails"
+import { VendorTimeblockDetails } from "./sections/VendorDetails"
 
 export function EventOverviewPreview() {
   const { data: event } = useEvent()
@@ -60,34 +70,47 @@ export function EventOverviewPreview() {
   const showTournament = isTournament && prefs.sections.tournament
   const showCart = isTournament && prefs.sections.cart
 
-  const showVendors =
-    prefs.sections.vendors &&
-    (vendors ?? []).some((tb) => selectedVendorIds.includes(tb.id))
+  const selectedFood = sortTimeblocksByTime(food).filter((tb) =>
+    selectedFoodIds.includes(tb.id),
+  )
+  const selectedBeverage = sortTimeblocksByTime(beverageTimeblocks).filter((tb) =>
+    selectedBeverageIds.includes(tb.id),
+  )
+  const selectedVendors = sortTimeblocksByTime(vendors).filter((tb) =>
+    selectedVendorIds.includes(tb.id),
+  )
+  const selectedSetup = sortTimeblocksByTime(setup).filter((tb) =>
+    selectedSetupIds.includes(tb.id),
+  )
+  const selectedNotes = sortTimeblocksByTime(notes).filter((tb) =>
+    selectedNoteIds.includes(tb.id),
+  )
 
-  const showFood =
-    prefs.sections.food &&
-    (food ?? []).some((tb) => selectedFoodIds.includes(tb.id))
+  const beverageBarSections = getVisibleBeverageTypeSections(beverageItems, {
+    hideEmptySpecialOrders: true,
+  }).filter((section) => section.items.length > 0)
 
+  const showVendors = prefs.sections.vendors && selectedVendors.length > 0
+  const showFood = prefs.sections.food && selectedFood.length > 0
   const showBeverage =
     prefs.sections.beverage &&
     hasBeverageSectionContent({
-      timeblocks: beverageTimeblocks.filter((tb) => selectedBeverageIds.includes(tb.id)),
+      timeblocks: selectedBeverage,
       items: beverageItems,
     })
+  const showSetup = prefs.sections.setup && selectedSetup.length > 0
+  const showNotes = prefs.sections.notes && selectedNotes.length > 0
 
-  const showSetup =
-    prefs.sections.setup &&
-    (setup ?? []).some((tb) => selectedSetupIds.includes(tb.id))
-
-  const showNotes =
-    prefs.sections.notes &&
-    (notes ?? []).some((tb) => selectedNoteIds.includes(tb.id))
+  const beverageUnitCount = selectedBeverage.length + beverageBarSections.length
 
   return (
     <PreviewDocument
       continuationHeadings={{
-        food: <SectionFrame title="Food (continued)"><span className="sr-only">continued</span></SectionFrame>,
-        beverage: <SectionFrame title="Beverage (continued)"><span className="sr-only">continued</span></SectionFrame>,
+        vendors: <SectionFrameHeading title="Vendor Details (continued)" />,
+        food: <SectionFrameHeading title="Food (continued)" />,
+        beverage: <SectionFrameHeading title="Beverage (continued)" />,
+        setup: <SectionFrameHeading title="Setup Instructions (continued)" />,
+        notes: <SectionFrameHeading title="Notes (continued)" />,
       }}
     >
       <PreviewBlock id="beo-overview" keepTogether>
@@ -98,13 +121,24 @@ export function EventOverviewPreview() {
         />
       </PreviewBlock>
 
-      {showVendors ? (
-        <PreviewBlock id="beo-vendors" keepTogether>
-          <SectionFrame title="Vendor Details">
-            <VendorDetails vendors={vendors} selectedIds={selectedVendorIds} />
-          </SectionFrame>
-        </PreviewBlock>
-      ) : null}
+      {showVendors
+        ? selectedVendors.map((vendor, index) => {
+            const isFirst = index === 0
+            const isLast = index === selectedVendors.length - 1
+            return (
+              <PreviewBlock
+                key={`beo-vendor-${vendor.id}`}
+                id={`beo-vendor-${vendor.id}`}
+                continuationKey="vendors"
+              >
+                {isFirst ? <SectionFrameHeading title="Vendor Details" /> : null}
+                <SectionFrameItem isLast={isLast}>
+                  <VendorTimeblockDetails vendor={vendor} />
+                </SectionFrameItem>
+              </PreviewBlock>
+            )
+          })
+        : null}
 
       {showTournament ? (
         <PreviewBlock id="beo-tournament" breakBefore keepTogether>
@@ -122,46 +156,111 @@ export function EventOverviewPreview() {
         </PreviewBlock>
       ) : null}
 
-      {showFood ? (
-        <PreviewBlock id="beo-food" breakBefore continuationKey="food">
-          <SectionFrame title="Food">
-            <FoodDetails
-              timeblocks={food}
-              selectedIds={selectedFoodIds}
-              showPricing={prefs.showPricing}
-            />
-          </SectionFrame>
-        </PreviewBlock>
-      ) : null}
+      {showFood
+        ? selectedFood.map((timeblock, index) => {
+            const isFirst = index === 0
+            const isLast = index === selectedFood.length - 1
+            return (
+              <PreviewBlock
+                key={`beo-food-${timeblock.id}`}
+                id={`beo-food-${timeblock.id}`}
+                breakBefore={isFirst}
+                continuationKey="food"
+              >
+                {isFirst ? <SectionFrameHeading title="Food" /> : null}
+                <SectionFrameItem isLast={isLast}>
+                  <FoodTimeblockDetails
+                    timeblock={timeblock}
+                    showPricing={prefs.showPricing}
+                  />
+                </SectionFrameItem>
+              </PreviewBlock>
+            )
+          })
+        : null}
 
       {showBeverage ? (
-        <PreviewBlock id="beo-beverage" breakBefore continuationKey="beverage">
-          <SectionFrame title="Beverage">
-            <BeverageDetails
-              timeblocks={beverageTimeblocks}
-              items={beverageItems}
-              selectedTimeblockIds={selectedBeverageIds}
-              showPricing={prefs.showPricing}
-            />
-          </SectionFrame>
-        </PreviewBlock>
+        <>
+          {selectedBeverage.map((timeblock, index) => {
+            const isFirst = index === 0
+            const isLastOverall = index === beverageUnitCount - 1
+            return (
+              <PreviewBlock
+                key={`beo-beverage-${timeblock.id}`}
+                id={`beo-beverage-${timeblock.id}`}
+                breakBefore={isFirst}
+                continuationKey="beverage"
+              >
+                {isFirst ? <SectionFrameHeading title="Beverage" /> : null}
+                <SectionFrameItem isLast={isLastOverall}>
+                  <BeverageTimeblockDetails timeblock={timeblock} />
+                </SectionFrameItem>
+              </PreviewBlock>
+            )
+          })}
+          {beverageBarSections.map((section, index) => {
+            const unitIndex = selectedBeverage.length + index
+            const isFirst = unitIndex === 0
+            const isFirstBar = index === 0
+            const isLast = unitIndex === beverageUnitCount - 1
+            return (
+              <PreviewBlock
+                key={`beo-beverage-bar-${section.type}`}
+                id={`beo-beverage-bar-${section.type}`}
+                breakBefore={isFirst}
+                continuationKey="beverage"
+              >
+                {isFirst ? <SectionFrameHeading title="Beverage" /> : null}
+                <SectionFrameItem isLast={isLast}>
+                  {isFirstBar ? <BeverageBarListHeading /> : null}
+                  <BeverageTypeSectionList
+                    section={section}
+                    showPricing={prefs.showPricing}
+                  />
+                </SectionFrameItem>
+              </PreviewBlock>
+            )
+          })}
+        </>
       ) : null}
 
-      {showSetup ? (
-        <PreviewBlock id="beo-setup" keepTogether>
-          <SectionFrame title="Setup Instructions">
-            <SetupInstructionDetails timeblocks={setup} selectedIds={selectedSetupIds} />
-          </SectionFrame>
-        </PreviewBlock>
-      ) : null}
+      {showSetup
+        ? selectedSetup.map((timeblock, index) => {
+            const isFirst = index === 0
+            const isLast = index === selectedSetup.length - 1
+            return (
+              <PreviewBlock
+                key={`beo-setup-${timeblock.id}`}
+                id={`beo-setup-${timeblock.id}`}
+                continuationKey="setup"
+              >
+                {isFirst ? <SectionFrameHeading title="Setup Instructions" /> : null}
+                <SectionFrameItem isLast={isLast}>
+                  <SetupInstructionTimeblockDetails timeblock={timeblock} />
+                </SectionFrameItem>
+              </PreviewBlock>
+            )
+          })
+        : null}
 
-      {showNotes ? (
-        <PreviewBlock id="beo-notes" keepTogether>
-          <SectionFrame title="Notes">
-            <NoteDetails timeblocks={notes} selectedIds={selectedNoteIds} />
-          </SectionFrame>
-        </PreviewBlock>
-      ) : null}
+      {showNotes
+        ? selectedNotes.map((timeblock, index) => {
+            const isFirst = index === 0
+            const isLast = index === selectedNotes.length - 1
+            return (
+              <PreviewBlock
+                key={`beo-notes-${timeblock.id}`}
+                id={`beo-notes-${timeblock.id}`}
+                continuationKey="notes"
+              >
+                {isFirst ? <SectionFrameHeading title="Notes" /> : null}
+                <SectionFrameItem isLast={isLast}>
+                  <NoteTimeblockDetails timeblock={timeblock} />
+                </SectionFrameItem>
+              </PreviewBlock>
+            )
+          })
+        : null}
     </PreviewDocument>
   )
 }
