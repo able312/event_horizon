@@ -128,6 +128,10 @@ export function PreviewDocument({
 
     if (generation !== generationRef.current) return
 
+    // Skip when print:hidden collapses the measure root to 0 height so we
+    // never feed the packer zeros while a print dialog is open.
+    if (root.getBoundingClientRect().height === 0) return
+
     const headingHeights: Record<string, number> = {}
     root.querySelectorAll<HTMLElement>("[data-preview-continuation-key]").forEach((node) => {
       const key = node.dataset.previewContinuationKey
@@ -200,7 +204,7 @@ export function PreviewDocument({
     <div className={cn("preview-document", className)}>
       <div
         aria-hidden
-        className="pointer-events-none absolute -left-[99999px] top-0 opacity-0"
+        className="pointer-events-none absolute -left-[99999px] top-0 opacity-0 print:hidden"
         style={{ width: PAGE_CONTENT_WIDTH_PX }}
       >
         <div ref={measureRef} className="flex flex-col">
@@ -240,7 +244,7 @@ export function PreviewDocument({
           <p className="text-sm text-muted-foreground">Nothing to preview.</p>
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-8 print:gap-0">
+        <div className="flex flex-col items-center gap-8 print:block print:gap-0">
           {pages.map((page, pageIndex) => (
             <div
               key={`page-${pageIndex}`}

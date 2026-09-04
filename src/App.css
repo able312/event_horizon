@@ -18,11 +18,29 @@
 }
 
 @media print {
-  /* Kill the grey stage; let the paper card fill the page */
-  body, html {
+  /*
+    Release the viewport-height + overflow clip chain so Chromium can
+    fragment multi-page preview documents. Inline height:100vh on
+    #root/#body (index.html) and SplitLayout's h-screen overflow-hidden
+    otherwise clip everything after page 1.
+  */
+  html, body, #root {
     background: white !important;
-    min-height: 0 !important;
     height: auto !important;
+    min-height: 0 !important;
+    width: auto !important;
+    overflow: visible !important;
+  }
+
+  .print-root {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Collapse the h-full flex row into normal block flow for print. */
+  .print-root > * {
+    height: auto !important;
+    display: block !important;
   }
 
   /* Force black text everywhere — avoids light-grey muted colours vanishing */
@@ -32,25 +50,8 @@
     color-adjust: exact;
   }
 
-  /* Remove Electron/browser scrollbars during print */
-  html, body {
-    overflow: visible !important;
-  }
-
-  .preview-container,
-  [class*="min-h-screen"][class*="flex-col"] {
-    background: white !important;
-  }
-
+  /* Page breaks are owned by Tailwind print:break-after-* on each .preview-page */
   .preview-page {
     box-shadow: none !important;
-    page-break-after: always;
-    break-after: page;
-  }
-
-  .preview-page:last-child {
-    page-break-after: auto;
-    break-after: auto;
   }
 }
-
