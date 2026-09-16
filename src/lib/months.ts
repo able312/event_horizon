@@ -112,6 +112,36 @@ export function toLocalDateEndExclusiveIso(localDate: string): string | null {
   return new Date(year, month - 1, day + 1, 0, 0, 0, 0).toISOString()
 }
 
+/**
+ * Years of navigable history and future for calendars that use dropdown
+ * month/year navigation. react-day-picker's built-in default caps the
+ * dropdown at the end of the *current* year, which blocks scheduling
+ * events in future years — so the range must always be derived from `now`.
+ */
+export const DROPDOWN_CALENDAR_YEARS_BACK = 5
+export const DROPDOWN_CALENDAR_YEARS_FORWARD = 10
+
+export type MonthNavigationRange = {
+  startMonth: Date
+  endMonth: Date
+}
+
+/**
+ * Returns the first month `yearsBack` years before `now` and the last month
+ * `yearsForward` years after `now`, relative to the current calendar year.
+ */
+export function getDropdownMonthNavigationRange(
+  now: Date = new Date(),
+  yearsBack: number = DROPDOWN_CALENDAR_YEARS_BACK,
+  yearsForward: number = DROPDOWN_CALENDAR_YEARS_FORWARD,
+): MonthNavigationRange {
+  const currentYear = now.getFullYear()
+  return {
+    startMonth: new Date(currentYear - yearsBack, 0, 1),
+    endMonth: new Date(currentYear + yearsForward, 11, 1),
+  }
+}
+
 function toMonthParam(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, "0")}`
 }

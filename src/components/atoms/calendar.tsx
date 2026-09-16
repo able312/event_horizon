@@ -7,6 +7,7 @@ import {
 import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker"
 
 import { cn } from "~/lib/utils"
+import { getDropdownMonthNavigationRange } from "~/lib/months"
 import { Button, buttonVariants } from "~/components/atoms/button"
 
 function Calendar({
@@ -17,15 +18,30 @@ function Calendar({
   buttonVariant = "ghost",
   formatters,
   components,
+  startMonth,
+  endMonth,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
 }) {
   const defaultClassNames = getDefaultClassNames()
 
+  // react-day-picker caps dropdown navigation at the end of the current year
+  // unless startMonth/endMonth are given. Derive a range from today so future
+  // years are always reachable, while still honouring explicit overrides.
+  const usesDropdown = captionLayout !== "label"
+  const defaultRange = React.useMemo(
+    () => (usesDropdown ? getDropdownMonthNavigationRange() : null),
+    [usesDropdown],
+  )
+  const resolvedStartMonth = startMonth ?? defaultRange?.startMonth
+  const resolvedEndMonth = endMonth ?? defaultRange?.endMonth
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      startMonth={resolvedStartMonth}
+      endMonth={resolvedEndMonth}
       className={cn(
         "bg-background group/calendar p-3 [--cell-size:--spacing(8)] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",
         String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
