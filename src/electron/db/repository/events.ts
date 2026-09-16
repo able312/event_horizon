@@ -5,10 +5,14 @@ import type { Event, EventStatus, NewEvent, UpdateEvent } from "../../../definit
 import type { EventSearchRequest, EventSearchResponse } from "../../../definitions/ipc.js"
 import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm"
 import { v4 as uuidv4 } from "uuid"
+import { assertValidEventDateRange } from "../../../lib/events/eventDateRange.js"
 
 export function createEventsRepository(database: AppDatabase) {
   const toInsertEntry = (data: NewEvent, createdAtOverride?: string): NewEvent => {
     const now = createdAtOverride ?? Date.now().toString()
+    const startDateTime = data.startDateTime ?? null
+    const endDateTime = data.endDateTime ?? null
+    assertValidEventDateRange(startDateTime, endDateTime)
 
     return {
       ...data,
@@ -17,8 +21,8 @@ export function createEventsRepository(database: AppDatabase) {
       type: data.type ?? "function",
       status: data.status ?? "new_lead",
       isInternal: data.isInternal ?? 0,
-      startDateTime: data.startDateTime ?? null,
-      endDateTime: data.endDateTime ?? null,
+      startDateTime,
+      endDateTime,
       clientName: data.clientName ?? null,
       clientEmail: data.clientEmail ?? null,
       clientPhone: data.clientPhone ?? null,
@@ -215,6 +219,14 @@ export function createEventsRepository(database: AppDatabase) {
       if (!id) throw new Error("updateEvent: ID is required")
       if (Object.keys(updates).length === 0) {
         throw new Error("updateEvent: updates are required")
+      }
+
+      if ("startDateTime" in updates || "endDateTime" in updates) {
+        const current = eventQueries.getById(id)
+        assertValidEventDateRange(
+          "startDateTime" in updates ? updates.startDateTime ?? null : current.startDateTime,
+          "endDateTime" in updates ? updates.endDateTime ?? null : current.endDateTime,
+        )
       }
 
       const updatedEvent = database.update(events)

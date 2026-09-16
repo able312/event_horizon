@@ -1,29 +1,37 @@
 /**
  * DateTimeInput Component
- * 
+ *
  * A combined date and time input component.
  * Displays a DatePicker and time input side by side.
- * 
+ *
  * Features:
  * - Date picker for selecting the date
- * - Time input for selecting the time
+ * - Time input for selecting the time (disabled until a date is set)
  * - Preserves either date or time when the other changes
- * - Returns ISO string to parent
- * 
- * Location: src/components/ui/DateTimeInput.tsx
+ * - Returns ISO string or null to parent
  */
 
 import React from "react"
 import { DatePicker } from "~/components/atoms/date-picker"
+import { Input } from "~/components/atoms/input"
+import {
+  combineDateWithTime,
+  extractTimeString,
+  replaceDatePreservingTime,
+} from "~/components/atoms/dateTimeInput.lib"
 import { cn } from "~/lib/utils"
 
 interface DateTimeInputProps {
   /** Label for the datetime input */
   label: string
-  /** Current value as ISO date string */
+  /** Current value as ISO date string, or null when unset */
   value: string | null
-  /** Callback when datetime changes */
-  onChange: (value: string) => void
+  /** Callback when datetime changes (null clears the value) */
+  onChange: (value: string | null) => void
+  /** Optional minimum datetime — calendar days before this are disabled */
+  minDateTime?: string | null
+  /** Optional inline error message */
+  error?: string
   /** Optional className for the outer grid */
   className?: string
   /** Optional className for labels */
@@ -34,85 +42,78 @@ interface DateTimeInputProps {
   timeInputClassName?: string
 }
 
-/**
- * DateTimeInput
- * 
- * Combines a DatePicker and time input into a single component.
- * Maintains the time portion when the date changes, and vice versa.
- */
 const DateTimeInput: React.FC<DateTimeInputProps> = ({
   label,
   value,
   onChange,
+  minDateTime,
+  error,
   className,
   labelClassName,
   dateInputClassName,
   timeInputClassName,
 }) => {
-  /**
-   * Handle date change
-   * Preserves the existing time from the value
-   */
-  const handleDateChange = (date: Date | undefined) => {
-    if (!date) return
-    
-    const currentDate = value ? new Date(value) : new Date()
-    const hours = currentDate.getHours()
-    const minutes = currentDate.getMinutes()
-    
-    const newDate = new Date(date)
-    newDate.setHours(hours, minutes, 0, 0)
-    
-    onChange(newDate.toISOString())
+  const handleDateChange = (date: Date | null) => {
+    if (!date) {
+      onChange(null)
+      return
+    }
+    onChange(replaceDatePreservingTime(value, date))
   }
 
-  /**
-   * Handle time change
-   * Preserves the existing date from the value
-   */
   const handleTimeChange = (timeValue: string) => {
-    const [hours, minutes] = timeValue.split(":").map(Number)
-    
-    const currentDate = value ? new Date(value) : new Date()
-    currentDate.setHours(hours, minutes, 0, 0)
-    
-    onChange(currentDate.toISOString())
+    if (!value) return
+
+    const currentDate = new Date(value)
+    if (Number.isNaN(currentDate.getTime())) return
+
+    onChange(combineDateWithTime(currentDate, timeValue || null))
   }
 
-  /**
-   * Get the time portion from the value
-   */
-  const getTimeValue = (): string => {
-    if (!value) return ""
-    return new Date(value).toTimeString().slice(0, 5)
-  }
+  const minDate = minDateTime ? new Date(minDateTime) : undefined
+  const resolvedMinDate =
+    minDate && !Number.isNaN(minDate.getTime()) ? minDate : undefined
+
+  const dateValue = React.useMemo(() => {
+    if (!value) return null
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }, [value])
 
   return (
-    /**
-     * Container
-     * - Two column grid: date on left, time on right
-     */
-    <div className={cn("grid grid-cols-2 gap-2", className)}>
-      {/* Date Picker Column */}
-      <div>
-        <label className={cn("mb-1 block text-sm font-medium", labelClassName)}>{label}</label>
-        <DatePicker 
-          defaultValue={value ? new Date(value) : new Date()}
-          onChange={handleDateChange}
-          inputClassName={dateInputClassName}
-        />
-      </div>
+    <div className={cn("space-y-1", className)}>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className={cn("mb-1 block text-sm font-medium", labelClassName)}>
+            {label}
+          </label>
+          <DatePicker
+            value={dateValue}
+            onChange={handleDateChange}
+            inputClassName={dateInputClassName}
+            minDate={resolvedMinDate}
+          />
+        </div>
 
-      {/* Time Input Column */}
-      <div>
-        <label className={cn("mb-1 block text-sm font-medium", labelClassName)}>Time</label>
-        <input
-          type="time"
-          value={getTimeValue()}
-          onChange={(e) => handleTimeChange(e.target.value)}
-          className={cn("w-full rounded-lg border px-3 py-2", timeInputClassName)}
-        />
+        <div>
+          <label className={cn("mb-1 block text-sm font-medium", labelClassName)}>
+            Time
+          </label>
+          <Input
+            type="time"
+            value={extractTimeString(value)}
+            onChange={(e) => handleTimeChange(e.target.value)}
+            disabled={!value}
+            aria-invalid={error ? true : undefined}
+            className={cn("w-full rounded-lg border px-3 py-2", timeInputClassName)}
+          />
+        </div>
       </div>
+      {error ? (
+        <p className="text-xs text-red-400" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   )
 }

@@ -24,6 +24,10 @@ import {
 import { Button } from "~/components/atoms/button"
 import DateTimeInput from "~/components/atoms/DateTimeInput"
 import { EVENT_TYPE_OPTIONS } from "~/definitions/events/ui"
+import {
+  isValidEventDateRange,
+  resolveEndDateTimeForStart,
+} from "~/lib/events/eventDateRange"
 
 // ============================================================================
 // Types
@@ -46,11 +50,11 @@ interface DateTimeDialogProps {
   /** Callback to close the dialog */
   onOpenChange: (open: boolean) => void
   /** Current event start datetime */
-  startDateTime: string
+  startDateTime: string | null
   /** Current event end datetime */
-  endDateTime: string
+  endDateTime: string | null
   /** Callback to save the new date/time values */
-  onSave: (startDateTime: string, endDateTime: string) => void
+  onSave: (startDateTime: string | null, endDateTime: string | null) => void
 }
 
 /**
@@ -66,20 +70,30 @@ export const DateTimeDialog: React.FC<DateTimeDialogProps> = ({
   endDateTime,
   onSave,
 }) => {
-  // Temporary state for form inputs
-  const [tempStartDateTime, setTempStartDateTime] = useState<string>("")
-  const [tempEndDateTime, setTempEndDateTime] = useState<string>("")
+  const [tempStartDateTime, setTempStartDateTime] = useState<string | null>(null)
+  const [tempEndDateTime, setTempEndDateTime] = useState<string | null>(null)
 
-  // Initialize form with current event values when dialog opens
   useEffect(() => {
     if (open) {
-      setTempStartDateTime(startDateTime || new Date().toISOString())
-      setTempEndDateTime(endDateTime || new Date().toISOString())
+      setTempStartDateTime(startDateTime ?? null)
+      setTempEndDateTime(endDateTime ?? null)
     }
   }, [open, startDateTime, endDateTime])
 
-  // Handle save button click
+  const rangeValid = isValidEventDateRange(tempStartDateTime, tempEndDateTime)
+
+  const handleStartChange = (nextStart: string | null) => {
+    const nextEnd = resolveEndDateTimeForStart(
+      tempStartDateTime,
+      nextStart,
+      tempEndDateTime,
+    )
+    setTempStartDateTime(nextStart)
+    setTempEndDateTime(nextEnd)
+  }
+
   const handleSave = () => {
+    if (!rangeValid) return
     onSave(tempStartDateTime, tempEndDateTime)
     onOpenChange(false)
   }
@@ -93,25 +107,25 @@ export const DateTimeDialog: React.FC<DateTimeDialogProps> = ({
         
         {/* Date/Time Form Fields */}
         <div className="space-y-4 py-4">
-          {/* Start Date & Time */}
           <DateTimeInput
             label="Start Date"
-            value={tempStartDateTime || null}
-            onChange={setTempStartDateTime}
+            value={tempStartDateTime}
+            onChange={handleStartChange}
           />
 
-          {/* End Date & Time */}
           <DateTimeInput
             label="End Date"
-            value={tempEndDateTime || null}
+            value={tempEndDateTime}
             onChange={setTempEndDateTime}
+            minDateTime={tempStartDateTime}
+            error={rangeValid ? undefined : "End must be on or after the start date"}
           />
         </div>
         
         {/* Dialog Actions */}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave}>Save</Button>
+          <Button onClick={handleSave} disabled={!rangeValid}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

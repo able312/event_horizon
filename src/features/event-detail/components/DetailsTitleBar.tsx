@@ -169,8 +169,8 @@ const DetailsTitleBar: React.FC<DetailsTitleBarProps> = ({ eventResource }) => {
               <DateTimeDialog
                 open={dateDialogOpen}
                 onOpenChange={setDateDialogOpen}
-                startDateTime={event.startDateTime || new Date().toISOString()}
-                endDateTime={event.endDateTime || new Date().toISOString()}
+                startDateTime={event.startDateTime ?? null}
+                endDateTime={event.endDateTime ?? null}
                 onSave={(startDateTime, endDateTime) => {
                   void updateEvent({ startDateTime, endDateTime })
                 }}

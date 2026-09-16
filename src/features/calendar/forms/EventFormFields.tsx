@@ -3,6 +3,10 @@ import type { EventStatus, EventType } from "~/definitions/database"
 import { ITER_EVENT_STATUSES } from "~/definitions/events/event-constants"
 import { EVENT_STATUS_LABELS, EVENT_TYPE_LABELS, EVENT_TYPE_OPTIONS } from "~/definitions/events/ui"
 import DateTimeInput from "~/components/atoms/DateTimeInput"
+import {
+  isValidEventDateRange,
+  resolveEndDateTimeForStart,
+} from "~/lib/events/eventDateRange"
 
 export interface EventFormValues {
   title: string
@@ -11,8 +15,8 @@ export interface EventFormValues {
   clientName: string
   clientEmail: string
   clientPhone: string
-  startDateTime: string
-  endDateTime: string
+  startDateTime: string | null
+  endDateTime: string | null
   minGuests: number
   maxGuests: number
 }
@@ -26,11 +30,28 @@ interface EventFormFieldsProps {
 const formFieldClasses =
   "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-stone-100 placeholder:text-stone-400 focus:border-white/30 focus:outline-none"
 
+const dateTimeFieldClasses =
+  "border-white/15 bg-white/5 text-stone-100 placeholder:text-stone-400 focus-visible:border-white/30"
+
+const timeFieldClasses =
+  "border-white/15 bg-white/5 text-stone-100 placeholder:text-stone-400 focus:border-white/30"
+
 const EventFormFields: React.FC<EventFormFieldsProps> = ({
   values,
   onChange,
   autoFocusTitle = false,
 }) => {
+  const rangeInvalid = !isValidEventDateRange(values.startDateTime, values.endDateTime)
+
+  const handleStartChange = (startDateTime: string | null) => {
+    const endDateTime = resolveEndDateTimeForStart(
+      values.startDateTime,
+      startDateTime,
+      values.endDateTime,
+    )
+    onChange({ startDateTime, endDateTime })
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -110,19 +131,21 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
       <DateTimeInput
         label="Start Date"
         value={values.startDateTime}
-        onChange={(value) => onChange({ startDateTime: value })}
+        onChange={handleStartChange}
         labelClassName="text-stone-100"
-        dateInputClassName="border-white/15 bg-white/5 text-stone-100 placeholder:text-stone-400 focus-visible:border-white/30"
-        timeInputClassName="border-white/15 bg-white/5 text-stone-100 placeholder:text-stone-400 focus:border-white/30"
+        dateInputClassName={dateTimeFieldClasses}
+        timeInputClassName={timeFieldClasses}
       />
 
       <DateTimeInput
         label="End Date"
         value={values.endDateTime}
-        onChange={(value) => onChange({ endDateTime: value })}
+        onChange={(endDateTime) => onChange({ endDateTime })}
+        minDateTime={values.startDateTime}
+        error={rangeInvalid ? "End must be on or after the start date" : undefined}
         labelClassName="text-stone-100"
-        dateInputClassName="border-white/15 bg-white/5 text-stone-100 placeholder:text-stone-400 focus-visible:border-white/30"
-        timeInputClassName="border-white/15 bg-white/5 text-stone-100 placeholder:text-stone-400 focus:border-white/30"
+        dateInputClassName={dateTimeFieldClasses}
+        timeInputClassName={timeFieldClasses}
       />
 
       <div className="grid grid-cols-2 gap-4">

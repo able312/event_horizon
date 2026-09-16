@@ -174,7 +174,7 @@ describe("CreateEventSidebarForm save timing", () => {
     const onDraftPreviewChange = vi.fn()
     const startIso = "2026-07-14T15:30:45.123Z"
 
-    const { container } = render(
+    render(
       <CreateEventSidebarForm
         initialStartDateTime={startIso}
         initialEndDateTime={startIso}
@@ -184,9 +184,7 @@ describe("CreateEventSidebarForm save timing", () => {
       />,
     )
 
-    const dateInputs = Array.from(
-      container.querySelectorAll<HTMLInputElement>("#date-picker-input"),
-    )
+    const dateInputs = screen.getAllByPlaceholderText("Pick a date")
     expect(dateInputs.length).toBeGreaterThan(0)
 
     fireEvent.change(dateInputs[0], { target: { value: "July 20, 2026" } })
@@ -197,6 +195,52 @@ describe("CreateEventSidebarForm save timing", () => {
       expect(latestCall?.title).toBe("Untitled")
       expect(latestCall?.startDateTime).not.toBe(startIso)
     })
+  })
+
+  it("creates with null dates when opened from a blank state", async () => {
+    const onCreate = vi.fn(async () => undefined)
+
+    render(<CreateEventSidebarForm onCreate={onCreate} onCancel={vi.fn()} />)
+
+    fireEvent.change(screen.getByPlaceholderText("e.g., Smith Wedding"), {
+      target: { value: "Undated Lead" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Create" }))
+
+    await waitFor(() => {
+      expect(onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          startDateTime: null,
+          endDateTime: null,
+        }),
+      )
+    })
+  })
+
+  it("disables create when end is before start", async () => {
+    const onCreate = vi.fn(async () => undefined)
+    const startIso = "2026-07-14T15:00:00.000Z"
+    const endIso = "2026-07-13T15:00:00.000Z"
+
+    render(
+      <CreateEventSidebarForm
+        initialStartDateTime={startIso}
+        initialEndDateTime={endIso}
+        onCreate={onCreate}
+        onCancel={vi.fn()}
+      />,
+    )
+
+    fireEvent.change(screen.getByPlaceholderText("e.g., Smith Wedding"), {
+      target: { value: "Invalid Range" },
+    })
+
+    expect(
+      (screen.getByRole("button", { name: "Create" }) as HTMLButtonElement).disabled,
+    ).toBe(true)
+    expect(screen.getByText("End must be on or after the start date")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Create" }))
+    expect(onCreate).not.toHaveBeenCalled()
   })
 
   it("emits null preview on cancel", async () => {

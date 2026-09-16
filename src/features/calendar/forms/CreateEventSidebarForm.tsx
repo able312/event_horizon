@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react"
 import type { NewEvent } from "~/definitions/database"
-import EventFormFields, { type EventFormValues } from "./EventFormFields"
+import EventFormFields, {
+  type EventFormValues,
+} from "./EventFormFields"
+import { isEventFormValid } from "./eventFormValidation"
 import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
 
 interface CreateEventSidebarFormProps {
@@ -15,8 +18,6 @@ function createDefaultFormValues(
   initialStartDateTime?: string,
   initialEndDateTime?: string,
 ): EventFormValues {
-  const defaultDateTime = new Date().toISOString()
-
   return {
     title: "",
     type: "function",
@@ -24,8 +25,8 @@ function createDefaultFormValues(
     clientName: "",
     clientEmail: "",
     clientPhone: "",
-    startDateTime: initialStartDateTime ?? defaultDateTime,
-    endDateTime: initialEndDateTime ?? initialStartDateTime ?? defaultDateTime,
+    startDateTime: initialStartDateTime ?? null,
+    endDateTime: initialEndDateTime ?? initialStartDateTime ?? null,
     minGuests: 0,
     maxGuests: 0,
   }
@@ -72,7 +73,7 @@ export const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
   }
 
   const handleCreate = async () => {
-    if (!formValues.title || isSubmitting) return
+    if (!isEventFormValid(formValues) || isSubmitting) return
 
     setIsSubmitting(true)
     try {
@@ -122,7 +123,7 @@ export const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
         <button
           type="button"
           onClick={handleCreate}
-          disabled={!formValues.title || isSubmitting}
+          disabled={!isEventFormValid(formValues) || isSubmitting}
           className="flex-1 rounded-lg bg-orange-500 px-4 py-2 font-medium text-stone-950 transition-colors hover:bg-orange-400 disabled:bg-stone-900 disabled:text-stone-700"
         >
           Create

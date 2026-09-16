@@ -65,4 +65,47 @@ describe("EditEventSidebarForm save timing", () => {
     })
     expect(onCancel).not.toHaveBeenCalled()
   })
+
+  it("disables save when end is before start", () => {
+    const onSave = vi.fn(async () => undefined)
+
+    render(
+      <EditEventSidebarForm
+        event={makeEvent({
+          startDateTime: "2026-07-14T16:00:00.000Z",
+          endDateTime: "2026-07-14T15:00:00.000Z",
+        })}
+        onSave={onSave}
+        onCancel={vi.fn()}
+      />,
+    )
+
+    expect(
+      (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled,
+    ).toBe(true)
+    expect(screen.getByText("End must be on or after the start date")).toBeTruthy()
+  })
+
+  it("preserves null dates when saving an unscheduled event", async () => {
+    const onSave = vi.fn(async () => undefined)
+
+    render(
+      <EditEventSidebarForm
+        event={makeEvent({ startDateTime: null, endDateTime: null })}
+        onSave={onSave}
+        onCancel={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          startDateTime: null,
+          endDateTime: null,
+        }),
+      )
+    })
+  })
 })

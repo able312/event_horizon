@@ -254,3 +254,105 @@ describe("events repository month and unscheduled queries", () => {
     expect(secondPage.hasMore).toBe(false)
   })
 })
+
+describe("events repository date range validation", () => {
+  let testDb: TestDb | null = null
+
+  beforeEach(async () => {
+    testDb = await createTestDb()
+  })
+
+  afterEach(async () => {
+    if (!testDb) return
+    await testDb.cleanup()
+    testDb = null
+  })
+
+  it("insert rejects endDateTime before startDateTime", () => {
+    if (!testDb) throw new Error("Expected test DB to be initialized")
+    const repo = createEventsRepository(testDb.db)
+
+    expect(() =>
+      repo.insert({
+        title: "Invalid Range",
+        startDateTime: "2026-07-14T16:00:00.000Z",
+        endDateTime: "2026-07-14T15:00:00.000Z",
+      }),
+    ).toThrow("endDateTime cannot be before startDateTime")
+  })
+
+  it("insert allows equal timestamps and either side null", () => {
+    if (!testDb) throw new Error("Expected test DB to be initialized")
+    const repo = createEventsRepository(testDb.db)
+
+    const equal = repo.insert({
+      title: "Equal",
+      startDateTime: "2026-07-14T15:00:00.000Z",
+      endDateTime: "2026-07-14T15:00:00.000Z",
+    })
+    expect(equal.startDateTime).toBe("2026-07-14T15:00:00.000Z")
+
+    const unscheduled = repo.insert({
+      title: "Unscheduled",
+      startDateTime: null,
+      endDateTime: null,
+    })
+    expect(unscheduled.startDateTime).toBeNull()
+    expect(unscheduled.endDateTime).toBeNull()
+  })
+
+  it("update rejects a patch that makes end earlier than stored start", () => {
+    if (!testDb) throw new Error("Expected test DB to be initialized")
+    const repo = createEventsRepository(testDb.db)
+
+    const created = repo.insert({
+      title: "Scheduled",
+      startDateTime: "2026-07-14T16:00:00.000Z",
+      endDateTime: "2026-07-14T18:00:00.000Z",
+    })
+
+    expect(() =>
+      repo.update(created.id, { endDateTime: "2026-07-14T15:00:00.000Z" }),
+    ).toThrow("endDateTime cannot be before startDateTime")
+  })
+
+  it("update allows clearing both dates to null", () => {
+    if (!testDb) throw new Error("Expected test DB to be initialized")
+    const repo = createEventsRepository(testDb.db)
+
+    const created = repo.insert({
+      title: "Scheduled",
+      startDateTime: "2026-07-14T16:00:00.000Z",
+      endDateTime: "2026-07-14T18:00:00.000Z",
+    })
+
+    const updated = repo.update(created.id, {
+      startDateTime: null,
+      endDateTime: null,
+    })
+    expect(updated.startDateTime).toBeNull()
+    expect(updated.endDateTime).toBeNull()
+  })
+
+  it("insertMany rejects when any row has an invalid range", () => {
+    if (!testDb) throw new Error("Expected test DB to be initialized")
+    const repo = createEventsRepository(testDb.db)
+
+    expect(() =>
+      repo.insertMany([
+        {
+          title: "Valid",
+          startDateTime: "2026-07-14T15:00:00.000Z",
+          endDateTime: "2026-07-14T16:00:00.000Z",
+        },
+        {
+          title: "Invalid",
+          startDateTime: "2026-07-14T16:00:00.000Z",
+          endDateTime: "2026-07-14T15:00:00.000Z",
+        },
+      ]),
+    ).toThrow("endDateTime cannot be before startDateTime")
+
+    expect(repo.getAll()).toHaveLength(0)
+  })
+})

@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react"
 import type { Event, UpdateEvent } from "~/definitions/database"
-import EventFormFields, { type EventFormValues } from "./EventFormFields"
+import EventFormFields, {
+  type EventFormValues,
+} from "./EventFormFields"
+import { isEventFormValid } from "./eventFormValidation"
 
 interface EditEventSidebarFormProps {
   event: Event | null
@@ -16,8 +19,8 @@ function createFormValuesFromEvent(event: Event | null): EventFormValues {
     clientName: event?.clientName ?? "",
     clientEmail: event?.clientEmail ?? "",
     clientPhone: event?.clientPhone ?? "",
-    startDateTime: event?.startDateTime ?? new Date().toISOString(),
-    endDateTime: event?.endDateTime ?? new Date().toISOString(),
+    startDateTime: event?.startDateTime ?? null,
+    endDateTime: event?.endDateTime ?? null,
     minGuests: event?.minGuests ?? 0,
     maxGuests: event?.maxGuests ?? 0,
   }
@@ -36,7 +39,7 @@ export const EditEventSidebarForm: React.FC<EditEventSidebarFormProps> = ({
   }, [event])
 
   const handleSave = async () => {
-    if (!event || !formValues.title || isSubmitting) return
+    if (!event || !isEventFormValid(formValues) || isSubmitting) return
 
     setIsSubmitting(true)
     try {
@@ -100,7 +103,7 @@ export const EditEventSidebarForm: React.FC<EditEventSidebarFormProps> = ({
         <button
           type="button"
           onClick={handleSave}
-          disabled={!formValues.title || isSubmitting}
+          disabled={!isEventFormValid(formValues) || isSubmitting}
           className="flex-1 rounded-lg bg-orange-500 px-4 py-2 font-medium text-stone-950 transition-colors hover:bg-orange-400 disabled:bg-stone-900 disabled:text-stone-700"
         >
           Save
