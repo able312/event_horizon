@@ -82,7 +82,7 @@ const DateTimeInput: React.FC<DateTimeInputProps> = ({
 
   return (
     <div className={cn("space-y-1", className)}>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-[2fr_1fr] gap-2">
         <div>
           <label className={cn("mb-1 block text-sm font-medium", labelClassName)}>
             {label}
@@ -105,7 +105,7 @@ const DateTimeInput: React.FC<DateTimeInputProps> = ({
             onChange={(e) => handleTimeChange(e.target.value)}
             disabled={!value}
             aria-invalid={error ? true : undefined}
-            className={cn("w-full rounded-lg border px-3 py-2", timeInputClassName)}
+            className={cn("w-full rounded-md border", timeInputClassName)}
           />
         </div>
       </div>
