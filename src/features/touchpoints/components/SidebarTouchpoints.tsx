@@ -19,7 +19,7 @@ const SECTION_HEADER_CLASS: Record<SidebarTouchpointSectionKey, string> = {
 
 export const SidebarTouchpoints: React.FC = () => {
   const location = useLocation()
-  const { data = [], isLoading } = useIncompleteTouchpoints()
+  const { data = [], isLoading, completeTouchpoint } = useIncompleteTouchpoints()
   const [expanded, setExpanded] = useState<Partial<Record<SidebarTouchpointSectionKey, boolean>>>(
     {},
   )
@@ -58,6 +58,9 @@ export const SidebarTouchpoints: React.FC = () => {
                     key={item.id}
                     item={item}
                     to={buildEventDetailEntryPath(item.eventId, returnTo)}
+                    onComplete={() =>
+                      completeTouchpoint({ id: item.id, eventId: item.eventId })
+                    }
                   />
                 ))}
               </ul>

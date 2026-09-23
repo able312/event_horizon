@@ -2,6 +2,7 @@ import { Link } from "react-router"
 
 import type { SidebarTouchpointRow, SidebarTouchpointSectionKey } from "../lib/groupSidebarTouchpoints"
 import { formatSidebarDueLabelFromStored } from "../lib/touchpointStatus"
+import { TouchpointCompleteToggle } from "./TouchpointCompleteToggle"
 
 const ACCENT_BY_URGENCY: Record<SidebarTouchpointSectionKey, string> = {
   "due today": "border-orange-400",
@@ -24,18 +25,28 @@ const TITLE_BY_URGENCY: Record<SidebarTouchpointSectionKey, string> = {
 type SidebarTouchpointItemProps = {
   item: SidebarTouchpointRow
   to: string
+  onComplete: () => void
 }
 
-export const SidebarTouchpointItem: React.FC<SidebarTouchpointItemProps> = ({ item, to }) => {
+export const SidebarTouchpointItem: React.FC<SidebarTouchpointItemProps> = ({
+  item,
+  to,
+  onComplete,
+}) => {
   const dueLabel = formatSidebarDueLabelFromStored(item.dueDate)
   const eventName = item.eventTitle.trim() || "Untitled event"
 
   return (
-    <li>
-      <Link
-        to={to}
-        className={`block rounded-none border-l-2 px-1.5 py-1.5 transition-colors hover:bg-white/5 ${ACCENT_BY_URGENCY[item.urgency]}`}
-      >
+    <li
+      className={`flex items-start gap-2 rounded-none border-l-2 px-1.5 py-1.5 transition-colors hover:bg-white/5 ${ACCENT_BY_URGENCY[item.urgency]}`}
+    >
+      <TouchpointCompleteToggle
+        checked={false}
+        className="mt-1"
+        aria-label="Complete touchpoint"
+        onToggle={onComplete}
+      />
+      <Link to={to} className="min-w-0 flex-1">
         <p className={`truncate ${TITLE_BY_URGENCY[item.urgency]}`}>
           {item.title.trim() || "Untitled touchpoint"}
         </p>

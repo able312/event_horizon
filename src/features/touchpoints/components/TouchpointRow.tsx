@@ -1,4 +1,4 @@
-import { Check, Trash2 } from "lucide-react"
+import { Trash2 } from "lucide-react"
 
 import { Button } from "~/components/atoms/button"
 import { Input } from "~/components/atoms/input"
@@ -6,10 +6,8 @@ import type { Touchpoint } from "~/definitions/database"
 
 import type { TouchpointDraft } from "../types"
 import { getTouchpointUrgencyFromStored, URGENCY_STYLES } from "../lib/touchpointStatus"
+import { TouchpointCompleteToggle } from "./TouchpointCompleteToggle"
 import { TouchpointDueDatePicker } from "./TouchpointDueDatePicker"
-
-const COMPLETE_TOGGLE_CLASS =
-  "inline-flex size-4 shrink-0 items-center justify-center rounded-full border border-border bg-white text-orange-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40 disabled:opacity-50"
 
 /** Toggle (size-4) + gap-3 — keeps the bottom meta line aligned under the title. */
 const TITLE_COLUMN_OFFSET = "pl-7"
@@ -66,13 +64,11 @@ export const TouchpointRow: React.FC<TouchpointRowProps> = (props) => {
     return (
       <li className={ROW_CHROME_STANDARD}>
         <div className="flex items-center gap-3">
-          <button
-            type="button"
+          <TouchpointCompleteToggle
+            checked={false}
             disabled
-            className={COMPLETE_TOGGLE_CLASS}
             aria-label="Complete touchpoint"
-            aria-checked={false}
-            role="checkbox"
+            onToggle={() => undefined}
           />
           <Input
             autoFocus
@@ -135,16 +131,11 @@ export const TouchpointRow: React.FC<TouchpointRowProps> = (props) => {
       }
     >
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          className={COMPLETE_TOGGLE_CLASS}
+        <TouchpointCompleteToggle
+          checked={isComplete}
           aria-label={isComplete ? "Reopen touchpoint" : "Complete touchpoint"}
-          aria-checked={isComplete}
-          role="checkbox"
-          onClick={() => props.onToggleComplete(!isComplete)}
-        >
-          {isComplete ? <Check className="size-3 stroke-[3]" aria-hidden /> : null}
-        </button>
+          onToggle={() => props.onToggleComplete(!isComplete)}
+        />
         <Input
           defaultValue={touchpoint.title}
           key={`${touchpoint.id}-title-${touchpoint.title}`}

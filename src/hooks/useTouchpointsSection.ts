@@ -2,7 +2,12 @@ import { useParams } from "react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
-import type { NewTouchpoint, Touchpoint, UpdateTouchpoint } from "~/definitions/database"
+import type {
+  IncompleteTouchpointWithEvent,
+  NewTouchpoint,
+  Touchpoint,
+  UpdateTouchpoint,
+} from "~/definitions/database"
 import * as touchpointApi from "~/lib/ipc/touchpoints"
 
 function sortTouchpoints(items: Touchpoint[]): Touchpoint[] {
@@ -18,13 +23,14 @@ function sortTouchpoints(items: Touchpoint[]): Touchpoint[] {
   })
 }
 
+const incompleteQueryKey = ["touchpoints", "incomplete"] as const
+
 export function useTouchpointsSection(eventIdOverride?: string) {
   const { id: routeEventId } = useParams<{ id: string }>()
   const eventId = eventIdOverride ?? routeEventId
   const queryClient = useQueryClient()
 
   const queryKey = ["touchpoints", eventId] as const
-  const incompleteQueryKey = ["touchpoints", "incomplete"] as const
 
   const query = useQuery({
     queryKey,
@@ -125,8 +131,40 @@ export function useTouchpointsSection(eventIdOverride?: string) {
 }
 
 export function useIncompleteTouchpoints() {
-  return useQuery({
-    queryKey: ["touchpoints", "incomplete"] as const,
+  const queryClient = useQueryClient()
+
+  const query = useQuery({
+    queryKey: incompleteQueryKey,
     queryFn: () => touchpointApi.getIncompleteTouchpoints(),
   })
+
+  const completeMutation = useMutation({
+    mutationFn: ({ id }: { id: string; eventId: string }) =>
+      touchpointApi.updateTouchpoint(id, { completedAt: new Date().toISOString() }),
+    onMutate: async ({ id }) => {
+      await queryClient.cancelQueries({ queryKey: incompleteQueryKey })
+      const previous = queryClient.getQueryData<IncompleteTouchpointWithEvent[]>(incompleteQueryKey)
+
+      queryClient.setQueryData<IncompleteTouchpointWithEvent[]>(incompleteQueryKey, (old = []) =>
+        old.filter((row) => row.id !== id),
+      )
+
+      return { previous }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(incompleteQueryKey, context.previous)
+      }
+      toast.error("Failed to complete touchpoint")
+    },
+    onSettled: (_data, _err, vars) => {
+      void queryClient.invalidateQueries({ queryKey: incompleteQueryKey })
+      void queryClient.invalidateQueries({ queryKey: ["touchpoints", vars.eventId] })
+    },
+  })
+
+  return {
+    ...query,
+    completeTouchpoint: completeMutation.mutate,
+  }
 }
