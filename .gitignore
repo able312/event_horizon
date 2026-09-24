@@ -14,6 +14,10 @@ dist-electron
 dist-ssr
 *.local
 
+# Local SQLite databases, including worktree snapshots and WAL sidecars
+.event-horizon/
+*.sqlite*
+
 # Agents and Internal Documentation
 .cursor/*
 .fallow/*

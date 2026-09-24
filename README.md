@@ -26,7 +26,7 @@ Event Horizon is structured as a desktop app with explicit boundaries between UI
 - Preload: a constrained `contextBridge` layer exposing allowlisted IPC methods only
 - Main process: Electron window lifecycle, app menu actions, IPC handler registration, filesystem/OS access, and database initialization
 - Data layer: SQLite via `better-sqlite3`, modeled with Drizzle ORM and evolved through migrations
-- Storage model: the local database is created in Electron's user data directory using `app.getPath("userData")`
+- Storage model: main and installed builds use Electron's user data directory; development worktrees keep an ignored `.event-horizon/app.sqlite` inside each worktree
 
 The security and reliability baseline is also deliberate:
 
@@ -92,7 +92,11 @@ npm run dev
 - starts the Vite dev server on port `42069`
 - transpiles and launches the Electron process
 
-On startup, the app initializes a local SQLite database in Electron's user data directory and attempts to run the latest Drizzle migrations automatically.
+On startup, the app runs the latest Drizzle migrations. The `main` branch and installed app use `app.sqlite` in Electron's user data directory. A development worktree uses `.event-horizon/app.sqlite` in its own folder. A new worktree database starts empty, runs migrations, then receives synthetic sample events, a timeblock, food item, payment, and touchpoint. Existing worktree databases are left as they are; they are never copied from another worktree or reseeded.
+
+Before applying pending migrations to an existing database, the app makes a consistent SQLite snapshot in a neighboring `backups/` directory. Drizzle applies the pending migrations as one transaction, so one snapshot covers the full pending batch. If backup or migration fails, startup stops and shows an error. Backups and SQLite WAL sidecars are ignored by Git. To restore a backup, close the app, remove the target database's `-wal` and `-shm` sidecars, then copy the backup over `app.sqlite`. To reset a worktree, close its app and remove only its `.event-horizon` directory; the next launch creates a fresh seeded database. Older worktrees that already contain a copied database are preserved until explicitly reset.
+
+The app runs migrations automatically on its selected database. If you run `npx drizzle-kit migrate` directly, set `EVENT_HORIZON_DB_PATH` to the absolute path of the intended database first. The CLI has no implicit database target.
 
 ## Useful Scripts
 
@@ -106,7 +110,7 @@ On startup, the app initializes a local SQLite database in Electron's user data 
 - `npm run dist:mac` creates a macOS distribution build
 - `npm run dist:win` creates a Windows distribution build
 - `npx drizzle-kit generate` generates a new migration from schema changes
-- `npx drizzle-kit migrate` applies migrations to the database
+- `EVENT_HORIZON_DB_PATH=/absolute/path/to/app.sqlite npx drizzle-kit migrate` applies migrations to that database
 
 The rebuild scripts matter because SQLite is backed by native bindings, and the binary target differs between plain Node and Electron.
 
