@@ -10,9 +10,10 @@ afterEach(async () => {
   testDb = undefined
 })
 
-it("seeds related synthetic records after migrations", async () => {
+it("seeds related synthetic records once when startup is retried", async () => {
   testDb = await createTestDb()
-  seedDevelopmentDatabase(testDb.db)
+  seedDevelopmentDatabase(testDb.db, testDb.sqlite)
+  seedDevelopmentDatabase(testDb.db, testDb.sqlite)
 
   const events = testDb.sqlite.prepare("SELECT id, title, client_email FROM events ORDER BY title").all() as { id: string; title: string; client_email: string }[]
   expect(events.map((event) => event.title)).toEqual(["Sample Charity Tournament", "Sample Wedding Reception"])

@@ -32,6 +32,6 @@ export function initDB() {
   const backupPath = backupBeforePendingMigrations(sqliteDb, dbPath, migrationsFolder, existedBeforeOpen)
   if (backupPath) console.log(`Database backup before migration: ${backupPath}`)
   runMigrations(db, migrationsFolder)
-  if (isNewWorktreeDb) seedDevelopmentDatabase(db)
+  if (isNewWorktreeDb) seedDevelopmentDatabase(db, sqliteDb)
   console.log(`✅ Database migrated: ${dbPath}`)
 }
