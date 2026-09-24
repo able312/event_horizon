@@ -26,7 +26,7 @@ Event Horizon is structured as a desktop app with explicit boundaries between UI
 - Preload: a constrained `contextBridge` layer exposing allowlisted IPC methods only
 - Main process: Electron window lifecycle, app menu actions, IPC handler registration, filesystem/OS access, and database initialization
 - Data layer: SQLite via `better-sqlite3`, modeled with Drizzle ORM and evolved through migrations
-- Storage model: the local database is created in Electron's user data directory using `app.getPath("userData")`
+- Storage model: main and installed builds use Electron's user data directory; development worktrees keep an ignored `.event-horizon/app.sqlite` inside each worktree
 
 The security and reliability baseline is also deliberate:
 
@@ -92,7 +92,13 @@ npm run dev
 - starts the Vite dev server on port `42069`
 - transpiles and launches the Electron process
 
-On startup, the app initializes a local SQLite database in Electron's user data directory and attempts to run the latest Drizzle migrations automatically.
+On startup, the app runs the latest Drizzle migrations. The `main` branch uses `app.sqlite` in Electron's user data directory. A development worktree uses `.event-horizon/app.sqlite` in its own folder. On its first launch, it takes a consistent SQLite snapshot of the database belonging to the branch it was created from; later launches keep its own changes. This also works for a worktree created from another worktree when Git records that source branch in the new branch's reflog.
+
+Git does not always record a source branch (for example, a worktree created from `HEAD` or a commit hash). In that case, set `EVENT_HORIZON_DB_SOURCE` to the absolute path of the source SQLite file for the first launch. The app stops rather than starting with the wrong data. The source for `main` is its `app.sqlite` in Electron's user data directory; another worktree's source is its `.event-horizon/app.sqlite`. SQLite files and their WAL sidecars are ignored by Git. To start over, close the worktree app and remove only that worktree's `.event-horizon` directory; its next launch takes a fresh snapshot.
+
+When creating a worktree manually, name the source branch explicitly (`git worktree add -b feature/new /path/to/new main` or replace `main` with the source worktree's branch). This lets the first launch find the right database automatically. For an ambiguous source, launch once with `EVENT_HORIZON_DB_SOURCE=/absolute/path/to/source/app.sqlite npm run dev`.
+
+The app runs migrations automatically on its selected database. If you run `npx drizzle-kit migrate` directly, set `EVENT_HORIZON_DB_PATH` to the absolute path of the intended database first. The CLI has no implicit database target.
 
 ## Useful Scripts
 
@@ -106,7 +112,7 @@ On startup, the app initializes a local SQLite database in Electron's user data 
 - `npm run dist:mac` creates a macOS distribution build
 - `npm run dist:win` creates a Windows distribution build
 - `npx drizzle-kit generate` generates a new migration from schema changes
-- `npx drizzle-kit migrate` applies migrations to the database
+- `EVENT_HORIZON_DB_PATH=/absolute/path/to/app.sqlite npx drizzle-kit migrate` applies migrations to that database
 
 The rebuild scripts matter because SQLite is backed by native bindings, and the binary target differs between plain Node and Electron.
 
