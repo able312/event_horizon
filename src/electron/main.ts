@@ -1,4 +1,4 @@
-import { app, BrowserWindow, nativeImage } from 'electron';
+import { app, BrowserWindow, dialog, nativeImage } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url'
 import { isDev } from './utils.js';
@@ -47,12 +47,18 @@ const createWindow = () => {
     }
 }
 
-app.on("ready", async () => {
+app.on("ready", () => {
+    try {
+        initDB()
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        console.error("Database startup failed:", error)
+        dialog.showErrorBox("Database startup failed", `${message}\n\nThe app will close without opening a window.`)
+        app.quit()
+        return
+    }
 
     registerAllIpcHandlers()
-    
-
-    initDB()
 
     createWindow();
 
