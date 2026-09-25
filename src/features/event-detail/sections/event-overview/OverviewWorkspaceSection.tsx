@@ -7,6 +7,7 @@ import { TouchpointsCard } from "~/features/touchpoints"
 
 import { ClientDetailsCard } from "./components/ClientDetailsCard"
 import { InternalNotesCard } from "./components/InternalNotesCard"
+import ContactsList from "~/features/contacts/components/contactsList"
 
 interface OverviewWorkspaceSectionProps {
   eventResource: EventResource
@@ -38,6 +39,8 @@ const OverviewWorkspaceSection: React.FC<OverviewWorkspaceSectionProps> = ({ eve
         </div>
 
         <div className="min-w-0 space-y-4">
+          <ContactsList />
+
           <ClientDetailsCard
             client={{
               name: eventDetails.clientName ?? "No client listed",
