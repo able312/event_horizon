@@ -1,5 +1,6 @@
 import { act, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { toast } from "sonner"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import * as foodItemsIpc from "~/lib/ipc/foodItems"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
@@ -96,6 +97,7 @@ describe("useFoodSection optimistic cache", () => {
 
     const { result, queryClient } = renderHookWithProviders(() => useFoodSection())
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    queryClient.setQueryData(["timeblock", "tb-1"], makeTimeblock())
 
     act(() => {
       result.current.addItem({
@@ -108,6 +110,9 @@ describe("useFoodSection optimistic cache", () => {
       const cached = queryClient.getQueryData<TimeblockWithItems[]>(["foodSection", "event-1"])
       expect(cached?.[0].foodItems?.map((item) => item.name)).toEqual(["Sandwiches", "Salads"])
       expect((cached?.[0] as TimeblockWithItems & { items?: unknown }).items).toBeUndefined()
+
+      const focused = queryClient.getQueryData<TimeblockWithItems>(["timeblock", "tb-1"])
+      expect(focused?.foodItems?.map((item) => item.name)).toEqual(["Sandwiches", "Salads"])
     })
 
     await act(async () => {
@@ -119,6 +124,9 @@ describe("useFoodSection optimistic cache", () => {
       const cached = queryClient.getQueryData<TimeblockWithItems[]>(["foodSection", "event-1"])
       expect(cached?.[0].foodItems?.map((item) => item.id)).toEqual(["food-1", "food-2"])
       expect(cached?.[0].foodItems?.some((item) => item.id.startsWith("temp_"))).toBe(false)
+
+      const focused = queryClient.getQueryData<TimeblockWithItems>(["timeblock", "tb-1"])
+      expect(focused?.foodItems?.map((item) => item.id)).toEqual(["food-1", "food-2"])
     })
   })
 
@@ -132,6 +140,7 @@ describe("useFoodSection optimistic cache", () => {
 
     const { result, queryClient } = renderHookWithProviders(() => useFoodSection())
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    queryClient.setQueryData(["timeblock", "tb-1"], makeTimeblock())
 
     act(() => {
       result.current.updateItem({
@@ -145,6 +154,9 @@ describe("useFoodSection optimistic cache", () => {
       const cached = queryClient.getQueryData<TimeblockWithItems[]>(["foodSection", "event-1"])
       expect(cached?.[0].foodItems?.[0].name).toBe("Wraps")
       expect((cached?.[0] as TimeblockWithItems & { items?: unknown }).items).toBeUndefined()
+
+      const focused = queryClient.getQueryData<TimeblockWithItems>(["timeblock", "tb-1"])
+      expect(focused?.foodItems?.[0].name).toBe("Wraps")
     })
 
     deferredUpdate.resolve({
@@ -191,6 +203,23 @@ describe("useFoodSection optimistic cache", () => {
 
     const { result, queryClient } = renderHookWithProviders(() => useFoodSection())
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    queryClient.setQueryData(
+      ["timeblock", "tb-1"],
+      makeTimeblock({
+        foodItems: [
+          makeTimeblock().foodItems![0],
+          {
+            id: "food-2",
+            timeblockId: "tb-1",
+            name: "Salads",
+            quantity: 1,
+            serviceStyle: "Buffet",
+            includes: "Dressing",
+            unitPriceCents: 900,
+          },
+        ],
+      }),
+    )
 
     act(() => {
       result.current.removeItem({
@@ -203,6 +232,9 @@ describe("useFoodSection optimistic cache", () => {
       const cached = queryClient.getQueryData<TimeblockWithItems[]>(["foodSection", "event-1"])
       expect(cached?.[0].foodItems?.map((item) => item.id)).toEqual(["food-2"])
       expect((cached?.[0] as TimeblockWithItems & { items?: unknown }).items).toBeUndefined()
+
+      const focused = queryClient.getQueryData<TimeblockWithItems>(["timeblock", "tb-1"])
+      expect(focused?.foodItems?.map((item) => item.id)).toEqual(["food-2"])
     })
 
     deferredDelete.resolve(true)
@@ -218,6 +250,7 @@ describe("useFoodSection optimistic cache", () => {
 
     const { result, queryClient } = renderHookWithProviders(() => useFoodSection())
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    queryClient.setQueryData(["timeblock", "tb-1"], makeTimeblock())
 
     act(() => {
       result.current.addItem({
@@ -229,6 +262,8 @@ describe("useFoodSection optimistic cache", () => {
     await waitFor(() => {
       const cached = queryClient.getQueryData<TimeblockWithItems[]>(["foodSection", "event-1"])
       expect(cached).toEqual(initialData)
+      expect(queryClient.getQueryData<TimeblockWithItems>(["timeblock", "tb-1"])).toEqual(makeTimeblock())
+      expect(toast.error).toHaveBeenCalledWith("Failed to create food item")
     })
   })
 })
