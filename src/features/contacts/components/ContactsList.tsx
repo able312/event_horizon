@@ -5,8 +5,8 @@ import { Button } from "~/components/atoms/button"
 const ContactsList: React.FC = () => {
 
     return (
-      <section className="border border-stone-200 bg-background rounded-xs shadow-md px-4">
-          <div className="py-2 flex justify-between">
+      <section className="border border-stone-200 bg-background rounded-3xl shadow-md pl-4 pt-2 pr-2">
+          <div className="pb-2 flex justify-between">
             <h2 className="font-bold text-lg pt-1">Event Team</h2>
             <Button
                 type="button"

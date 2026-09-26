@@ -7,7 +7,7 @@ import { TouchpointsCard } from "~/features/touchpoints"
 
 import { ClientDetailsCard } from "./components/ClientDetailsCard"
 import { InternalNotesCard } from "./components/InternalNotesCard"
-import ContactsList from "~/features/contacts/components/contactsList"
+import ContactsList from "~/features/contacts/components/ContactsList"
 
 interface OverviewWorkspaceSectionProps {
   eventResource: EventResource

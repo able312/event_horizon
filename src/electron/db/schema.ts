@@ -1,5 +1,5 @@
-import { relations } from "drizzle-orm";
-import { index, sqliteTable, text, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { relations, sql } from "drizzle-orm";
+import { check, index, sqliteTable, text, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 
 /**
@@ -65,6 +65,7 @@ export const eventsRelations = relations(events, ({ many }) => ({
   payments: many(payments),
   touchpoints: many(touchpoints),
   beverageItems: many(beverageItems),
+  eventContacts: many(eventContacts),
 }));
 
 
@@ -275,5 +276,129 @@ export const vendorItemsRelations = relations(vendorItems, ({ one }) => ({
   timeblock: one(timeblocks, {
     fields: [vendorItems.timeblockId],
     references: [timeblocks.id],
+  }),
+}));
+
+// ============================================================================
+// Contacts - one row per real person or company, described by roles
+// ============================================================================
+
+export const CONTACT_KINDS = ["individual", "organization"] as const
+export const CONTACT_ROLE_TYPES = ["client", "coordinator", "vendor"] as const
+
+// Identity: who is this person or company, and how do we reach them?
+export const contacts = sqliteTable("contacts", {
+  id: text("id").primaryKey(),
+  kind: text("kind", { enum: CONTACT_KINDS }).notNull().default("individual"),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  organizationName: text("organization_name"),
+  displayName: text("display_name").notNull(), // stored so people and companies sort/search the same way
+  email: text("email"), // original casing, for display
+  emailNormalized: text("email_normalized").generatedAlwaysAs(
+    sql`nullif(lower(trim("email")), '')`,
+    { mode: "stored" },
+  ), // used for matching and uniqueness
+  phone: text("phone"),
+  notes: text("notes"),
+  archivedAt: text("archived_at"), // ISO datetime; archived contacts can't be newly assigned
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  check("contacts_kind_check", sql`${table.kind} IN ('individual', 'organization')`),
+  // Email is optional but unique among active contacts
+  uniqueIndex("contacts_email_unique")
+    .on(table.emailNormalized)
+    .where(sql`${table.emailNormalized} IS NOT NULL AND ${table.archivedAt} IS NULL`),
+  index("contacts_display_name_idx").on(table.displayName),
+]);
+export const contactsRelations = relations(contacts, ({ many }) => ({
+  roles: many(contactRoles),
+  eventContacts: many(eventContacts),
+}));
+
+// Editable lookup of vendor categories (catering, rentals, music, ...)
+export const vendorCategories = sqliteTable("vendor_categories", {
+  id: text("id").primaryKey(),
+  key: text("key").notNull(), // 'catering' - immutable once used
+  label: text("label").notNull(), // 'Catering'
+  colorToken: text("color_token").notNull(), // 'teal', 'amber', ...
+  sortOrder: integer("sort_order").notNull().default(0),
+  archivedAt: text("archived_at"), // hidden from pickers; existing rows keep it
+}, (table) => [
+  uniqueIndex("vendor_categories_key_unique").on(table.key),
+]);
+
+// Standing role: what does this contact generally do for us?
+export const contactRoles = sqliteTable("contact_roles", {
+  id: text("id").primaryKey(),
+  contactId: text("contact_id").notNull().references(() => contacts.id, { onDelete: "cascade" }),
+  role: text("role", { enum: CONTACT_ROLE_TYPES }).notNull(),
+  vendorCategoryId: text("vendor_category_id").references(() => vendorCategories.id),
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  check("contact_roles_role_check", sql`${table.role} IN ('client', 'coordinator', 'vendor')`),
+  // A category is required for vendors and forbidden for other roles
+  check(
+    "contact_roles_vendor_category_check",
+    sql`(${table.role} = 'vendor') = (${table.vendorCategoryId} IS NOT NULL)`,
+  ),
+  uniqueIndex("contact_roles_unique").on(
+    table.contactId,
+    table.role,
+    sql`coalesce(${table.vendorCategoryId}, '')`,
+  ),
+  index("contact_roles_role_category_idx").on(table.role, table.vendorCategoryId),
+]);
+export const contactRolesRelations = relations(contactRoles, ({ one }) => ({
+  contact: one(contacts, {
+    fields: [contactRoles.contactId],
+    references: [contacts.id],
+  }),
+  vendorCategory: one(vendorCategories, {
+    fields: [contactRoles.vendorCategoryId],
+    references: [vendorCategories.id],
+  }),
+}));
+
+// Assignment: what is this contact doing on this specific event?
+export const eventContacts = sqliteTable("event_contacts", {
+  id: text("id").primaryKey(),
+  eventId: text("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  // No cascade: a contact with assignment history can only be archived, not deleted
+  contactId: text("contact_id").notNull().references(() => contacts.id),
+  role: text("role", { enum: CONTACT_ROLE_TYPES }).notNull(),
+  vendorCategoryId: text("vendor_category_id").references(() => vendorCategories.id),
+  isPrimary: integer("is_primary", { mode: "boolean" }).notNull().default(false),
+  roleLabel: text("role_label"), // 'Lead coordinator', 'Bride's father'
+  notes: text("notes"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  removedAt: text("removed_at"), // soft remove
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  check("event_contacts_role_check", sql`${table.role} IN ('client', 'coordinator', 'vendor')`),
+  check(
+    "event_contacts_vendor_category_check",
+    sql`(${table.role} = 'vendor') = (${table.vendorCategoryId} IS NOT NULL)`,
+  ),
+  uniqueIndex("event_contacts_unique_active")
+    .on(table.eventId, table.contactId, table.role, sql`coalesce(${table.vendorCategoryId}, '')`)
+    .where(sql`${table.removedAt} IS NULL`),
+  index("event_contacts_by_event").on(table.eventId).where(sql`${table.removedAt} IS NULL`),
+  index("event_contacts_by_contact").on(table.contactId),
+]);
+export const eventContactsRelations = relations(eventContacts, ({ one }) => ({
+  event: one(events, {
+    fields: [eventContacts.eventId],
+    references: [events.id],
+  }),
+  contact: one(contacts, {
+    fields: [eventContacts.contactId],
+    references: [contacts.id],
+  }),
+  vendorCategory: one(vendorCategories, {
+    fields: [eventContacts.vendorCategoryId],
+    references: [vendorCategories.id],
   }),
 }));

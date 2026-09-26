@@ -14,6 +14,10 @@ import { registerMenuOfChargeItemsIpcHandlers } from "./menuOfChargeItemsHandler
 import { registerCartDetailsIpcHandlers } from "./cartDetailsHandler.js"
 import { registerPDFGenerationHandler } from "./savePdfHandler.js"
 import { registerSystemIpcHandlers } from "./systemHandler.js"
+import { registerContactsIpcHandlers } from "./contactsHandler.js"
+import { registerContactRolesIpcHandlers } from "./contactRolesHandler.js"
+import { registerVendorCategoriesIpcHandlers } from "./vendorCategoriesHandler.js"
+import { registerEventContactsIpcHandlers } from "./eventContactsHandler.js"
 
 export const registerAllIpcHandlers = () => {
     registerDatabaseStatsIpcHandlers()
@@ -29,4 +33,8 @@ export const registerAllIpcHandlers = () => {
     registerCartDetailsIpcHandlers()
     registerPDFGenerationHandler()
     registerSystemIpcHandlers()
+    registerContactsIpcHandlers()
+    registerContactRolesIpcHandlers()
+    registerVendorCategoriesIpcHandlers()
+    registerEventContactsIpcHandlers()
 }

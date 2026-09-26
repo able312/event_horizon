@@ -3,6 +3,7 @@ export type GenerateMenuContext = {
   eventId: string | null
 }
 
+import type { ContactsErrorPayload } from "./contacts.js"
 import type { Event, EventStatus, EventType } from "./database.js"
 
 export type EventSearchRequest = {
@@ -22,3 +23,11 @@ export type EventSearchResponse = {
   pageSize: number
   hasMore: boolean
 }
+
+/**
+ * Envelope for channels whose expected failures carry data the renderer needs.
+ * Electron only forwards an error's message across IPC, so typed errors travel as values.
+ */
+export type IpcResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: ContactsErrorPayload }
