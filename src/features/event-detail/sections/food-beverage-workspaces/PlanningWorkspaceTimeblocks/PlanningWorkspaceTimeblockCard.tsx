@@ -1,27 +1,17 @@
 import React from "react"
-import { Trash2 } from "lucide-react"
 
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import type { UpdateTimeblock } from "~/definitions/database"
-import { Button } from "~/components/atoms/button"
 import {
-  SECTION_TABLE_BODY_CELL_CLASS,
-  SECTION_TABLE_BODY_ROW_CLASS,
   SECTION_TABLE_CLASS,
   SECTION_TABLE_CONTAINER_CLASS,
   SECTION_TABLE_HEAD_CELL_CLASS_LEFT,
   SECTION_TABLE_HEAD_CELL_CLASS_RIGHT,
   SECTION_TABLE_HEAD_ROW_CLASS,
 } from "~/components/event-detail/detail-sections/sections/tableStyles"
-import {
-  centsToDollars,
-  computeBillableLineTotalCents,
-  dollarsToCents,
-  toCurrency,
-} from "~/features/event-detail/workspace/lib/financial"
 import PlanningTimeBlockHeader from "~/components/organisms/TimeblockHeader"
-import { PlanningTimeblockItemNoteRow } from "./PlanningTimeblockItemNoteRow"
 import FoodBevHeaderTail from "./FoodBevHeaderTail"
+import PlanningTimeblockItemRow from "./PlanningTimeblockItemRow"
 import type { WorkspaceItemBase } from "./PlanningWorkspaceTimeblockList"
 
 export interface PlanningWorkspaceTimeblockCardProps<TItem extends WorkspaceItemBase> {
@@ -43,14 +33,6 @@ export interface PlanningWorkspaceTimeblockCardProps<TItem extends WorkspaceItem
   removeItem: (payload: { timeblockId: string; itemId: string }) => void
 }
 
-function parseQuantity(value: string): number {
-  return Math.max(0, Number(value) || 0)
-}
-
-function parsePrice(value: string): number {
-  return Math.max(0, dollarsToCents(value))
-}
-
 function PlanningWorkspaceTimeblockCard<TItem extends WorkspaceItemBase>({
   sectionTitle,
   emptyItemsCopy,
@@ -69,9 +51,6 @@ function PlanningWorkspaceTimeblockCard<TItem extends WorkspaceItemBase>({
   updateItem,
   removeItem,
 }: PlanningWorkspaceTimeblockCardProps<TItem>) {
-  const patchItem = (field: keyof WorkspaceItemBase, value: WorkspaceItemBase[keyof WorkspaceItemBase]) =>
-    ({ [field]: value }) as Partial<TItem>
-
   const handleUpdateTimeblock = (payload: { id: string; updates: UpdateTimeblock }) => {
     if (disabled) return
     updateTimeblock(payload)
@@ -145,113 +124,15 @@ function PlanningWorkspaceTimeblockCard<TItem extends WorkspaceItemBase>({
               </thead>
               <tbody>
                 {items.map((item) => (
-                  <React.Fragment
-                    key={`${item.id}-${item.name}-${item.quantity ?? ""}-${item.serviceStyle ?? ""}-${item.includes ?? ""}-${item.unitPriceCents ?? ""}`}
-                  >
-                    <tr>
-                      <td className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-[220px] align-top`}>
-                        <input
-                          type="text"
-                          defaultValue={item.name ?? ""}
-                          disabled={disabled}
-                          onBlur={(e) =>
-                            updateItem({
-                              timeblockId: timeblock.id,
-                              itemId: item.id,
-                              updates: patchItem("name", e.target.value),
-                            })
-                          }
-                          aria-label="Item Name"
-                          placeholder="Untitled item"
-                          className="h-8 w-full rounded-xs border border-transparent bg-transparent px-1.5 text-sm font-medium outline-none transition-colors focus:border-border focus:bg-background disabled:opacity-60"
-                        />
-                      </td>
-                      <td className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-[170px] align-top`}>
-                        <select
-                          defaultValue={item.serviceStyle ?? ""}
-                          disabled={disabled}
-                          onBlur={(e) =>
-                            updateItem({
-                              timeblockId: timeblock.id,
-                              itemId: item.id,
-                              updates: patchItem("serviceStyle", e.target.value),
-                            })
-                          }
-                          aria-label="Service Style"
-                          className="h-8 w-full rounded-xs border border-transparent bg-transparent px-1.5 text-sm text-muted-foreground outline-none transition-colors focus:border-border focus:bg-background focus:text-foreground disabled:opacity-60"
-                        >
-                          <option value="">Select...</option>
-                          {serviceStyleOptions.map((style) => (
-                            <option key={style} value={style}>
-                              {style}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className={`${SECTION_TABLE_BODY_CELL_CLASS} w-[84px] align-top text-right`}>
-                        <input
-                          type="number"
-                          min="0"
-                          defaultValue={item.quantity ?? 0}
-                          disabled={disabled}
-                          onBlur={(e) =>
-                            updateItem({
-                              timeblockId: timeblock.id,
-                              itemId: item.id,
-                              updates: patchItem("quantity", parseQuantity(e.target.value)),
-                            })
-                          }
-                          aria-label="Quantity"
-                          className="ml-auto h-8 w-16 rounded-xs border border-transparent bg-transparent px-1.5 text-right text-sm text-muted-foreground outline-none transition-colors focus:border-border focus:bg-background focus:text-foreground disabled:opacity-60"
-                        />
-                      </td>
-                      <td className={`${SECTION_TABLE_BODY_CELL_CLASS} w-[112px] align-top text-right`}>
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          defaultValue={item.unitPriceCents ? centsToDollars(item.unitPriceCents).toFixed(2) : ""}
-                          disabled={disabled}
-                          onBlur={(e) =>
-                            updateItem({
-                              timeblockId: timeblock.id,
-                              itemId: item.id,
-                              updates: patchItem("unitPriceCents", parsePrice(e.target.value)),
-                            })
-                          }
-                          aria-label="Unit Price"
-                          placeholder="0.00"
-                          className="ml-auto h-8 w-20 rounded-xs border border-transparent bg-transparent px-1.5 text-right text-sm text-muted-foreground outline-none transition-colors focus:border-border focus:bg-background focus:text-foreground disabled:opacity-60"
-                        />
-                      </td>
-                      <td className={`${SECTION_TABLE_BODY_CELL_CLASS} w-[104px] align-center text-right text-sm font-medium text-foreground`}>
-                        {toCurrency(computeBillableLineTotalCents(item))}
-                      </td>
-                      <td className={`${SECTION_TABLE_BODY_CELL_CLASS} w-[72px] align-top text-right`}>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={disabled}
-                          onClick={() => removeItem({ timeblockId: timeblock.id, itemId: item.id })}
-                          aria-label="Remove Item"
-                          className="h-8 px-2 text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 />
-                        </Button>
-                      </td>
-                    </tr>
-                    <tr className={SECTION_TABLE_BODY_ROW_CLASS}>
-                      <td colSpan={6} className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-[240px] align-top`}>
-                        <PlanningTimeblockItemNoteRow
-                          key={timeblock.id + "_" + item.id + "_notesRow"}
-                          timeblockID={timeblock.id}
-                          itemID={item.id}
-                          note={item.includes ?? ""}
-                          updateItem={updateItem}
-                        />
-                      </td>
-                    </tr>
-                  </React.Fragment>
+                  <PlanningTimeblockItemRow
+                    key={item.id}
+                    timeblockId={timeblock.id}
+                    item={item}
+                    serviceStyleOptions={serviceStyleOptions}
+                    disabled={disabled}
+                    updateItem={updateItem}
+                    removeItem={removeItem}
+                  />
                 ))}
               </tbody>
             </table>
