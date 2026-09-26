@@ -145,7 +145,9 @@ function PlanningWorkspaceTimeblockCard<TItem extends WorkspaceItemBase>({
               </thead>
               <tbody>
                 {items.map((item) => (
-                  <React.Fragment key={item.id}>
+                  <React.Fragment
+                    key={`${item.id}-${item.name}-${item.quantity ?? ""}-${item.serviceStyle ?? ""}-${item.includes ?? ""}-${item.unitPriceCents ?? ""}`}
+                  >
                     <tr>
                       <td className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-[220px] align-top`}>
                         <input
