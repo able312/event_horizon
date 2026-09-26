@@ -6,7 +6,6 @@ import { registerEventsIpcHandlers } from "./eventsHandler.js"
 import { registerTimeblocksIpcHandlers } from "./timeblocksHandler.js"
 import { registerFoodItemsIpcHandlers } from "./foodItemsHandler.js"
 import { registerBeverageItemsIpcHandlers } from "./beverageItemsHandler.js"
-import { registerVendorItemsIpcHandlers } from "./vendorItemsHandler.js"
 import { registerPaymentsIpcHandlers } from "./paymentsHandler.js"
 import { registerTouchpointsIpcHandlers } from "./touchpointsHandler.js"
 import { registerTournamentDetailsIpcHandlers } from "./tournamentDetailsHandler.js"
@@ -25,7 +24,6 @@ export const registerAllIpcHandlers = () => {
     registerTimeblocksIpcHandlers()
     registerFoodItemsIpcHandlers()
     registerBeverageItemsIpcHandlers()
-    registerVendorItemsIpcHandlers()
     registerPaymentsIpcHandlers()
     registerTouchpointsIpcHandlers()
     registerTournamentDetailsIpcHandlers()

@@ -2,9 +2,10 @@
 import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
 import { runMigrations } from "../factory.js"
+import { createMigrationsFolderBefore, type TempMigrationsFolder } from "../test/migrationsFolder.js"
 import { createTestDb, type TestDb } from "../test/testDb.js"
 
 vi.mock("electron", () => ({
@@ -54,6 +55,16 @@ function columnNames(sqlite: TestDb["sqlite"], tableName: string): string[] {
 
 describe("vendor notes consolidation migration", () => {
   let testDb: TestDb | null = null
+  // Migrate up to, but not including, 0019 - which moves vendors into contacts and drops vendor_items
+  let through0018: TempMigrationsFolder
+
+  beforeAll(async () => {
+    through0018 = await createMigrationsFolderBefore("0019_contacts_backfill")
+  })
+
+  afterAll(async () => {
+    await through0018.cleanup()
+  })
 
   afterEach(async () => {
     if (testDb) {
@@ -79,7 +90,7 @@ describe("vendor notes consolidation migration", () => {
         VALUES ('vendor-1', 'tb-1', 'Pat Photo', '555-1000', 'photo@example.com', 'Vendor note');
       `)
 
-      runMigrations(testDb.db, migrationsFolder)
+      runMigrations(testDb.db, through0018.folder)
 
       const migratedTimeblock = testDb.sqlite.prepare(`
         SELECT details
@@ -130,7 +141,7 @@ describe("vendor notes consolidation migration", () => {
         VALUES ('vendor-2', 'tb-2', 'Band Lead', '555-2000', 'band@example.com', 'Vendor note');
       `)
 
-      runMigrations(testDb.db, migrationsFolder)
+      runMigrations(testDb.db, through0018.folder)
 
       const migratedTimeblock = testDb.sqlite.prepare(`
         SELECT details
@@ -161,7 +172,7 @@ describe("vendor notes consolidation migration", () => {
         VALUES ('vendor-3', 'tb-3', 'Rental Rep', '555-3000', 'rental@example.com', '   ');
       `)
 
-      runMigrations(testDb.db, migrationsFolder)
+      runMigrations(testDb.db, through0018.folder)
 
       const migratedTimeblock = testDb.sqlite.prepare(`
         SELECT details
@@ -189,7 +200,7 @@ describe("vendor notes consolidation migration", () => {
         VALUES ('tb-4', 'event-4', 'Tent Rental', '08:00', NULL, 'vendor', NULL, 'created', NULL);
       `)
 
-      runMigrations(testDb.db, migrationsFolder)
+      runMigrations(testDb.db, through0018.folder)
 
       const repairedVendor = testDb.sqlite.prepare(`
         SELECT timeblock_id, contact_name, contact_phone, contact_email
@@ -225,7 +236,7 @@ describe("vendor notes consolidation migration", () => {
         VALUES ('vendor-5', 'tb-5', 'DJ Lead', '555-5000', 'dj@example.com', 'Bring mixer');
       `)
 
-      runMigrations(testDb.db, migrationsFolder)
+      runMigrations(testDb.db, through0018.folder)
 
       expect(() => {
         testDb!.sqlite.prepare(`

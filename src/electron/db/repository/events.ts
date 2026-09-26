@@ -1,9 +1,9 @@
 import { db } from "../index.js"
 import type { AppDatabase } from "../factory.js"
-import { events } from "../schema.js"
+import { contacts, eventContacts, events } from "../schema.js"
 import type { Event, EventStatus, NewEvent, UpdateEvent } from "../../../definitions/database.js"
 import type { EventSearchRequest, EventSearchResponse } from "../../../definitions/ipc.js"
-import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm"
+import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, or, sql, type SQL } from "drizzle-orm"
 import { v4 as uuidv4 } from "uuid"
 import { assertValidEventDateRange } from "../../../lib/events/eventDateRange.js"
 
@@ -23,9 +23,6 @@ export function createEventsRepository(database: AppDatabase) {
       isInternal: data.isInternal ?? 0,
       startDateTime,
       endDateTime,
-      clientName: data.clientName ?? null,
-      clientEmail: data.clientEmail ?? null,
-      clientPhone: data.clientPhone ?? null,
       minGuests: data.minGuests ?? null,
       maxGuests: data.maxGuests ?? null,
       guestCountFinal: data.guestCountFinal ?? null,
@@ -124,19 +121,31 @@ export function createEventsRepository(database: AppDatabase) {
       const containsPattern = `%${escaped}%`
 
       const normalizedTitle = sql`lower(coalesce(${events.title}, ''))`
-      const normalizedClientName = sql`lower(coalesce(${events.clientName}, ''))`
-      const normalizedClientEmail = sql`lower(coalesce(${events.clientEmail}, ''))`
-      const normalizedClientPhone = sql`lower(coalesce(${events.clientPhone}, ''))`
+      const normalizedClientName = sql`lower(${contacts.displayName})`
+      const normalizedClientEmail = sql`lower(coalesce(${contacts.email}, ''))`
+      const normalizedClientPhone = sql`lower(coalesce(${contacts.phone}, ''))`
+
+      // Client details live on contacts; match any active client assigned to the event
+      const hasClientMatching = (condition: SQL) => sql<boolean>`exists (
+        select 1 from ${eventContacts}
+        inner join ${contacts} on ${contacts.id} = ${eventContacts.contactId}
+        where ${eventContacts.eventId} = ${events.id}
+          and ${eventContacts.role} = 'client'
+          and ${eventContacts.removedAt} is null
+          and ${condition}
+      )`
 
       const titleStartsWith = sql<boolean>`${normalizedTitle} like ${startsWithPattern}`
       const titleContains = sql<boolean>`${normalizedTitle} like ${containsPattern}`
-      const clientNameStartsWith = sql<boolean>`${normalizedClientName} like ${startsWithPattern}`
-      const clientNameContains = sql<boolean>`${normalizedClientName} like ${containsPattern}`
-      const clientEmailContains = sql<boolean>`${normalizedClientEmail} like ${containsPattern}`
-      const clientPhoneContains = sql<boolean>`${normalizedClientPhone} like ${containsPattern}`
+      const clientNameStartsWith = hasClientMatching(sql`${normalizedClientName} like ${startsWithPattern}`)
+      const clientContains = hasClientMatching(sql`(
+        ${normalizedClientName} like ${containsPattern}
+        or ${normalizedClientEmail} like ${containsPattern}
+        or ${normalizedClientPhone} like ${containsPattern}
+      )`)
 
       const whereClauses = [
-        or(titleContains, clientNameContains, clientEmailContains, clientPhoneContains),
+        or(titleContains, clientContains),
       ]
 
       if (params.type) whereClauses.push(eq(events.type, params.type))

@@ -5,7 +5,6 @@ import type { EventResource } from "~/features/event-detail/types"
 
 import { TouchpointsCard } from "~/features/touchpoints"
 
-import { ClientDetailsCard } from "./components/ClientDetailsCard"
 import { InternalNotesCard } from "./components/InternalNotesCard"
 import ContactsList from "~/features/contacts/components/ContactsList"
 
@@ -39,16 +38,11 @@ const OverviewWorkspaceSection: React.FC<OverviewWorkspaceSectionProps> = ({ eve
         </div>
 
         <div className="min-w-0 space-y-4">
-          <ContactsList />
-
-          <ClientDetailsCard
-            client={{
-              name: eventDetails.clientName ?? "No client listed",
-              email: eventDetails.clientEmail ?? "-",
-              phone: eventDetails.clientPhone ?? "-",
-            }}
+          <ContactsList
+            eventId={eventDetails.id}
             eventTitle={eventDetails.title ?? "Untitled event"}
           />
+
           <TouchpointsCard
             eventId={eventDetails.id}
             eventStartDateTime={eventDetails.startDateTime ?? null}

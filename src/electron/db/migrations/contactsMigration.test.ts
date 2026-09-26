@@ -2,13 +2,13 @@
 import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { eq } from "drizzle-orm"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { v4 as uuidv4 } from "uuid"
 
 import { runMigrations } from "../factory.js"
 import { DEFAULT_VENDOR_CATEGORIES } from "../repository/vendorCategories.js"
 import { events, touchpoints } from "../schema.js"
+import { createMigrationsFolderBefore } from "../test/migrationsFolder.js"
 import { createTestDb, type TestDb } from "../test/testDb.js"
 
 vi.mock("electron", () => ({
@@ -64,20 +64,25 @@ describe("0018_contacts migration", () => {
 
     const eventId = uuidv4()
     const createdAt = new Date().toISOString()
-    testDb.db
-      .insert(events)
-      .values({ id: eventId, title: "Existing event", clientName: "Legacy Client", createdAt })
-      .run()
+    testDb.sqlite
+      .prepare("INSERT INTO events (id, title, client_name, created_at) VALUES (?, 'Existing event', 'Legacy Client', ?)")
+      .run(eventId, createdAt)
     testDb.db.insert(touchpoints).values({ id: uuidv4(), eventId, title: "Call", createdAt }).run()
 
     for (const table of CONTACT_TABLES) expect(tableExists(testDb.sqlite, table)).toBe(false)
 
-    runMigrations(testDb.db, migrationsFolder)
+    // Stop before 0019, which moves the client off the events table
+    const through0018 = await createMigrationsFolderBefore("0019_contacts_backfill")
+    try {
+      runMigrations(testDb.db, through0018.folder)
+    } finally {
+      await through0018.cleanup()
+    }
 
     for (const table of CONTACT_TABLES) expect(tableExists(testDb.sqlite, table)).toBe(true)
 
-    const event = testDb.db.select().from(events).where(eq(events.id, eventId)).get()
-    expect(event?.clientName).toBe("Legacy Client")
+    const event = testDb.sqlite.prepare("SELECT client_name AS clientName FROM events WHERE id = ?").get(eventId)
+    expect(event).toEqual({ clientName: "Legacy Client" })
     expect(testDb.db.select().from(touchpoints).all()).toHaveLength(1)
 
     const seeded = testDb.sqlite

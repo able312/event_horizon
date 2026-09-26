@@ -4,7 +4,6 @@ import {
     foodItems, 
     beverageItems,
     beverageItemTimeblocks,
-    vendorItems, 
     payments,
     touchpoints,
     tournamentDetails,
@@ -106,9 +105,3 @@ export type BeverageItemType = (typeof beverageItems.type.enumValues)[number]
 export type BeverageItemTimeblock = InferSelectModel<typeof beverageItemTimeblocks>
 export type NewBeverageItemTimeblock = InferInsertModel<typeof beverageItemTimeblocks>
 
-// ============================================================================
-// Vendor Items
-// ============================================================================
-
-export type VendorItem = InferSelectModel<typeof vendorItems>
-export type UpdateVendorItem = Partial<Omit<VendorItem, "id" | "createdAt" | "updatedAt">>

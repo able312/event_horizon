@@ -35,11 +35,6 @@ export const events = sqliteTable("events", {
   startDateTime: text("start_date_time"), // ISO datetime string
   endDateTime: text("end_date_time"),     // ISO datetime string
   
-  // Client contact (single client for now - will expand to separate table later)
-  clientName: text("client_name"),
-  clientEmail: text("client_email"),
-  clientPhone: text("client_phone"),
-  
   // Guest information
   minGuests: integer("min_guests"),
   maxGuests: integer("max_guests"),
@@ -188,7 +183,7 @@ export const timeblocks = sqliteTable("timeblocks", {
   title: text("title").notNull(),
   time: text("time"), // HH:mm format - if set, appears on timeline
   details: text("details"),
-  sectionType: text("section_type", { enum: ["food", "beverage", "setup_instruction", "vendor", "note", "tournament_detail", "cart_detail"] }).notNull(),
+  sectionType: text("section_type", { enum: ["food", "beverage", "setup_instruction", "note", "tournament_detail", "cart_detail"] }).notNull(),
   assignedTo: text("assigned_to"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at")
@@ -201,7 +196,6 @@ export const timeblocksRelations = relations(timeblocks, ({ many, one }) => ({
   }),
   foodItems: many(foodItems),
   beverageItemTimeblocks: many(beverageItemTimeblocks),
-  vendorItem: one(vendorItems),
 }));
 
 // ============================================================================
@@ -258,23 +252,6 @@ export const beverageItemTimeblocksRelations = relations(beverageItemTimeblocks,
   }),
   timeblock: one(timeblocks, {
     fields: [beverageItemTimeblocks.timeblockId],
-    references: [timeblocks.id],
-  }),
-}));
-
-// Vendor items
-export const vendorItems = sqliteTable("vendor_items", {
-  id: text("id").primaryKey(),
-  timeblockId: text("timeblock_id").references(() => timeblocks.id, { onDelete: "cascade" }).notNull(),
-  contactName: text("contact_name"),
-  contactPhone: text("contact_phone"),
-  contactEmail: text("contact_email"),
-}, (table) => [
-  uniqueIndex("vendor_items_timeblock_id_unique").on(table.timeblockId),
-]);
-export const vendorItemsRelations = relations(vendorItems, ({ one }) => ({
-  timeblock: one(timeblocks, {
-    fields: [vendorItems.timeblockId],
     references: [timeblocks.id],
   }),
 }));

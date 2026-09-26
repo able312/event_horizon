@@ -24,9 +24,6 @@ function SelectionHarness({ navModel }: SelectionHarnessProps) {
       <button type="button" onClick={() => selection.setSelectedNodeId("unscheduled:note")}>
         select-unscheduled-note
       </button>
-      <button type="button" onClick={() => selection.setSelectedNodeId("scheduled:vendor")}>
-        select-scheduled-vendor
-      </button>
       <button type="button" onClick={() => selection.setSelectedNodeId("scheduled:cart")}>
         select-scheduled-cart
       </button>
@@ -56,14 +53,6 @@ function buildNavModel(overrides?: Partial<WorkspaceNavModel>): WorkspaceNavMode
         label: "Lunch",
         sectionType: SECTION_TYPE.FOOD,
         sourceRef: { kind: "timeblock", timeblockId: "tb-food" },
-      },
-      {
-        id: "scheduled:vendor",
-        groupId: "scheduled",
-        nodeType: "timeblock",
-        label: "AV",
-        sectionType: SECTION_TYPE.VENDOR,
-        sourceRef: { kind: "timeblock", timeblockId: "tb-vendor" },
       },
       {
         id: "scheduled:cart",
@@ -113,13 +102,6 @@ function buildNavModel(overrides?: Partial<WorkspaceNavModel>): WorkspaceNavMode
         nodeType: "category",
         label: "Food",
         sourceRef: { kind: "category", categoryId: "food" },
-      },
-      {
-        id: "category:logistics",
-        groupId: "categories",
-        nodeType: "category",
-        label: "Logistics",
-        sourceRef: { kind: "category", categoryId: "logistics" },
       },
       {
         id: "category:tournament",
@@ -185,13 +167,8 @@ describe("useWorkspaceSelection", () => {
     })
   })
 
-  it("maps vendor to logistics and cart detail to tournament", async () => {
+  it("maps cart detail to tournament", async () => {
     renderSelectionHarness(buildNavModel(), "/events/evt_1/food")
-
-    act(() => {
-      screen.getByRole("button", { name: "select-scheduled-vendor" }).click()
-    })
-    expect(screen.getByTestId("selected-node-id").textContent).toBe("category:logistics")
 
     act(() => {
       screen.getByRole("button", { name: "select-scheduled-cart" }).click()

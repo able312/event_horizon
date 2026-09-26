@@ -60,17 +60,6 @@ const TimelineBlock: React.FC<TimelineBlockProps> = ({ timeblock }) => {
         </>
       )}
 
-      {timeblock.sectionType === SECTION_TYPE.VENDOR && (
-        <GenericDetailsBlock
-          blockHeader={timeblock.vendorItem?.contactName}
-          blockSubtitle={
-            timeblock.vendorItem?.contactPhone + " | " + timeblock.vendorItem?.contactEmail
-          }
-          markdownNotes={timeblock.details}
-          borderColor="purple"
-        />
-      )}
-
       {timeblock.sectionType === SECTION_TYPE.SETUP_INSTRUCTION && timeblock.details ? (
         <GenericDetailsBlock
           key={`${timeblock.id}_setup`}
@@ -195,8 +184,6 @@ function getTypeColor(type: string) {
       return "bg-amber-100 text-amber-800"
     case "beverage":
       return "bg-blue-100 text-blue-800"
-    case "vendor":
-      return "bg-purple-100 text-purple-800"
     case "setup_instruction":
       return "bg-red-100 text-red-800"
     case "note":
@@ -216,8 +203,6 @@ function getTypeLabel(type: string) {
       return "Food"
     case "beverage":
       return "Beverage"
-    case "vendor":
-      return "Vendor"
     case "note":
       return "Note"
     case "setup_instruction":

@@ -85,10 +85,6 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "vendor-categories:patch",
   "vendor-categories:post",
   "vendor-categories:restore",
-  "vendor-items:delete",
-  "vendor-items:get-by-event",
-  "vendor-items:patch",
-  "vendor-items:post",
 ])
 
 const ALLOWED_SEND_CHANNELS = new Set([

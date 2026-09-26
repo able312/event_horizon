@@ -80,13 +80,6 @@ function buildNavModel(overrides?: Partial<WorkspaceNavModel>): WorkspaceNavMode
         sourceRef: { kind: "category", categoryId: "food" },
       },
       {
-        id: "category:logistics",
-        groupId: "categories",
-        nodeType: "category",
-        label: "Logistics",
-        sourceRef: { kind: "category", categoryId: "logistics" },
-      },
-      {
         id: "category:tournament",
         groupId: "categories",
         nodeType: "category",

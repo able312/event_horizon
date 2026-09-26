@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from "uuid"
 import { getMonthRangeUtcFromLocal } from "../../../lib/months.js"
 import { events } from "../schema.js"
 import { createTestDb, type TestDb } from "../test/testDb.js"
+import { createEventContactsRepository } from "./eventContacts.js"
 import { createEventsRepository } from "./events.js"
 
 vi.mock("electron", () => ({
@@ -156,9 +157,15 @@ describe("events repository month and unscheduled queries", () => {
     testDb.db.insert(events).values([
       createEventRecord({ id: "e1", title: "Alpha Classic", createdAt: "2026-04-01T00:00:00.000Z" }),
       createEventRecord({ id: "e2", title: "The Alpha Cup", createdAt: "2026-04-02T00:00:00.000Z" }),
-      createEventRecord({ id: "e3", title: "Other", clientName: "Alpha Client", createdAt: "2026-04-03T00:00:00.000Z" }),
-      createEventRecord({ id: "e4", title: "Other 2", clientEmail: "alpha@example.com", createdAt: "2026-04-04T00:00:00.000Z" }),
+      createEventRecord({ id: "e3", title: "Other", createdAt: "2026-04-03T00:00:00.000Z" }),
+      createEventRecord({ id: "e4", title: "Other 2", createdAt: "2026-04-04T00:00:00.000Z" }),
+      createEventRecord({ id: "e5", title: "Other 3", createdAt: "2026-04-05T00:00:00.000Z" }),
     ]).run()
+    const eventContactsRepo = createEventContactsRepository(testDb.db)
+    eventContactsRepo.assign("e3", { newContact: { firstName: "Alpha", lastName: "Client" } }, "client")
+    eventContactsRepo.assign("e4", { newContact: { firstName: "Pat", email: "alpha@example.com" } }, "client")
+    // Coordinators aren't searched as the client
+    eventContactsRepo.assign("e5", { newContact: { firstName: "Alpha", lastName: "Planner" } }, "coordinator")
 
     const result = repo.search({
       query: "alpha",

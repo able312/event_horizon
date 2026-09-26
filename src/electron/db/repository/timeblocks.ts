@@ -150,7 +150,6 @@ const TIMEBLOCK_WITH_ITEMS_RELATIONS = {
       beverageItem: true,
     },
   },
-  vendorItem: true,
 } as const
 
 export function createTimeblocksRepository(database: AppDatabase) {

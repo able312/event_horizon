@@ -7,7 +7,6 @@ import { useFoodSection } from "~/hooks/useFoodSection"
 import { useNoteSection } from "~/hooks/useNoteSection"
 import { usePaymentsSection } from "~/hooks/usePaymentsSection"
 import { useSetupInstructionSection } from "~/hooks/useSetupInstrucionSection"
-import { useVendorSection } from "~/hooks/useVendorSection"
 import {
   PREVIEW_TYPES,
   resolvePreviewType,
@@ -42,14 +41,12 @@ const PreviewPanelOrchestrator: React.FC = () => {
 
   const { data: food } = useFoodSection()
   const { timeblocks: beverageTimeblocks, items: beverageItems } = useBeverageSection()
-  const { data: vendors } = useVendorSection()
   const { data: setup } = useSetupInstructionSection()
   const { data: notes } = useNoteSection()
   const { data: payments } = usePaymentsSection()
 
   const foodOptions = toTimeblockOptions(food)
   const beverageOptions = toTimeblockOptions(beverageTimeblocks)
-  const vendorOptions = toTimeblockOptions(vendors)
   const setupOptions = toTimeblockOptions(setup)
   const noteOptions = toTimeblockOptions(notes)
 
@@ -74,10 +71,6 @@ const PreviewPanelOrchestrator: React.FC = () => {
   const beoBeverageSelected = filterSelectedIds(
     state.beo.selectedTimeblockIds.beverage,
     beverageOptions.map((o) => o.id),
-  )
-  const beoVendorSelected = filterSelectedIds(
-    state.beo.selectedTimeblockIds.vendors,
-    vendorOptions.map((o) => o.id),
   )
   const beoSetupSelected = filterSelectedIds(
     state.beo.selectedTimeblockIds.setup,
@@ -172,16 +165,6 @@ const PreviewPanelOrchestrator: React.FC = () => {
                 />
               ) : null}
 
-              {(vendors?.length ?? 0) > 0 ? (
-                <PreviewToggleRow
-                  id="beo-section-vendors"
-                  label="Vendors"
-                  checked={state.beo.sections.vendors}
-                  onChange={(value) =>
-                    dispatch({ type: "beo/setSectionVisible", section: "vendors", value })
-                  }
-                />
-              ) : null}
               {isTournament ? (
                 <>
                   <PreviewToggleRow
@@ -280,26 +263,6 @@ const PreviewPanelOrchestrator: React.FC = () => {
                   }
                   onClearAll={() =>
                     dispatch({ type: "beo/clearAllTimeblocks", section: "beverage" })
-                  }
-                />
-              ) : null}
-              {state.beo.sections.vendors ? (
-                <PreviewTimeblockSelector
-                  sectionLabel="Vendor timeblocks"
-                  options={vendorOptions}
-                  selectedIds={beoVendorSelected}
-                  onToggle={(id, value) =>
-                    dispatch({ type: "beo/setTimeblockSelected", section: "vendors", id, value })
-                  }
-                  onSelectAll={() =>
-                    dispatch({
-                      type: "beo/selectAllTimeblocks",
-                      section: "vendors",
-                      ids: vendorOptions.map((o) => o.id),
-                    })
-                  }
-                  onClearAll={() =>
-                    dispatch({ type: "beo/clearAllTimeblocks", section: "vendors" })
                   }
                 />
               ) : null}

@@ -1,7 +1,6 @@
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 
 type ListFieldKey = "foodItems" | "beverageItems"
-type NestedFieldKey = "vendorItem"
 
 export function appendListItem<K extends ListFieldKey>(
   cache: TimeblockWithItems[] | undefined,
@@ -77,36 +76,4 @@ export function replaceListItemByTempId<K extends ListFieldKey>(
 
     return { ...timeblock, [key]: nextItems } as TimeblockWithItems
   })
-}
-
-export function updateNestedOneToOneById<K extends NestedFieldKey>(
-  cache: TimeblockWithItems[] | undefined,
-  key: K,
-  nestedItemId: string,
-  updates: Partial<NonNullable<TimeblockWithItems[K]>>,
-): TimeblockWithItems[] {
-  return (cache ?? []).map((timeblock) => {
-    const nestedItem = timeblock[key]
-    if (!nestedItem || nestedItem.id !== nestedItemId) {
-      return timeblock
-    }
-
-    return {
-      ...timeblock,
-      [key]: {
-        ...nestedItem,
-        ...updates,
-      },
-    } as TimeblockWithItems
-  })
-}
-
-export function replaceTimeblockById(
-  cache: TimeblockWithItems[] | undefined,
-  timeblockId: string,
-  replacement: TimeblockWithItems,
-): TimeblockWithItems[] {
-  return (cache ?? []).map((timeblock) =>
-    timeblock.id === timeblockId ? replacement : timeblock,
-  )
 }

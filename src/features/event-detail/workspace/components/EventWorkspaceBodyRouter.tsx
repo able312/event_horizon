@@ -4,7 +4,6 @@ import GolfCartsSection from "~/components/event-detail/detail-sections/sections
 import FinancialWorkspaceSection from "./FinancialWorkspaceSection"
 import FoodWorkspaceSection from "~/features/event-detail/sections/food-beverage-workspaces/FoodWorkspaceSection"
 import BeverageWorkspaceSection from "~/features/event-detail/sections/food-beverage-workspaces/BeverageWorkspaceSection"
-import VendorWorkspaceSection from "../../sections/vendor-workspace/VendorWorkspaceSection"
 import FocusedTimeblockWorkspace from "../../sections/FocusedTimeblockWorkspace"
 
 import type { EventResource } from "~/features/event-detail/types"
@@ -47,12 +46,6 @@ function renderCategoryWorkspace(
       return (
         <div className={`${scrollContainerClassName} p-4`}>
           <BeverageWorkspaceSection />
-        </div>
-      )
-    case "logistics":
-      return (
-        <div className={`${scrollContainerClassName} p-4`}>
-          <VendorWorkspaceSection />
         </div>
       )
     case "tournament":

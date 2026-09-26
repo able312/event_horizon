@@ -9,7 +9,6 @@ const hooksMock = vi.hoisted(() => ({
   useEvent: vi.fn(),
   useFoodSection: vi.fn(),
   useBeverageSection: vi.fn(),
-  useVendorSection: vi.fn(),
   useSetupInstructionSection: vi.fn(),
   useNoteSection: vi.fn(),
   usePaymentsSection: vi.fn(),
@@ -24,9 +23,6 @@ vi.mock("~/hooks/useFoodSection", () => ({
 vi.mock("~/hooks/useBeverageSection", () => ({
   useBeverageSection: hooksMock.useBeverageSection,
 }))
-vi.mock("~/hooks/useVendorSection", () => ({
-  useVendorSection: hooksMock.useVendorSection,
-}))
 vi.mock("~/hooks/useSetupInstrucionSection", () => ({
   useSetupInstructionSection: hooksMock.useSetupInstructionSection,
 }))
@@ -40,7 +36,6 @@ vi.mock("~/hooks/usePaymentsSection", () => ({
 function renderPanel(initialEntry: string) {
   hooksMock.useFoodSection.mockReturnValue({ data: [] })
   hooksMock.useBeverageSection.mockReturnValue({ timeblocks: [], items: [] })
-  hooksMock.useVendorSection.mockReturnValue({ data: [] })
   hooksMock.useSetupInstructionSection.mockReturnValue({ data: [] })
   hooksMock.useNoteSection.mockReturnValue({ data: [] })
   hooksMock.usePaymentsSection.mockReturnValue({ data: [] })
@@ -105,8 +100,7 @@ describe("PreviewPanelOrchestrator", () => {
       },
     })
     hooksMock.useFoodSection.mockReturnValue({ data: [] })
-    hooksMock.useVendorSection.mockReturnValue({ data: [] })
-    hooksMock.useSetupInstructionSection.mockReturnValue({ data: [] })
+      hooksMock.useSetupInstructionSection.mockReturnValue({ data: [] })
     hooksMock.useNoteSection.mockReturnValue({ data: [] })
     hooksMock.useBeverageSection.mockReturnValue({
       timeblocks: [],

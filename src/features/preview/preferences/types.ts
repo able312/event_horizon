@@ -3,7 +3,6 @@ import type { PreviewTypeId } from "~/features/preview/lib/previewTypes"
 export type BeoSectionId =
   | "contact"
   | "internalNotes"
-  | "vendors"
   | "tournament"
   | "cart"
   | "food"
@@ -11,7 +10,7 @@ export type BeoSectionId =
   | "setup"
   | "notes"
 
-export type BeoTimeblockSectionId = "food" | "beverage" | "vendors" | "setup" | "notes"
+export type BeoTimeblockSectionId = "food" | "beverage" | "setup" | "notes"
 
 export type BeoPreferences = {
   showContactInfo: boolean
@@ -83,7 +82,6 @@ export function createInitialBeoPreferences(): BeoPreferences {
     showInternalNotes: true,
     showPricing: false,
     sections: {
-      vendors: true,
       tournament: true,
       cart: true,
       food: true,
@@ -94,7 +92,6 @@ export function createInitialBeoPreferences(): BeoPreferences {
     selectedTimeblockIds: {
       food: [],
       beverage: [],
-      vendors: [],
       setup: [],
       notes: [],
     },

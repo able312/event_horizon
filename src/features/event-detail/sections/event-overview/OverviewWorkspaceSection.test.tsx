@@ -12,6 +12,10 @@ vi.mock("~/hooks/useTouchpointsSection", () => ({
   useTouchpointsSection: useTouchpointsSectionMock,
 }))
 
+vi.mock("~/features/contacts/components/ContactsList", () => ({
+  default: () => null,
+}))
+
 function stubTouchpointsSection() {
   useTouchpointsSectionMock.mockReturnValue({
     data: [],
@@ -35,9 +39,6 @@ function makeEvent(overrides: Partial<Event> = {}): Event {
     status: "planning",
     startDateTime: "2026-08-12T18:30:00.000Z",
     endDateTime: "2026-08-12T21:00:00.000Z",
-    clientName: "Example Name",
-    clientEmail: "example@example.com",
-    clientPhone: "2265551234",
     minGuests: 80,
     maxGuests: 120,
     guestCountFinal: 0,

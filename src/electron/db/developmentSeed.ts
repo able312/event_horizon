@@ -1,4 +1,5 @@
-import { events, foodItems, payments, timeblocks, touchpoints } from "./schema.js"
+import { v4 as uuidv4 } from "uuid"
+import { contactRoles, contacts, eventContacts, events, foodItems, payments, timeblocks, touchpoints } from "./schema.js"
 import type { AppDatabase, SqliteConnection } from "./factory.js"
 
 const seedIds = {
@@ -8,6 +9,8 @@ const seedIds = {
   foodItem: "00000000-0000-4000-8000-000000000004",
   payment: "00000000-0000-4000-8000-000000000005",
   touchpoint: "00000000-0000-4000-8000-000000000006",
+  organizerContact: "00000000-0000-4000-8000-000000000007",
+  coupleContact: "00000000-0000-4000-8000-000000000008",
 } as const
 
 function futureDate(daysFromNow: number, hour: number): string {
@@ -37,8 +40,6 @@ export function seedDevelopmentDatabase(database: AppDatabase, sqlite: SqliteCon
         status: "planning",
         startDateTime: futureDate(30, 13),
         endDateTime: futureDate(30, 21),
-        clientName: "Sample Organizer",
-        clientEmail: "organizer@example.test",
         minGuests: 80,
         maxGuests: 120,
         createdAt: now,
@@ -50,10 +51,52 @@ export function seedDevelopmentDatabase(database: AppDatabase, sqlite: SqliteCon
         status: "new_lead",
         startDateTime: futureDate(60, 17),
         endDateTime: futureDate(61, 1),
-        clientName: "Sample Couple",
-        clientEmail: "couple@example.test",
         maxGuests: 90,
         createdAt: now,
+      },
+    ]).run()
+    database.insert(contacts).values([
+      {
+        id: seedIds.organizerContact,
+        firstName: "Sample",
+        lastName: "Organizer",
+        displayName: "Sample Organizer",
+        email: "organizer@example.test",
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: seedIds.coupleContact,
+        firstName: "Sample",
+        lastName: "Couple",
+        displayName: "Sample Couple",
+        email: "couple@example.test",
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]).run()
+    database.insert(contactRoles).values([
+      { id: uuidv4(), contactId: seedIds.organizerContact, role: "client", createdAt: now },
+      { id: uuidv4(), contactId: seedIds.coupleContact, role: "client", createdAt: now },
+    ]).run()
+    database.insert(eventContacts).values([
+      {
+        id: uuidv4(),
+        eventId: seedIds.tournamentEvent,
+        contactId: seedIds.organizerContact,
+        role: "client",
+        isPrimary: true,
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: uuidv4(),
+        eventId: seedIds.weddingEvent,
+        contactId: seedIds.coupleContact,
+        role: "client",
+        isPrimary: true,
+        createdAt: now,
+        updatedAt: now,
       },
     ]).run()
     database.insert(timeblocks).values({

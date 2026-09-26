@@ -38,7 +38,6 @@ describe("navPolicy", () => {
       "overview",
       "food",
       "beverage",
-      "logistics",
       "tournament",
       "financial",
     ])
@@ -66,7 +65,6 @@ describe("navPolicy", () => {
     expect(isFocusedTimeblockSectionType(SECTION_TYPE.BEVERAGE)).toBe(true)
     expect(getAggregateCategoryIdForSectionType(SECTION_TYPE.NOTE)).toBeNull()
     expect(getAggregateCategoryIdForSectionType(SECTION_TYPE.CART_DETAIL)).toBe("tournament")
-    expect(getAggregateCategoryIdForSectionType(SECTION_TYPE.VENDOR)).toBe("logistics")
     expect(getAggregateCategoryIdForSectionType(SECTION_TYPE.FOOD)).toBe("food")
     expect(getAggregateCategoryIdForSectionType(SECTION_TYPE.BEVERAGE)).toBe("beverage")
   })

@@ -4,7 +4,6 @@ import * as cartDetailsIpc from "./cartDetails"
 import * as eventsIpc from "./ipcEventsQueries"
 import * as timeblocksIpc from "./timeblocks"
 import * as tournamentDetailsIpc from "./tournamentDetails"
-import * as vendorItemsIpc from "./vendorItems"
 
 type WrapperCase = {
   name: string
@@ -46,7 +45,6 @@ const createTimeblockArg = {
   sectionType: "note",
 } as Parameters<typeof timeblocksIpc.createTimeblock>[0]
 const updateTimeblockArg = { details: "Updated details" } as Parameters<typeof timeblocksIpc.updateTimeblock>[1]
-const updateVendorArg = { contactEmail: "updated-vendor@example.com" } as Parameters<typeof vendorItemsIpc.updateVendor>[1]
 const updateCartDetailsArg = { notes: "Updated cart notes" } as Parameters<typeof cartDetailsIpc.updateCartDetails>[1]
 const updateTournamentDetailsArg = { notes: "Updated tournament notes" } as Parameters<
   typeof tournamentDetailsIpc.updateTournamentDetails
@@ -154,30 +152,6 @@ const wrapperCases: WrapperCase[] = [
     channel: "timeblocks:delete",
     args: [recordId],
     invokeWrapper: timeblocksIpc.deleteTimeblock as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "vendorItems.getVendorsByEvent",
-    channel: "vendor-items:get-by-event",
-    args: [eventId],
-    invokeWrapper: vendorItemsIpc.getVendorsByEvent as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "vendorItems.createVendor",
-    channel: "vendor-items:post",
-    args: [eventId],
-    invokeWrapper: vendorItemsIpc.createVendor as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "vendorItems.updateVendor",
-    channel: "vendor-items:patch",
-    args: [recordId, updateVendorArg],
-    invokeWrapper: vendorItemsIpc.updateVendor as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "vendorItems.deleteVendor",
-    channel: "vendor-items:delete",
-    args: [timeblockId],
-    invokeWrapper: vendorItemsIpc.deleteVendor as unknown as (...args: unknown[]) => Promise<unknown>,
   },
   {
     name: "cartDetails.getCartDetails",

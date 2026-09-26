@@ -134,6 +134,13 @@
       "when": 1780200000000,
       "tag": "0018_contacts",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1780300000000,
+      "tag": "0019_contacts_backfill",
+      "breakpoints": true
     }
   ]
 }

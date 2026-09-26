@@ -42,7 +42,6 @@ describe("previewPreferencesReducer", () => {
       selections: {
         food: ["f1"],
         beverage: ["b1"],
-        vendors: [],
         setup: [],
         notes: [],
       },
@@ -52,7 +51,6 @@ describe("previewPreferencesReducer", () => {
       selections: {
         food: ["f2"],
         beverage: ["b2"],
-        vendors: ["v1"],
         setup: [],
         notes: [],
       },
@@ -84,15 +82,15 @@ describe("previewPreferencesReducer", () => {
     let state = createInitialPreviewPreferences()
     state = previewPreferencesReducer(state, {
       type: "beo/selectAllTimeblocks",
-      section: "vendors",
-      ids: ["v1", "v2"],
+      section: "notes",
+      ids: ["n1", "n2"],
     })
-    expect(state.beo.selectedTimeblockIds.vendors).toEqual(["v1", "v2"])
+    expect(state.beo.selectedTimeblockIds.notes).toEqual(["n1", "n2"])
 
     state = previewPreferencesReducer(state, {
       type: "beo/clearAllTimeblocks",
-      section: "vendors",
+      section: "notes",
     })
-    expect(state.beo.selectedTimeblockIds.vendors).toEqual([])
+    expect(state.beo.selectedTimeblockIds.notes).toEqual([])
   })
 })
