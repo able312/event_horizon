@@ -35,6 +35,7 @@ describe("getPdfDocumentType", () => {
     expect(getPdfDocumentType("beo-food")).toBe("BEO")
     expect(getPdfDocumentType("timeline")).toBe("Timeline")
     expect(getPdfDocumentType("financial-report")).toBe("Estimate")
+    expect(getPdfDocumentType("cart-diagram")).toBe("Cart_Setup")
   })
 })
 
@@ -83,6 +84,17 @@ describe("buildPdfFileName", () => {
         now: new Date(2026, 9, 16),
       }),
     ).toBe("10.16.2026_Carrie_Estimate_01.12.2027.pdf")
+  })
+
+  it("builds a cart setup filename for diagram previews", () => {
+    expect(
+      buildPdfFileName({
+        clientName: "Carrie",
+        startDateTime: "2027-01-12T12:00:00.000Z",
+        previewType: "cart-diagram",
+        now: new Date(2026, 9, 16),
+      }),
+    ).toBe("10.16.2026_Carrie_Cart_Setup_01.12.2027.pdf")
   })
 
   it("uses Client and Undated fallbacks when data is missing", () => {

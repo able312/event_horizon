@@ -40,11 +40,14 @@ export type FinancialPreferences = {
   showPaymentStatus: boolean
 }
 
+export type CartDiagramPreferences = Record<string, never>
+
 export type PreviewPreferencesState = {
   beo: BeoPreferences
   "beo-food": FoodBeoPreferences
   timeline: TimelinePreferences
   "financial-report": FinancialPreferences
+  "cart-diagram": CartDiagramPreferences
   /** Tracks which data-derived defaults have been applied once. */
   defaultsApplied: {
     beoTimeblocks: boolean
@@ -132,6 +135,7 @@ export function createInitialPreviewPreferences(): PreviewPreferencesState {
     "beo-food": createInitialFoodBeoPreferences(),
     timeline: createInitialTimelinePreferences(),
     "financial-report": createInitialFinancialPreferences(),
+    "cart-diagram": {},
     defaultsApplied: {
       beoTimeblocks: false,
       foodBeoTimeblocks: false,

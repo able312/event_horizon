@@ -27,6 +27,11 @@ const FoodOnlyPreview = lazy(() =>
   })),
 )
 const FinancialPreview = lazy(() => import("~/features/preview/pages/FinancialPreview"))
+const CartDiagramPreview = lazy(() =>
+  import("~/features/preview/pages/CartDiagramPreview").then((module) => ({
+    default: module.CartDiagramPreview,
+  })),
+)
 
 function PreviewPageFallback() {
   return (
@@ -46,6 +51,8 @@ function renderPreviewPage(type: PreviewTypeId) {
       return <FoodOnlyPreview />
     case "financial-report":
       return <FinancialPreview />
+    case "cart-diagram":
+      return <CartDiagramPreview />
     default:
       return <EventOverviewPreview />
   }
