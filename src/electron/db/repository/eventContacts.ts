@@ -9,6 +9,7 @@ import type {
   EventContact,
   EventContactsPanel,
   EventContactsPanelItem,
+  PrimaryClient,
   RecipientResolution,
   RecipientSelection,
   UpdateEventContact,
@@ -145,6 +146,46 @@ export function createEventContactsRepository(database: DbExecutor) {
       }))
 
       return { eventId, groups: groupPanelItems(rows) }
+    },
+
+    /**
+     * One client per event for list views, keyed by event id. Picks the primary client,
+     * falling back to the first client in panel order. Events with no clients are omitted.
+     */
+    getPrimaryClients: (eventIds: string[]): Record<string, PrimaryClient> => {
+      const ids = requireStringArray(eventIds, "eventIds")
+      if (ids.length === 0) return {}
+
+      const rows = database
+        .select({
+          eventId: eventContacts.eventId,
+          contactId: contacts.id,
+          displayName: contacts.displayName,
+          email: contacts.email,
+          phone: contacts.phone,
+        })
+        .from(eventContacts)
+        .innerJoin(contacts, eq(eventContacts.contactId, contacts.id))
+        .where(
+          and(
+            inArray(eventContacts.eventId, ids),
+            eq(eventContacts.role, "client"),
+            isNull(eventContacts.removedAt),
+          ),
+        )
+        .orderBy(
+          asc(eventContacts.eventId),
+          desc(eventContacts.isPrimary),
+          asc(eventContacts.sortOrder),
+          asc(sql`lower(${contacts.displayName})`),
+        )
+        .all()
+
+      const clients: Record<string, PrimaryClient> = {}
+      for (const { eventId, ...client } of rows) {
+        clients[eventId] ??= client
+      }
+      return clients
     },
 
     /**

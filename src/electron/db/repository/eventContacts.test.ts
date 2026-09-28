@@ -223,6 +223,38 @@ describe("event contacts repository", () => {
     ])
   })
 
+  it("returns one client per event for list views: primary first, else the first client in panel order", () => {
+    const { eventContacts } = repos()
+    const withPrimary = seedEvent("Primary set")
+    const withoutPrimary = seedEvent("No primary")
+    const vendorsOnly = seedEvent("Vendors only")
+    const removedOnly = seedEvent("Removed client")
+
+    eventContacts.assign(withPrimary, { newContact: { displayName: "Anna" } }, "client")
+    eventContacts.assign(withPrimary, { newContact: { displayName: "Ben", email: "ben@example.com", phone: "555" } }, "client", {
+      isPrimary: true,
+    })
+    eventContacts.assign(withoutPrimary, { newContact: { displayName: "Zed" } }, "client")
+    eventContacts.assign(withoutPrimary, { newContact: { displayName: "Amy" } }, "client")
+    eventContacts.assign(vendorsOnly, { newContact: { displayName: "DJ Mo" } }, "vendor", {
+      vendorCategoryId: categoryId("music"),
+    })
+    const gone = eventContacts.assign(removedOnly, { newContact: { displayName: "Gone" } }, "client", { isPrimary: true })
+    eventContacts.remove(gone.id)
+
+    const clients = eventContacts.getPrimaryClients([withPrimary, withoutPrimary, vendorsOnly, removedOnly, "missing"])
+
+    expect(Object.keys(clients).sort()).toEqual([withPrimary, withoutPrimary].sort())
+    expect(clients[withPrimary]).toMatchObject({ displayName: "Ben", email: "ben@example.com", phone: "555" })
+    // No primary: first by sort order (assignment order), matching the panel
+    expect(clients[withoutPrimary]).toMatchObject({ displayName: "Zed" })
+
+    expect(eventContacts.getPrimaryClients([])).toEqual({})
+    expect(() => eventContacts.getPrimaryClients("not-an-array" as unknown as string[])).toThrow(
+      expect.objectContaining({ code: "InvalidInput" }),
+    )
+  })
+
   it("reorders a role group and validates the id list", () => {
     const { eventContacts } = repos()
     const eventA = seedEvent("Event A")

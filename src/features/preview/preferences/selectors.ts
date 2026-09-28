@@ -1,3 +1,4 @@
+import type { PrimaryClient } from "~/definitions/contacts"
 import type { Event } from "~/definitions/database"
 import type { BeverageItemWithAssignments } from "~/definitions/beverage/beverage-types"
 import type { TimeblockWithItems, TimelineTimeblock } from "~/definitions/timeblocks/timeblocks-types"
@@ -10,9 +11,9 @@ export type TimeblockOption = {
   label: string
 }
 
-export function hasContactInfo(event: Pick<Event, "clientName" | "clientPhone" | "clientEmail"> | null | undefined): boolean {
-  if (!event) return false
-  return Boolean(event.clientName?.trim() || event.clientPhone?.trim() || event.clientEmail?.trim())
+export function hasContactInfo(client: Pick<PrimaryClient, "displayName" | "phone" | "email"> | null | undefined): boolean {
+  if (!client) return false
+  return Boolean(client.displayName.trim() || client.phone?.trim() || client.email?.trim())
 }
 
 export function hasInternalNotes(event: Pick<Event, "internalNotes"> | null | undefined): boolean {

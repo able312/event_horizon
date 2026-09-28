@@ -14,9 +14,6 @@ function makeEvent(overrides: Partial<GoogleCalendarEventInput> = {}): GoogleCal
     status: "planning",
     startDateTime: "2026-05-12T18:30:00.000Z",
     endDateTime: "2026-05-12T21:00:00.000Z",
-    clientName: "Example Name",
-    clientEmail: "example.email@nocompany.com",
-    clientPhone: "2265551234",
     minGuests: 80,
     maxGuests: 120,
     guestCountFinal: 0,
@@ -35,7 +32,6 @@ describe("googleCalendar utils", () => {
     const description = buildGoogleCalendarDescription(
       makeEvent({
         internalNotes: "   ",
-        clientName: null,
         guestCountFinal: 1,
         maxGuests: 99,
       }),
@@ -46,6 +42,16 @@ describe("googleCalendar utils", () => {
     expect(description).toContain("Name: Not set")
     expect(description).toContain("EVENT TYPE:")
     expect(description).toContain("STATUS:")
+  })
+
+  it("lists the primary client's details under CLIENT INFO", () => {
+    const description = buildGoogleCalendarDescription(makeEvent(), {
+      client: { displayName: "Example Name", email: "example.email@nocompany.com", phone: null },
+    })
+
+    expect(description).toContain("Name: Example Name")
+    expect(description).toContain("Email: example.email@nocompany.com")
+    expect(description).toContain("Phone: Not set")
   })
 
   it("appends incomplete touchpoints to the description", () => {

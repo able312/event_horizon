@@ -5,6 +5,7 @@ import * as eventsApi from "~/lib/ipc/ipcEventsQueries"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
 import { EVENTS_SEARCH_QUERY_KEY_PREFIX } from "./eventsCache"
 import { useEvents } from "./useEvents"
+import { PRIMARY_CLIENTS_QUERY_KEY_PREFIX } from "./useEventContacts"
 import { useEventsMonthQuery } from "./useEventsMonthQuery"
 
 vi.mock("~/lib/ipc/ipcEventsQueries", () => ({
@@ -148,6 +149,27 @@ describe("useEvents month-scoped queries and mutations", () => {
     expect(getUnscheduledEventsMock).toHaveBeenCalledTimes(1)
   })
 
+  it("createEvent forwards the new client and refreshes batched primary clients", async () => {
+    vi.mocked(eventsApi.getEventsByMonth).mockResolvedValue([makeEvent()])
+    vi.mocked(eventsApi.getUnscheduledEvents).mockResolvedValue([])
+    const createEventMock = vi.mocked(eventsApi.createEvent)
+    createEventMock.mockResolvedValue(makeEvent({ id: "event-created" }))
+
+    const { result, queryClient } = renderHookWithProviders(() => useEvents("2026-04"))
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
+
+    const newEvent = { title: "Created Event", startDateTime: "2026-04-20T12:00:00.000Z" } as NewEvent
+    const client = { firstName: "Jane", lastName: "Smith", email: "jane@example.com" }
+
+    await act(async () => {
+      await result.current.createEvent(newEvent, client)
+    })
+
+    expect(createEventMock).toHaveBeenCalledWith(newEvent, client)
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: PRIMARY_CLIENTS_QUERY_KEY_PREFIX })
+  })
+
   it("updateEvent returns a promise and rejects on mutation failure", async () => {
     const getEventsByMonthMock = vi.mocked(eventsApi.getEventsByMonth)
     const getUnscheduledEventsMock = vi.mocked(eventsApi.getUnscheduledEvents)
@@ -204,27 +226,27 @@ describe("useEvents month-scoped queries and mutations", () => {
 
     const { result, queryClient } = renderHookWithProviders(() => useEvents("2026-04"))
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    queryClient.setQueryData(["event", "event-1"], makeEvent({ clientName: "Old Client" }))
+    queryClient.setQueryData(["event", "event-1"], makeEvent({ title: "Old Title" }))
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
 
     const updatePromise = result.current.updateEvent({
       id: "event-1",
-      updates: { clientName: "New Client", clientEmail: "new@example.com", clientPhone: "123" },
+      updates: { title: "New Title", minGuests: 10, maxGuests: 20 },
     })
 
     await waitFor(() => {
       const cached = queryClient.getQueryData<Event>(["event", "event-1"])
-      expect(cached?.clientName).toBe("New Client")
-      expect(cached?.clientEmail).toBe("new@example.com")
-      expect(cached?.clientPhone).toBe("123")
+      expect(cached?.title).toBe("New Title")
+      expect(cached?.minGuests).toBe(10)
+      expect(cached?.maxGuests).toBe(20)
     })
 
     await act(async () => {
       deferredUpdate.resolve(
         makeEvent({
-          clientName: "New Client",
-          clientEmail: "new@example.com",
-          clientPhone: "123",
+          title: "New Title",
+          minGuests: 10,
+          maxGuests: 20,
         }),
       )
       await expect(updatePromise).resolves.toBeTruthy()
@@ -244,17 +266,17 @@ describe("useEvents month-scoped queries and mutations", () => {
 
     const { result, queryClient } = renderHookWithProviders(() => useEvents("2026-04"))
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    queryClient.setQueryData(["event", "event-1"], makeEvent({ clientName: "Old Client" }))
+    queryClient.setQueryData(["event", "event-1"], makeEvent({ title: "Old Title" }))
 
     await expect(
       result.current.updateEvent({
         id: "event-1",
-        updates: { clientName: "Broken Client" },
+        updates: { title: "Broken Title" },
       }),
     ).rejects.toThrow("update failed")
 
     const cached = queryClient.getQueryData<Event>(["event", "event-1"])
-    expect(cached?.clientName).toBe("Old Client")
+    expect(cached?.title).toBe("Old Title")
   })
 
   it("deleteEvent returns a promise and resolves boolean result", async () => {
@@ -291,7 +313,7 @@ describe("useEvents month-scoped queries and mutations", () => {
 
     const { result, queryClient } = renderHookWithProviders(() => useEvents("2026-04"))
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    queryClient.setQueryData(["event", "event-1"], makeEvent({ clientName: "Old Client" }))
+    queryClient.setQueryData(["event", "event-1"], makeEvent({ title: "Old Title" }))
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
 
     const deletePromise = result.current.deleteEvent("event-1")

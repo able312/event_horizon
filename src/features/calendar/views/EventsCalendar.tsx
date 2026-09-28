@@ -15,6 +15,7 @@
  */
 
 import React, { useCallback, useMemo, useRef } from "react"
+import type { PrimaryClient } from "~/definitions/contacts"
 import type { Event } from "~/definitions/database"
 import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
 import { shiftMonthParam, toMonthStartDate } from "~/lib/months"
@@ -24,6 +25,8 @@ import CalendarGrid from "~/features/calendar/views/CalendarGrid"
 
 interface EventsCalendarProps {
   events: Event[]
+  /** Primary client per event id, for the client line on each chip */
+  clientsByEventId?: Record<string, PrimaryClient>
   date: string
   onDateChange: (date: string) => void
   onDayCellClick?: (date: Date) => void
@@ -46,6 +49,7 @@ const WHEEL_SNAP_COOLDOWN_MS = 300
  */
 const EventsCalendar: React.FC<EventsCalendarProps> = ({
   events,
+  clientsByEventId,
   date,
   onDateChange,
   onDayCellClick,
@@ -132,6 +136,7 @@ const EventsCalendar: React.FC<EventsCalendarProps> = ({
         {/* Calendar Grid with Events */}
         <CalendarGrid
           events={events}
+          clientsByEventId={clientsByEventId}
           year={year}
           month={month}
           startingDay={startingDay}

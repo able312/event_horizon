@@ -23,6 +23,11 @@ const createEventArg: Parameters<typeof eventsIpc.createEvent>[0] = {
   type: "tournament",
   createdAt: "2026-07-16T00:00:00.000Z",
 }
+const createEventClientArg: Parameters<typeof eventsIpc.createEvent>[1] = {
+  firstName: "Alex",
+  lastName: "Doe",
+  email: "alex@example.com",
+}
 const updateEventArg = { title: "Updated Event" } as Parameters<typeof eventsIpc.updateEvent>[1]
 const icsImportCommitArg = {
   sessionId: "session-1",
@@ -78,7 +83,7 @@ const wrapperCases: WrapperCase[] = [
   {
     name: "events.createEvent",
     channel: "events:post",
-    args: [createEventArg],
+    args: [createEventArg, createEventClientArg],
     invokeWrapper: eventsIpc.createEvent as unknown as (...args: unknown[]) => Promise<unknown>,
   },
   {

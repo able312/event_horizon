@@ -12,6 +12,7 @@ const hooksMock = vi.hoisted(() => ({
   useSetupInstructionSection: vi.fn(),
   useNoteSection: vi.fn(),
   usePaymentsSection: vi.fn(),
+  usePrimaryClient: vi.fn(),
 }))
 
 vi.mock("~/hooks/useEvent", () => ({
@@ -32,6 +33,9 @@ vi.mock("~/hooks/useNoteSection", () => ({
 vi.mock("~/hooks/usePaymentsSection", () => ({
   usePaymentsSection: hooksMock.usePaymentsSection,
 }))
+vi.mock("~/hooks/useEventContacts", () => ({
+  usePrimaryClient: hooksMock.usePrimaryClient,
+}))
 
 function renderPanel(initialEntry: string) {
   hooksMock.useFoodSection.mockReturnValue({ data: [] })
@@ -39,6 +43,7 @@ function renderPanel(initialEntry: string) {
   hooksMock.useSetupInstructionSection.mockReturnValue({ data: [] })
   hooksMock.useNoteSection.mockReturnValue({ data: [] })
   hooksMock.usePaymentsSection.mockReturnValue({ data: [] })
+  hooksMock.usePrimaryClient.mockReturnValue({ data: null })
 
   return render(
     <PreviewPreferencesProvider>

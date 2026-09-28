@@ -16,6 +16,10 @@ vi.mock("../state/useCalendarPanelState", () => ({
   }),
 }))
 
+vi.mock("~/hooks/useEventContacts", () => ({
+  usePrimaryClients: () => ({ data: {} }),
+}))
+
 vi.mock("../views/EventsCalendar", () => ({
   default: ({
     onDayCellClick,
@@ -43,9 +47,6 @@ vi.mock("../views/EventsCalendar", () => ({
             status: "new_lead",
             startDateTime: null,
             endDateTime: null,
-            clientName: "",
-            clientEmail: "",
-            clientPhone: "",
             minGuests: 0,
             maxGuests: 0,
             createdAt: "created",

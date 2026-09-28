@@ -3,6 +3,7 @@ import type {
   ContactWithRoles,
   EventContactsPanel,
   EventContactsPanelItem,
+  PrimaryClient,
 } from "~/definitions/contacts"
 import { isContactsError } from "~/lib/contacts/contactsError"
 
@@ -14,6 +15,16 @@ export const ROLE_LABELS: Record<ContactRoleType, { singular: string; plural: st
 
 export function getPanelItems(panel: EventContactsPanel | undefined): EventContactsPanelItem[] {
   return panel?.groups.flatMap((group) => group.items) ?? []
+}
+
+/**
+ * The client to show on documents: the panel lists the primary client first,
+ * so this is the primary client, or the first client when none is marked primary.
+ */
+export function selectPrimaryClient(panel: EventContactsPanel | undefined): PrimaryClient | null {
+  const client = panel?.groups.find((group) => group.role === "client")?.items[0]
+  if (!client) return null
+  return { contactId: client.contactId, displayName: client.displayName, email: client.email, phone: client.phone }
 }
 
 /** Drops selected ids that are no longer on the panel (e.g. after a contact is removed). */

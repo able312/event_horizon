@@ -123,6 +123,12 @@ export type EventContactsPanel = {
   groups: EventContactsPanelGroup[]
 }
 
+/**
+ * The client shown on documents, lists and calendar exports:
+ * the primary client, or the first client in panel order when none is marked primary.
+ */
+export type PrimaryClient = Pick<EventContactsPanelItem, "contactId" | "displayName" | "email" | "phone">
+
 export type ContactEventHistory = {
   eventContactId: string
   eventId: string

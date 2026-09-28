@@ -1,4 +1,5 @@
 import { ipcMain } from "electron"
+import type { NewContact } from "../../definitions/contacts.js"
 import type { NewEvent, UpdateEvent } from "../../definitions/database.js"
 import type { EventSearchRequest } from "../../definitions/ipc.js"
 import type { IcsImportCommitRequest } from "../../definitions/events/icsImport.js"
@@ -6,6 +7,7 @@ import eventQueries from "../db/repository/events.js"
 import { logAndThrow } from "./ipcErrors.js"
 import { getMonthRangeUtcFromLocal } from "../../lib/months.js"
 import { commitIcsImport } from "../services/icsImportService.js"
+import eventCreationService from "../services/eventCreationService.js"
 
 export const registerEventsIpcHandlers = () => {
   ipcMain.handle("events:get-many", async () => {
@@ -56,9 +58,9 @@ export const registerEventsIpcHandlers = () => {
     }
   })
 
-  ipcMain.handle("events:post", async (_event, newEvent: NewEvent) => {
+  ipcMain.handle("events:post", async (_event, newEvent: NewEvent, client?: NewContact | null) => {
     try {
-      return eventQueries.insert(newEvent)
+      return eventCreationService.create(newEvent, client)
     } catch (err) {
       logAndThrow("Error creating event:", err)
     }

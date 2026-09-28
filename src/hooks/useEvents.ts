@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import type { NewContact } from "~/definitions/contacts"
 import type { Event, NewEvent, UpdateEvent } from "~/definitions/database"
 import * as eventsApi from "~/lib/ipc/ipcEventsQueries"
 import {
@@ -15,6 +16,12 @@ import {
   invalidateEventsSearchQueries,
 } from "./eventsCache"
 import { useEventsMonthQuery } from "./useEventsMonthQuery"
+import { PRIMARY_CLIENTS_QUERY_KEY_PREFIX } from "./useEventContacts"
+
+type CreateEventVariables = {
+  newEvent: NewEvent
+  client?: NewContact | null
+}
 
 type SnapshotEntry = {
   key: readonly unknown[]
@@ -68,8 +75,8 @@ export function useEvents(month: string) {
   })
 
   const createMutation = useMutation({
-    mutationFn: (newEvent: NewEvent) => eventsApi.createEvent(newEvent),
-    onMutate: async (newEvent) => {
+    mutationFn: ({ newEvent, client }: CreateEventVariables) => eventsApi.createEvent(newEvent, client),
+    onMutate: async ({ newEvent }) => {
       await queryClient.cancelQueries({ queryKey: EVENTS_MONTH_QUERY_KEY_PREFIX })
       await queryClient.cancelQueries({ queryKey: EVENTS_UNSCHEDULED_QUERY_KEY })
       await queryClient.cancelQueries({ queryKey: EVENTS_SEARCH_QUERY_KEY_PREFIX })
@@ -110,8 +117,11 @@ export function useEvents(month: string) {
       }
       toast.error("Failed to create event")
     },
-    onSettled: async (_createdEvent, _err, _variables, context) => {
+    onSettled: async (_createdEvent, _err, variables, context) => {
       await invalidateEventsSearchQueries(queryClient)
+      if (variables.client) {
+        await queryClient.invalidateQueries({ queryKey: PRIMARY_CLIENTS_QUERY_KEY_PREFIX })
+      }
 
       if (context?.nextScope) {
         await invalidateEventScopes(queryClient, [context.nextScope])
@@ -290,8 +300,8 @@ export function useEvents(month: string) {
     },
   })
 
-  const createEvent = async (newEvent: NewEvent): Promise<Event> => {
-    return await createMutation.mutateAsync(newEvent)
+  const createEvent = async (newEvent: NewEvent, client?: NewContact | null): Promise<Event> => {
+    return await createMutation.mutateAsync({ newEvent, client })
   }
 
   const updateEvent = async ({ id, updates }: { id: string; updates: UpdateEvent }): Promise<Event> => {

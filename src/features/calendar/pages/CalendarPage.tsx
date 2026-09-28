@@ -6,6 +6,7 @@ import { useCalendarPanelState } from "../state/useCalendarPanelState"
 import { ACTIONS } from "../state/calendarSidePanelReducer"
 import { toIsoForDayUsingCurrentTime } from "~/lib/formatters"
 import type { UseEventsReturn } from "~/hooks/useEvents"
+import { usePrimaryClients } from "~/hooks/useEventContacts"
 
 interface CalendarPageProps {
     queryState: UseEventsQueryStateReturn
@@ -18,6 +19,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ queryState, eventsHook, onD
   const {ui, dispatch} = useCalendarPanelState()  
   const { state, setDate } = queryState
   const { monthEvents } = eventsHook
+  const { data: clientsByEventId } = usePrimaryClients(monthEvents.map((event) => event.id))
 
   const handleCalendarDayCellClick = (prefillIso: Date) => {
     dispatch({type: ACTIONS.OPEN_CREATE, prefillIso: toIsoForDayUsingCurrentTime(prefillIso) })
@@ -28,6 +30,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ queryState, eventsHook, onD
   return (
     <EventsCalendar
       events={monthEvents}
+      clientsByEventId={clientsByEventId}
       date={state.date ?? "null"}
       onDateChange={setDate}
       onDayCellClick={handleCalendarDayCellClick}

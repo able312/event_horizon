@@ -18,6 +18,7 @@ import {
 } from "~/features/preview/preferences/selectors"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
 import { useEvent } from "~/hooks/useEvent"
+import { usePrimaryClient } from "~/hooks/useEventContacts"
 import { useFoodSection } from "~/hooks/useFoodSection"
 import { useMenuOfChargeItemsSection } from "~/hooks/useMenuOfChargeSection"
 import { usePaymentsSection } from "~/hooks/usePaymentsSection"
@@ -145,6 +146,7 @@ function buildChargeTableSpecs(params: {
 
 export default function FinancialPreview() {
   const { data: event } = useEvent()
+  const { data: client } = usePrimaryClient(event?.id)
   const { data: chargeItems } = useMenuOfChargeItemsSection()
   const { data: food } = useFoodSection()
   const { items: beverageItems } = useBeverageSection()
@@ -220,22 +222,22 @@ export default function FinancialPreview() {
 
           <div className="mb-4 flex justify-between border-b-2">
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 pb-2 text-sm">
-              {event?.clientName ? (
+              {client?.displayName ? (
                 <>
                   <dt className="text-muted-foreground">To</dt>
-                  <dd className="font-medium">{event.clientName}</dd>
+                  <dd className="font-medium">{client.displayName}</dd>
                 </>
               ) : null}
-              {event?.clientPhone ? (
+              {client?.phone ? (
                 <>
                   <dt className="text-muted-foreground">Phone</dt>
-                  <dd className="font-medium">{event.clientPhone}</dd>
+                  <dd className="font-medium">{client.phone}</dd>
                 </>
               ) : null}
-              {event?.clientEmail ? (
+              {client?.email ? (
                 <>
                   <dt className="text-muted-foreground">Email</dt>
-                  <dd className="font-medium">{event.clientEmail}</dd>
+                  <dd className="font-medium">{client.email}</dd>
                 </>
               ) : null}
             </dl>

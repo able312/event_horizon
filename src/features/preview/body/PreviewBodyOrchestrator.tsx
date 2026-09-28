@@ -12,6 +12,7 @@ import {
   type PreviewTypeId,
 } from "~/features/preview/lib/previewTypes"
 import { useEvent } from "~/hooks/useEvent"
+import { usePrimaryClient } from "~/hooks/useEventContacts"
 import { useHotkey } from "~/lib/hotKeys"
 import { callSavePDF } from "~/lib/ipc/savePDF"
 
@@ -57,11 +58,12 @@ const PreviewBodyOrchestrator: React.FC = () => {
   const [searchParams] = useSearchParams()
   const previewType = resolvePreviewType(searchParams)
   const { data: event } = useEvent()
+  const { data: client } = usePrimaryClient(event?.id)
 
   const handleSavePDF = async () => {
     try {
       const defaultFileName = buildPdfFileName({
-        clientName: event?.clientName,
+        clientName: client?.displayName,
         startDateTime: event?.startDateTime,
         previewType,
       })

@@ -2,6 +2,7 @@ import type { Event } from "~/definitions/database"
 import { formatDate, getDateString } from "~/lib/formatters"
 import { SectionFrame } from "~/features/preview/components/SectionFrame"
 import { hasContactInfo } from "~/features/preview/preferences/selectors"
+import { usePrimaryClient } from "~/hooks/useEventContacts"
 
 type PrintHeaderProps = {
   event: Event
@@ -14,9 +15,11 @@ export function PrintHeader({
   showContactInfo = true,
   showInternalNotes = true,
 }: PrintHeaderProps) {
+  const { data: client } = usePrimaryClient(event?.id)
+
   if (!event) return null
 
-  const contactVisible = showContactInfo && hasContactInfo(event)
+  const contactVisible = showContactInfo && hasContactInfo(client)
   const notesVisible = showInternalNotes && Boolean(event.internalNotes?.trim())
 
   return (
@@ -61,22 +64,22 @@ export function PrintHeader({
       {contactVisible ? (
         <SectionFrame title="Contact Information">
           <dl className="grid grid-cols-[auto_1fr_auto_1fr_auto_1fr] gap-x-4 gap-y-1 text-sm">
-            {event.clientName?.trim() ? (
+            {client?.displayName.trim() ? (
               <>
                 <dt className="text-muted-foreground">Name</dt>
-                <dd className="font-medium">{event.clientName}</dd>
+                <dd className="font-medium">{client.displayName}</dd>
               </>
             ) : null}
-            {event.clientPhone?.trim() ? (
+            {client?.phone?.trim() ? (
               <>
                 <dt className="text-muted-foreground">Phone</dt>
-                <dd className="font-medium">{event.clientPhone}</dd>
+                <dd className="font-medium">{client.phone}</dd>
               </>
             ) : null}
-            {event.clientEmail?.trim() ? (
+            {client?.email?.trim() ? (
               <>
                 <dt className="text-muted-foreground">Email</dt>
-                <dd className="font-medium">{event.clientEmail}</dd>
+                <dd className="font-medium">{client.email}</dd>
               </>
             ) : null}
           </dl>

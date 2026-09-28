@@ -22,6 +22,7 @@ const contactRoleQueries = { listForContact: vi.fn(), ensure: vi.fn(), remove: v
 const vendorCategoryQueries = { list: vi.fn(), create: vi.fn(), update: vi.fn(), archive: vi.fn(), restore: vi.fn() }
 const eventContactQueries = {
   getPanel: vi.fn(),
+  getPrimaryClients: vi.fn(),
   assign: vi.fn(),
   update: vi.fn(),
   setPrimary: vi.fn(),
@@ -64,7 +65,7 @@ describe("contacts IPC handlers", () => {
   it("registers every channel and each is allowlisted in preload", async () => {
     await registerAll()
     const channels = handleMock.mock.calls.map((entry) => entry[0] as string)
-    expect(channels).toHaveLength(25)
+    expect(channels).toHaveLength(26)
 
     const preloadSource = readFileSync(join(process.cwd(), "src/electron/preload.cts"), "utf8")
     for (const channel of channels) expect(preloadSource).toContain(`"${channel}"`)
@@ -93,6 +94,13 @@ describe("contacts IPC handlers", () => {
 
     await handlerFor("vendor-categories:get-many")({}, { includeArchived: true })
     expect(vendorCategoryQueries.list).toHaveBeenCalledWith({ includeArchived: true })
+
+    eventContactQueries.getPrimaryClients.mockReturnValueOnce({})
+    await expect(handlerFor("event-contacts:get-primary-clients")({}, ["event-1"])).resolves.toEqual({
+      ok: true,
+      data: {},
+    })
+    expect(eventContactQueries.getPrimaryClients).toHaveBeenCalledWith(["event-1"])
 
     await handlerFor("event-contacts:resolve-recipients")({}, "event-1", { roles: ["client"] })
     expect(eventContactQueries.resolveRecipients).toHaveBeenCalledWith("event-1", { roles: ["client"] })

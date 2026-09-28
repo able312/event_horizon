@@ -9,7 +9,7 @@ import type {
   UpdateContact,
   UpdateEventContact,
 } from "~/definitions/contacts"
-import { getContactsErrorMessage } from "~/features/contacts/lib/eventContactsPanel"
+import { getContactsErrorMessage, selectPrimaryClient } from "~/features/contacts/lib/eventContactsPanel"
 import * as contactsApi from "~/lib/ipc/contacts"
 import * as eventContactsApi from "~/lib/ipc/eventContacts"
 import * as vendorCategoriesApi from "~/lib/ipc/vendorCategories"
@@ -17,6 +17,8 @@ import * as vendorCategoriesApi from "~/lib/ipc/vendorCategories"
 const CONTACT_SEARCH_LIMIT = 20
 
 export const eventContactsQueryKey = (eventId: string) => ["event-contacts", eventId] as const
+/** Batched primary clients for list views; any contact change on any event can affect them. */
+export const PRIMARY_CLIENTS_QUERY_KEY_PREFIX = ["event-contacts", "primary-clients"] as const
 const contactsRootKey = ["contacts"] as const
 
 export type AssignEventContactVariables = {
@@ -55,6 +57,7 @@ export function useEventContacts(eventId: string) {
 
   const invalidatePanel = () => {
     void queryClient.invalidateQueries({ queryKey })
+    void queryClient.invalidateQueries({ queryKey: PRIMARY_CLIENTS_QUERY_KEY_PREFIX })
   }
 
   // Assigning/saving can create or change a contact, which changes directory search and by-id results
@@ -120,6 +123,27 @@ export function useEventContacts(eventId: string) {
     setPrimary: setPrimaryMutation.mutate,
     removeContact: removeMutation.mutate,
   }
+}
+
+/** The event's primary client. Shares the panel's cache, so it updates as soon as contacts are edited. */
+export function usePrimaryClient(eventId: string | undefined) {
+  return useQuery({
+    queryKey: eventContactsQueryKey(eventId ?? ""),
+    enabled: Boolean(eventId),
+    queryFn: () => eventContactsApi.getEventContactsPanel(eventId!),
+    select: selectPrimaryClient,
+  })
+}
+
+/** Primary client per event id, fetched in one call so list views avoid a request per event. */
+export function usePrimaryClients(eventIds: string[]) {
+  const ids = [...new Set(eventIds)].sort()
+  return useQuery({
+    queryKey: [...PRIMARY_CLIENTS_QUERY_KEY_PREFIX, ids],
+    enabled: ids.length > 0,
+    placeholderData: keepPreviousData,
+    queryFn: () => eventContactsApi.getPrimaryClients(ids),
+  })
 }
 
 /** Directory search for the add-contact dialog. Keeps the last results visible while typing. */

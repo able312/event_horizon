@@ -10,6 +10,7 @@ import {
   getContactsErrorMessage,
   isAlreadyAssigned,
   pruneSelection,
+  selectPrimaryClient,
   toggleGroupSelection,
   toggleId,
 } from "./eventContactsPanel"
@@ -88,5 +89,13 @@ describe("event contacts panel helpers", () => {
       "Already on event",
     )
     expect(getContactsErrorMessage(new Error("boom"), "Fallback")).toBe("Fallback")
+  })
+
+  it("selects the first client (the panel sorts the primary first) as the primary client", () => {
+    expect(selectPrimaryClient(panel)).toEqual({ contactId: "c-1", displayName: "Sarah Kim", email: null, phone: null })
+
+    const noClients: EventContactsPanel = { ...panel, groups: panel.groups.map((group) => ({ ...group, items: group.role === "client" ? [] : group.items })) }
+    expect(selectPrimaryClient(noClients)).toBeNull()
+    expect(selectPrimaryClient(undefined)).toBeNull()
   })
 })

@@ -1,3 +1,4 @@
+import type { PrimaryClient } from "~/definitions/contacts"
 import type { Event } from "~/definitions/database"
 import { EVENT_STATUS_LABELS, EVENT_TYPE_LABELS } from "~/definitions/events/ui"
 import { formatTouchpointsPlainText } from "~/features/touchpoints/lib/formatTouchpointsPlainText"
@@ -17,9 +18,6 @@ export type GoogleCalendarEventInput = Pick<
   | "minGuests"
   | "maxGuests"
   | "guestCountFinal"
-  | "clientName"
-  | "clientEmail"
-  | "clientPhone"
   | "calendarId"
 >
 
@@ -57,6 +55,7 @@ export function formatGoogleCalendarDateUtc(isoDate: string): string {
 
 export type GoogleCalendarDescriptionOptions = {
   incompleteTouchpoints?: TouchpointPlainItem[]
+  client?: Pick<PrimaryClient, "displayName" | "email" | "phone"> | null
 }
 
 export function buildGoogleCalendarDescription(
@@ -66,9 +65,9 @@ export function buildGoogleCalendarDescription(
   const eventType = EVENT_TYPE_LABELS[event.type] ?? event.type
   const eventStatus = EVENT_STATUS_LABELS[event.status] ?? event.status
   const internalNote = cleanText(event.internalNotes)
-  const name = cleanText(event.clientName) ?? MISSING_PLACEHOLDER
-  const email = cleanText(event.clientEmail) ?? MISSING_PLACEHOLDER
-  const phone = cleanText(event.clientPhone) ?? MISSING_PLACEHOLDER
+  const name = cleanText(options.client?.displayName) ?? MISSING_PLACEHOLDER
+  const email = cleanText(options.client?.email) ?? MISSING_PLACEHOLDER
+  const phone = cleanText(options.client?.phone) ?? MISSING_PLACEHOLDER
 
   const isGuestCountFinal = event.guestCountFinal === 1
   const minGuests = event.minGuests ?? MISSING_PLACEHOLDER

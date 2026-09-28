@@ -15,6 +15,10 @@ export const registerEventContactsIpcHandlers = () => {
     toContactsIpcResult("Error getting event contacts panel:", () => eventContactQueries.getPanel(eventId)),
   )
 
+  ipcMain.handle("event-contacts:get-primary-clients", async (_event, eventIds: string[]) =>
+    toContactsIpcResult("Error getting primary clients:", () => eventContactQueries.getPrimaryClients(eventIds)),
+  )
+
   ipcMain.handle(
     "event-contacts:assign",
     async (

@@ -15,6 +15,7 @@
 import React from "react"
 import { useLocation, useNavigate } from "react-router"
 import { EVENT_TYPE_COLORS } from "~/definitions/events/ui"
+import type { PrimaryClient } from "~/definitions/contacts"
 import type { Event } from "~/definitions/database"
 import { buildEventDetailEntryPath } from "~/features/event-detail/workspace/lib/eventDetailRouteState"
 import EventItemContextMenu from "../interactions/EventItemContextMenu"
@@ -22,6 +23,8 @@ import EventItemContextMenu from "../interactions/EventItemContextMenu"
 interface UnscheduledEventsProps {
   /** Events to display (filtered to those without dates) */
   events: Event[]
+  /** Primary client per event id, from the contacts table */
+  clientsByEventId?: Record<string, PrimaryClient>
   /** Callback when editing an event */
   onEventEdit?: (event: Event) => void
   /** Callback when deleting an event */
@@ -35,6 +38,7 @@ interface UnscheduledEventsProps {
  */
 const UnscheduledEvents: React.FC<UnscheduledEventsProps> = ({
   events,
+  clientsByEventId,
   onEventEdit,
   onEventDelete,
 }) => {
@@ -83,9 +87,9 @@ const UnscheduledEvents: React.FC<UnscheduledEventsProps> = ({
               <span className="font-medium">{event.title}</span>
 
               {/* Client Name (if present) */}
-              {event.clientName && (
+              {clientsByEventId?.[event.id] && (
                 <span className="text-sm text-muted-foreground">
-                  - {event.clientName}
+                  - {clientsByEventId[event.id].displayName}
                 </span>
               )}
             </button>

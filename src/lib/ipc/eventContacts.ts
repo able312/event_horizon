@@ -5,6 +5,7 @@ import type {
   ContactRoleType,
   EventContact,
   EventContactsPanel,
+  PrimaryClient,
   RecipientResolution,
   RecipientSelection,
   UpdateEventContact,
@@ -13,6 +14,10 @@ import { invokeContactsChannel } from "./contactsIpcResult"
 
 export function getEventContactsPanel(eventId: string): Promise<EventContactsPanel> {
   return invokeContactsChannel("event-contacts:get-panel", eventId)
+}
+
+export function getPrimaryClients(eventIds: string[]): Promise<Record<string, PrimaryClient>> {
+  return invokeContactsChannel("event-contacts:get-primary-clients", eventIds)
 }
 
 export function assignEventContact(

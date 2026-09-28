@@ -1,15 +1,25 @@
 import React, { useEffect, useState } from "react"
+import type { NewContact } from "~/definitions/contacts"
 import type { NewEvent } from "~/definitions/database"
+import { hasFormErrors } from "~/features/contacts/lib/contactForm"
 import EventFormFields, {
   type EventFormValues,
 } from "./EventFormFields"
 import { isEventFormValid } from "./eventFormValidation"
+import NewClientFields from "./NewClientFields"
+import {
+  EMPTY_NEW_CLIENT,
+  toNewClientContact,
+  validateNewClient,
+  type NewClientFormValues,
+} from "./newClientForm"
 import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
 
 interface CreateEventSidebarFormProps {
   initialStartDateTime?: string
   initialEndDateTime?: string
-  onCreate: (event: NewEvent) => Promise<void>
+  /** client is null when the client section was left blank */
+  onCreate: (event: NewEvent, client: NewContact | null) => Promise<void>
   onCancel: () => void
   onDraftPreviewChange?: (draft: CalendarDraftPreview | null) => void
 }
@@ -22,9 +32,6 @@ function createDefaultFormValues(
     title: "",
     type: "function",
     status: "new_lead",
-    clientName: "",
-    clientEmail: "",
-    clientPhone: "",
     startDateTime: initialStartDateTime ?? null,
     endDateTime: initialEndDateTime ?? initialStartDateTime ?? null,
     minGuests: 0,
@@ -42,7 +49,10 @@ export const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
   const [formValues, setFormValues] = useState<EventFormValues>(() =>
     createDefaultFormValues(initialStartDateTime, initialEndDateTime),
   )
+  const [clientValues, setClientValues] = useState<NewClientFormValues>(EMPTY_NEW_CLIENT)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const clientErrors = validateNewClient(clientValues)
+  const canCreate = isEventFormValid(formValues) && !hasFormErrors(clientErrors) && !isSubmitting
 
   useEffect(() => {
     if (!onDraftPreviewChange) return
@@ -69,11 +79,12 @@ export const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
   const handleCancel = () => {
     onDraftPreviewChange?.(null)
     setFormValues(createDefaultFormValues(initialStartDateTime, initialEndDateTime))
+    setClientValues(EMPTY_NEW_CLIENT)
     onCancel()
   }
 
   const handleCreate = async () => {
-    if (!isEventFormValid(formValues) || isSubmitting) return
+    if (!canCreate) return
 
     setIsSubmitting(true)
     try {
@@ -81,16 +92,14 @@ export const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
         title: formValues.title,
         type: formValues.type,
         status: formValues.status,
-        clientName: formValues.clientName,
-        clientEmail: formValues.clientEmail,
-        clientPhone: formValues.clientPhone,
         startDateTime: formValues.startDateTime,
         endDateTime: formValues.endDateTime,
         minGuests: formValues.minGuests,
         maxGuests: formValues.maxGuests,
       } as NewEvent
-      await onCreate(newEvent)
+      await onCreate(newEvent, toNewClientContact(clientValues))
       setFormValues(createDefaultFormValues(initialStartDateTime, initialEndDateTime))
+      setClientValues(EMPTY_NEW_CLIENT)
       onCancel()
     } catch {
       // Mutation errors are surfaced by hook-level toasts.
@@ -110,6 +119,13 @@ export const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
         values={formValues}
         onChange={(updates) => setFormValues((current) => ({ ...current, ...updates }))}
         autoFocusTitle
+        clientFields={
+          <NewClientFields
+            values={clientValues}
+            errors={clientErrors}
+            onChange={(updates) => setClientValues((current) => ({ ...current, ...updates }))}
+          />
+        }
       />
 
       <div className="flex gap-3 pb-2">
@@ -123,7 +139,7 @@ export const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
         <button
           type="button"
           onClick={handleCreate}
-          disabled={!isEventFormValid(formValues) || isSubmitting}
+          disabled={!canCreate}
           className="flex-1 rounded-lg bg-orange-500 px-4 py-2 font-medium text-stone-950 transition-colors hover:bg-orange-400 disabled:bg-stone-900 disabled:text-stone-700"
         >
           Create

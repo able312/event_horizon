@@ -1,5 +1,5 @@
 import { db } from "../index.js"
-import type { AppDatabase } from "../factory.js"
+import type { DbExecutor } from "../factory.js"
 import { contacts, eventContacts, events } from "../schema.js"
 import type { Event, EventStatus, NewEvent, UpdateEvent } from "../../../definitions/database.js"
 import type { EventSearchRequest, EventSearchResponse } from "../../../definitions/ipc.js"
@@ -7,7 +7,7 @@ import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, or, sql, type SQL } 
 import { v4 as uuidv4 } from "uuid"
 import { assertValidEventDateRange } from "../../../lib/events/eventDateRange.js"
 
-export function createEventsRepository(database: AppDatabase) {
+export function createEventsRepository(database: DbExecutor) {
   const toInsertEntry = (data: NewEvent, createdAtOverride?: string): NewEvent => {
     const now = createdAtOverride ?? Date.now().toString()
     const startDateTime = data.startDateTime ?? null
