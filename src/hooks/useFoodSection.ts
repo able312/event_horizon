@@ -30,12 +30,22 @@ function restoreQueryData<T>(
   queryKey: readonly unknown[],
   previousData: T | undefined,
 ) {
-  if (previousData === undefined) {
-    queryClient.removeQueries({ queryKey, exact: true })
-    return
-  }
-
+  // Only restore when we had a snapshot. Avoid removeQueries on active observers.
+  if (previousData === undefined) return
   queryClient.setQueryData(queryKey, previousData)
+}
+
+function pickConfirmedUpdates(
+  updatedItem: FoodItem,
+  updates: Partial<FoodItem>,
+): Partial<FoodItem> {
+  return (Object.keys(updates) as (keyof FoodItem)[]).reduce<Partial<FoodItem>>(
+    (confirmed, key) => {
+      if (!(key in updatedItem)) return confirmed
+      return { ...confirmed, [key]: updatedItem[key] }
+    },
+    {},
+  )
 }
 
 
@@ -166,14 +176,20 @@ export function useFoodSection() {
       return { previousData, previousFocusedData }
     },
     onSuccess: (updatedItem, variables) => {
+      // Merge only fields this mutation sent so an in-flight sibling update
+      // (e.g. name then quantity) is not overwritten by a stale server row.
+      const confirmedUpdates = pickConfirmedUpdates(updatedItem, variables.updates)
+
       queryClient.setQueryData<TimeblockWithItems[]>(queryKey, (old = []) =>
-        updateListItem(old, variables.timeblockId, "foodItems", updatedItem.id, updatedItem),
+        updateListItem(old, variables.timeblockId, "foodItems", updatedItem.id, confirmedUpdates),
       )
       queryClient.setQueryData<TimeblockWithItems>(
         focusedTimeblockQueryKey(variables.timeblockId),
         (old) => updateFocusedFoodItems(
           old,
-          (items) => items.map((item) => item.id === updatedItem.id ? updatedItem : item),
+          (items) => items.map((item) =>
+            item.id === updatedItem.id ? { ...item, ...confirmedUpdates } : item,
+          ),
         ),
       )
     },
@@ -194,13 +210,8 @@ export function useFoodSection() {
   })
 
   const deleteItemMutation = useMutation({
-    mutationFn: async ({ itemId }: { timeblockId: string; itemId: string }) => {
-      const deleted = await foodItemsIpc.deleteFoodItem(itemId)
-      if (!deleted) {
-        throw new Error(`Food item not found for id ${itemId}`)
-      }
-      return deleted
-    },
+    mutationFn: ({ itemId }: { timeblockId: string; itemId: string }) =>
+      foodItemsIpc.deleteFoodItem(itemId),
     onMutate: async ({ timeblockId, itemId }) => {
       const focusedQueryKey = focusedTimeblockQueryKey(timeblockId)
       await Promise.all([
