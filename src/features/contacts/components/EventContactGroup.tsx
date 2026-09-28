@@ -11,6 +11,11 @@ type EventContactGroupProps = {
   selectedIds: ReadonlySet<string>
   onToggleSelected: (eventContactId: string) => void
   onToggleGroup: (eventContactIds: string[]) => void
+  /** Inline add form shown under the heading, when adding from this group. */
+  addForm: React.ReactNode
+  /** The row being edited is replaced by `editForm`. */
+  editingId: string | null
+  editForm: React.ReactNode
   onAdd: () => void
   onEdit: (item: EventContactsPanelItem) => void
   onSetPrimary: (item: EventContactsPanelItem) => void
@@ -23,6 +28,9 @@ export const EventContactGroup: React.FC<EventContactGroupProps> = ({
   selectedIds,
   onToggleSelected,
   onToggleGroup,
+  addForm,
+  editingId,
+  editForm,
   onAdd,
   onEdit,
   onSetPrimary,
@@ -61,29 +69,37 @@ export const EventContactGroup: React.FC<EventContactGroupProps> = ({
         </button>
       </div>
 
+      {addForm}
+
       {group.items.length === 0 ? (
-        <button
-          type="button"
-          className="mt-1 w-full rounded-xs border border-dashed border-border py-2 text-xs text-muted-foreground transition-colors hover:border-orange-300 hover:text-orange-600"
-          onClick={onAdd}
-        >
-          No {labels.plural.toLowerCase()} yet — add one
-        </button>
+        addForm ? null : (
+          <button
+            type="button"
+            className="mt-1 w-full rounded-xs border border-dashed border-border py-2 text-xs text-muted-foreground transition-colors hover:border-orange-300 hover:text-orange-600"
+            onClick={onAdd}
+          >
+            No {labels.plural.toLowerCase()} yet — add one
+          </button>
+        )
       ) : (
         <ul className="divide-y divide-border">
-          {group.items.map((item) => (
-            <EventContactRow
-              key={item.eventContactId}
-              role={group.role}
-              item={item}
-              eventTitle={eventTitle}
-              selected={selectedIds.has(item.eventContactId)}
-              onToggleSelected={() => onToggleSelected(item.eventContactId)}
-              onEdit={() => onEdit(item)}
-              onSetPrimary={() => onSetPrimary(item)}
-              onRemove={() => onRemove(item)}
-            />
-          ))}
+          {group.items.map((item) =>
+            item.eventContactId === editingId ? (
+              <li key={item.eventContactId}>{editForm}</li>
+            ) : (
+              <EventContactRow
+                key={item.eventContactId}
+                role={group.role}
+                item={item}
+                eventTitle={eventTitle}
+                selected={selectedIds.has(item.eventContactId)}
+                onToggleSelected={() => onToggleSelected(item.eventContactId)}
+                onEdit={() => onEdit(item)}
+                onSetPrimary={() => onSetPrimary(item)}
+                onRemove={() => onRemove(item)}
+              />
+            ),
+          )}
         </ul>
       )}
     </section>

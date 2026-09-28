@@ -8,9 +8,12 @@ import { useEventContacts } from "~/hooks/useEventContacts"
 
 import { useEmailEventContacts } from "../hooks/useEmailEventContacts"
 import { getContactsErrorMessage, pruneSelection, toggleGroupSelection, toggleId } from "../lib/eventContactsPanel"
-import { AddEventContactDialog } from "./AddEventContactDialog"
-import { EditEventContactDialog, type EditTarget } from "./EditEventContactDialog"
+import { AddEventContactForm } from "./AddEventContactForm"
+import { EditEventContactForm, type EditTarget } from "./EditEventContactForm"
 import { EventContactGroup } from "./EventContactGroup"
+
+/** Only one inline form is open at a time. An add form sits in the group it was opened from. */
+type OpenForm = { kind: "add"; role: ContactRoleType } | { kind: "edit"; target: EditTarget } | null
 
 type ContactsListProps = {
   eventId: string
@@ -33,8 +36,8 @@ const ContactsList: React.FC<ContactsListProps> = ({ eventId, eventTitle }) => {
   const { emailContacts, isResolving } = useEmailEventContacts(eventId, eventTitle)
 
   const [rawSelection, setRawSelection] = useState<Set<string>>(new Set())
-  const [addRole, setAddRole] = useState<ContactRoleType | null>(null)
-  const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
+  const [openForm, setOpenForm] = useState<OpenForm>(null)
+  const closeForm = () => setOpenForm(null)
 
   // Ignore selections for contacts that have since left the panel
   const selectedIds = useMemo(() => pruneSelection(rawSelection, panel), [rawSelection, panel])
@@ -69,7 +72,7 @@ const ContactsList: React.FC<ContactsListProps> = ({ eventId, eventTitle }) => {
           type="button"
           variant="outline"
           className="h-8 shrink-0 rounded-xs px-2 text-sm"
-          onClick={() => setAddRole("client")}
+          onClick={() => setOpenForm({ kind: "add", role: "client" })}
         >
           <Plus className="size-3.5" />
           Add
@@ -95,8 +98,31 @@ const ContactsList: React.FC<ContactsListProps> = ({ eventId, eventTitle }) => {
               selectedIds={selectedIds}
               onToggleSelected={(id) => setRawSelection(toggleId(selectedIds, id))}
               onToggleGroup={(ids) => setRawSelection(toggleGroupSelection(selectedIds, ids))}
-              onAdd={() => setAddRole(group.role)}
-              onEdit={(item) => setEditTarget({ role: group.role, item })}
+              addForm={
+                openForm?.kind === "add" && openForm.role === group.role ? (
+                  <AddEventContactForm
+                    panel={panel}
+                    initialRole={group.role}
+                    isAssigning={isAssigning}
+                    onAssign={assignContactAsync}
+                    onClose={closeForm}
+                  />
+                ) : null
+              }
+              editingId={openForm?.kind === "edit" ? openForm.target.item.eventContactId : null}
+              editForm={
+                openForm?.kind === "edit" ? (
+                  <EditEventContactForm
+                    key={openForm.target.item.eventContactId}
+                    target={openForm.target}
+                    isSaving={isSaving}
+                    onSave={saveContactAsync}
+                    onClose={closeForm}
+                  />
+                ) : null
+              }
+              onAdd={() => setOpenForm({ kind: "add", role: group.role })}
+              onEdit={(item) => setOpenForm({ kind: "edit", target: { role: group.role, item } })}
               onSetPrimary={(item) => setPrimary(item.eventContactId)}
               onRemove={(item) => handleRemove(group.role, item)}
             />
@@ -130,21 +156,6 @@ const ContactsList: React.FC<ContactsListProps> = ({ eventId, eventTitle }) => {
           ) : null}
         </div>
       ) : null}
-
-      <AddEventContactDialog
-        open={addRole !== null}
-        onOpenChange={(open) => !open && setAddRole(null)}
-        panel={panel}
-        initialRole={addRole ?? undefined}
-        isAssigning={isAssigning}
-        onAssign={assignContactAsync}
-      />
-      <EditEventContactDialog
-        target={editTarget}
-        onOpenChange={(open) => !open && setEditTarget(null)}
-        isSaving={isSaving}
-        onSave={saveContactAsync}
-      />
     </section>
   )
 }
