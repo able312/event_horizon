@@ -20,6 +20,7 @@ import { DetailsTitleBarSkeleton } from "~/features/event-detail/components/Deta
 import { formatDateMonthDay, formatTime, isSameDay } from "~/lib/formatters"
 
 import type { EventStatus, EventType } from "~/definitions/database"
+import { usePrimaryClient } from "~/hooks/useEventContacts"
 import type { EventResource } from "../types"
 
 interface DetailsTitleBarProps {
@@ -34,6 +35,8 @@ const DetailsTitleBar: React.FC<DetailsTitleBarProps> = ({ eventResource }) => {
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [dateDialogOpen, setDateDialogOpen] = useState(false)
     const [guestsDialogOpen, setGuestsDialogOpen] = useState(false)
+    const { data: client } = usePrimaryClient(event?.id)
+    const clientName = client?.displayName.trim()
 
     if (isLoading) {
     return (
@@ -68,17 +71,29 @@ const DetailsTitleBar: React.FC<DetailsTitleBarProps> = ({ eventResource }) => {
     setStatusDropdownOpen(false)
   }
     return (
-        <div className="flex justify-between px-4 py-2 border-b-1">
-            <div className="min-w-0">
+        // @container: the layout switches on the bar's own width (the sidebar takes part of the window).
+        // Below @5xl both sides fold into two lines together: badges under the title, guests under the date.
+        <div className="@container flex justify-between gap-6 px-4 py-2 border-b-1">
+            <div className="min-w-0 flex-1">
                 <div className="flex justify-between">
-                  {/* TITLE, TYPE & STATUS START */}
-                  <div className="min-w-0 flex gap-8">
-                    <div>
-                      <p className="text-xl font-bold truncate">{event.title}</p>
+                  {/* TITLE, CLIENT, TYPE & STATUS START */}
+                  <div className="min-w-0 flex flex-col items-start gap-1 @5xl:flex-row @5xl:items-center @5xl:gap-6">
+                    {/* Title truncates first; the client keeps up to half the row so same-named events stay distinguishable */}
+                    <div className="min-w-0 max-w-full flex items-baseline gap-2">
+                      <p className="text-xl font-bold truncate" title={event.title}>{event.title}</p>
+                      {clientName ? (
+                        <p
+                          className="max-w-1/2 shrink-0 truncate text-base font-medium text-stone-500"
+                          title={`Client: ${clientName}`}
+                        >
+                          <span aria-hidden="true" className="mr-2 text-stone-300">·</span>
+                          {clientName}
+                        </p>
+                      ) : null}
                     </div>
-                        
+
                     {/* TYPE */}
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex shrink-0 items-center gap-2">
                       <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${EVENT_TYPE_COLORS[type]}`}>
                         {EVENT_TYPE_LABELS[type]}
                       </span>
@@ -112,11 +127,12 @@ const DetailsTitleBar: React.FC<DetailsTitleBarProps> = ({ eventResource }) => {
                     </div>
                   </div>
                 </div>
-                {/* <p className="text-sm font-medium truncate">{event.clientName}</p> */}
             </div>
             
 
             <div className="flex items-center gap-8 shrink-0">
+              {/* DATE & GUESTS: stacked at the end of the bar when narrow, side by side when wide */}
+              <div className="flex flex-col items-start gap-1 @5xl:flex-row @5xl:items-center @5xl:gap-8">
                 <button
                 type="button"
                 onClick={() => setDateDialogOpen(true)}
@@ -157,6 +173,7 @@ const DetailsTitleBar: React.FC<DetailsTitleBarProps> = ({ eventResource }) => {
                     </p>
                 </div>
                 </button>
+              </div>
     
                 <EntityKebabMenu
                   onEdit={() => setEditDialogOpen(true)}

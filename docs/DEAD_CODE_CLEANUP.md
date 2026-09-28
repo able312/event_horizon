@@ -19,7 +19,7 @@ This document lists dead code identified via static analysis ([fallow](https://d
 
 | Category | Count |
 |---|---|
-| Whole files to delete | 14 files (+ 8 associated test files) |
+| Whole files to delete | 13 files (+ 7 associated test files) |
 | Partial cleanups (exports / functions / types) | ~35 symbols across 15 files |
 | Unused npm dependencies | 4 |
 | Stale config references | 2 |
@@ -51,15 +51,6 @@ Within those modal files, also remove before deletion (or they go away with the 
 
 - `export default CreateEventModal` / `export default EditEventModal` — redundant default exports; named exports were only used in tests.
 - `export const CreateEventModal` / `export const EditEventModal` — the components themselves.
-
-### Calendar — legacy unscheduled events panel
-
-Unscheduled events now render via `EventsTable` in `CalendarPageOrchestrator.tsx` when `bodyView === "unscheduled-list"`.
-
-| File | Status | Notes |
-|---|---|---|
-| `src/features/calendar/views/UnscheduledEvents.tsx` | **Delete file** | Replaced by `EventsTable`. |
-| `src/features/calendar/views/UnscheduledEvents.test.tsx` | **Delete file** | Tests the removed component. |
 
 ### Event detail — legacy food section UI
 
