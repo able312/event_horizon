@@ -25,6 +25,7 @@ const eventContactQueries = {
   getPrimaryClients: vi.fn(),
   assign: vi.fn(),
   update: vi.fn(),
+  updateWithContact: vi.fn(),
   setPrimary: vi.fn(),
   reorder: vi.fn(),
   remove: vi.fn(),
@@ -65,7 +66,7 @@ describe("contacts IPC handlers", () => {
   it("registers every channel and each is allowlisted in preload", async () => {
     await registerAll()
     const channels = handleMock.mock.calls.map((entry) => entry[0] as string)
-    expect(channels).toHaveLength(26)
+    expect(channels).toHaveLength(27)
 
     const preloadSource = readFileSync(join(process.cwd(), "src/electron/preload.cts"), "utf8")
     for (const channel of channels) expect(preloadSource).toContain(`"${channel}"`)
@@ -81,6 +82,12 @@ describe("contacts IPC handlers", () => {
     expect(eventContactQueries.assign).toHaveBeenCalledWith("event-1", { contactId: "c-1" }, "vendor", {
       vendorCategoryId: "cat",
     })
+
+    eventContactQueries.updateWithContact.mockReturnValueOnce({ id: "ec-1" })
+    await expect(
+      handlerFor("event-contacts:patch-with-contact")({}, "ec-1", { phone: "555" }, { notes: "Arrives 3pm" }),
+    ).resolves.toEqual({ ok: true, data: { id: "ec-1" } })
+    expect(eventContactQueries.updateWithContact).toHaveBeenCalledWith("ec-1", { phone: "555" }, { notes: "Arrives 3pm" })
 
     contactQueries.merge.mockReturnValueOnce({ id: "target" })
     await expect(handlerFor("contacts:merge")({}, "source", "target")).resolves.toEqual({

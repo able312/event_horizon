@@ -36,6 +36,7 @@ const wrapperCases: WrapperCase[] = [
   { name: "getEventContactsPanel", channel: "event-contacts:get-panel", args: ["e-1"], invokeWrapper: wrap(eventContactsIpc.getEventContactsPanel) },
   { name: "assignEventContact", channel: "event-contacts:assign", args: ["e-1", { contactId: "c-1" }, "client", { isPrimary: true }], invokeWrapper: wrap(eventContactsIpc.assignEventContact) },
   { name: "updateEventContact", channel: "event-contacts:patch", args: ["ec-1", { notes: "n" }], invokeWrapper: wrap(eventContactsIpc.updateEventContact) },
+  { name: "updateEventContactWithContact", channel: "event-contacts:patch-with-contact", args: ["ec-1", { phone: "1" }, { notes: "n" }], invokeWrapper: wrap(eventContactsIpc.updateEventContactWithContact) },
   { name: "setPrimaryEventContact", channel: "event-contacts:set-primary", args: ["ec-1"], invokeWrapper: wrap(eventContactsIpc.setPrimaryEventContact) },
   { name: "reorderEventContacts", channel: "event-contacts:reorder", args: ["e-1", "client", ["ec-1"]], invokeWrapper: wrap(eventContactsIpc.reorderEventContacts) },
   { name: "removeEventContact", channel: "event-contacts:delete", args: ["ec-1"], invokeWrapper: wrap(eventContactsIpc.removeEventContact) },

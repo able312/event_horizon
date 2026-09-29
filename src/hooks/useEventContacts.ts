@@ -45,7 +45,6 @@ export type AssignEventContactVariables = {
 }
 
 export type SaveEventContactVariables = {
-  contactId: string
   eventContactId: string
   contact: UpdateContact
   assignment: UpdateEventContact
@@ -92,12 +91,10 @@ export function useEventContacts(eventId: string) {
     },
   })
 
-  /** Saves the contact's own details, then the event-specific assignment fields. */
+  /** Saves the contact's own details and the event-specific assignment fields together: both or neither. */
   const saveMutation = useMutation({
-    mutationFn: async ({ contactId, eventContactId, contact, assignment }: SaveEventContactVariables) => {
-      await contactsApi.updateContact(contactId, contact)
-      await eventContactsApi.updateEventContact(eventContactId, assignment)
-    },
+    mutationFn: ({ eventContactId, contact, assignment }: SaveEventContactVariables) =>
+      eventContactsApi.updateEventContactWithContact(eventContactId, contact, assignment),
     onSettled: () => {
       invalidatePanel()
       invalidateDirectory()

@@ -32,6 +32,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "event-contacts:get-panel",
   "event-contacts:get-primary-clients",
   "event-contacts:patch",
+  "event-contacts:patch-with-contact",
   "event-contacts:reorder",
   "event-contacts:resolve-recipients",
   "event-contacts:set-primary",

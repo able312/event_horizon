@@ -5,6 +5,7 @@ import type {
   AssignEventContactOptions,
   ContactRoleType,
   RecipientSelection,
+  UpdateContact,
   UpdateEventContact,
 } from "../../definitions/contacts.js"
 import eventContactQueries from "../db/repository/eventContacts.js"
@@ -35,6 +36,14 @@ export const registerEventContactsIpcHandlers = () => {
 
   ipcMain.handle("event-contacts:patch", async (_event, eventContactId: string, patch: UpdateEventContact) =>
     toContactsIpcResult("Error updating event contact:", () => eventContactQueries.update(eventContactId, patch)),
+  )
+
+  ipcMain.handle(
+    "event-contacts:patch-with-contact",
+    async (_event, eventContactId: string, contactPatch: UpdateContact, assignmentPatch: UpdateEventContact) =>
+      toContactsIpcResult("Error saving event contact:", () =>
+        eventContactQueries.updateWithContact(eventContactId, contactPatch, assignmentPatch),
+      ),
   )
 
   ipcMain.handle("event-contacts:set-primary", async (_event, eventContactId: string) =>

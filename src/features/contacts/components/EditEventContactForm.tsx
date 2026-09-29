@@ -34,7 +34,7 @@ type EditEventContactFormProps = {
 }
 
 const TITLE = "Edit contact"
-const DESCRIPTION = "Contact details are shared across every event. The role label only applies to this event."
+const DESCRIPTION = "Contact details are shared across every event. The role label and notes only apply to this event."
 
 /** Loads the full contact, then renders the edit form in place of the contact's row. */
 export const EditEventContactForm: React.FC<EditEventContactFormProps> = ({ target, isSaving, onSave, onClose }) => {
@@ -91,7 +91,6 @@ const EditEventContactFields: React.FC<EditEventContactFieldsProps> = ({
 
     try {
       await onSave({
-        contactId: contact.id,
         eventContactId: target.item.eventContactId,
         contact: toContactPayload(form),
         assignment: toAssignmentPatch(assignment),

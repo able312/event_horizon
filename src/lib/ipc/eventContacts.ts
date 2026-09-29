@@ -8,6 +8,7 @@ import type {
   PrimaryClient,
   RecipientResolution,
   RecipientSelection,
+  UpdateContact,
   UpdateEventContact,
 } from "~/definitions/contacts"
 import { invokeContactsChannel } from "./contactsIpcResult"
@@ -31,6 +32,15 @@ export function assignEventContact(
 
 export function updateEventContact(eventContactId: string, patch: UpdateEventContact): Promise<EventContact> {
   return invokeContactsChannel("event-contacts:patch", eventContactId, patch)
+}
+
+/** Updates the contact's shared details and the assignment in one transaction. */
+export function updateEventContactWithContact(
+  eventContactId: string,
+  contactPatch: UpdateContact,
+  assignmentPatch: UpdateEventContact,
+): Promise<EventContact> {
+  return invokeContactsChannel("event-contacts:patch-with-contact", eventContactId, contactPatch, assignmentPatch)
 }
 
 export function setPrimaryEventContact(eventContactId: string): Promise<void> {

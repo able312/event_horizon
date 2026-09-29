@@ -22,6 +22,7 @@ vi.mock("~/lib/ipc/eventContacts", () => ({
   getEventContactsPanel: vi.fn(),
   assignEventContact: vi.fn(),
   updateEventContact: vi.fn(),
+  updateEventContactWithContact: vi.fn(),
   setPrimaryEventContact: vi.fn(),
   removeEventContact: vi.fn(),
   getContactEventHistory: vi.fn(),
@@ -78,6 +79,7 @@ function makePanel(): EventContactsPanel {
     email: null,
     phone: null,
     roleLabel: null,
+    notes: null,
     vendorCategory: null,
     isPrimary: false,
     contactArchived: false,
@@ -162,32 +164,27 @@ describe("useEventContacts", () => {
     await waitFor(() => expect(eventContactsIpc.getEventContactsPanel).toHaveBeenCalledTimes(2))
   })
 
-  it("saves contact details before the event assignment", async () => {
+  it("saves contact details and the event assignment in a single call", async () => {
     vi.mocked(eventContactsIpc.getEventContactsPanel).mockResolvedValue(makePanel())
-    const calls: string[] = []
-    vi.mocked(contactsIpc.updateContact).mockImplementation(async () => {
-      calls.push("contact")
-      return {} as never
-    })
-    vi.mocked(eventContactsIpc.updateEventContact).mockImplementation(async () => {
-      calls.push("assignment")
-      return {} as never
-    })
+    vi.mocked(eventContactsIpc.updateEventContactWithContact).mockResolvedValue({} as never)
 
     const { result } = renderHookWithProviders(() => useEventContacts("event-1"))
 
     await act(async () => {
       await result.current.saveContactAsync({
-        contactId: "c-1",
         eventContactId: "ec-1",
         contact: { phone: "555" },
         assignment: { roleLabel: "Bride" },
       })
     })
 
-    expect(calls).toEqual(["contact", "assignment"])
-    expect(contactsIpc.updateContact).toHaveBeenCalledWith("c-1", { phone: "555" })
-    expect(eventContactsIpc.updateEventContact).toHaveBeenCalledWith("ec-1", { roleLabel: "Bride" })
+    expect(eventContactsIpc.updateEventContactWithContact).toHaveBeenCalledWith(
+      "ec-1",
+      { phone: "555" },
+      { roleLabel: "Bride" },
+    )
+    expect(contactsIpc.updateContact).not.toHaveBeenCalled()
+    expect(eventContactsIpc.updateEventContact).not.toHaveBeenCalled()
   })
 })
 
