@@ -22,8 +22,12 @@ export const EMPTY_CONTACT_FORM: ContactFormValues = {
   phone: "",
 }
 
+/**
+ * Contacts with no name (e.g. migrated with just an email or phone) show a fallback display name.
+ * Seed it into the name field so the form is valid and the user can replace it with a real name.
+ */
 export function contactToFormValues(contact: Contact): ContactFormValues {
-  return {
+  const values: ContactFormValues = {
     kind: contact.kind,
     firstName: contact.firstName ?? "",
     lastName: contact.lastName ?? "",
@@ -31,6 +35,10 @@ export function contactToFormValues(contact: Contact): ContactFormValues {
     email: contact.email ?? "",
     phone: contact.phone ?? "",
   }
+  if (deriveDisplayName(values)) return values
+  return contact.kind === "organization"
+    ? { ...values, organizationName: contact.displayName }
+    : { ...values, firstName: contact.displayName }
 }
 
 /**

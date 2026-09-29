@@ -77,4 +77,22 @@ describe("contact form", () => {
       phone: "555",
     })
   })
+
+  it("seeds the name field from the display name when the contact has no name", () => {
+    const phoneOnly = {
+      kind: "individual",
+      firstName: null,
+      lastName: null,
+      organizationName: null,
+      displayName: "555-0199",
+      email: null,
+      phone: "555-0199",
+    } as Contact
+    const values = contactToFormValues(phoneOnly)
+    expect(values).toMatchObject({ firstName: "555-0199", lastName: "", organizationName: "" })
+    expect(validateContactForm(values)).toEqual({})
+
+    const unnamedOrg = { ...phoneOnly, kind: "organization", displayName: "Unnamed vendor" } as Contact
+    expect(contactToFormValues(unnamedOrg)).toMatchObject({ firstName: "", organizationName: "Unnamed vendor" })
+  })
 })

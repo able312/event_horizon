@@ -224,20 +224,25 @@ export function createContactsRepository(database: DbExecutor) {
       const nameChanged = (["kind", "firstName", "lastName", "organizationName"] as const).some(
         (key) => patch[key] !== undefined,
       )
-      // Only re-derive the display name if the user never customised it
-      const displayNameWasDefault = existing.displayName === deriveDisplayName(existing)
-      const displayName =
-        patch.displayName !== undefined
-          ? patch.displayName
-          : nameChanged && displayNameWasDefault
-            ? null
-            : existing.displayName
-
-      const fields = buildContactFields({
+      const nameParts = {
         kind: pick("kind") ?? existing.kind,
         firstName: pick("firstName"),
         lastName: pick("lastName"),
         organizationName: pick("organizationName"),
+      }
+      // Only re-derive the display name if the user never customised it. A contact with no name
+      // (e.g. migrated with just an email or phone) only has a fallback, which a real name replaces.
+      const existingDerivedName = deriveDisplayName(existing)
+      const displayNameWasDefault = existingDerivedName === null || existing.displayName === existingDerivedName
+      const displayName =
+        patch.displayName !== undefined
+          ? patch.displayName
+          : nameChanged && displayNameWasDefault && deriveDisplayName(nameParts)
+            ? null
+            : existing.displayName
+
+      const fields = buildContactFields({
+        ...nameParts,
         displayName,
         email: pick("email"),
         phone: pick("phone"),

@@ -94,6 +94,15 @@ describe("contacts repository", () => {
     expect(updated.updatedAt >= sarah.updatedAt).toBe(true)
   })
 
+  it("replaces a fallback display name once a contact without a name is given one", () => {
+    const repo = createContactsRepository(testDb.db)
+    const phoneOnly = repo.create({ displayName: "555-0199", phone: "555-0199" })
+
+    // Saving other fields with the name still blank keeps the fallback instead of failing
+    expect(repo.update(phoneOnly.id, { firstName: null, email: "jamie@example.com" }).displayName).toBe("555-0199")
+    expect(repo.update(phoneOnly.id, { firstName: "Jamie", lastName: "Lee" }).displayName).toBe("Jamie Lee")
+  })
+
   it("searches by name, email and standing role with cursor paging", () => {
     const repo = createContactsRepository(testDb.db)
     const roles = createContactRolesRepository(testDb.db)
