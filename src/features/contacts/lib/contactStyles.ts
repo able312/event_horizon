@@ -20,6 +20,12 @@ const ROLE_AVATAR_CLASSES: Record<ContactRoleType, string> = {
   vendor: COLOR_TOKEN_SWATCHES.stone!.avatar,
 }
 
+const ROLE_BADGE_CLASSES: Record<ContactRoleType, string> = {
+  client: "bg-blue-50 text-blue-700",
+  coordinator: "bg-orange-50 text-orange-700",
+  vendor: COLOR_TOKEN_SWATCHES.stone!.badge,
+}
+
 export function getSwatch(colorToken: string): Swatch {
   return COLOR_TOKEN_SWATCHES[colorToken] ?? COLOR_TOKEN_SWATCHES.stone!
 }
@@ -28,4 +34,10 @@ export function getSwatch(colorToken: string): Swatch {
 export function getAvatarClass(role: ContactRoleType, vendorCategory: VendorCategorySummary | null): string {
   if (role === "vendor" && vendorCategory) return getSwatch(vendorCategory.colorToken).avatar
   return ROLE_AVATAR_CLASSES[role]
+}
+
+/** Badge variant of getAvatarClass, for chips/pills rather than circular avatars. */
+export function getRoleBadgeClass(role: ContactRoleType, vendorCategory: VendorCategorySummary | null): string {
+  if (role === "vendor" && vendorCategory) return getSwatch(vendorCategory.colorToken).badge
+  return ROLE_BADGE_CLASSES[role]
 }

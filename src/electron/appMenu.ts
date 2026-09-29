@@ -124,6 +124,18 @@ export function rebuildAppMenu(targetWindowId?: number) {
   {
     label: "View",
     submenu: [
+      {
+        label: "Contacts",
+        accelerator: "CmdOrCtrl+Shift+C",
+        click: (_menuItem, browserWindow) => {
+          const targetWindow = browserWindow instanceof BrowserWindow
+            ? browserWindow
+            : BrowserWindow.getFocusedWindow()
+
+          targetWindow?.webContents.send("navigate", "/contacts")
+        },
+      },
+      { type: "separator" },
       { role: "togglefullscreen" },
       { type: "separator" },
       { role: "toggleDevTools" },

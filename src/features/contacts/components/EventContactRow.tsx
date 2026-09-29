@@ -18,6 +18,7 @@ import { cn } from "~/lib/utils"
 import { getSwatch } from "../lib/contactStyles"
 import { describeAssignment, formatContactPlainText } from "../lib/eventContactsPanel"
 import { ContactAvatar } from "./ContactAvatar"
+import { ContactDetailRow } from "./ContactDetailRow"
 
 type EventContactRowProps = {
   role: ContactRoleType
@@ -161,35 +162,10 @@ export const EventContactRow: React.FC<EventContactRowProps> = ({
 
       {expanded ? (
         <dl className="mt-2 ml-[4.25rem] grid gap-1.5 border-l-2 border-border pl-3">
-          <ContactDetail label="Email" value={item.email} />
-          <ContactDetail label="Phone" value={item.phone} />
+          <ContactDetailRow label="Email" value={item.email} />
+          <ContactDetailRow label="Phone" value={item.phone} />
         </dl>
       ) : null}
     </li>
   )
 }
-
-const ContactDetail: React.FC<{ label: string; value: string | null }> = ({ label, value }) => (
-  <div className="flex items-center gap-2">
-    <dt className="w-12 shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">{label}</dt>
-    <dd className="flex min-w-0 items-center gap-1 text-sm">
-      {value ? (
-        <>
-          <span className="truncate select-text">{value}</span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-6 text-muted-foreground hover:text-orange-500"
-            aria-label={`Copy ${label.toLowerCase()}`}
-            onClick={() => void copyToClipboard(value, `${value} copied to clipboard`)}
-          >
-            <Copy className="size-3" />
-          </Button>
-        </>
-      ) : (
-        <span className="text-muted-foreground">—</span>
-      )}
-    </dd>
-  </div>
-)
