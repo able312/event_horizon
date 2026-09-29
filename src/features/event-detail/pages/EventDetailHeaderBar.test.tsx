@@ -54,6 +54,7 @@ const contactsPanel: EventContactsPanel = {
           email: "example.name@nocompany.com",
           phone: "2265551234",
           roleLabel: null,
+          notes: null,
           vendorCategory: null,
           isPrimary: true,
           contactArchived: false,

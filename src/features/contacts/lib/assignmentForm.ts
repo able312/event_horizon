@@ -11,12 +11,14 @@ export type AssignmentValues = {
   role: ContactRoleType
   vendorCategoryId: string | null
   roleLabel: string
+  notes: string
 }
 
 export const DEFAULT_ASSIGNMENT: AssignmentValues = {
   role: "client",
   vendorCategoryId: null,
   roleLabel: "",
+  notes: "",
 }
 
 export function assignmentFromPanelItem(role: ContactRoleType, item: EventContactsPanelItem): AssignmentValues {
@@ -24,6 +26,7 @@ export function assignmentFromPanelItem(role: ContactRoleType, item: EventContac
     role,
     vendorCategoryId: item.vendorCategory?.id ?? null,
     roleLabel: item.roleLabel ?? "",
+    notes: item.notes ?? "",
   }
 }
 
@@ -37,11 +40,11 @@ export function toAssignOptions(values: AssignmentValues): AssignEventContactOpt
   return {
     vendorCategoryId: values.role === "vendor" ? values.vendorCategoryId : null,
     roleLabel: cleanText(values.roleLabel),
+    notes: cleanText(values.notes),
   }
 }
 
 export function toAssignmentPatch(values: AssignmentValues): UpdateEventContact {
-  return values.role === "vendor"
-    ? { vendorCategoryId: values.vendorCategoryId, roleLabel: cleanText(values.roleLabel) }
-    : { roleLabel: cleanText(values.roleLabel) }
+  const patch = { roleLabel: cleanText(values.roleLabel), notes: cleanText(values.notes) }
+  return values.role === "vendor" ? { vendorCategoryId: values.vendorCategoryId, ...patch } : patch
 }

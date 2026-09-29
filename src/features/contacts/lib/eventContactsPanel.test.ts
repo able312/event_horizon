@@ -28,6 +28,7 @@ function item(overrides: Partial<EventContactsPanelItem>): EventContactsPanelIte
     email: null,
     phone: null,
     roleLabel: null,
+    notes: null,
     vendorCategory: null,
     isPrimary: false,
     contactArchived: false,

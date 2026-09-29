@@ -72,7 +72,7 @@ describe("event contacts repository", () => {
       eventA,
       { newContact: { firstName: "Sarah", lastName: "Kim", email: "sarah@feast.com" } },
       "vendor",
-      { vendorCategoryId: catering, roleLabel: "Head chef" },
+      { vendorCategoryId: catering, roleLabel: "Head chef", notes: "Arrives 3pm" },
     )
 
     expect(roles.listForContact(assignment.contactId)).toEqual([
@@ -87,6 +87,7 @@ describe("event contacts repository", () => {
         email: "sarah@feast.com",
         phone: null,
         roleLabel: "Head chef",
+        notes: "Arrives 3pm",
         vendorCategory: { id: catering, label: "Catering", colorToken: "teal" },
         isPrimary: false,
         contactArchived: false,
@@ -293,6 +294,34 @@ describe("event contacts repository", () => {
     expect(() => eventContacts.update(row.id, { vendorCategoryId: music })).toThrow(
       expect.objectContaining({ code: "DuplicateAssignment" }),
     )
+  })
+
+  it("saves contact details and the assignment together, rolling both back if either is rejected", () => {
+    const { contacts: contactsRepo, eventContacts } = repos()
+    const eventA = seedEvent("Event A")
+    const music = categoryId("music")
+    const rentals = categoryId("rentals")
+
+    const row = eventContacts.assign(eventA, { newContact: { displayName: "DJ Mo", phone: "555" } }, "vendor", {
+      vendorCategoryId: music,
+    })
+    eventContacts.assign(eventA, { contactId: row.contactId }, "vendor", { vendorCategoryId: rentals })
+
+    // Moving to a category the contact already has on this event is rejected; the phone change must not stick
+    expect(() => eventContacts.updateWithContact(row.id, { phone: "999" }, { vendorCategoryId: rentals })).toThrow(
+      expect.objectContaining({ code: "DuplicateAssignment" }),
+    )
+    expect(contactsRepo.getById(row.contactId)?.phone).toBe("555")
+
+    const saved = eventContacts.updateWithContact(row.id, { phone: "999" }, { notes: "Time: 18:30" })
+    expect(saved).toMatchObject({ id: row.id, notes: "Time: 18:30" })
+    expect(contactsRepo.getById(row.contactId)?.phone).toBe("999")
+
+    eventContacts.remove(row.id)
+    expect(() => eventContacts.updateWithContact(row.id, { phone: "111" }, {})).toThrow(
+      expect.objectContaining({ code: "InvalidInput" }),
+    )
+    expect(contactsRepo.getById(row.contactId)?.phone).toBe("999")
   })
 
   it("lists a contact's event history newest first, including removed assignments", () => {

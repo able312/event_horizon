@@ -1,3 +1,5 @@
+import { useId } from "react"
+
 import type { ContactRoleType } from "~/definitions/contacts"
 import { useVendorCategories } from "~/hooks/useEventContacts"
 import { cn } from "~/lib/utils"
@@ -27,7 +29,7 @@ type AssignmentFieldsProps = {
   categoryError?: string
 }
 
-/** Event-specific fields: role on this event, vendor category, and a free-text role label. */
+/** Event-specific fields: role on this event, vendor category, a free-text role label, and notes. */
 export const AssignmentFields: React.FC<AssignmentFieldsProps> = ({
   values,
   onChange,
@@ -35,6 +37,7 @@ export const AssignmentFields: React.FC<AssignmentFieldsProps> = ({
   categoryError,
 }) => {
   const { data: categories = [] } = useVendorCategories()
+  const notesId = useId()
 
   const handleRoleChange = (role: ContactRoleType) => {
     // A category is only valid for vendors
@@ -88,6 +91,20 @@ export const AssignmentFields: React.FC<AssignmentFieldsProps> = ({
         placeholder={ROLE_LABEL_PLACEHOLDERS[values.role]}
         onChange={(event) => onChange({ roleLabel: event.target.value })}
       />
+
+      <div>
+        <label htmlFor={notesId} className="mb-1 block text-xs uppercase tracking-wide text-muted-foreground">
+          Notes for this event (optional)
+        </label>
+        <textarea
+          id={notesId}
+          value={values.notes}
+          placeholder="e.g. Arrival time, who they report to"
+          onChange={(event) => onChange({ notes: event.target.value })}
+          rows={3}
+          className="w-full rounded-md border border-stone-300 bg-transparent px-3 py-1.5 text-sm shadow-xs outline-none focus-visible:ring-[2px] focus-visible:ring-orange-500"
+        />
+      </div>
     </div>
   )
 }

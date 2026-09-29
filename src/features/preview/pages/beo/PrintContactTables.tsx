@@ -1,5 +1,8 @@
+import { Fragment } from "react"
+
 import type { EventContactsPanelGroup } from "~/definitions/contacts"
 import { describePrintTitle, PRINT_ROLE_HEADINGS } from "~/features/contacts/lib/eventContactsPanel"
+import { cn } from "~/lib/utils"
 
 type PrintContactTablesProps = {
   groups: EventContactsPanelGroup[]
@@ -21,12 +24,21 @@ export function PrintContactTables({ groups }: PrintContactTablesProps) {
           </thead>
           <tbody>
             {group.items.map((item) => (
-              <tr key={item.eventContactId} className="border-b border-stone-200 align-top last:border-b-0">
-                <td className="py-1 pr-2 text-muted-foreground">{describePrintTitle(item)}</td>
-                <td className="py-1 pr-2 font-medium">{item.displayName}</td>
-                <td className="py-1 pr-2">{item.phone}</td>
-                <td className="break-all py-1">{item.email}</td>
-              </tr>
+              <Fragment key={item.eventContactId}>
+                <tr className={cn("align-top", !item.notes && "border-b border-stone-200 last:border-b-0")}>
+                  <td className="py-1 pr-2 text-muted-foreground">{describePrintTitle(item)}</td>
+                  <td className="py-1 pr-2 font-medium">{item.displayName}</td>
+                  <td className="py-1 pr-2">{item.phone}</td>
+                  <td className="break-all py-1">{item.email}</td>
+                </tr>
+                {item.notes ? (
+                  <tr className="border-b border-stone-200 last:border-b-0">
+                    <td colSpan={4} className="whitespace-pre-line pb-1 text-xs text-muted-foreground">
+                      {item.notes}
+                    </td>
+                  </tr>
+                ) : null}
+              </Fragment>
             ))}
           </tbody>
         </table>

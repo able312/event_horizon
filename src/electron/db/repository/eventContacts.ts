@@ -12,6 +12,7 @@ import type {
   PrimaryClient,
   RecipientResolution,
   RecipientSelection,
+  UpdateContact,
   UpdateEventContact,
   VendorCategorySummary,
 } from "../../../definitions/contacts.js"
@@ -69,6 +70,7 @@ function selectPanelRows(database: DbExecutor, eventId: string, filter?: SQL) {
       email: contacts.email,
       phone: contacts.phone,
       roleLabel: eventContacts.roleLabel,
+      notes: eventContacts.notes,
       isPrimary: eventContacts.isPrimary,
       contactArchivedAt: contacts.archivedAt,
       categoryId: vendorCategories.id,
@@ -139,6 +141,7 @@ export function createEventContactsRepository(database: DbExecutor) {
           email: row.email,
           phone: row.phone,
           roleLabel: row.roleLabel,
+          notes: row.notes,
           vendorCategory: toCategorySummary(row.categoryId, row.categoryLabel, row.categoryColor),
           isPrimary: row.isPrimary,
           contactArchived: row.contactArchivedAt !== null,
@@ -305,6 +308,22 @@ export function createEventContactsRepository(database: DbExecutor) {
         if (patch.isPrimary === true) markPrimary(tx, row)
 
         return tx.select().from(eventContacts).where(eq(eventContacts.id, row.id)).get()!
+      })
+    },
+
+    /**
+     * Saves the assigned contact's shared details and this assignment's fields together,
+     * so a rejected assignment change doesn't leave the contact half-saved.
+     */
+    updateWithContact: (
+      eventContactId: string,
+      contactPatch: UpdateContact,
+      assignmentPatch: UpdateEventContact,
+    ): EventContact => {
+      return database.transaction((tx) => {
+        const row = requireActiveEventContact(tx, eventContactId)
+        createContactsRepository(tx).update(row.contactId, contactPatch)
+        return createEventContactsRepository(tx).update(row.id, assignmentPatch)
       })
     },
 

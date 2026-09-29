@@ -107,6 +107,8 @@ export type EventContactsPanelItem = {
   email: string | null
   phone: string | null
   roleLabel: string | null
+  /** Event-specific notes, e.g. a vendor's arrival time. */
+  notes: string | null
   vendorCategory: VendorCategorySummary | null
   isPrimary: boolean
   contactArchived: boolean

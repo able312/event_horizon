@@ -164,6 +164,12 @@ export const EventContactRow: React.FC<EventContactRowProps> = ({
         <dl className="mt-2 ml-[4.25rem] grid gap-1.5 border-l-2 border-border pl-3">
           <ContactDetailRow label="Email" value={item.email} />
           <ContactDetailRow label="Phone" value={item.phone} />
+          {item.notes ? (
+            <div className="flex gap-2">
+              <dt className="w-12 shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">Notes</dt>
+              <dd className="min-w-0 whitespace-pre-line text-sm select-text">{item.notes}</dd>
+            </div>
+          ) : null}
         </dl>
       ) : null}
     </li>
