@@ -58,9 +58,23 @@ const PreviewBodyOrchestrator: React.FC = () => {
   const [searchParams] = useSearchParams()
   const previewType = resolvePreviewType(searchParams)
   const { data: event } = useEvent()
-  const { data: client } = usePrimaryClient(event?.id)
+  const {
+    data: client,
+    isSuccess: contactsLoaded,
+    isError: contactsFailed,
+    isFetching: contactsFetching,
+    refetch: refetchContacts,
+  } = usePrimaryClient(event?.id)
+  // Every document prints contact details, so exporting before they load would silently drop them.
+  const canExport = contactsLoaded
+
+  const handlePrint = () => {
+    if (!canExport) return
+    window.print()
+  }
 
   const handleSavePDF = async () => {
+    if (!canExport) return
     try {
       const defaultFileName = buildPdfFileName({
         clientName: client?.displayName,
@@ -77,7 +91,7 @@ const PreviewBodyOrchestrator: React.FC = () => {
     }
   }
 
-  useHotkey("Cmd+P", () => window.print())
+  useHotkey("Cmd+P", handlePrint)
   useHotkey("Cmd+S", () => void handleSavePDF())
 
 
@@ -102,12 +116,20 @@ const PreviewBodyOrchestrator: React.FC = () => {
         <span className="text-xs font-medium uppercase tracking-wide text-neutral-400">
           Print Preview — {getPreviewTypeLabel(previewType)}
         </span>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={() => void handleSavePDF()}>
+        <div className="flex items-center gap-2">
+          {contactsFailed ? (
+            <>
+              <span className="text-xs text-destructive">Contacts failed to load</span>
+              <Button variant="ghost" size="sm" onClick={() => void refetchContacts()} disabled={contactsFetching}>
+                {contactsFetching ? "Retrying..." : "Retry"}
+              </Button>
+            </>
+          ) : null}
+          <Button variant="ghost" size="sm" onClick={() => void handleSavePDF()} disabled={!canExport}>
             <Save className="h-4 w-4" />
             Save as PDF
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => window.print()}>
+          <Button variant="ghost" size="sm" onClick={handlePrint} disabled={!canExport}>
             <Printer className="h-4 w-4" />
             Print
           </Button>
