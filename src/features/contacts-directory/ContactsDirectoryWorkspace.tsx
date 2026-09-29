@@ -33,13 +33,16 @@ const ContactsDirectoryWorkspace: React.FC = () => {
     if (contactId) setIsCreating(false)
   }, [contactId])
 
-  const handleSelectContact = (contact: ContactWithRoles) => {
-    navigate(`/contacts/${contact.id}`)
+  // Clear creation mode directly: re-selecting the contact already in the URL doesn't change contactId,
+  // so the effect above wouldn't fire.
+  const showContact = (id: string) => {
+    setIsCreating(false)
+    navigate(`/contacts/${id}`)
   }
 
-  const handleCreated = (contact: Contact) => {
-    navigate(`/contacts/${contact.id}`)
-  }
+  const handleSelectContact = (contact: ContactWithRoles) => showContact(contact.id)
+
+  const handleCreated = (contact: Contact) => showContact(contact.id)
 
   if (search.isError) {
     return (
@@ -78,6 +81,7 @@ const ContactsDirectoryWorkspace: React.FC = () => {
           isCreating={isCreating}
           onBack={() => navigate("/events")}
           onCreated={handleCreated}
+          onViewExisting={showContact}
           onCancelCreate={() => setIsCreating(false)}
           onDeleted={() => navigate("/contacts")}
         />

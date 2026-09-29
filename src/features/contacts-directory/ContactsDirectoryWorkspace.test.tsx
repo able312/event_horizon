@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router"
 import { describe, expect, it, vi } from "vitest"
 
@@ -94,5 +94,41 @@ describe("ContactsDirectoryWorkspace", () => {
     expect(screen.getByTestId("route-blocking-error")).toBeTruthy()
     fireEvent.click(screen.getByRole("button", { name: "retry-load" }))
     expect(refetch).toHaveBeenCalledTimes(1)
+  })
+
+  describe("leaving creation mode for the contact already in the URL", () => {
+    type PanelProps = { onStartCreate: () => void; onSelectContact: (contact: { id: string }) => void }
+    type BodyProps = { isCreating: boolean; contactId: string | undefined; onViewExisting: (contactId: string) => void }
+
+    const lastProps = <T,>(mock: typeof panelPropsMock) => mock.mock.calls[mock.mock.calls.length - 1][0] as T
+
+    function startCreatingAtC1() {
+      useContactSearchMock.mockReturnValue({
+        data: { items: [], nextCursor: null },
+        isLoading: false,
+        isError: false,
+        isFetching: false,
+        refetch: vi.fn(),
+      })
+      renderAt("/contacts/c-1")
+      act(() => lastProps<PanelProps>(panelPropsMock).onStartCreate())
+      expect(lastProps<BodyProps>(bodyPropsMock).isCreating).toBe(true)
+    }
+
+    it("closes the create form when the selected contact is clicked again", () => {
+      startCreatingAtC1()
+
+      act(() => lastProps<PanelProps>(panelPropsMock).onSelectContact({ id: "c-1" }))
+
+      expect(lastProps<BodyProps>(bodyPropsMock)).toMatchObject({ isCreating: false, contactId: "c-1" })
+    })
+
+    it("closes the create form when viewing an existing contact from the email conflict", () => {
+      startCreatingAtC1()
+
+      act(() => lastProps<BodyProps>(bodyPropsMock).onViewExisting("c-1"))
+
+      expect(lastProps<BodyProps>(bodyPropsMock)).toMatchObject({ isCreating: false, contactId: "c-1" })
+    })
   })
 })

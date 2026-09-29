@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { Link } from "react-router"
 import { toast } from "sonner"
 
 import { Button } from "~/components/atoms/button"
@@ -21,10 +20,12 @@ type EmailConflict = { contactId: string; message: string }
 
 type ContactCreateFormProps = {
   onCreated: (contact: Contact) => void
+  /** Leaves creation mode and opens the contact that already owns the email. */
+  onViewExisting: (contactId: string) => void
   onCancel: () => void
 }
 
-export const ContactCreateForm: React.FC<ContactCreateFormProps> = ({ onCreated, onCancel }) => {
+export const ContactCreateForm: React.FC<ContactCreateFormProps> = ({ onCreated, onViewExisting, onCancel }) => {
   const [form, setForm] = useState<DirectoryContactFormValues>(EMPTY_DIRECTORY_CONTACT_FORM)
   const [errors, setErrors] = useState<ContactFormErrors>({})
   const [emailConflict, setEmailConflict] = useState<EmailConflict | null>(null)
@@ -85,9 +86,13 @@ export const ContactCreateForm: React.FC<ContactCreateFormProps> = ({ onCreated,
       {emailConflict ? (
         <p className="text-xs text-destructive">
           {emailConflict.message}{" "}
-          <Link to={`/contacts/${emailConflict.contactId}`} className="font-medium underline">
+          <button
+            type="button"
+            onClick={() => onViewExisting(emailConflict.contactId)}
+            className="font-medium underline"
+          >
             View existing contact →
-          </Link>
+          </button>
         </p>
       ) : null}
     </InlineFormPanel>

@@ -10,6 +10,7 @@ type ContactsDirectoryBodyProps = {
   isCreating: boolean
   onBack: () => void
   onCreated: (contact: Contact) => void
+  onViewExisting: (contactId: string) => void
   onCancelCreate: () => void
   onDeleted: () => void
 }
@@ -19,6 +20,7 @@ const ContactsDirectoryBody: React.FC<ContactsDirectoryBodyProps> = ({
   isCreating,
   onBack,
   onCreated,
+  onViewExisting,
   onCancelCreate,
   onDeleted,
 }) => {
@@ -30,7 +32,7 @@ const ContactsDirectoryBody: React.FC<ContactsDirectoryBodyProps> = ({
         </ContactsBodyHeader>
         <Body.Content>
           <div className="overflow-y-auto p-4">
-            <ContactCreateForm onCreated={onCreated} onCancel={onCancelCreate} />
+            <ContactCreateForm onCreated={onCreated} onViewExisting={onViewExisting} onCancel={onCancelCreate} />
           </div>
         </Body.Content>
       </>
