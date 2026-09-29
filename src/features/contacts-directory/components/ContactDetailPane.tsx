@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { toast } from "sonner"
 
+import RouteBlockingError from "~/components/atoms/route-blocking-error"
 import { Body } from "~/components/layouts/SplitLayout"
 import { getContactsErrorMessage } from "~/features/contacts/lib/eventContactsPanel"
 import { useArchiveContact, useContact, useDeleteContact, useRestoreContact } from "~/hooks/useEventContacts"
@@ -21,7 +22,7 @@ type ContactDetailPaneProps = {
 
 /** Mounted with key={contactId} by the parent, so edit/delete-confirm state resets on selection change. */
 export const ContactDetailPane: React.FC<ContactDetailPaneProps> = ({ contactId, onBack, onDeleted }) => {
-  const { data: contact, isLoading } = useContact(contactId)
+  const { data: contact, isLoading, isError, isFetching, refetch } = useContact(contactId)
   const [isEditing, setIsEditing] = useState(false)
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
 
@@ -47,6 +48,25 @@ export const ContactDetailPane: React.FC<ContactDetailPaneProps> = ({ contactId,
         <ContactsBodyHeader onBack={onBack} />
         <Body.Content>
           <p className="p-4 text-sm text-muted-foreground">Loading contact…</p>
+        </Body.Content>
+      </>
+    )
+  }
+
+  // A failed load is not the same as a missing contact: the record may still exist, so offer a retry.
+  if (isError) {
+    return (
+      <>
+        <ContactsBodyHeader onBack={onBack} />
+        <Body.Content>
+          <RouteBlockingError
+            title="Could not load contact"
+            description="This contact is temporarily unavailable. Please retry."
+            onRetry={async () => {
+              await refetch()
+            }}
+            isRetrying={isFetching}
+          />
         </Body.Content>
       </>
     )
