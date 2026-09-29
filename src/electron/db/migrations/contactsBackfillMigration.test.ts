@@ -130,6 +130,14 @@ function standingRoles(sqlite: Sqlite, contactId: string): string[] {
   ).map((row) => row.role)
 }
 
+function timeblockRows(sqlite: Sqlite) {
+  return sqlite
+    .prepare(
+      "SELECT id, section_type AS sectionType, title, time, details, assigned_to AS assignedTo FROM timeblocks ORDER BY id",
+    )
+    .all()
+}
+
 function columnNames(sqlite: Sqlite, table: string): string[] {
   return (sqlite.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((column) => column.name)
 }
@@ -278,7 +286,18 @@ describe("0019_contacts_backfill migration", () => {
     expect(standingRoles(sqlite, dana.id)).toEqual(["vendor:other"])
 
     expect(tableExists(sqlite, "vendor_items")).toBe(false)
-    expect(sqlite.prepare("SELECT id FROM timeblocks ORDER BY id").all()).toEqual([{ id: "tb-note" }])
+    // The timed vendor stays on the timeline as a note; untimed vendor timeblocks are removed
+    expect(timeblockRows(sqlite)).toEqual([
+      {
+        id: "tb-dj",
+        sectionType: "note",
+        title: "Vendor: Beat Co",
+        time: "18:30",
+        details: "Contact: Dana DJ · 555-0200 · dana@beat.co\n\nNeeds two outlets",
+        assignedTo: "Alex",
+      },
+      expect.objectContaining({ id: "tb-note", sectionType: "note", title: "Keep me" }),
+    ])
     expect(sqlite.pragma("foreign_key_check")).toEqual([])
   })
 
@@ -296,6 +315,16 @@ describe("0019_contacts_backfill migration", () => {
       expect.objectContaining({ role: "vendor", categoryKey: "other", notes: "Assigned to: Alex", sortOrder: 1 }),
     ])
     expect(allContacts(sqlite).map((row) => row.displayName)).toEqual(["Unnamed vendor", "Unnamed vendor"])
+    expect(timeblockRows(sqlite)).toEqual([
+      {
+        id: "tb-time",
+        sectionType: "note",
+        title: "Vendor: Unnamed vendor",
+        time: "07:00",
+        details: null,
+        assignedTo: null,
+      },
+    ])
   })
 
   it("collapses one vendor listed twice on the same event into a single assignment", async () => {

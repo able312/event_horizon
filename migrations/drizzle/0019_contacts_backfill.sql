@@ -1,5 +1,6 @@
 -- Moves each event's inline client and its vendor_items into contacts/event_contacts,
--- then drops the legacy columns, the vendor timeblocks and the vendor_items table.
+-- keeps timed vendor timeblocks on the timeline as notes, then drops the legacy columns,
+-- the remaining vendor timeblocks and the vendor_items table.
 -- Contacts are merged by normalized email (and matched to existing active contacts);
 -- contacts without an email are never merged.
 
@@ -248,10 +249,33 @@ WHERE NOT EXISTS (
 		AND `ec`.`removed_at` IS NULL
 );--> statement-breakpoint
 
+-- Timed vendor entries (deliveries, arrivals) are the timeline's only record of those times,
+-- so keep them as notes titled after the vendor, with the vendor's contact details.
+UPDATE `timeblocks`
+SET
+	`section_type` = 'note',
+	`title` = (
+		SELECT 'Vendor: ' || coalesce(`s`.`role_label`, `s`.`display_name`)
+		FROM `__contact_sources` `s`
+		WHERE `s`.`source_id` = 'vendor:' || `timeblocks`.`id`
+	),
+	`details` = (
+		SELECT nullif(concat_ws(
+			char(10) || char(10),
+			'Contact: ' || nullif(concat_ws(' · ', `s`.`full_name`, `s`.`phone`, `s`.`email`), ''),
+			nullif(trim(`timeblocks`.`details`), '')
+		), '')
+		FROM `__contact_sources` `s`
+		WHERE `s`.`source_id` = 'vendor:' || `timeblocks`.`id`
+	),
+	`updated_at` = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+WHERE `section_type` = 'vendor'
+	AND trim(coalesce(`time`, '')) <> '';--> statement-breakpoint
+
 DROP TABLE `__contact_identities`;--> statement-breakpoint
 DROP TABLE `__contact_sources`;--> statement-breakpoint
 
--- Vendors are contacts now; remove the vendor timeblocks and their satellite table.
+-- Vendors are contacts now; remove the remaining vendor timeblocks and their satellite table.
 DROP TABLE `vendor_items`;--> statement-breakpoint
 DELETE FROM `timeblocks` WHERE `section_type` = 'vendor';--> statement-breakpoint
 
