@@ -7,7 +7,7 @@ import { FoodOnlyPreview } from "./FoodOnlyPreview"
 const hooksMock = vi.hoisted(() => ({
   useEvent: vi.fn(),
   useFoodSection: vi.fn(),
-  usePrimaryClient: vi.fn(),
+  usePrintableContactGroups: vi.fn(),
 }))
 
 vi.mock("~/hooks/useEvent", () => ({
@@ -19,7 +19,7 @@ vi.mock("~/hooks/useFoodSection", () => ({
 }))
 
 vi.mock("~/hooks/useEventContacts", () => ({
-  usePrimaryClient: hooksMock.usePrimaryClient,
+  usePrintableContactGroups: hooksMock.usePrintableContactGroups,
 }))
 
 vi.mock("./sections/FoodDetails", () => ({
@@ -42,7 +42,7 @@ afterEach(() => {
 describe("FoodOnlyPreview", () => {
   it("renders an empty state when no event data exists", () => {
     hooksMock.useEvent.mockReturnValue({ data: undefined })
-    hooksMock.usePrimaryClient.mockReturnValue({ data: undefined })
+    hooksMock.usePrintableContactGroups.mockReturnValue({ data: [] })
     hooksMock.useFoodSection.mockReturnValue({ data: [] })
 
     renderFoodOnly()
@@ -65,8 +65,23 @@ describe("FoodOnlyPreview", () => {
         internalNotes: "Internal event note",
       },
     })
-    hooksMock.usePrimaryClient.mockReturnValue({
-      data: { contactId: "contact-1", displayName: "Alex Doe", phone: "555-555-5555", email: "alex@example.com" },
+    hooksMock.usePrintableContactGroups.mockReturnValue({
+      data: [
+        {
+          role: "client",
+          items: [
+            {
+              eventContactId: "ec-1",
+              contactId: "contact-1",
+              displayName: "Alex Doe",
+              phone: "555-555-5555",
+              email: "alex@example.com",
+              roleLabel: null,
+              vendorCategory: null,
+            },
+          ],
+        },
+      ],
     })
     hooksMock.useFoodSection.mockReturnValue({
       data: [{ id: "food-1", title: "Dinner", time: "18:00", foodItems: [] }],

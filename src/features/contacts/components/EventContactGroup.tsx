@@ -47,7 +47,7 @@ export const EventContactGroup: React.FC<EventContactGroupProps> = ({
         {ids.length > 0 ? (
           <input
             type="checkbox"
-            className="size-3.5 shrink-0 cursor-pointer accent-orange-500"
+            className="size-3.5 shrink-0 cursor-pointer accent-orange-500 opacity-10 transition-opacity hover:opacity-100 focus-visible:opacity-100 checked:opacity-100 indeterminate:opacity-100"
             aria-label={`Select all ${labels.plural.toLowerCase()}`}
             checked={allSelected}
             ref={(el) => {

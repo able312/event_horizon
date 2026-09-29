@@ -2,6 +2,7 @@ import type {
   ContactRoleType,
   ContactWithRoles,
   EventContactsPanel,
+  EventContactsPanelGroup,
   EventContactsPanelItem,
   PrimaryClient,
 } from "~/definitions/contacts"
@@ -25,6 +26,28 @@ export function selectPrimaryClient(panel: EventContactsPanel | undefined): Prim
   const client = panel?.groups.find((group) => group.role === "client")?.items[0]
   if (!client) return null
   return { contactId: client.contactId, displayName: client.displayName, email: client.email, phone: client.phone }
+}
+
+/** Column heading for each role's table on printed documents. */
+export const PRINT_ROLE_HEADINGS: Record<ContactRoleType, string> = {
+  client: "Client",
+  coordinator: "Organizer",
+  vendor: "Vendor",
+}
+
+/** Contacts with something to print, grouped by role. Empty groups are dropped. */
+export function selectPrintableContactGroups(panel: EventContactsPanel | undefined): EventContactsPanelGroup[] {
+  return (panel?.groups ?? [])
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => item.displayName.trim() || item.phone?.trim() || item.email?.trim()),
+    }))
+    .filter((group) => group.items.length > 0)
+}
+
+/** The event-specific title shown in a print table's first column, e.g. "Bride" or "Florist". */
+export function describePrintTitle(item: EventContactsPanelItem): string {
+  return item.roleLabel?.trim() || item.vendorCategory?.label || "—"
 }
 
 /** Drops selected ids that are no longer on the panel (e.g. after a contact is removed). */

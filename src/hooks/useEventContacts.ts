@@ -10,7 +10,11 @@ import type {
   UpdateContact,
   UpdateEventContact,
 } from "~/definitions/contacts"
-import { getContactsErrorMessage, selectPrimaryClient } from "~/features/contacts/lib/eventContactsPanel"
+import {
+  getContactsErrorMessage,
+  selectPrimaryClient,
+  selectPrintableContactGroups,
+} from "~/features/contacts/lib/eventContactsPanel"
 import * as contactRolesApi from "~/lib/ipc/contactRoles"
 import * as contactsApi from "~/lib/ipc/contacts"
 import * as eventContactsApi from "~/lib/ipc/eventContacts"
@@ -145,6 +149,16 @@ export function usePrimaryClient(eventId: string | undefined) {
     enabled: Boolean(eventId),
     queryFn: () => eventContactsApi.getEventContactsPanel(eventId!),
     select: selectPrimaryClient,
+  })
+}
+
+/** Every client, coordinator and vendor with contact details, grouped by role, for printed documents. */
+export function usePrintableContactGroups(eventId: string | undefined) {
+  return useQuery({
+    queryKey: eventContactsQueryKey(eventId ?? ""),
+    enabled: Boolean(eventId),
+    queryFn: () => eventContactsApi.getEventContactsPanel(eventId!),
+    select: selectPrintableContactGroups,
   })
 }
 

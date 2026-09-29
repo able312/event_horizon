@@ -68,7 +68,7 @@ export const EventContactRow: React.FC<EventContactRowProps> = ({
       <div className="flex items-center gap-2.5">
         <input
           type="checkbox"
-          className="size-3.5 shrink-0 cursor-pointer accent-orange-500"
+          className="size-3.5 shrink-0 cursor-pointer accent-orange-500 opacity-10 transition-opacity hover:opacity-100 focus-visible:opacity-100 checked:opacity-100 indeterminate:opacity-100"
           checked={selected}
           aria-label={`Select ${item.displayName}`}
           onChange={onToggleSelected}

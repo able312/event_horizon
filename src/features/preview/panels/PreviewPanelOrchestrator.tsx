@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from "react-router"
 import { Panel } from "~/components/layouts/SplitLayout"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
 import { useEvent } from "~/hooks/useEvent"
-import { usePrimaryClient } from "~/hooks/useEventContacts"
+import { usePrintableContactGroups } from "~/hooks/useEventContacts"
 import { useFoodSection } from "~/hooks/useFoodSection"
 import { useNoteSection } from "~/hooks/useNoteSection"
 import { usePaymentsSection } from "~/hooks/usePaymentsSection"
@@ -23,7 +23,6 @@ import {
   filterSelectedIds,
   hasBeverageNotes,
   hasBeverageSectionContent,
-  hasContactInfo,
   hasInternalNotes,
   hasPricedFoodOrBeverage,
   toTimeblockOptions,
@@ -35,7 +34,7 @@ const PreviewPanelOrchestrator: React.FC = () => {
   const { id: eventId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const { data: event } = useEvent()
-  const { data: client } = usePrimaryClient(event?.id)
+  const { data: contactGroups } = usePrintableContactGroups(event?.id)
   const activeType = resolvePreviewType(searchParams)
   const { state, dispatch } = usePreviewPreferences()
 
@@ -52,7 +51,7 @@ const PreviewPanelOrchestrator: React.FC = () => {
   const setupOptions = toTimeblockOptions(setup)
   const noteOptions = toTimeblockOptions(notes)
 
-  const showContactControl = hasContactInfo(client)
+  const showContactControl = (contactGroups?.length ?? 0) > 0
   const showInternalNotesControl = hasInternalNotes(event)
   const showPricingControl = hasPricedFoodOrBeverage({
     foodTimeblocks: food,

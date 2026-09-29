@@ -5,12 +5,14 @@ import { ContactsError } from "~/lib/contacts/contactsError"
 
 import {
   describeAssignment,
+  describePrintTitle,
   describeStandingRoles,
   formatContactPlainText,
   getContactsErrorMessage,
   isAlreadyAssigned,
   pruneSelection,
   selectPrimaryClient,
+  selectPrintableContactGroups,
   toggleGroupSelection,
   toggleId,
 } from "./eventContactsPanel"
@@ -43,6 +45,27 @@ const panel: EventContactsPanel = {
 }
 
 describe("event contacts panel helpers", () => {
+  it("keeps only groups with printable contacts", () => {
+    const withBlank: EventContactsPanel = {
+      eventId: "e-1",
+      groups: [
+        { role: "client", items: [item({ displayName: " ", phone: "", email: null }), item({ eventContactId: "ec-3", phone: "555" })] },
+        { role: "coordinator", items: [] },
+        { role: "vendor", items: [item({ eventContactId: "ec-2", vendorCategory: catering })] },
+      ],
+    }
+    const groups = selectPrintableContactGroups(withBlank)
+    expect(groups.map((g) => g.role)).toEqual(["client", "vendor"])
+    expect(groups[0].items.map((i) => i.eventContactId)).toEqual(["ec-3"])
+    expect(selectPrintableContactGroups(undefined)).toEqual([])
+  })
+
+  it("titles a print row by role label, then vendor category", () => {
+    expect(describePrintTitle(item({ roleLabel: " Bride " }))).toBe("Bride")
+    expect(describePrintTitle(item({ vendorCategory: catering }))).toBe("Catering")
+    expect(describePrintTitle(item({}))).toBe("—")
+  })
+
   it("drops selections that are no longer on the panel", () => {
     expect([...pruneSelection(new Set(["ec-1", "ec-gone"]), panel)]).toEqual(["ec-1"])
     expect(pruneSelection(new Set(["ec-1"]), undefined).size).toBe(0)
