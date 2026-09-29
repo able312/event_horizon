@@ -61,7 +61,7 @@ describe("useEventsQueryState", () => {
   it("sanitizes and normalizes incoming params", async () => {
     const { result } = renderHook(() => useEventsQueryState(), {
       wrapper: createWrapper(
-        "/events?view=bogus&date=2026-4&search=%20%20abc%20%20&type=bad&status=planning",
+        "/events?view=bogus&date=2026-4&search=%20%20abc%20%20&type=bad&status=confirmed",
       ),
     })
 
@@ -69,11 +69,11 @@ describe("useEventsQueryState", () => {
     expect(result.current.state.date).toBe("2026-04")
     expect(result.current.state.search).toBe("abc")
     expect(result.current.state.type).toBeNull()
-    expect(result.current.state.status).toBe("planning")
+    expect(result.current.state.status).toBe("confirmed")
 
     await waitFor(() => {
       expect(latestSearch).toBe(
-        "?date=2026-04&search=abc&status=planning",
+        "?date=2026-04&search=abc&status=confirmed",
       )
     })
   })

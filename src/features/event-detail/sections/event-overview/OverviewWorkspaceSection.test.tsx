@@ -32,7 +32,7 @@ function makeEvent(overrides: Partial<Event> = {}): Event {
     id: "event-1",
     title: "Example Dinner",
     type: "function",
-    status: "planning",
+    status: "confirmed",
     startDateTime: "2026-08-12T18:30:00.000Z",
     endDateTime: "2026-08-12T21:00:00.000Z",
     clientName: "Example Name",
