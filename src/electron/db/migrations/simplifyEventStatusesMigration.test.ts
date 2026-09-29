@@ -57,7 +57,7 @@ const EXPECTED_STATUS_MAPPING: Record<string, string> = {
   estimate_sent: "tentative",
   estimate_confirmed: "tentative",
   agreement_sent: "tentative",
-  agreement_and_deposit_received: "tentative",
+  agreement_and_deposit_received: "confirmed",
   planning: "confirmed",
   details_locked: "confirmed",
   event_complete: "closed",
