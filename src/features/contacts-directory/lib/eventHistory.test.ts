@@ -9,7 +9,7 @@ function makeRow(overrides: Partial<ContactEventHistory>): ContactEventHistory {
     eventContactId: "ec-1",
     eventId: "e-1",
     eventTitle: "Event",
-    eventStatus: "planning",
+    eventStatus: "confirmed",
     eventStartDateTime: null,
     role: "client",
     vendorCategory: null,

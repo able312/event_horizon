@@ -113,12 +113,12 @@ describe("rollback stray food workspace migration", () => {
         VALUES ('food-1', 'tb-1', 'Chicken Supreme', 1, 'Buffet', 'Chafer', 2500, 'Potatoes', 'Hot hold at pass')
       `).run()
 
-      // Stop before 0019, which drops vendor_items
-      const through0018 = await createMigrationsFolderBefore("0019_contacts_backfill")
+      // Stop before 0020, which drops vendor_items
+      const through0019 = await createMigrationsFolderBefore("0020_contacts_backfill")
       try {
-        runMigrations(testDb.db, through0018.folder)
+        runMigrations(testDb.db, through0019.folder)
       } finally {
-        await through0018.cleanup()
+        await through0019.cleanup()
       }
 
       expect(columnNames(testDb.sqlite, "timeblocks")).toEqual([

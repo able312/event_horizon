@@ -39,7 +39,7 @@ type AssignmentRow = {
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 
 async function createPreBackfillDb(): Promise<TestDb> {
-  const preMigration = await createMigrationsFolderBefore("0019_contacts_backfill")
+  const preMigration = await createMigrationsFolderBefore("0020_contacts_backfill")
   try {
     return await createTestDb({ migrationsFolder: preMigration.folder })
   } finally {
@@ -146,7 +146,7 @@ function tableExists(sqlite: Sqlite, name: string): boolean {
   return Boolean(sqlite.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(name))
 }
 
-describe("0019_contacts_backfill migration", () => {
+describe("0020_contacts_backfill migration", () => {
   let testDb: TestDb | null = null
 
   afterEach(async () => {

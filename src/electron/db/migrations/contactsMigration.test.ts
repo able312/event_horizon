@@ -29,8 +29,8 @@ async function createPreContactsMigrationsFolder() {
 
   const journalPath = join(tempMigrationsFolder, "meta/_journal.json")
   const journal: Journal = JSON.parse(await readFile(journalPath, "utf8"))
-  const contactsEntry = journal.entries.find((entry) => entry.tag === "0018_contacts")
-  if (!contactsEntry) throw new Error("Expected 0018_contacts migration entry")
+  const contactsEntry = journal.entries.find((entry) => entry.tag === "0019_contacts")
+  if (!contactsEntry) throw new Error("Expected 0019_contacts migration entry")
 
   journal.entries = journal.entries.filter((entry) => entry.idx < contactsEntry.idx)
   await writeFile(journalPath, JSON.stringify(journal, null, 2))
@@ -46,7 +46,7 @@ function tableExists(sqlite: TestDb["sqlite"], name: string): boolean {
   return Boolean(sqlite.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(name))
 }
 
-describe("0018_contacts migration", () => {
+describe("0019_contacts migration", () => {
   let testDb: TestDb | null = null
   let cleanupMigrations: (() => Promise<void>) | null = null
 
@@ -71,12 +71,12 @@ describe("0018_contacts migration", () => {
 
     for (const table of CONTACT_TABLES) expect(tableExists(testDb.sqlite, table)).toBe(false)
 
-    // Stop before 0019, which moves the client off the events table
-    const through0018 = await createMigrationsFolderBefore("0019_contacts_backfill")
+    // Stop before 0020, which moves the client off the events table
+    const through0019 = await createMigrationsFolderBefore("0020_contacts_backfill")
     try {
-      runMigrations(testDb.db, through0018.folder)
+      runMigrations(testDb.db, through0019.folder)
     } finally {
-      await through0018.cleanup()
+      await through0019.cleanup()
     }
 
     for (const table of CONTACT_TABLES) expect(tableExists(testDb.sqlite, table)).toBe(true)

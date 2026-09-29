@@ -1,5 +1,6 @@
 import { act, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { toast } from "sonner"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import * as foodItemsIpc from "~/lib/ipc/foodItems"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
@@ -96,6 +97,7 @@ describe("useFoodSection optimistic cache", () => {
 
     const { result, queryClient } = renderHookWithProviders(() => useFoodSection())
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    queryClient.setQueryData(["timeblock", "tb-1"], makeTimeblock())
 
     act(() => {
       result.current.addItem({
@@ -108,6 +110,9 @@ describe("useFoodSection optimistic cache", () => {
       const cached = queryClient.getQueryData<TimeblockWithItems[]>(["foodSection", "event-1"])
       expect(cached?.[0].foodItems?.map((item) => item.name)).toEqual(["Sandwiches", "Salads"])
       expect((cached?.[0] as TimeblockWithItems & { items?: unknown }).items).toBeUndefined()
+
+      const focused = queryClient.getQueryData<TimeblockWithItems>(["timeblock", "tb-1"])
+      expect(focused?.foodItems?.map((item) => item.name)).toEqual(["Sandwiches", "Salads"])
     })
 
     await act(async () => {
@@ -119,6 +124,9 @@ describe("useFoodSection optimistic cache", () => {
       const cached = queryClient.getQueryData<TimeblockWithItems[]>(["foodSection", "event-1"])
       expect(cached?.[0].foodItems?.map((item) => item.id)).toEqual(["food-1", "food-2"])
       expect(cached?.[0].foodItems?.some((item) => item.id.startsWith("temp_"))).toBe(false)
+
+      const focused = queryClient.getQueryData<TimeblockWithItems>(["timeblock", "tb-1"])
+      expect(focused?.foodItems?.map((item) => item.id)).toEqual(["food-1", "food-2"])
     })
   })
 
@@ -132,6 +140,7 @@ describe("useFoodSection optimistic cache", () => {
 
     const { result, queryClient } = renderHookWithProviders(() => useFoodSection())
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    queryClient.setQueryData(["timeblock", "tb-1"], makeTimeblock())
 
     act(() => {
       result.current.updateItem({
@@ -145,6 +154,9 @@ describe("useFoodSection optimistic cache", () => {
       const cached = queryClient.getQueryData<TimeblockWithItems[]>(["foodSection", "event-1"])
       expect(cached?.[0].foodItems?.[0].name).toBe("Wraps")
       expect((cached?.[0] as TimeblockWithItems & { items?: unknown }).items).toBeUndefined()
+
+      const focused = queryClient.getQueryData<TimeblockWithItems>(["timeblock", "tb-1"])
+      expect(focused?.foodItems?.[0].name).toBe("Wraps")
     })
 
     deferredUpdate.resolve({
@@ -191,6 +203,23 @@ describe("useFoodSection optimistic cache", () => {
 
     const { result, queryClient } = renderHookWithProviders(() => useFoodSection())
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    queryClient.setQueryData(
+      ["timeblock", "tb-1"],
+      makeTimeblock({
+        foodItems: [
+          makeTimeblock().foodItems![0],
+          {
+            id: "food-2",
+            timeblockId: "tb-1",
+            name: "Salads",
+            quantity: 1,
+            serviceStyle: "Buffet",
+            includes: "Dressing",
+            unitPriceCents: 900,
+          },
+        ],
+      }),
+    )
 
     act(() => {
       result.current.removeItem({
@@ -203,12 +232,15 @@ describe("useFoodSection optimistic cache", () => {
       const cached = queryClient.getQueryData<TimeblockWithItems[]>(["foodSection", "event-1"])
       expect(cached?.[0].foodItems?.map((item) => item.id)).toEqual(["food-2"])
       expect((cached?.[0] as TimeblockWithItems & { items?: unknown }).items).toBeUndefined()
+
+      const focused = queryClient.getQueryData<TimeblockWithItems>(["timeblock", "tb-1"])
+      expect(focused?.foodItems?.map((item) => item.id)).toEqual(["food-2"])
     })
 
     deferredDelete.resolve(true)
   })
 
-  it("rolls cache back to previous state when mutation fails", async () => {
+  it("rolls cache back to previous state when create fails", async () => {
     const getSectionMock = vi.mocked(foodItemsIpc.getFoodSectionWithItems)
     const createItemMock = vi.mocked(foodItemsIpc.createFoodItem)
 
@@ -218,6 +250,7 @@ describe("useFoodSection optimistic cache", () => {
 
     const { result, queryClient } = renderHookWithProviders(() => useFoodSection())
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    queryClient.setQueryData(["timeblock", "tb-1"], makeTimeblock())
 
     act(() => {
       result.current.addItem({
@@ -229,6 +262,151 @@ describe("useFoodSection optimistic cache", () => {
     await waitFor(() => {
       const cached = queryClient.getQueryData<TimeblockWithItems[]>(["foodSection", "event-1"])
       expect(cached).toEqual(initialData)
+      expect(queryClient.getQueryData<TimeblockWithItems>(["timeblock", "tb-1"])).toEqual(makeTimeblock())
+      expect(toast.error).toHaveBeenCalledWith("Failed to create food item")
     })
+  })
+
+  it("rolls cache back to previous state when update fails", async () => {
+    const getSectionMock = vi.mocked(foodItemsIpc.getFoodSectionWithItems)
+    const updateItemMock = vi.mocked(foodItemsIpc.updateFoodItem)
+
+    const initialData = [makeTimeblock()]
+    getSectionMock.mockResolvedValue(initialData)
+    updateItemMock.mockRejectedValue(new Error("update failed"))
+
+    const { result, queryClient } = renderHookWithProviders(() => useFoodSection())
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    queryClient.setQueryData(["timeblock", "tb-1"], makeTimeblock())
+
+    act(() => {
+      result.current.updateItem({
+        timeblockId: "tb-1",
+        itemId: "food-1",
+        updates: { name: "Wraps" },
+      })
+    })
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData<TimeblockWithItems[]>(["foodSection", "event-1"])
+      expect(cached).toEqual(initialData)
+      expect(queryClient.getQueryData<TimeblockWithItems>(["timeblock", "tb-1"])).toEqual(makeTimeblock())
+      expect(toast.error).toHaveBeenCalledWith("Failed to update food item")
+    })
+  })
+
+  it("rolls cache back to previous state when delete fails", async () => {
+    const getSectionMock = vi.mocked(foodItemsIpc.getFoodSectionWithItems)
+    const deleteItemMock = vi.mocked(foodItemsIpc.deleteFoodItem)
+
+    const initialData = [makeTimeblock()]
+    getSectionMock.mockResolvedValue(initialData)
+    deleteItemMock.mockRejectedValue(new Error("delete failed"))
+
+    const { result, queryClient } = renderHookWithProviders(() => useFoodSection())
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    queryClient.setQueryData(["timeblock", "tb-1"], makeTimeblock())
+
+    act(() => {
+      result.current.removeItem({
+        timeblockId: "tb-1",
+        itemId: "food-1",
+      })
+    })
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData<TimeblockWithItems[]>(["foodSection", "event-1"])
+      expect(cached).toEqual(initialData)
+      expect(queryClient.getQueryData<TimeblockWithItems>(["timeblock", "tb-1"])).toEqual(makeTimeblock())
+      expect(toast.error).toHaveBeenCalledWith("Failed to delete food item")
+    })
+  })
+
+  it("update onSuccess only merges confirmed fields so a sibling optimistic update is preserved", async () => {
+    const getSectionMock = vi.mocked(foodItemsIpc.getFoodSectionWithItems)
+    const updateItemMock = vi.mocked(foodItemsIpc.updateFoodItem)
+
+    // Hang post-mutation refetches so this test isolates onSuccess merge behavior.
+    const deferredRefetch = createDeferred<TimeblockWithItems[]>()
+    getSectionMock
+      .mockResolvedValueOnce([makeTimeblock()])
+      .mockReturnValue(deferredRefetch.promise)
+
+    const deferredName = createDeferred<ReturnType<typeof foodItemsIpc.updateFoodItem> extends Promise<infer R> ? R : never>()
+    const deferredQuantity = createDeferred<ReturnType<typeof foodItemsIpc.updateFoodItem> extends Promise<infer R> ? R : never>()
+    updateItemMock
+      .mockReturnValueOnce(deferredName.promise)
+      .mockReturnValueOnce(deferredQuantity.promise)
+
+    const { result, queryClient } = renderHookWithProviders(() => useFoodSection())
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    queryClient.setQueryData(["timeblock", "tb-1"], makeTimeblock())
+
+    act(() => {
+      result.current.updateItem({
+        timeblockId: "tb-1",
+        itemId: "food-1",
+        updates: { name: "Wraps" },
+      })
+    })
+
+    act(() => {
+      result.current.updateItem({
+        timeblockId: "tb-1",
+        itemId: "food-1",
+        updates: { quantity: 5 },
+      })
+    })
+
+    await waitFor(() => {
+      const focused = queryClient.getQueryData<TimeblockWithItems>(["timeblock", "tb-1"])
+      expect(focused?.foodItems?.[0].name).toBe("Wraps")
+      expect(focused?.foodItems?.[0].quantity).toBe(5)
+    })
+
+    // Name response still has the old quantity — must not clobber quantity: 5.
+    await act(async () => {
+      deferredName.resolve({
+        id: "food-1",
+        timeblockId: "tb-1",
+        name: "Wraps",
+        quantity: 1,
+        serviceStyle: "Buffet",
+        includes: "Condiments",
+        unitPriceCents: 1200,
+      })
+      await deferredName.promise
+    })
+
+    const cached = queryClient.getQueryData<TimeblockWithItems[]>(["foodSection", "event-1"])
+    expect(cached?.[0].foodItems?.[0].name).toBe("Wraps")
+    expect(cached?.[0].foodItems?.[0].quantity).toBe(5)
+
+    const focused = queryClient.getQueryData<TimeblockWithItems>(["timeblock", "tb-1"])
+    expect(focused?.foodItems?.[0].name).toBe("Wraps")
+    expect(focused?.foodItems?.[0].quantity).toBe(5)
+
+    deferredQuantity.resolve({
+      id: "food-1",
+      timeblockId: "tb-1",
+      name: "Wraps",
+      quantity: 5,
+      serviceStyle: "Buffet",
+      includes: "Condiments",
+      unitPriceCents: 1200,
+    })
+    deferredRefetch.resolve([
+      makeTimeblock({
+        foodItems: [{
+          id: "food-1",
+          timeblockId: "tb-1",
+          name: "Wraps",
+          quantity: 5,
+          serviceStyle: "Buffet",
+          includes: "Condiments",
+          unitPriceCents: 1200,
+        }],
+      }),
+    ])
   })
 })

@@ -2,7 +2,7 @@ import type { PreviewTypeId } from "~/features/preview/lib/previewTypes"
 
 const UNSAFE_FILENAME_CHARS = /[/\\:*?"<>|]/g
 
-export type PdfDocumentType = "BEO" | "Timeline" | "Estimate"
+export type PdfDocumentType = "BEO" | "Timeline" | "Estimate" | "Cart_Setup"
 
 export type BuildPdfFileNameInput = {
   clientName: string | null | undefined
@@ -33,6 +33,8 @@ export function getPdfDocumentType(previewType: PreviewTypeId): PdfDocumentType 
       return "Timeline"
     case "financial-report":
       return "Estimate"
+    case "cart-diagram":
+      return "Cart_Setup"
     case "beo":
     case "beo-food":
     default:

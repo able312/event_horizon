@@ -37,7 +37,7 @@ export function seedDevelopmentDatabase(database: AppDatabase, sqlite: SqliteCon
         id: seedIds.tournamentEvent,
         title: "Sample Charity Tournament",
         type: "tournament",
-        status: "planning",
+        status: "confirmed",
         startDateTime: futureDate(30, 13),
         endDateTime: futureDate(30, 21),
         minGuests: 80,

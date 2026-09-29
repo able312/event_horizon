@@ -56,7 +56,7 @@ const baseEvent: Event = {
   id: "event-1",
   title: "Alpha",
   type: "function",
-  status: "planning",
+  status: "confirmed",
   startDateTime: null,
   endDateTime: null,
   minGuests: null,

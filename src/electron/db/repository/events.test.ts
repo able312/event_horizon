@@ -189,21 +189,21 @@ describe("events repository month and unscheduled queries", () => {
         id: "in-range",
         title: "Alpha Match",
         type: "wedding",
-        status: "planning",
+        status: "confirmed",
         startDateTime: "2026-06-15T10:00:00.000Z",
       }),
       createEventRecord({
         id: "wrong-type",
         title: "Alpha Match",
         type: "function",
-        status: "planning",
+        status: "confirmed",
         startDateTime: "2026-06-15T10:00:00.000Z",
       }),
       createEventRecord({
         id: "unscheduled",
         title: "Alpha Match",
         type: "wedding",
-        status: "planning",
+        status: "confirmed",
         startDateTime: null,
       }),
     ]).run()
@@ -211,7 +211,7 @@ describe("events repository month and unscheduled queries", () => {
     const result = repo.search({
       query: "alpha",
       type: "wedding",
-      status: "planning",
+      status: "confirmed",
       startFrom: "2026-06-01T00:00:00.000Z",
       startTo: "2026-07-01T00:00:00.000Z",
       page: 0,

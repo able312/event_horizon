@@ -12,7 +12,7 @@ import type { DbExecutor } from "../factory.js"
 import { db } from "../index.js"
 import { contactRoles, eventContacts, vendorCategories } from "../schema.js"
 
-/** Keep in sync with the seed rows in migrations/drizzle/0018_contacts.sql. */
+/** Keep in sync with the seed rows in migrations/drizzle/0019_contacts.sql. */
 export const DEFAULT_VENDOR_CATEGORIES: ReadonlyArray<Required<NewVendorCategory>> = [
   { key: "catering", label: "Catering", colorToken: "teal", sortOrder: 10 },
   { key: "rentals", label: "Rentals", colorToken: "amber", sortOrder: 20 },

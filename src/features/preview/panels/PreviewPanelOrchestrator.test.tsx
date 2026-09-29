@@ -96,6 +96,21 @@ describe("PreviewPanelOrchestrator", () => {
     expect(screen.getByText("Include system rows")).toBeTruthy()
   })
 
+  it("offers the cart setup diagram only for tournament events", () => {
+    hooksMock.useEvent.mockReturnValue({
+      data: {
+        id: "evt_1",
+        title: "Club Championship",
+        startDateTime: "2026-06-01T16:00:00.000Z",
+        type: "tournament",
+      },
+    })
+
+    renderPanel("/preview/evt_1?type=beo")
+
+    expect(screen.getByRole("button", { name: "Cart Setup Diagram" })).toBeTruthy()
+  })
+
   it("shows financial options when the financial preview is active", () => {
     hooksMock.useEvent.mockReturnValue({
       data: {

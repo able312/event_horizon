@@ -9,8 +9,9 @@ import { useNoteSection } from "~/hooks/useNoteSection"
 import { usePaymentsSection } from "~/hooks/usePaymentsSection"
 import { useSetupInstructionSection } from "~/hooks/useSetupInstrucionSection"
 import {
-  PREVIEW_TYPES,
+  getPreviewTypesForEvent,
   resolvePreviewType,
+  type PreviewTypeId,
 } from "~/features/preview/lib/previewTypes"
 import {
   PreviewOptionSection,
@@ -64,6 +65,7 @@ const PreviewPanelOrchestrator: React.FC = () => {
   })
   const beverageNotesAvailable = hasBeverageNotes(beverageItems)
   const paymentsExist = (payments?.length ?? 0) > 0
+  const availablePreviewTypes = getPreviewTypesForEvent(event?.type)
 
   const beoFoodSelected = filterSelectedIds(
     state.beo.selectedTimeblockIds.food,
@@ -86,7 +88,7 @@ const PreviewPanelOrchestrator: React.FC = () => {
     foodOptions.map((o) => o.id),
   )
 
-  const handleSelectType = (typeId: (typeof PREVIEW_TYPES)[number]["id"]) => {
+  const handleSelectType = (typeId: PreviewTypeId) => {
     if (!eventId) return
 
     const nextParams = new URLSearchParams(searchParams)
@@ -115,7 +117,7 @@ const PreviewPanelOrchestrator: React.FC = () => {
         <div className="space-y-6 px-3 py-4">
           <PreviewOptionSection title="Preview Type">
             <div className="space-y-1">
-              {PREVIEW_TYPES.map(({ id, label, icon: Icon }) => {
+              {availablePreviewTypes.map(({ id, label, icon: Icon }) => {
                 const isActive = activeType === id
 
                 return (

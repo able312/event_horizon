@@ -4,6 +4,7 @@ import { toast } from "sonner"
 import type { FoodItem } from "~/definitions/database"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import * as foodItemsIpc from "~/lib/ipc/foodItems"
+import { focusedTimeblockQueryKey } from "./useFocusedTimeblock"
 import { useTimeblockMutations } from "./useTimeblockMutations"
 import {
   appendListItem,
@@ -12,6 +13,41 @@ import {
   updateListItem,
 } from "./util/optimisticTimeblockCache"
 
+function updateFocusedFoodItems(
+  timeblock: TimeblockWithItems | undefined,
+  updateItems: (items: FoodItem[]) => FoodItem[],
+): TimeblockWithItems | undefined {
+  if (!timeblock) return timeblock
+
+  return {
+    ...timeblock,
+    foodItems: updateItems(timeblock.foodItems ?? []),
+  }
+}
+
+function restoreQueryData<T>(
+  queryClient: ReturnType<typeof useQueryClient>,
+  queryKey: readonly unknown[],
+  previousData: T | undefined,
+) {
+  // Only restore when we had a snapshot. Avoid removeQueries on active observers.
+  if (previousData === undefined) return
+  queryClient.setQueryData(queryKey, previousData)
+}
+
+function pickConfirmedUpdates(
+  updatedItem: FoodItem,
+  updates: Partial<FoodItem>,
+): Partial<FoodItem> {
+  return (Object.keys(updates) as (keyof FoodItem)[]).reduce<Partial<FoodItem>>(
+    (confirmed, key) => {
+      if (!(key in updatedItem)) return confirmed
+      return { ...confirmed, [key]: updatedItem[key] }
+    },
+    {},
+  )
+}
+
 
 export function useFoodSection() {
   const { id: eventId } = useParams()
@@ -19,9 +55,12 @@ export function useFoodSection() {
 
   const queryKey = ["foodSection", eventId] as const
 
-  const invalidateKeys = () => {
+  const invalidateKeys = (focusedTimeblockId?: string) => {
     queryClient.invalidateQueries({ queryKey })
     queryClient.invalidateQueries({ queryKey: ["timeblocks", eventId] })
+    if (focusedTimeblockId) {
+      queryClient.invalidateQueries({ queryKey: focusedTimeblockQueryKey(focusedTimeblockId) })
+    }
   }
 
   const query = useQuery({
@@ -49,8 +88,13 @@ export function useFoodSection() {
         unitPriceCents: newItem?.unitPriceCents ?? undefined,
       }),
     onMutate: async ({ timeblockId, newItem }) => {
-      await queryClient.cancelQueries({ queryKey })
+      const focusedQueryKey = focusedTimeblockQueryKey(timeblockId)
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey }),
+        queryClient.cancelQueries({ queryKey: focusedQueryKey }),
+      ])
       const previousData = queryClient.getQueryData<TimeblockWithItems[]>(queryKey)
+      const previousFocusedData = queryClient.getQueryData<TimeblockWithItems>(focusedQueryKey)
 
       const tempId = `temp_${Date.now()}`
       const optimisticItem: FoodItem = {
@@ -66,8 +110,11 @@ export function useFoodSection() {
       queryClient.setQueryData<TimeblockWithItems[]>(queryKey, (old = []) =>
         appendListItem(old, timeblockId, "foodItems", optimisticItem)
       )
+      queryClient.setQueryData<TimeblockWithItems>(focusedQueryKey, (old) =>
+        updateFocusedFoodItems(old, (items) => [...items, optimisticItem]),
+      )
 
-      return { previousData, tempId, timeblockId }
+      return { previousData, previousFocusedData, tempId, timeblockId }
     },
     onSuccess: (createdItem, _variables, context) => {
       if (!context) return
@@ -75,15 +122,27 @@ export function useFoodSection() {
       queryClient.setQueryData<TimeblockWithItems[]>(queryKey, (old = []) =>
         replaceListItemByTempId(old, context.timeblockId, "foodItems", context.tempId, createdItem)
       )
+      queryClient.setQueryData<TimeblockWithItems>(
+        focusedTimeblockQueryKey(context.timeblockId),
+        (old) => updateFocusedFoodItems(
+          old,
+          (items) => items.map((item) => item.id === context.tempId ? createdItem : item),
+        ),
+      )
     },
-    onError: (_err, _variables, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(queryKey, context.previousData)
+    onError: (_err, variables, context) => {
+      if (context) {
+        restoreQueryData(queryClient, queryKey, context.previousData)
+        restoreQueryData(
+          queryClient,
+          focusedTimeblockQueryKey(variables.timeblockId),
+          context.previousFocusedData,
+        )
       }
       toast.error("Failed to create food item")
     },
-    onSettled: () => {
-      invalidateKeys()
+    onSettled: (_data, _error, variables) => {
+      invalidateKeys(variables.timeblockId)
     },
   })
 
@@ -97,23 +156,56 @@ export function useFoodSection() {
         unitPriceCents: updates.unitPriceCents ?? undefined,
       }),
     onMutate: async ({ timeblockId, itemId, updates }) => {
-      await queryClient.cancelQueries({ queryKey })
+      const focusedQueryKey = focusedTimeblockQueryKey(timeblockId)
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey }),
+        queryClient.cancelQueries({ queryKey: focusedQueryKey }),
+      ])
       const previousData = queryClient.getQueryData<TimeblockWithItems[]>(queryKey)
+      const previousFocusedData = queryClient.getQueryData<TimeblockWithItems>(focusedQueryKey)
 
       queryClient.setQueryData<TimeblockWithItems[]>(queryKey, (old = []) =>
         updateListItem(old, timeblockId, "foodItems", itemId, updates)
       )
+      queryClient.setQueryData<TimeblockWithItems>(focusedQueryKey, (old) =>
+        updateFocusedFoodItems(old, (items) => items.map((item) =>
+          item.id === itemId ? { ...item, ...updates } : item,
+        )),
+      )
 
-      return { previousData }
+      return { previousData, previousFocusedData }
     },
-    onError: (_err, _variables, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(queryKey, context.previousData)
+    onSuccess: (updatedItem, variables) => {
+      // Merge only fields this mutation sent so an in-flight sibling update
+      // (e.g. name then quantity) is not overwritten by a stale server row.
+      const confirmedUpdates = pickConfirmedUpdates(updatedItem, variables.updates)
+
+      queryClient.setQueryData<TimeblockWithItems[]>(queryKey, (old = []) =>
+        updateListItem(old, variables.timeblockId, "foodItems", updatedItem.id, confirmedUpdates),
+      )
+      queryClient.setQueryData<TimeblockWithItems>(
+        focusedTimeblockQueryKey(variables.timeblockId),
+        (old) => updateFocusedFoodItems(
+          old,
+          (items) => items.map((item) =>
+            item.id === updatedItem.id ? { ...item, ...confirmedUpdates } : item,
+          ),
+        ),
+      )
+    },
+    onError: (_err, variables, context) => {
+      if (context) {
+        restoreQueryData(queryClient, queryKey, context.previousData)
+        restoreQueryData(
+          queryClient,
+          focusedTimeblockQueryKey(variables.timeblockId),
+          context.previousFocusedData,
+        )
       }
       toast.error("Failed to update food item")
     },
-    onSettled: () => {
-      invalidateKeys()
+    onSettled: (_data, _error, variables) => {
+      invalidateKeys(variables.timeblockId)
     },
   })
 
@@ -121,23 +213,36 @@ export function useFoodSection() {
     mutationFn: ({ itemId }: { timeblockId: string; itemId: string }) =>
       foodItemsIpc.deleteFoodItem(itemId),
     onMutate: async ({ timeblockId, itemId }) => {
-      await queryClient.cancelQueries({ queryKey })
+      const focusedQueryKey = focusedTimeblockQueryKey(timeblockId)
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey }),
+        queryClient.cancelQueries({ queryKey: focusedQueryKey }),
+      ])
       const previousData = queryClient.getQueryData<TimeblockWithItems[]>(queryKey)
+      const previousFocusedData = queryClient.getQueryData<TimeblockWithItems>(focusedQueryKey)
 
       queryClient.setQueryData<TimeblockWithItems[]>(queryKey, (old = []) =>
         removeListItem(old, timeblockId, "foodItems", itemId)
       )
+      queryClient.setQueryData<TimeblockWithItems>(focusedQueryKey, (old) =>
+        updateFocusedFoodItems(old, (items) => items.filter((item) => item.id !== itemId)),
+      )
 
-      return { previousData }
+      return { previousData, previousFocusedData }
     },
-    onError: (_err, _variables, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(queryKey, context.previousData)
+    onError: (_err, variables, context) => {
+      if (context) {
+        restoreQueryData(queryClient, queryKey, context.previousData)
+        restoreQueryData(
+          queryClient,
+          focusedTimeblockQueryKey(variables.timeblockId),
+          context.previousFocusedData,
+        )
       }
       toast.error("Failed to delete food item")
     },
-    onSettled: () => {
-      invalidateKeys()
+    onSettled: (_data, _error, variables) => {
+      invalidateKeys(variables.timeblockId)
     },
   })
 
