@@ -1,6 +1,7 @@
 import { CalendarDays, Star } from "lucide-react"
 import { Link } from "react-router"
 
+import { Button } from "~/components/atoms/button"
 import type { ContactEventHistory } from "~/definitions/contacts"
 import { EVENT_STATUS_LABELS } from "~/definitions/events/ui"
 import { getRoleBadgeClass } from "~/features/contacts/lib/contactStyles"
@@ -62,7 +63,7 @@ type ContactEventHistoryListProps = {
 }
 
 export const ContactEventHistoryList: React.FC<ContactEventHistoryListProps> = ({ contactId }) => {
-  const { data: history = [], isLoading } = useContactEventHistory(contactId)
+  const { data: history = [], isLoading, isError, isFetching, refetch } = useContactEventHistory(contactId)
   const { upcoming, past } = groupEventHistory(history, new Date())
 
   return (
@@ -73,6 +74,14 @@ export const ContactEventHistoryList: React.FC<ContactEventHistoryListProps> = (
 
       {isLoading ? (
         <p className="text-xs text-muted-foreground">Loading events…</p>
+      ) : isError ? (
+        // A failed load must not read as "No events yet": the contact may well have assignments.
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-destructive/40 p-4 text-xs">
+          <p className="text-destructive">Could not load this contact's events.</p>
+          <Button type="button" variant="ghost" size="sm" onClick={() => void refetch()} disabled={isFetching}>
+            {isFetching ? "Retrying..." : "Retry"}
+          </Button>
+        </div>
       ) : history.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
           No events yet.
