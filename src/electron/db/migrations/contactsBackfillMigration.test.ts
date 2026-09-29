@@ -282,6 +282,22 @@ describe("0019_contacts_backfill migration", () => {
     expect(sqlite.pragma("foreign_key_check")).toEqual([])
   })
 
+  it("keeps vendors that only have a time or an assignee filled in", async () => {
+    testDb = await createPreBackfillDb()
+    const { sqlite } = testDb
+    insertEvent(sqlite, "e1")
+    insertVendor(sqlite, "tb-time", "e1", { time: "07:00", createdAt: "2026-01-01" }, {})
+    insertVendor(sqlite, "tb-assigned", "e1", { assignedTo: "Alex", createdAt: "2026-01-02" }, null)
+
+    runMigrations(testDb.db, MIGRATIONS_FOLDER)
+
+    expect(assignments(sqlite, "e1")).toEqual([
+      expect.objectContaining({ role: "vendor", categoryKey: "other", notes: "Time: 07:00", sortOrder: 0 }),
+      expect.objectContaining({ role: "vendor", categoryKey: "other", notes: "Assigned to: Alex", sortOrder: 1 }),
+    ])
+    expect(allContacts(sqlite).map((row) => row.displayName)).toEqual(["Unnamed vendor", "Unnamed vendor"])
+  })
+
   it("collapses one vendor listed twice on the same event into a single assignment", async () => {
     testDb = await createPreBackfillDb()
     const { sqlite } = testDb

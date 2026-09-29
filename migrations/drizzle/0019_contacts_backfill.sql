@@ -95,7 +95,9 @@ FROM (
 	WHERE `t`.`section_type` = 'vendor'
 ) `src`
 -- Skip vendor rows that were created but never filled in
-WHERE coalesce(`src`.`title`, `src`.`contact_name`, `src`.`email`, `src`.`phone`, `src`.`details`) IS NOT NULL;--> statement-breakpoint
+WHERE coalesce(
+	`src`.`title`, `src`.`contact_name`, `src`.`email`, `src`.`phone`, `src`.`details`, `src`.`time`, `src`.`assigned_to`
+) IS NOT NULL;--> statement-breakpoint
 
 -- Rows sharing an email become one contact; everything else is its own contact.
 UPDATE `__contact_sources`
