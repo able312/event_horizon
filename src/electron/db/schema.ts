@@ -16,17 +16,8 @@ export const events = sqliteTable("events", {
   type: text("type", { enum: ["tournament", "wedding", "function"] }).notNull().default("function"), // tournament, wedding, function
   status: text("status", {enum: [
     "new_lead",
-    "contacted",
-    "ready_for_estimate",
-    "estimate_sent",
-    "estimate_confirmed",
-    "agreement_sent",
-    "agreement_and_deposit_received",
-    "planning",
-    "details_locked",
-    "event_complete",
-    "invoice_sent",
-    "paid_in_full",
+    "tentative",
+    "confirmed",
     "closed",
     "lost"
   ]}).notNull().default("new_lead"),

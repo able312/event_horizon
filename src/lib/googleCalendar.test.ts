@@ -11,7 +11,7 @@ function makeEvent(overrides: Partial<GoogleCalendarEventInput> = {}): GoogleCal
   return {
     title: "Example Dinner",
     type: "function",
-    status: "planning",
+    status: "confirmed",
     startDateTime: "2026-05-12T18:30:00.000Z",
     endDateTime: "2026-05-12T21:00:00.000Z",
     clientName: "Example Name",
