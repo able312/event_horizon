@@ -5,6 +5,7 @@ import MonthNavigator from "~/features/calendar/navigation/MonthNavigator"
 import CalendarPage from "./CalendarPage"
 import type { UseEventsReturn } from "~/hooks/useEvents"
 import { usePrimaryClients } from "~/hooks/useEventContacts"
+import { ClientNamesError } from "../views/ClientNamesError"
 import { useCallback } from "react"
 import { getCurrentMonthParam } from "~/lib/months"
 import EventsTable from "~/features/calendar/views/EventsTable"
@@ -42,7 +43,8 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
       bodyView === "search-results" ? searchEvents
       : bodyView === "unscheduled-list" ? eventsHook.unscheduledEvents
       : []
-    const { data: clientsByEventId } = usePrimaryClients(tableEvents.map((event) => event.id))
+    const primaryClients = usePrimaryClients(tableEvents.map((event) => event.id))
+    const clientsByEventId = primaryClients.data
 
     const handleGoToToday = useCallback(() => {
         const todayMonth = getCurrentMonthParam()
@@ -75,6 +77,7 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
 
             {bodyView === "unscheduled-list" && <>
                 <Body.Content>
+                    <ClientNamesError query={primaryClients} />
                     <EventsTable
                         events={eventsHook.unscheduledEvents}
                         clientsByEventId={clientsByEventId}
@@ -87,6 +90,7 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
 
             {bodyView === "search-results" && <>
                 <Body.Content>
+                    <ClientNamesError query={primaryClients} />
                     <EventsTable 
                         events={searchEvents}
                         clientsByEventId={clientsByEventId}
