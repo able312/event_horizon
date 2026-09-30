@@ -1,8 +1,8 @@
 -- Moves each event's inline client and its vendor_items into contacts/event_contacts,
 -- keeps timed vendor timeblocks on the timeline as notes, then drops the legacy columns,
 -- the remaining vendor timeblocks and the vendor_items table.
--- Contacts are merged by normalized email (and matched to existing active contacts);
--- contacts without an email are never merged.
+-- Contacts are merged by normalized email (and matched to existing active contacts), combining
+-- details across the merged rows; contacts without an email are never merged.
 
 -- Migrated vendors need a category; make sure the 'other' fallback exists.
 INSERT OR IGNORE INTO `vendor_categories` (`id`, `key`, `label`, `color_token`, `sort_order`)
@@ -135,36 +135,133 @@ SELECT
 	)
 FROM (SELECT DISTINCT `identity_key`, `email_normalized` FROM `__contact_sources`) `s`;--> statement-breakpoint
 
--- New contacts take their details from the first source: clients before vendors, then event order.
+-- Merge each identity's sources field by field, so a phone or name found on only one of them is kept.
+-- Clients come before vendors, then event order; the first non-empty value of each field wins.
+CREATE TABLE `__contact_merged` (
+	`identity_key` text PRIMARY KEY NOT NULL,
+	`full_name` text,
+	`organization_name` text,
+	`phone` text,
+	`email` text,
+	`fallback_display_name` text NOT NULL
+);--> statement-breakpoint
+
+INSERT INTO `__contact_merged` (
+	`identity_key`, `full_name`, `organization_name`, `phone`, `email`, `fallback_display_name`
+)
+SELECT
+	`i`.`identity_key`,
+	(
+		SELECT `s`.`full_name` FROM `__contact_sources` `s`
+		WHERE `s`.`identity_key` = `i`.`identity_key` AND `s`.`full_name` IS NOT NULL
+		ORDER BY `s`.`role_rank`, `s`.`event_id`, `s`.`sort_order`, `s`.`source_id` LIMIT 1
+	),
+	(
+		SELECT `s`.`organization_name` FROM `__contact_sources` `s`
+		WHERE `s`.`identity_key` = `i`.`identity_key` AND `s`.`organization_name` IS NOT NULL
+		ORDER BY `s`.`role_rank`, `s`.`event_id`, `s`.`sort_order`, `s`.`source_id` LIMIT 1
+	),
+	(
+		SELECT `s`.`phone` FROM `__contact_sources` `s`
+		WHERE `s`.`identity_key` = `i`.`identity_key` AND `s`.`phone` IS NOT NULL
+		ORDER BY `s`.`role_rank`, `s`.`event_id`, `s`.`sort_order`, `s`.`source_id` LIMIT 1
+	),
+	(
+		SELECT `s`.`email` FROM `__contact_sources` `s`
+		WHERE `s`.`identity_key` = `i`.`identity_key` AND `s`.`email` IS NOT NULL
+		ORDER BY `s`.`role_rank`, `s`.`event_id`, `s`.`sort_order`, `s`.`source_id` LIMIT 1
+	),
+	(
+		SELECT `s`.`display_name` FROM `__contact_sources` `s`
+		WHERE `s`.`identity_key` = `i`.`identity_key`
+		ORDER BY `s`.`role_rank`, `s`.`event_id`, `s`.`sort_order`, `s`.`source_id` LIMIT 1
+	)
+FROM `__contact_identities` `i`;--> statement-breakpoint
+
 INSERT INTO `contacts` (
 	`id`, `kind`, `first_name`, `last_name`, `organization_name`, `display_name`,
 	`email`, `phone`, `created_at`, `updated_at`
 )
 SELECT
 	`i`.`contact_id`,
-	`s`.`kind`,
+	CASE WHEN `m`.`full_name` IS NULL AND `m`.`organization_name` IS NOT NULL THEN 'organization' ELSE 'individual' END,
 	CASE
-		WHEN `s`.`full_name` IS NULL THEN NULL
-		WHEN instr(`s`.`full_name`, ' ') > 0 THEN substr(`s`.`full_name`, 1, instr(`s`.`full_name`, ' ') - 1)
-		ELSE `s`.`full_name`
+		WHEN `m`.`full_name` IS NULL THEN NULL
+		WHEN instr(`m`.`full_name`, ' ') > 0 THEN substr(`m`.`full_name`, 1, instr(`m`.`full_name`, ' ') - 1)
+		ELSE `m`.`full_name`
 	END,
 	CASE
-		WHEN instr(coalesce(`s`.`full_name`, ''), ' ') > 0 THEN trim(substr(`s`.`full_name`, instr(`s`.`full_name`, ' ') + 1))
+		WHEN instr(coalesce(`m`.`full_name`, ''), ' ') > 0 THEN trim(substr(`m`.`full_name`, instr(`m`.`full_name`, ' ') + 1))
 	END,
-	`s`.`organization_name`,
-	`s`.`display_name`,
-	`s`.`email`,
-	`s`.`phone`,
+	`m`.`organization_name`,
+	coalesce(`m`.`full_name`, `m`.`organization_name`, `m`.`fallback_display_name`),
+	`m`.`email`,
+	`m`.`phone`,
 	strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
 	strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
 FROM `__contact_identities` `i`
-INNER JOIN (
-	SELECT
-		*,
-		row_number() OVER (PARTITION BY `identity_key` ORDER BY `role_rank`, `event_id`, `sort_order`) AS `pick`
-	FROM `__contact_sources`
-) `s` ON `s`.`identity_key` = `i`.`identity_key` AND `s`.`pick` = 1
+INNER JOIN `__contact_merged` `m` ON `m`.`identity_key` = `i`.`identity_key`
 WHERE `i`.`is_existing` = 0;--> statement-breakpoint
+
+-- Contacts that already existed in the app keep their details; only fill in a missing phone.
+UPDATE `contacts`
+SET
+	`phone` = (
+		SELECT `m`.`phone`
+		FROM `__contact_identities` `i`
+		INNER JOIN `__contact_merged` `m` ON `m`.`identity_key` = `i`.`identity_key`
+		WHERE `i`.`contact_id` = `contacts`.`id`
+	),
+	`updated_at` = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+WHERE `phone` IS NULL
+	AND EXISTS (
+		SELECT 1
+		FROM `__contact_identities` `i`
+		INNER JOIN `__contact_merged` `m` ON `m`.`identity_key` = `i`.`identity_key`
+		WHERE `i`.`contact_id` = `contacts`.`id` AND `i`.`is_existing` = 1 AND `m`.`phone` IS NOT NULL
+	);--> statement-breakpoint
+
+-- A source whose name or phone didn't make it onto the contact keeps it in that event's assignment notes.
+-- (Vendor business names are already kept as the assignment's role label.)
+UPDATE `__contact_sources`
+SET `notes` = concat_ws(
+	char(10) || char(10),
+	`notes`,
+	(
+		SELECT 'Also recorded as: ' || concat_ws(
+			' · ',
+			CASE
+				WHEN `__contact_sources`.`full_name` IS NOT NULL
+					AND lower(`__contact_sources`.`full_name`) NOT IN (
+						lower(`c`.`display_name`), lower(concat_ws(' ', `c`.`first_name`, `c`.`last_name`))
+					)
+				THEN `__contact_sources`.`full_name`
+			END,
+			CASE
+				WHEN `__contact_sources`.`phone` IS NOT NULL AND `__contact_sources`.`phone` IS NOT `c`.`phone`
+				THEN `__contact_sources`.`phone`
+			END
+		)
+		FROM `__contact_identities` `i`
+		INNER JOIN `contacts` `c` ON `c`.`id` = `i`.`contact_id`
+		WHERE `i`.`identity_key` = `__contact_sources`.`identity_key`
+	)
+)
+WHERE EXISTS (
+	SELECT 1
+	FROM `__contact_identities` `i`
+	INNER JOIN `contacts` `c` ON `c`.`id` = `i`.`contact_id`
+	WHERE `i`.`identity_key` = `__contact_sources`.`identity_key`
+		AND (
+			(
+				`__contact_sources`.`full_name` IS NOT NULL
+				AND lower(`__contact_sources`.`full_name`) NOT IN (
+					lower(`c`.`display_name`), lower(concat_ws(' ', `c`.`first_name`, `c`.`last_name`))
+				)
+			)
+			OR (`__contact_sources`.`phone` IS NOT NULL AND `__contact_sources`.`phone` IS NOT `c`.`phone`)
+		)
+);--> statement-breakpoint
 
 -- Standing roles for every migrated contact.
 INSERT INTO `contact_roles` (`id`, `contact_id`, `role`, `vendor_category_id`, `created_at`)
@@ -272,6 +369,7 @@ SET
 WHERE `section_type` = 'vendor'
 	AND trim(coalesce(`time`, '')) <> '';--> statement-breakpoint
 
+DROP TABLE `__contact_merged`;--> statement-breakpoint
 DROP TABLE `__contact_identities`;--> statement-breakpoint
 DROP TABLE `__contact_sources`;--> statement-breakpoint
 

@@ -205,20 +205,55 @@ describe("0020_contacts_backfill migration", () => {
 
     runMigrations(testDb.db, MIGRATIONS_FOLDER)
 
-    // Client details win over vendor details, then the first event
+    // Client details win over vendor details, then the first event; the other name is kept as a note
     const sam = contactByName(sqlite, "Sam Rivera")
     expect(sam.email).toBe("sam@example.com")
     expect(allContacts(sqlite).filter((row) => row.email?.toLowerCase().includes("sam@"))).toHaveLength(1)
     expect(standingRoles(sqlite, sam.id)).toEqual(["client", "vendor:other"])
 
     expect(assignments(sqlite, "e1")).toEqual([expect.objectContaining({ contactId: sam.id, role: "client" })])
-    expect(assignments(sqlite, "e2")).toEqual([expect.objectContaining({ contactId: sam.id, role: "client" })])
+    expect(assignments(sqlite, "e2")).toEqual([
+      expect.objectContaining({ contactId: sam.id, role: "client", notes: "Also recorded as: Samantha Rivera" }),
+    ])
 
     const chrisIds = allContacts(sqlite).filter((row) => row.displayName === "Chris Park").map((row) => row.id)
     expect(new Set(chrisIds).size).toBe(2)
     expect(assignments(sqlite, "e3").map((row) => [row.role, row.contactId])).toEqual([
       ["client", expect.any(String)],
       ["vendor", sam.id],
+    ])
+  })
+
+  it("merges details across sources that share an email and keeps conflicting ones as assignment notes", async () => {
+    testDb = await createPreBackfillDb()
+    const { sqlite } = testDb
+    insertEvent(sqlite, "e1", { email: "alex@kim.co" })
+    insertEvent(sqlite, "e2", { name: "Alex Kim", email: "ALEX@kim.co" })
+    insertEvent(sqlite, "e3")
+    insertEvent(sqlite, "e4", { name: "Alexandra Kim", email: "alex@kim.co", phone: "555-0999" })
+    insertVendor(sqlite, "tb-1", "e3", { title: "Kim Catering" }, { name: "Alex Kim", email: "alex@kim.co", phone: "555-0300" })
+
+    runMigrations(testDb.db, MIGRATIONS_FOLDER)
+
+    // The first client has only an email; the name, phone and business come from the other sources
+    expect(allContacts(sqlite)).toEqual([
+      expect.objectContaining({
+        kind: "individual",
+        firstName: "Alex",
+        lastName: "Kim",
+        organizationName: "Kim Catering",
+        displayName: "Alex Kim",
+        email: "alex@kim.co",
+        phone: "555-0999",
+      }),
+    ])
+
+    // Values that didn't make it onto the contact stay with the event they came from
+    expect(assignments(sqlite, "e1")[0]!.notes).toBeNull()
+    expect(assignments(sqlite, "e2")[0]!.notes).toBeNull()
+    expect(assignments(sqlite, "e4")[0]!.notes).toBe("Also recorded as: Alexandra Kim")
+    expect(assignments(sqlite, "e3")).toEqual([
+      expect.objectContaining({ role: "vendor", roleLabel: "Kim Catering", notes: "Also recorded as: 555-0300" }),
     ])
   })
 
@@ -366,7 +401,7 @@ describe("0020_contacts_backfill migration", () => {
         "INSERT INTO contacts (id, display_name, created_at, updated_at) VALUES ('already-primary', 'Already Primary', ?, ?)",
       )
       .run(now, now)
-    insertEvent(sqlite, "e1", { name: "Taylor New Name", email: "TAYLOR@example.com" })
+    insertEvent(sqlite, "e1", { name: "Taylor New Name", email: "TAYLOR@example.com", phone: "555-0400" })
     insertEvent(sqlite, "e2", { name: "Morgan Lane", email: "morgan@example.com" })
     sqlite
       .prepare(
@@ -376,10 +411,13 @@ describe("0020_contacts_backfill migration", () => {
 
     runMigrations(testDb.db, MIGRATIONS_FOLDER)
 
-    // The existing contact is linked as-is, not overwritten
-    expect(contactByName(sqlite, "Taylor Existing").id).toBe("existing")
+    // The existing contact is linked, not overwritten: only its missing phone is filled in,
+    // and the differing legacy name is kept on the assignment
+    expect(contactByName(sqlite, "Taylor Existing")).toMatchObject({ id: "existing", firstName: "Taylor", phone: "555-0400" })
     expect(allContacts(sqlite).some((row) => row.displayName === "Taylor New Name")).toBe(false)
-    expect(assignments(sqlite, "e1")).toEqual([expect.objectContaining({ contactId: "existing", isPrimary: 1 })])
+    expect(assignments(sqlite, "e1")).toEqual([
+      expect.objectContaining({ contactId: "existing", isPrimary: 1, notes: "Also recorded as: Taylor New Name" }),
+    ])
     expect(standingRoles(sqlite, "existing")).toEqual(["client"])
 
     // Archived contacts don't claim the email, so a new contact is created
