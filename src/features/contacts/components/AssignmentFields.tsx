@@ -8,6 +8,7 @@ import type { AssignmentValues } from "../lib/assignmentForm"
 import { getSwatch } from "../lib/contactStyles"
 import { ROLE_LABELS } from "../lib/eventContactsPanel"
 import { FormField } from "./FormField"
+import { InlineQueryError } from "./InlineQueryError"
 import { SegmentedControl } from "./SegmentedControl"
 
 const ROLE_OPTIONS = (["client", "coordinator", "vendor"] as const).map((role) => ({
@@ -36,7 +37,8 @@ export const AssignmentFields: React.FC<AssignmentFieldsProps> = ({
   showRolePicker = true,
   categoryError,
 }) => {
-  const { data: categories = [] } = useVendorCategories()
+  const categoriesQuery = useVendorCategories()
+  const categories = categoriesQuery.data ?? []
   const notesId = useId()
 
   const handleRoleChange = (role: ContactRoleType) => {
@@ -58,29 +60,38 @@ export const AssignmentFields: React.FC<AssignmentFieldsProps> = ({
       {values.role === "vendor" ? (
         <div>
           <p className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">Vendor category</p>
-          <div role="radiogroup" aria-label="Vendor category" className="flex flex-wrap gap-1.5">
-            {categories.map((category) => {
-              const selected = category.id === values.vendorCategoryId
-              return (
-                <button
-                  key={category.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  className={cn(
-                    "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs transition-colors",
-                    selected
-                      ? "border-stone-800 bg-stone-800 text-white"
-                      : "border-border bg-background text-foreground hover:bg-accent",
-                  )}
-                  onClick={() => onChange({ vendorCategoryId: category.id })}
-                >
-                  <span className={cn("size-2 rounded-full", getSwatch(category.colorToken).dot)} aria-hidden />
-                  {category.label}
-                </button>
-              )
-            })}
-          </div>
+          {/* A vendor needs a category, so an empty picker would silently block saving */}
+          {categoriesQuery.isError ? (
+            <InlineQueryError
+              message="Could not load vendor categories."
+              onRetry={() => void categoriesQuery.refetch()}
+              isRetrying={categoriesQuery.isFetching}
+            />
+          ) : (
+            <div role="radiogroup" aria-label="Vendor category" className="flex flex-wrap gap-1.5">
+              {categories.map((category) => {
+                const selected = category.id === values.vendorCategoryId
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    className={cn(
+                      "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs transition-colors",
+                      selected
+                        ? "border-stone-800 bg-stone-800 text-white"
+                        : "border-border bg-background text-foreground hover:bg-accent",
+                    )}
+                    onClick={() => onChange({ vendorCategoryId: category.id })}
+                  >
+                    <span className={cn("size-2 rounded-full", getSwatch(category.colorToken).dot)} aria-hidden />
+                    {category.label}
+                  </button>
+                )
+              })}
+            </div>
+          )}
           {categoryError ? <p className="mt-1 text-xs text-destructive">{categoryError}</p> : null}
         </div>
       ) : null}

@@ -5,10 +5,13 @@ import { deriveInitials } from "~/lib/contacts/contactRules"
 import { cn } from "~/lib/utils"
 
 import { describeStandingRoles } from "../lib/eventContactsPanel"
+import { InlineQueryError } from "./InlineQueryError"
 
 type ContactSearchResultsProps = {
   contacts: ContactWithRoles[]
   isLoading: boolean
+  isError: boolean
+  onRetry: () => void
   hasQuery: boolean
   isAssigned: (contactId: string) => boolean
   disabled: boolean
@@ -18,11 +21,18 @@ type ContactSearchResultsProps = {
 export const ContactSearchResults: React.FC<ContactSearchResultsProps> = ({
   contacts,
   isLoading,
+  isError,
+  onRetry,
   hasQuery,
   isAssigned,
   disabled,
   onSelect,
 }) => {
+  // A failed search must not read as "no matches": that invites creating a duplicate of an existing contact
+  if (isError) {
+    return <InlineQueryError message="Could not search contacts." onRetry={onRetry} isRetrying={isLoading} className="m-2" />
+  }
+
   if (isLoading && contacts.length === 0) {
     return <p className="px-2 py-6 text-center text-xs text-muted-foreground">Searching contacts…</p>
   }

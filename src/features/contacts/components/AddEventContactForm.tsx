@@ -163,6 +163,8 @@ export const AddEventContactForm: React.FC<AddEventContactFormProps> = ({
               <ContactSearchResults
                 contacts={contacts}
                 isLoading={search.isFetching}
+                isError={search.isError}
+                onRetry={() => void search.refetch()}
                 hasQuery={debouncedQuery.trim().length > 0}
                 disabled={isAssigning}
                 isAssigned={(contactId) =>

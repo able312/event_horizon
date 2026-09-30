@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Plus, X } from "lucide-react"
 
 import { Button } from "~/components/atoms/button"
+import { InlineQueryError } from "~/features/contacts/components/InlineQueryError"
 import { SegmentedControl } from "~/features/contacts/components/SegmentedControl"
 import { getRoleBadgeClass, getSwatch } from "~/features/contacts/lib/contactStyles"
 import { ROLE_LABELS } from "~/features/contacts/lib/eventContactsPanel"
@@ -26,8 +27,10 @@ type ContactRolesEditorProps = {
 }
 
 export const ContactRolesEditor: React.FC<ContactRolesEditorProps> = ({ contactId }) => {
-  const { data: roles = [], isLoading } = useContactRoles(contactId)
-  const { data: categories = [] } = useVendorCategories()
+  const rolesQuery = useContactRoles(contactId)
+  const categoriesQuery = useVendorCategories()
+  const roles = rolesQuery.data ?? []
+  const categories = categoriesQuery.data ?? []
   const ensureRole = useEnsureContactRole()
   const removeRole = useRemoveContactRole()
 
@@ -61,8 +64,14 @@ export const ContactRolesEditor: React.FC<ContactRolesEditorProps> = ({ contactI
       }
     >
 
-      {isLoading ? (
+      {rolesQuery.isLoading ? (
         <p className="text-xs text-muted-foreground">Loading roles…</p>
+      ) : rolesQuery.isError ? (
+        <InlineQueryError
+          message="Could not load standing roles."
+          onRetry={() => void rolesQuery.refetch()}
+          isRetrying={rolesQuery.isFetching}
+        />
       ) : roles.length === 0 ? (
         <p className="text-xs text-muted-foreground">No standing roles yet.</p>
       ) : (
@@ -106,7 +115,13 @@ export const ContactRolesEditor: React.FC<ContactRolesEditorProps> = ({ contactI
         <div className="space-y-2 rounded-xs border border-border p-2">
           <SegmentedControl aria-label="Role to add" options={ROLE_OPTIONS} value={pendingRole} onChange={setPendingRole} />
 
-          {pendingRole === "vendor" ? (
+          {pendingRole === "vendor" && categoriesQuery.isError ? (
+            <InlineQueryError
+              message="Could not load vendor categories."
+              onRetry={() => void categoriesQuery.refetch()}
+              isRetrying={categoriesQuery.isFetching}
+            />
+          ) : pendingRole === "vendor" ? (
             <div role="radiogroup" aria-label="Vendor category" className="flex flex-wrap gap-1.5">
               {categories.map((category) => {
                 const selected = category.id === pendingCategoryId
