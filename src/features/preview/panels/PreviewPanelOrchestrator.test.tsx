@@ -9,10 +9,10 @@ const hooksMock = vi.hoisted(() => ({
   useEvent: vi.fn(),
   useFoodSection: vi.fn(),
   useBeverageSection: vi.fn(),
-  useVendorSection: vi.fn(),
   useSetupInstructionSection: vi.fn(),
   useNoteSection: vi.fn(),
   usePaymentsSection: vi.fn(),
+  usePrintableContactGroups: vi.fn(),
 }))
 
 vi.mock("~/hooks/useEvent", () => ({
@@ -24,9 +24,6 @@ vi.mock("~/hooks/useFoodSection", () => ({
 vi.mock("~/hooks/useBeverageSection", () => ({
   useBeverageSection: hooksMock.useBeverageSection,
 }))
-vi.mock("~/hooks/useVendorSection", () => ({
-  useVendorSection: hooksMock.useVendorSection,
-}))
 vi.mock("~/hooks/useSetupInstrucionSection", () => ({
   useSetupInstructionSection: hooksMock.useSetupInstructionSection,
 }))
@@ -36,14 +33,17 @@ vi.mock("~/hooks/useNoteSection", () => ({
 vi.mock("~/hooks/usePaymentsSection", () => ({
   usePaymentsSection: hooksMock.usePaymentsSection,
 }))
+vi.mock("~/hooks/useEventContacts", () => ({
+  usePrintableContactGroups: hooksMock.usePrintableContactGroups,
+}))
 
 function renderPanel(initialEntry: string) {
   hooksMock.useFoodSection.mockReturnValue({ data: [] })
   hooksMock.useBeverageSection.mockReturnValue({ timeblocks: [], items: [] })
-  hooksMock.useVendorSection.mockReturnValue({ data: [] })
   hooksMock.useSetupInstructionSection.mockReturnValue({ data: [] })
   hooksMock.useNoteSection.mockReturnValue({ data: [] })
   hooksMock.usePaymentsSection.mockReturnValue({ data: [] })
+  hooksMock.usePrintableContactGroups.mockReturnValue({ data: [] })
 
   return render(
     <PreviewPreferencesProvider>
@@ -120,8 +120,7 @@ describe("PreviewPanelOrchestrator", () => {
       },
     })
     hooksMock.useFoodSection.mockReturnValue({ data: [] })
-    hooksMock.useVendorSection.mockReturnValue({ data: [] })
-    hooksMock.useSetupInstructionSection.mockReturnValue({ data: [] })
+      hooksMock.useSetupInstructionSection.mockReturnValue({ data: [] })
     hooksMock.useNoteSection.mockReturnValue({ data: [] })
     hooksMock.useBeverageSection.mockReturnValue({
       timeblocks: [],

@@ -88,6 +88,7 @@ describe("CreateEventSidebarForm save timing", () => {
         startDateTime: startIso,
         endDateTime: endIso,
       }),
+      null,
     )
   })
 
@@ -130,6 +131,7 @@ describe("CreateEventSidebarForm save timing", () => {
         startDateTime: secondIso,
         endDateTime: secondIso,
       }),
+      null,
     )
   })
 
@@ -213,6 +215,7 @@ describe("CreateEventSidebarForm save timing", () => {
           startDateTime: null,
           endDateTime: null,
         }),
+        null,
       )
     })
   })
@@ -299,5 +302,35 @@ describe("CreateEventSidebarForm save timing", () => {
         expect.objectContaining({ title: "Retry Draft" }),
       )
     })
+  })
+
+  it("passes the client section as a new contact alongside the event", async () => {
+    const onCreate = vi.fn(async () => undefined)
+    render(<CreateEventSidebarForm onCreate={onCreate} onCancel={vi.fn()} />)
+
+    fireEvent.change(screen.getByPlaceholderText("e.g., Smith Wedding"), { target: { value: "Smith Wedding" } })
+    fireEvent.change(screen.getByLabelText("Client Name"), { target: { value: "Jane Smith" } })
+    fireEvent.change(screen.getByLabelText("Client Email"), { target: { value: "jane@example.com" } })
+    fireEvent.click(screen.getByRole("button", { name: "Create" }))
+
+    await waitFor(() => {
+      expect(onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Smith Wedding" }),
+        expect.objectContaining({ firstName: "Jane", lastName: "Smith", email: "jane@example.com" }),
+      )
+    })
+  })
+
+  it("blocks create until a client with contact details also has a name", () => {
+    render(<CreateEventSidebarForm onCreate={vi.fn(async () => undefined)} onCancel={vi.fn()} />)
+
+    fireEvent.change(screen.getByPlaceholderText("e.g., Smith Wedding"), { target: { value: "Smith Wedding" } })
+    fireEvent.change(screen.getByLabelText("Client Phone"), { target: { value: "555-0100" } })
+
+    expect(screen.getByText("A first or last name is required")).toBeTruthy()
+    expect((screen.getByRole("button", { name: "Create" }) as HTMLButtonElement).disabled).toBe(true)
+
+    fireEvent.change(screen.getByLabelText("Client Name"), { target: { value: "Jane" } })
+    expect((screen.getByRole("button", { name: "Create" }) as HTMLButtonElement).disabled).toBe(false)
   })
 })

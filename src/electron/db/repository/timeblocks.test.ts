@@ -297,30 +297,30 @@ describe("timeblocks.getAllTimelineBlocks", () => {
       createdAt: new Date().toISOString(),
     }).run()
 
-    const blankVendor = repo.insert({
+    const blankTournament = repo.insert({
       eventId,
-      sectionType: "vendor",
+      sectionType: "tournament_detail",
       prefill: {
         mode: "section_default",
-        sectionType: "vendor",
+        sectionType: "tournament_detail",
       },
     })
 
-    const explicitVendor = repo.insert({
+    const explicitTournament = repo.insert({
       eventId,
-      sectionType: "vendor",
-      title: "Stage Vendor",
+      sectionType: "tournament_detail",
+      title: "Shotgun Start",
       details: "Check power access.",
       prefill: {
         mode: "section_default",
-        sectionType: "vendor",
+        sectionType: "tournament_detail",
       },
     })
 
-    expect(blankVendor.title).toBe("")
-    expect(blankVendor.details).toBeNull()
-    expect(explicitVendor.title).toBe("Stage Vendor")
-    expect(explicitVendor.details).toBe("Check power access.")
+    expect(blankTournament.title).toBe("")
+    expect(blankTournament.details).toBeNull()
+    expect(explicitTournament.title).toBe("Shotgun Start")
+    expect(explicitTournament.details).toBe("Check power access.")
   })
 
   it("gets timeblocks by event and section type without note/setup satellites", async () => {

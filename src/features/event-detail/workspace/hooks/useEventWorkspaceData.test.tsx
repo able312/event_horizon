@@ -7,7 +7,6 @@ const useEventMock = vi.fn()
 const useTimelineMock = vi.fn()
 const useFoodSectionMock = vi.fn()
 const useBeverageSectionMock = vi.fn()
-const useVendorSectionMock = vi.fn()
 const useNoteSectionMock = vi.fn()
 const useSetupInstructionSectionMock = vi.fn()
 
@@ -15,7 +14,6 @@ vi.mock("~/hooks/useEvent", () => ({ useEvent: () => useEventMock() }))
 vi.mock("~/hooks/useTimeline", () => ({ useTimeline: () => useTimelineMock() }))
 vi.mock("~/hooks/useFoodSection", () => ({ useFoodSection: () => useFoodSectionMock() }))
 vi.mock("~/hooks/useBeverageSection", () => ({ useBeverageSection: () => useBeverageSectionMock() }))
-vi.mock("~/hooks/useVendorSection", () => ({ useVendorSection: () => useVendorSectionMock() }))
 vi.mock("~/hooks/useNoteSection", () => ({ useNoteSection: () => useNoteSectionMock() }))
 vi.mock("~/hooks/useSetupInstrucionSection", () => ({ useSetupInstructionSection: () => useSetupInstructionSectionMock() }))
 
@@ -54,7 +52,6 @@ describe("useEventWorkspaceData", () => {
       items: [],
       ...common,
     })
-    useVendorSectionMock.mockReturnValue({ data: [], ...common })
     useNoteSectionMock.mockReturnValue({ data: [], ...common })
     useSetupInstructionSectionMock.mockReturnValue({ data: [], ...common })
 

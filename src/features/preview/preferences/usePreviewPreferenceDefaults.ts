@@ -6,7 +6,6 @@ import { useFoodSection } from "~/hooks/useFoodSection"
 import { useNoteSection } from "~/hooks/useNoteSection"
 import { usePaymentsSection } from "~/hooks/usePaymentsSection"
 import { useSetupInstructionSection } from "~/hooks/useSetupInstrucionSection"
-import { useVendorSection } from "~/hooks/useVendorSection"
 import { usePreviewPreferences } from "~/features/preview/preferences/PreviewPreferencesContext"
 
 /**
@@ -18,21 +17,19 @@ export function usePreviewPreferenceDefaults() {
   const { data: event } = useEvent()
   const { data: food } = useFoodSection()
   const { timeblocks: beverageTimeblocks } = useBeverageSection()
-  const { data: vendors } = useVendorSection()
   const { data: setup } = useSetupInstructionSection()
   const { data: notes } = useNoteSection()
   const { data: payments } = usePaymentsSection()
 
   useEffect(() => {
     if (state.defaultsApplied.beoTimeblocks) return
-    if (!food && !beverageTimeblocks && !vendors && !setup && !notes) return
+    if (!food && !beverageTimeblocks && !setup && !notes) return
 
     dispatch({
       type: "beo/applyDefaultTimeblocks",
       selections: {
         food: (food ?? []).map((tb) => tb.id),
         beverage: beverageTimeblocks.map((tb) => tb.id),
-        vendors: (vendors ?? []).map((tb) => tb.id),
         setup: (setup ?? []).map((tb) => tb.id),
         notes: (notes ?? []).map((tb) => tb.id),
       },
@@ -44,7 +41,6 @@ export function usePreviewPreferenceDefaults() {
     notes,
     setup,
     state.defaultsApplied.beoTimeblocks,
-    vendors,
   ])
 
   useEffect(() => {

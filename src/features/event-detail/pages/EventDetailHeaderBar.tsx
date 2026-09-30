@@ -13,11 +13,13 @@ import {
 import { Input } from "~/components/atoms/input"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/atoms/tooltip"
 import type { UpdateEvent } from "~/definitions/database"
+import { selectPrimaryClient } from "~/features/contacts/lib/eventContactsPanel"
 import {
   buildGoogleCalendarCreateUrl,
   buildGoogleCalendarUpdateUrl,
   type GoogleCalendarEventInput,
 } from "~/lib/googleCalendar"
+import { getEventContactsPanel } from "~/lib/ipc/eventContacts"
 import { getIncompleteTouchpointsByEventId } from "~/lib/ipc/touchpoints"
 import { openExternalUrl } from "~/lib/ipc/system"
 import {
@@ -96,12 +98,16 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
     if (!canPushToCalendar) return
 
     try {
-      const incomplete = await getIncompleteTouchpointsByEventId(eventId)
+      const [incomplete, contactsPanel] = await Promise.all([
+        getIncompleteTouchpointsByEventId(eventId),
+        getEventContactsPanel(eventId),
+      ])
       const options = {
         incompleteTouchpoints: (incomplete ?? []).map((row) => ({
           title: row.title,
           dueDate: row.dueDate,
         })),
+        client: selectPrimaryClient(contactsPanel),
       }
       const url = hasCalendarId
         ? buildGoogleCalendarUpdateUrl(event, options)

@@ -1,9 +1,12 @@
-import Database from "better-sqlite3"
+import Database, { type RunResult } from "better-sqlite3"
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3"
+import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core"
 import { migrate } from "drizzle-orm/better-sqlite3/migrator"
 import * as schema from "./schema.js"
 
 export type AppDatabase = BetterSQLite3Database<typeof schema>
+/** The database or an open transaction - lets repositories compose inside one transaction. */
+export type DbExecutor = BaseSQLiteDatabase<"sync", RunResult, typeof schema>
 export type SqliteConnection = ReturnType<typeof Database>
 
 export function createSqliteConnection(dbPath: string): SqliteConnection {

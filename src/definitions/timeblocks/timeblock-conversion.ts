@@ -123,8 +123,6 @@ export function getConversionTypeLabel(sectionType: TimeblockType): string {
       return "Note"
     case SECTION_TYPE.BEVERAGE:
       return "Beverage"
-    case SECTION_TYPE.VENDOR:
-      return "Logistics"
     default:
       return sectionType
   }

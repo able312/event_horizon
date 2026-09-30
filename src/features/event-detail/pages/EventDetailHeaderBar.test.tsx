@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import EventDetailHeaderBar from "./EventDetailHeaderBar"
 import type { EventResource } from "../types"
+import type { EventContactsPanel } from "~/definitions/contacts"
 import type { Event } from "~/definitions/database"
 
 function makeEvent(overrides: Partial<Event> = {}): Event {
@@ -15,9 +16,6 @@ function makeEvent(overrides: Partial<Event> = {}): Event {
     status: "confirmed",
     startDateTime: "2026-05-12T18:30:00.000Z",
     endDateTime: "2026-05-12T21:00:00.000Z",
-    clientName: "Example Name",
-    clientEmail: "example.name@nocompany.com",
-    clientPhone: "2265551234",
     minGuests: 80,
     maxGuests: 120,
     guestCountFinal: 0,
@@ -42,10 +40,37 @@ function makeEventResource(overrides: Partial<EventResource> = {}): EventResourc
   }
 }
 
+const contactsPanel: EventContactsPanel = {
+  eventId: "event-1",
+  groups: [
+    {
+      role: "client",
+      items: [
+        {
+          eventContactId: "ec-1",
+          contactId: "contact-1",
+          displayName: "Example Name",
+          initials: "EN",
+          email: "example.name@nocompany.com",
+          phone: "2265551234",
+          roleLabel: null,
+          notes: null,
+          vendorCategory: null,
+          isPrimary: true,
+          contactArchived: false,
+        },
+      ],
+    },
+    { role: "coordinator", items: [] },
+    { role: "vendor", items: [] },
+  ],
+}
+
 describe("EventDetailHeaderBar", () => {
   beforeEach(() => {
     vi.mocked(window.electron.ipcRenderer.invoke).mockImplementation(async (channel: string) => {
       if (channel === "touchpoints:get-incomplete-by-event-id") return []
+      if (channel === "event-contacts:get-panel") return { ok: true, data: contactsPanel }
       if (channel === "system:open-external") return undefined
       return undefined
     })
@@ -82,6 +107,10 @@ describe("EventDetailHeaderBar", () => {
         expect.stringContaining("https://calendar.google.com/calendar/u/0/r/eventedit"),
       )
     })
+    const openedUrl = vi
+      .mocked(window.electron.ipcRenderer.invoke)
+      .mock.calls.find(([channel]) => channel === "system:open-external")?.[1] as string
+    expect(new URL(openedUrl).searchParams.get("details")).toContain("Name: Example Name")
     expect(screen.getByPlaceholderText("Paste Google Calendar ID")).toBeTruthy()
     expect(
       screen.queryByRole("button", { name: "Create Event in Google Calendar" }),

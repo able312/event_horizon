@@ -11,9 +11,10 @@ import {
 } from "./selectors"
 
 describe("preview preference selectors", () => {
-  it("treats any populated contact field as available", () => {
-    expect(hasContactInfo({ clientName: null, clientPhone: "555", clientEmail: null })).toBe(true)
-    expect(hasContactInfo({ clientName: "", clientPhone: "", clientEmail: "" })).toBe(false)
+  it("treats any populated primary client field as available", () => {
+    expect(hasContactInfo({ displayName: "", phone: "555", email: null })).toBe(true)
+    expect(hasContactInfo({ displayName: " ", phone: "", email: "" })).toBe(false)
+    expect(hasContactInfo(null)).toBe(false)
   })
 
   it("treats beverage section as available with items or timeblocks", () => {

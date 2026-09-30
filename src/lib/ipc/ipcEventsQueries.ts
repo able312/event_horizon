@@ -1,3 +1,4 @@
+import type { NewContact } from "~/definitions/contacts"
 import type { NewEvent, Event, UpdateEvent } from "~/definitions/database"
 import type { EventSearchRequest, EventSearchResponse } from "~/definitions/ipc"
 import type {
@@ -26,8 +27,9 @@ export function getEventById(id: string): Promise<Event> {
   return window.electron.ipcRenderer.invoke("events:get-by-id", id) as Promise<Event>
 }
 
-export function createEvent(newEvent: NewEvent): Promise<Event> {
-  return window.electron.ipcRenderer.invoke("events:post", newEvent) as Promise<Event>
+/** When a client is given, the back end also assigns them as the event's primary client. */
+export function createEvent(newEvent: NewEvent, client?: NewContact | null): Promise<Event> {
+  return window.electron.ipcRenderer.invoke("events:post", newEvent, client ?? null) as Promise<Event>
 }
 
 export function updateEvent(id: string, updates: UpdateEvent): Promise<Event> {

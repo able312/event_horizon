@@ -1,7 +1,8 @@
 import type { Event } from "~/definitions/database"
 import { formatDate, getDateString } from "~/lib/formatters"
 import { SectionFrame } from "~/features/preview/components/SectionFrame"
-import { hasContactInfo } from "~/features/preview/preferences/selectors"
+import { PrintContactTables } from "~/features/preview/pages/beo/PrintContactTables"
+import { usePrintableContactGroups } from "~/hooks/useEventContacts"
 
 type PrintHeaderProps = {
   event: Event
@@ -14,9 +15,11 @@ export function PrintHeader({
   showContactInfo = true,
   showInternalNotes = true,
 }: PrintHeaderProps) {
+  const { data: contactGroups } = usePrintableContactGroups(event?.id)
+
   if (!event) return null
 
-  const contactVisible = showContactInfo && hasContactInfo(event)
+  const contactVisible = showContactInfo && (contactGroups?.length ?? 0) > 0
   const notesVisible = showInternalNotes && Boolean(event.internalNotes?.trim())
 
   return (
@@ -60,26 +63,7 @@ export function PrintHeader({
 
       {contactVisible ? (
         <SectionFrame title="Contact Information">
-          <dl className="grid grid-cols-[auto_1fr_auto_1fr_auto_1fr] gap-x-4 gap-y-1 text-sm">
-            {event.clientName?.trim() ? (
-              <>
-                <dt className="text-muted-foreground">Name</dt>
-                <dd className="font-medium">{event.clientName}</dd>
-              </>
-            ) : null}
-            {event.clientPhone?.trim() ? (
-              <>
-                <dt className="text-muted-foreground">Phone</dt>
-                <dd className="font-medium">{event.clientPhone}</dd>
-              </>
-            ) : null}
-            {event.clientEmail?.trim() ? (
-              <>
-                <dt className="text-muted-foreground">Email</dt>
-                <dd className="font-medium">{event.clientEmail}</dd>
-              </>
-            ) : null}
-          </dl>
+          <PrintContactTables groups={contactGroups ?? []} />
         </SectionFrame>
       ) : null}
     </>

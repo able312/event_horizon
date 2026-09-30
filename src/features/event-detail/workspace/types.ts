@@ -5,7 +5,6 @@ export type WorkspaceCategoryId =
   | "overview"
   | "food"
   | "beverage"
-  | "logistics"
   | "tournament"
   | "financial"
 

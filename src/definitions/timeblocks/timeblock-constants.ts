@@ -7,7 +7,6 @@ export const SECTION_TYPE = {
   FOOD: "food",
   BEVERAGE: "beverage",
   SETUP_INSTRUCTION: "setup_instruction",
-  VENDOR: "vendor",
   NOTE: "note",
   TOURNAMENT_DETAIL: "tournament_detail",
   CART_DETAIL: "cart_detail",

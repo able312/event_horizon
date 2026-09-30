@@ -4,7 +4,6 @@ import { useEvent } from "~/hooks/useEvent"
 import { useTimeline } from "~/hooks/useTimeline"
 import { useFoodSection } from "~/hooks/useFoodSection"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
-import { useVendorSection } from "~/hooks/useVendorSection"
 import { useNoteSection } from "~/hooks/useNoteSection"
 import { useSetupInstructionSection } from "~/hooks/useSetupInstrucionSection"
 
@@ -20,7 +19,6 @@ export function useEventWorkspaceData(): EventWorkspaceData {
   const timelineQuery = useTimeline()
   const foodQuery = useFoodSection()
   const beverageQuery = useBeverageSection()
-  const vendorQuery = useVendorSection()
   const noteQuery = useNoteSection()
   const setupQuery = useSetupInstructionSection()
 
@@ -28,11 +26,10 @@ export function useEventWorkspaceData(): EventWorkspaceData {
     () => [
       ...(foodQuery.data ?? EMPTY_SECTION_ROWS),
       ...(beverageQuery.timeblocks ?? EMPTY_SECTION_ROWS),
-      ...(vendorQuery.data ?? EMPTY_SECTION_ROWS),
       ...(noteQuery.data ?? EMPTY_SECTION_ROWS),
       ...(setupQuery.data ?? EMPTY_SECTION_ROWS),
     ],
-    [foodQuery.data, beverageQuery.timeblocks, vendorQuery.data, noteQuery.data, setupQuery.data],
+    [foodQuery.data, beverageQuery.timeblocks, noteQuery.data, setupQuery.data],
   )
 
   const navModel = useMemo(
@@ -50,7 +47,6 @@ export function useEventWorkspaceData(): EventWorkspaceData {
     timelineQuery.isLoading ||
     foodQuery.isLoading ||
     beverageQuery.isLoading ||
-    vendorQuery.isLoading ||
     noteQuery.isLoading ||
     setupQuery.isLoading
 
@@ -59,7 +55,6 @@ export function useEventWorkspaceData(): EventWorkspaceData {
     timelineQuery.isFetching ||
     foodQuery.isFetching ||
     beverageQuery.isFetching ||
-    vendorQuery.isFetching ||
     noteQuery.isFetching ||
     setupQuery.isFetching
 
@@ -68,7 +63,6 @@ export function useEventWorkspaceData(): EventWorkspaceData {
     (timelineQuery.error as Error | null) ||
     (foodQuery.error as Error | null) ||
     (beverageQuery.error as Error | null) ||
-    (vendorQuery.error as Error | null) ||
     (noteQuery.error as Error | null) ||
     (setupQuery.error as Error | null) ||
     null
@@ -79,7 +73,6 @@ export function useEventWorkspaceData(): EventWorkspaceData {
       timelineQuery.refetch(),
       foodQuery.refetch(),
       beverageQuery.refetch(),
-      vendorQuery.refetch(),
       noteQuery.refetch(),
       setupQuery.refetch(),
     ])

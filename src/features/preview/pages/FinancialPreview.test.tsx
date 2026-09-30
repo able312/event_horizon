@@ -18,6 +18,7 @@ const hooksMock = vi.hoisted(() => ({
   useFoodSection: vi.fn(),
   useBeverageSection: vi.fn(),
   usePaymentsSection: vi.fn(),
+  usePrimaryClient: vi.fn(),
 }))
 
 vi.mock("~/hooks/useEvent", () => ({
@@ -40,6 +41,10 @@ vi.mock("~/hooks/usePaymentsSection", () => ({
   usePaymentsSection: hooksMock.usePaymentsSection,
 }))
 
+vi.mock("~/hooks/useEventContacts", () => ({
+  usePrimaryClient: hooksMock.usePrimaryClient,
+}))
+
 function renderFinancial() {
   return render(
     <PreviewPreferencesProvider>
@@ -57,11 +62,12 @@ describe("FinancialPreview", () => {
   it("renders combined menu/food/beverage totals using shared workspace model", async () => {
     hooksMock.useEvent.mockReturnValue({
       data: {
-        clientName: "Alex Doe",
-        clientPhone: "555-555-5555",
-        clientEmail: "alex@example.com",
+        id: "event-1",
         startDateTime: "2026-06-01T16:00:00.000Z",
       },
+    })
+    hooksMock.usePrimaryClient.mockReturnValue({
+      data: { contactId: "contact-1", displayName: "Alex Doe", phone: "555-555-5555", email: "alex@example.com" },
     })
 
     hooksMock.useMenuOfChargeItemsSection.mockReturnValue({
@@ -88,6 +94,9 @@ describe("FinancialPreview", () => {
     })
 
     expect(screen.getByText("The Club at Westlinks")).toBeTruthy()
+    expect(screen.getByText("Alex Doe")).toBeTruthy()
+    expect(screen.getByText("555-555-5555")).toBeTruthy()
+    expect(screen.getByText("alex@example.com")).toBeTruthy()
     expect(screen.queryByText("Estimate Total")).toBeNull()
     expect(screen.queryByText("Charges Total")).toBeNull()
     expect(screen.getByText("Grand Total")).toBeTruthy()
@@ -99,10 +108,11 @@ describe("FinancialPreview", () => {
   it("does not render literal zero rows for incomplete food or beverage lines", async () => {
     hooksMock.useEvent.mockReturnValue({
       data: {
-        clientName: "Alex Doe",
+        id: "event-1",
         startDateTime: "2026-06-01T16:00:00.000Z",
       },
     })
+    hooksMock.usePrimaryClient.mockReturnValue({ data: null })
     hooksMock.useMenuOfChargeItemsSection.mockReturnValue({ data: [] })
     hooksMock.useFoodSection.mockReturnValue({
       data: [

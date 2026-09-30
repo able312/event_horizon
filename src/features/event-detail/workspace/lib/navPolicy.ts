@@ -2,7 +2,6 @@ import {
   LayoutDashboard,
   UtensilsCrossed,
   Wine,
-  Truck,
   Trophy,
   CircleDollarSign,
   type LucideIcon,
@@ -41,12 +40,6 @@ export const WORKSPACE_CATEGORIES = [
     label: "Beverage",
     slug: "beverage",
     icon: Wine,
-  },
-  {
-    id: "logistics",
-    label: "Logistics",
-    slug: "logistics",
-    icon: Truck,
   },
   {
     id: "tournament",
@@ -96,8 +89,6 @@ export function getSectionTypeLabel(sectionType: TimeblockType | undefined): str
       return "Food"
     case SECTION_TYPE.BEVERAGE:
       return "Beverage"
-    case SECTION_TYPE.VENDOR:
-      return "Logistics"
     case SECTION_TYPE.SETUP_INSTRUCTION:
       return "Setup Instruction"
     case SECTION_TYPE.NOTE:
@@ -144,8 +135,6 @@ export function getAggregateCategoryIdForSectionType(
       return "food"
     case SECTION_TYPE.BEVERAGE:
       return "beverage"
-    case SECTION_TYPE.VENDOR:
-      return "logistics"
     case SECTION_TYPE.TOURNAMENT_DETAIL:
     case SECTION_TYPE.CART_DETAIL:
       return "tournament"

@@ -12,6 +12,7 @@ import { useGenerateMenuState } from './hooks/useGenerateMenuState'
 
 const EventDetail = lazy(() => import('~/routes/EventDetail'))
 const Preview = lazy(() => import('~/routes/Preview'))
+const Contacts = lazy(() => import('~/routes/Contacts'))
 const NotFound = lazy(() =>
   import('./routes/NotFound').then((module) => ({
     default: module.NotFound,
@@ -70,6 +71,24 @@ function App() {
           element={
             <Suspense fallback={<RouteFallback />}>
               <Preview />
+            </Suspense>
+          }
+        />
+
+        <Route
+          path="/contacts"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <Contacts />
+            </Suspense>
+          }
+        />
+
+        <Route
+          path="/contacts/:contactId"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <Contacts />
             </Suspense>
           }
         />

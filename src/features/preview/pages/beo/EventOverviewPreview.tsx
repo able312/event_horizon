@@ -16,7 +16,6 @@ import { useEvent } from "~/hooks/useEvent"
 import { useFoodSection } from "~/hooks/useFoodSection"
 import { useNoteSection } from "~/hooks/useNoteSection"
 import { useSetupInstructionSection } from "~/hooks/useSetupInstrucionSection"
-import { useVendorSection } from "~/hooks/useVendorSection"
 import { PrintHeader } from "./EventOverviewHeader"
 import {
   BeverageBarListHeading,
@@ -28,7 +27,6 @@ import { FoodTimeblockDetails } from "./sections/FoodDetails"
 import { NoteTimeblockDetails } from "./sections/NoteDetails"
 import { SetupInstructionTimeblockDetails } from "./sections/SetupInstructionDetails"
 import { TournamentDetails } from "./sections/TournamentDetails"
-import { VendorTimeblockDetails } from "./sections/VendorDetails"
 
 export function EventOverviewPreview() {
   const { data: event } = useEvent()
@@ -37,7 +35,6 @@ export function EventOverviewPreview() {
 
   const { data: food } = useFoodSection()
   const { timeblocks: beverageTimeblocks, items: beverageItems } = useBeverageSection()
-  const { data: vendors } = useVendorSection()
   const { data: setup } = useSetupInstructionSection()
   const { data: notes } = useNoteSection()
 
@@ -45,7 +42,6 @@ export function EventOverviewPreview() {
 
   const availableFoodIds = (food ?? []).map((tb) => tb.id)
   const availableBeverageIds = beverageTimeblocks.map((tb) => tb.id)
-  const availableVendorIds = (vendors ?? []).map((tb) => tb.id)
   const availableSetupIds = (setup ?? []).map((tb) => tb.id)
   const availableNoteIds = (notes ?? []).map((tb) => tb.id)
 
@@ -56,9 +52,6 @@ export function EventOverviewPreview() {
   const selectedBeverageIds = state.defaultsApplied.beoTimeblocks
     ? filterSelectedIds(prefs.selectedTimeblockIds.beverage, availableBeverageIds)
     : availableBeverageIds
-  const selectedVendorIds = state.defaultsApplied.beoTimeblocks
-    ? filterSelectedIds(prefs.selectedTimeblockIds.vendors, availableVendorIds)
-    : availableVendorIds
   const selectedSetupIds = state.defaultsApplied.beoTimeblocks
     ? filterSelectedIds(prefs.selectedTimeblockIds.setup, availableSetupIds)
     : availableSetupIds
@@ -76,9 +69,6 @@ export function EventOverviewPreview() {
   const selectedBeverage = sortTimeblocksByTime(beverageTimeblocks).filter((tb) =>
     selectedBeverageIds.includes(tb.id),
   )
-  const selectedVendors = sortTimeblocksByTime(vendors).filter((tb) =>
-    selectedVendorIds.includes(tb.id),
-  )
   const selectedSetup = sortTimeblocksByTime(setup).filter((tb) =>
     selectedSetupIds.includes(tb.id),
   )
@@ -90,7 +80,6 @@ export function EventOverviewPreview() {
     hideEmptySpecialOrders: true,
   }).filter((section) => section.items.length > 0)
 
-  const showVendors = prefs.sections.vendors && selectedVendors.length > 0
   const showFood = prefs.sections.food && selectedFood.length > 0
   const showBeverage =
     prefs.sections.beverage &&
@@ -106,7 +95,6 @@ export function EventOverviewPreview() {
   return (
     <PreviewDocument
       continuationHeadings={{
-        vendors: <SectionFrameHeading title="Vendor Details (continued)" />,
         food: <SectionFrameHeading title="Food (continued)" />,
         beverage: <SectionFrameHeading title="Beverage (continued)" />,
         setup: <SectionFrameHeading title="Setup Instructions (continued)" />,
@@ -120,25 +108,6 @@ export function EventOverviewPreview() {
           showInternalNotes={prefs.showInternalNotes}
         />
       </PreviewBlock>
-
-      {showVendors
-        ? selectedVendors.map((vendor, index) => {
-            const isFirst = index === 0
-            const isLast = index === selectedVendors.length - 1
-            return (
-              <PreviewBlock
-                key={`beo-vendor-${vendor.id}`}
-                id={`beo-vendor-${vendor.id}`}
-                continuationKey="vendors"
-              >
-                {isFirst ? <SectionFrameHeading title="Vendor Details" /> : null}
-                <SectionFrameItem isLast={isLast}>
-                  <VendorTimeblockDetails vendor={vendor} />
-                </SectionFrameItem>
-              </PreviewBlock>
-            )
-          })
-        : null}
 
       {showTournament ? (
         <PreviewBlock id="beo-tournament" breakBefore keepTogether>

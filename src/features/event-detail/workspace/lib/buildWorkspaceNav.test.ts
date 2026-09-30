@@ -66,7 +66,6 @@ describe("buildWorkspaceNav", () => {
       "category:overview",
       "category:food",
       "category:beverage",
-      "category:logistics",
       "category:tournament",
       "category:financial",
     ])

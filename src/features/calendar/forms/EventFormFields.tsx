@@ -7,14 +7,12 @@ import {
   isValidEventDateRange,
   resolveEndDateTimeForStart,
 } from "~/lib/events/eventDateRange"
+import { formFieldClasses } from "./eventFormStyles"
 
 export interface EventFormValues {
   title: string
   type: EventType
   status: EventStatus
-  clientName: string
-  clientEmail: string
-  clientPhone: string
   startDateTime: string | null
   endDateTime: string | null
   minGuests: number
@@ -25,10 +23,9 @@ interface EventFormFieldsProps {
   values: EventFormValues
   onChange: (updates: Partial<EventFormValues>) => void
   autoFocusTitle?: boolean
+  /** Rendered between status and dates, e.g. the new-client inputs on the create form */
+  clientFields?: React.ReactNode
 }
-
-const formFieldClasses =
-  "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-stone-100 placeholder:text-stone-400 focus:border-white/30 focus:outline-none"
 
 const dateTimeFieldClasses =
   "border-white/15 bg-white/5 text-stone-100 placeholder:text-stone-400 focus-visible:border-white/30"
@@ -40,6 +37,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
   values,
   onChange,
   autoFocusTitle = false,
+  clientFields,
 }) => {
   const rangeInvalid = !isValidEventDateRange(values.startDateTime, values.endDateTime)
 
@@ -98,35 +96,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
         </div>
       </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-stone-100">Client Name</label>
-        <input
-          type="text"
-          value={values.clientName}
-          onChange={(e) => onChange({ clientName: e.target.value })}
-          className={formFieldClasses}
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-stone-100">Client Email</label>
-        <input
-          type="email"
-          value={values.clientEmail}
-          onChange={(e) => onChange({ clientEmail: e.target.value })}
-          className={formFieldClasses}
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-stone-100">Client Phone</label>
-        <input
-          type="tel"
-          value={values.clientPhone}
-          onChange={(e) => onChange({ clientPhone: e.target.value })}
-          className={formFieldClasses}
-        />
-      </div>
+      {clientFields}
 
       <DateTimeInput
         label="Start Date"

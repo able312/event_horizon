@@ -41,6 +41,10 @@ vi.mock("./CalendarPage", () => ({
   },
 }))
 
+vi.mock("~/hooks/useEventContacts", () => ({
+  usePrimaryClients: () => ({ data: {} }),
+}))
+
 vi.mock("~/features/calendar/views/EventsTable", () => ({
   default: ({
     onEdit,
@@ -62,9 +66,6 @@ vi.mock("~/features/calendar/views/EventsTable", () => ({
               status: "new_lead",
               startDateTime: null,
               endDateTime: null,
-              clientName: "",
-              clientEmail: "",
-              clientPhone: "",
               minGuests: 0,
               maxGuests: 0,
               createdAt: "created",

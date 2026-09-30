@@ -19,12 +19,15 @@ import { Link, useLocation } from "react-router"
 import { EVENT_TYPE_LABELS, EVENT_TYPE_COLORS, EVENT_STATUS_LABELS, EVENT_STATUS_COLORS } from "~/definitions/events/ui"
 import { formatDate } from "~/lib/formatters"
 import { EntityKebabMenu } from "~/components/atoms/entity-kebab-menu"
+import type { PrimaryClient } from "~/definitions/contacts"
 import type { Event } from "~/definitions/database"
 import { buildEventDetailEntryPath } from "~/features/event-detail/workspace/lib/eventDetailRouteState"
 
 interface EventsTableProps {
   /** Array of events to display */
   events: Event[]
+  /** Primary client per event id, shown in the Client column */
+  clientsByEventId?: Record<string, PrimaryClient>
   /** Loading state for rendering a neutral empty row while month data is fetching */
   isLoading?: boolean
   /** Callback when Edit is clicked */
@@ -40,6 +43,7 @@ interface EventsTableProps {
  */
 const EventsTable: React.FC<EventsTableProps> = ({
   events,
+  clientsByEventId,
   isLoading = false,
   onEdit,
   onDelete,
@@ -88,6 +92,7 @@ const EventsTable: React.FC<EventsTableProps> = ({
               <EventTableRow 
                 key={event.id} 
                 event={event} 
+                clientName={clientsByEventId?.[event.id]?.displayName}
                 onEdit={onEdit}
                 onDelete={onDelete}
                 returnTo={returnTo}
@@ -108,6 +113,7 @@ const EventsTable: React.FC<EventsTableProps> = ({
  */
 interface EventTableRowProps {
   event: Event
+  clientName?: string
   onEdit?: (event: Event) => void
   onDelete?: (eventId: string) => void
   returnTo: string
@@ -115,6 +121,7 @@ interface EventTableRowProps {
 
 const EventTableRow: React.FC<EventTableRowProps> = ({
   event,
+  clientName,
   onEdit,
   onDelete,
   returnTo,
@@ -142,7 +149,7 @@ const EventTableRow: React.FC<EventTableRowProps> = ({
       <td className="px-4 py-3 text-sm">{formatDate(event.startDateTime)}</td>
 
       {/* Client Name */}
-      <td className="px-4 py-3 text-sm">{event.clientName || "-"}</td>
+      <td className="px-4 py-3 text-sm">{clientName || "-"}</td>
 
       {/* Guest Count */}
       <td className="px-4 py-3 text-sm">

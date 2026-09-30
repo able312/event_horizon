@@ -73,7 +73,6 @@ export function previewPreferencesReducer(
           selectedTimeblockIds: {
             food: [...action.selections.food],
             beverage: [...action.selections.beverage],
-            vendors: [...action.selections.vendors],
             setup: [...action.selections.setup],
             notes: [...action.selections.notes],
           },

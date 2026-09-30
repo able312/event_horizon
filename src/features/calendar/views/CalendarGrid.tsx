@@ -18,6 +18,7 @@ import React from "react"
 import { useLocation, useNavigate } from "react-router"
 import { AlertTriangle } from "lucide-react"
 import { EVENT_TYPE_COLORS } from "~/definitions/events/ui"
+import type { PrimaryClient } from "~/definitions/contacts"
 import type { Event } from "~/definitions/database"
 import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
 import { buildEventDetailEntryPath } from "~/features/event-detail/workspace/lib/eventDetailRouteState"
@@ -29,6 +30,8 @@ const MAX_VISIBLE_DAY_EVENTS = 3
 interface CalendarGridProps {
   /** Events to display on the calendar */
   events: Event[]
+  /** Primary client per event id, from the contacts table */
+  clientsByEventId?: Record<string, PrimaryClient>
   /** Current year being displayed */
   year: number
   /** Current month being displayed (0-11) */
@@ -55,6 +58,7 @@ interface CalendarGridProps {
  */
 const CalendarGrid: React.FC<CalendarGridProps> = ({
   events,
+  clientsByEventId,
   year,
   month,
   startingDay,
@@ -254,7 +258,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         </span>
                       ) : null}
                     </div>
-                    <p>{event.clientName}</p>
+                    <p>{clientsByEventId?.[event.id]?.displayName}</p>
                     <p>{!event.guestCountFinal ? event.minGuests + " - " : "" }{event.maxGuests} guests</p>
                     <p>{event.status}</p>
                   </button>

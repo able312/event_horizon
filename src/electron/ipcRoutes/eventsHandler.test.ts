@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const handleMock = vi.fn()
 const searchMock = vi.fn()
+const createMock = vi.fn()
 
 vi.mock("electron", () => ({
   ipcMain: {
@@ -26,10 +27,31 @@ vi.mock("../services/icsImportService.js", () => ({
   commitIcsImport: vi.fn(),
 }))
 
+vi.mock("../services/eventCreationService.js", () => ({
+  default: { create: createMock },
+}))
+
 describe("registerEventsIpcHandlers", () => {
   beforeEach(() => {
     handleMock.mockReset()
     searchMock.mockReset()
+    createMock.mockReset()
+  })
+
+  it("forwards events:post and its optional client to the event creation service", async () => {
+    const { registerEventsIpcHandlers } = await import("./eventsHandler.js")
+    registerEventsIpcHandlers()
+
+    const handler = handleMock.mock.calls.find((entry) => entry[0] === "events:post")?.[1] as
+      | ((...args: unknown[]) => Promise<unknown>)
+      | undefined
+
+    const newEvent = { title: "Smith Wedding" }
+    const client = { firstName: "Jane", lastName: "Smith" }
+    createMock.mockReturnValueOnce({ id: "event-1" })
+
+    await expect(handler?.({}, newEvent, client)).resolves.toEqual({ id: "event-1" })
+    expect(createMock).toHaveBeenCalledWith(newEvent, client)
   })
 
   it("registers events:search and forwards payload to repository", async () => {

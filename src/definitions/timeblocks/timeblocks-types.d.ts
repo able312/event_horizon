@@ -1,12 +1,11 @@
 // Query return type
 
 import { timeblocks } from '~/electron/db/schema'
-import type { Timeblock, FoodItem, BeverageItem, VendorItem, CartDetails } from '../database';
+import type { Timeblock, FoodItem, BeverageItem, CartDetails } from '../database';
 
 export type TimeblockWithItems = Timeblock & {
     foodItems?: FoodItem[],
     beverageItems?: BeverageItem[],
-    vendorItem?: VendorItem,
     cartDetails?: Pick<CartDetails, "whatGoesOnCarts" | "customGrid">
 }
 
