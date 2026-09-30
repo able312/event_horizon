@@ -4,12 +4,12 @@ import { describe, expect, it, vi } from "vitest"
 
 import ContactsDirectoryWorkspace from "./ContactsDirectoryWorkspace"
 
-const useContactSearchMock = vi.fn()
+const useContactDirectoryMock = vi.fn()
 const panelPropsMock = vi.fn()
 const bodyPropsMock = vi.fn()
 
 vi.mock("~/hooks/useEventContacts", () => ({
-  useContactSearch: (...args: unknown[]) => useContactSearchMock(...args),
+  useContactDirectory: (...args: unknown[]) => useContactDirectoryMock(...args),
 }))
 
 vi.mock("./components/ContactsDirectoryPanel", () => ({
@@ -49,8 +49,12 @@ function renderAt(path: string) {
 
 describe("ContactsDirectoryWorkspace", () => {
   it("renders the panel and body on a healthy search", () => {
-    useContactSearchMock.mockReturnValue({
-      data: { items: [], nextCursor: null },
+    useContactDirectoryMock.mockReturnValue({
+      data: { pages: [{ items: [], nextCursor: null }] },
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isFetchNextPageError: false,
+      fetchNextPage: vi.fn(),
       isLoading: false,
       isError: false,
       isFetching: false,
@@ -65,8 +69,12 @@ describe("ContactsDirectoryWorkspace", () => {
   })
 
   it("passes the selected contactId from the route into the panel and body", () => {
-    useContactSearchMock.mockReturnValue({
-      data: { items: [], nextCursor: null },
+    useContactDirectoryMock.mockReturnValue({
+      data: { pages: [{ items: [], nextCursor: null }] },
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isFetchNextPageError: false,
+      fetchNextPage: vi.fn(),
       isLoading: false,
       isError: false,
       isFetching: false,
@@ -81,7 +89,7 @@ describe("ContactsDirectoryWorkspace", () => {
 
   it("shows a blocking error when the directory search fails, and retries it", () => {
     const refetch = vi.fn()
-    useContactSearchMock.mockReturnValue({
+    useContactDirectoryMock.mockReturnValue({
       data: undefined,
       isLoading: false,
       isError: true,
@@ -103,8 +111,12 @@ describe("ContactsDirectoryWorkspace", () => {
     const lastProps = <T,>(mock: typeof panelPropsMock) => mock.mock.calls[mock.mock.calls.length - 1][0] as T
 
     function startCreatingAtC1() {
-      useContactSearchMock.mockReturnValue({
-        data: { items: [], nextCursor: null },
+      useContactDirectoryMock.mockReturnValue({
+        data: { pages: [{ items: [], nextCursor: null }] },
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isFetchNextPageError: false,
+      fetchNextPage: vi.fn(),
         isLoading: false,
         isError: false,
         isFetching: false,

@@ -1,4 +1,4 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 import type {
@@ -197,6 +197,38 @@ export function useContactSearch(query: string, enabled: boolean, filters?: Cont
         role: filters?.role,
         includeArchived: filters?.includeArchived,
       }),
+  })
+}
+
+export type ContactDirectoryFilters = {
+  role?: ContactRoleType
+  includeArchived?: boolean
+  pageSize: number
+}
+
+/** Contacts page list: loads one page at a time and appends the next on request, so no contact is out of reach. */
+export function useContactDirectory(query: string, filters: ContactDirectoryFilters) {
+  const trimmed = query.trim()
+  return useInfiniteQuery({
+    queryKey: [
+      ...contactsRootKey,
+      "directory",
+      trimmed,
+      filters.role ?? null,
+      filters.includeArchived ?? false,
+      filters.pageSize,
+    ],
+    placeholderData: keepPreviousData,
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) =>
+      contactsApi.searchContacts({
+        query: trimmed,
+        limit: filters.pageSize,
+        cursor: pageParam,
+        role: filters.role,
+        includeArchived: filters.includeArchived,
+      }),
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
   })
 }
 

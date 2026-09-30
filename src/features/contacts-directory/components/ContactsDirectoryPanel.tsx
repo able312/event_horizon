@@ -24,6 +24,10 @@ type ContactsDirectoryPanelProps = {
   onShowArchivedChange: (showArchived: boolean) => void
   contacts: ContactWithRoles[]
   isLoading: boolean
+  hasMore: boolean
+  isLoadingMore: boolean
+  loadMoreFailed: boolean
+  onLoadMore: () => void
   selectedContactId: string | null
   onSelectContact: (contact: ContactWithRoles) => void
 }
@@ -38,6 +42,10 @@ const ContactsDirectoryPanel: React.FC<ContactsDirectoryPanelProps> = ({
   onShowArchivedChange,
   contacts,
   isLoading,
+  hasMore,
+  isLoadingMore,
+  loadMoreFailed,
+  onLoadMore,
   selectedContactId,
   onSelectContact,
 }) => {
@@ -99,16 +107,33 @@ const ContactsDirectoryPanel: React.FC<ContactsDirectoryPanelProps> = ({
             {query ? "No matching contacts." : "Your contact directory is empty."}
           </p>
         ) : (
-          <ul className="divide-y divide-white/10">
-            {contacts.map((contact) => (
-              <ContactDirectoryRow
-                key={contact.id}
-                contact={contact}
-                selected={contact.id === selectedContactId}
-                onSelect={onSelectContact}
-              />
-            ))}
-          </ul>
+          <>
+            <ul className="divide-y divide-white/10">
+              {contacts.map((contact) => (
+                <ContactDirectoryRow
+                  key={contact.id}
+                  contact={contact}
+                  selected={contact.id === selectedContactId}
+                  onSelect={onSelectContact}
+                />
+              ))}
+            </ul>
+            {hasMore ? (
+              <div className="space-y-1.5 p-3">
+                {loadMoreFailed ? (
+                  <p className="text-center text-xs text-red-400">Could not load more contacts.</p>
+                ) : null}
+                <button
+                  type="button"
+                  disabled={isLoadingMore}
+                  className="h-8 w-full rounded-lg border border-white/15 bg-white/5 text-xs text-stone-300 transition-colors hover:bg-white/10 disabled:opacity-50"
+                  onClick={onLoadMore}
+                >
+                  {isLoadingMore ? "Loading…" : loadMoreFailed ? "Retry" : "Load more contacts"}
+                </button>
+              </div>
+            ) : null}
+          </>
         )}
       </Panel.Content>
     </>

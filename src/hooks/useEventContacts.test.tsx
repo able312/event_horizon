@@ -12,6 +12,7 @@ import {
   eventContactsQueryKey,
   PRIMARY_CLIENTS_QUERY_KEY_PREFIX,
   useArchiveContact,
+  useContactDirectory,
   useContactSearch,
   useCreateContact,
   useDeleteContact,
@@ -219,6 +220,33 @@ describe("useContactSearch", () => {
     expect(contactsIpc.searchContacts).toHaveBeenCalledWith(
       expect.objectContaining({ query: "sarah", role: "vendor", includeArchived: true }),
     )
+  })
+})
+
+describe("useContactDirectory", () => {
+  it("loads the next page from the previous page's cursor and keeps both", async () => {
+    const first = makeContact({ id: "c-1", displayName: "Ada" })
+    const second = makeContact({ id: "c-2", displayName: "Bea" })
+    vi.mocked(contactsIpc.searchContacts)
+      .mockResolvedValueOnce({ items: [{ ...first, roles: [] }], nextCursor: "1" })
+      .mockResolvedValueOnce({ items: [{ ...second, roles: [] }], nextCursor: null })
+
+    const { result } = renderHookWithProviders(() => useContactDirectory("", { role: "client", pageSize: 1 }))
+
+    await waitFor(() => expect(result.current.hasNextPage).toBe(true))
+    expect(contactsIpc.searchContacts).toHaveBeenLastCalledWith(
+      expect.objectContaining({ query: "", role: "client", limit: 1, cursor: null }),
+    )
+
+    await act(async () => {
+      await result.current.fetchNextPage()
+    })
+
+    await waitFor(() =>
+      expect(result.current.data?.pages.flatMap((page) => page.items.map((item) => item.id))).toEqual(["c-1", "c-2"]),
+    )
+    expect(contactsIpc.searchContacts).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: "1" }))
+    expect(result.current.hasNextPage).toBe(false)
   })
 })
 

@@ -4,13 +4,13 @@ import { useNavigate, useParams } from "react-router"
 import RouteBlockingError from "~/components/atoms/route-blocking-error"
 import { SplitLayout } from "~/components/layouts/SplitLayout"
 import type { Contact, ContactRoleType, ContactWithRoles } from "~/definitions/contacts"
-import { useContactSearch } from "~/hooks/useEventContacts"
+import { useContactDirectory } from "~/hooks/useEventContacts"
 import { useDebounceValue } from "~/lib/debounce"
 
 import ContactsDirectoryBody from "./components/ContactsDirectoryBody"
 import ContactsDirectoryPanel from "./components/ContactsDirectoryPanel"
 
-const DIRECTORY_SEARCH_LIMIT = 100
+const DIRECTORY_PAGE_SIZE = 100
 
 const ContactsDirectoryWorkspace: React.FC = () => {
   const { contactId } = useParams<{ contactId?: string }>()
@@ -22,11 +22,12 @@ const ContactsDirectoryWorkspace: React.FC = () => {
   const [showArchived, setShowArchived] = useState(false)
   const debouncedQuery = useDebounceValue(query, 200)
 
-  const search = useContactSearch(debouncedQuery, true, {
+  const search = useContactDirectory(debouncedQuery, {
     role: role ?? undefined,
     includeArchived: showArchived,
-    limit: DIRECTORY_SEARCH_LIMIT,
+    pageSize: DIRECTORY_PAGE_SIZE,
   })
+  const contacts = search.data?.pages.flatMap((page) => page.items) ?? []
 
   // A new selection (including one made from the create form) always leaves creation mode.
   useEffect(() => {
@@ -44,7 +45,8 @@ const ContactsDirectoryWorkspace: React.FC = () => {
 
   const handleCreated = (contact: Contact) => showContact(contact.id)
 
-  if (search.isError) {
+  // A failed "load more" keeps the loaded contacts and retries from the button instead
+  if (search.isError && !search.isFetchNextPageError) {
     return (
       <RouteBlockingError
         title="Could not load contacts"
@@ -68,8 +70,12 @@ const ContactsDirectoryWorkspace: React.FC = () => {
           onRoleChange={setRole}
           showArchived={showArchived}
           onShowArchivedChange={setShowArchived}
-          contacts={search.data?.items ?? []}
+          contacts={contacts}
           isLoading={search.isLoading}
+          hasMore={search.hasNextPage}
+          isLoadingMore={search.isFetchingNextPage}
+          loadMoreFailed={search.isFetchNextPageError}
+          onLoadMore={() => void search.fetchNextPage()}
           selectedContactId={isCreating ? null : (contactId ?? null)}
           onSelectContact={handleSelectContact}
         />
