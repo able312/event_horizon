@@ -43,18 +43,22 @@ const ContactsList: React.FC<ContactsListProps> = ({ eventId, eventTitle }) => {
   const selectedIds = useMemo(() => pruneSelection(rawSelection, panel), [rawSelection, panel])
 
   const handleRemove = (role: ContactRoleType, item: EventContactsPanelItem) => {
-    removeContact(item.eventContactId)
-    toast(`${item.displayName} removed from event`, {
-      action: {
-        label: "Undo",
-        // Re-assigning restores the removed row, including its role label
-        onClick: () => {
-          assignContactAsync({
-            target: { contactId: item.contactId },
-            role,
-            opts: { vendorCategoryId: item.vendorCategory?.id ?? null, isPrimary: item.isPrimary },
-          }).catch((err: unknown) => toast.error(getContactsErrorMessage(err, "Failed to restore contact")))
-        },
+    // Only offer Undo once the removal has actually happened; on failure the hook restores the row and reports it
+    removeContact(item.eventContactId, {
+      onSuccess: () => {
+        toast(`${item.displayName} removed from event`, {
+          action: {
+            label: "Undo",
+            // Re-assigning restores the removed row, including its role label
+            onClick: () => {
+              assignContactAsync({
+                target: { contactId: item.contactId },
+                role,
+                opts: { vendorCategoryId: item.vendorCategory?.id ?? null, isPrimary: item.isPrimary },
+              }).catch((err: unknown) => toast.error(getContactsErrorMessage(err, "Failed to restore contact")))
+            },
+          },
+        })
       },
     })
   }

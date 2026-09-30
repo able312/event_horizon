@@ -1,4 +1,5 @@
 import { act, waitFor } from "@testing-library/react"
+import { toast } from "sonner"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Contact, EventContactsPanel } from "~/definitions/contacts"
@@ -141,6 +142,24 @@ describe("useEventContacts", () => {
       const cached = queryClient.getQueryData<EventContactsPanel>(eventContactsQueryKey("event-1"))
       expect(cached?.groups[0]!.items).toHaveLength(1)
     })
+  })
+
+  // The Undo toast hangs off onSuccess, so it must never appear for a removal that failed
+  it("runs the caller's onSuccess only once the removal succeeds", async () => {
+    vi.mocked(eventContactsIpc.getEventContactsPanel).mockResolvedValue(makePanel())
+    vi.mocked(eventContactsIpc.removeEventContact).mockRejectedValueOnce(new Error("db down")).mockResolvedValueOnce()
+
+    const { result } = renderHookWithProviders(() => useEventContacts("event-1"))
+    await waitFor(() => expect(result.current.data).toBeDefined())
+
+    const onFailedSuccess = vi.fn()
+    act(() => result.current.removeContact("ec-1", { onSuccess: onFailedSuccess }))
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Failed to remove contact"))
+    expect(onFailedSuccess).not.toHaveBeenCalled()
+
+    const onSuccess = vi.fn()
+    act(() => result.current.removeContact("ec-1", { onSuccess }))
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
   })
 
   it("assigns through IPC and refetches the panel", async () => {
