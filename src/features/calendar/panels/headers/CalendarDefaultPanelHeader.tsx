@@ -1,6 +1,6 @@
 import { Button } from "~/components/atoms/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/atoms/tooltip"
-import { CalendarX2, Plus, Search, Users } from 'lucide-react'
+import { CalendarX2, CirclePlus, Plus, Search, Users } from 'lucide-react'
 import { useNavigate } from "react-router"
 
 interface CalendarDefaultHeaderProps {
@@ -62,39 +62,39 @@ const CalendarDefaultPanelHeader: React.FC<CalendarDefaultHeaderProps> = ({
   return (
     <>
       <HeaderIconButton
-        label="Contacts"
-        ariaLabel="Open contacts"
-        onClick={() => navigate("/contacts")}
-        className="text-white transition-colors"
+        label="Create event"
+        hotkey={`${modifier}N`}
+        ariaLabel="Create new event"
+        onClick={onOpenCreate}
+        className="size-8 rounded-md transition-colors hover:bg-orange-600 hover:text-white"
       >
-        <Users className="h-6 w-6" />
-      </HeaderIconButton>
-      <HeaderIconButton
-        label="Unscheduled events"
-        hotkey={isUnscheduledActive ? "Esc" : undefined}
-        ariaLabel="Toggle unscheduled events list"
-        onClick={onToggleUnscheduledView}
-        className={isUnscheduledActive ? "text-orange-500 transition-colors" : "text-white transition-colors"}
-      >
-        <CalendarX2 className="h-6 w-6" />
+        <CirclePlus className="size-4 text-orange-500" strokeWidth={2.5} />
       </HeaderIconButton>
       <HeaderIconButton
         label="Search events"
         hotkey={`${modifier}F`}
         ariaLabel="Open search"
         onClick={onOpenSearch}
-        className="text-white transition-colors"
+        className="size-8 text-white transition-colors"
       >
         <Search className="h-6 w-6" />
       </HeaderIconButton>
       <HeaderIconButton
-        label="Create event"
-        hotkey={`${modifier}N`}
-        ariaLabel="Create new event"
-        onClick={onOpenCreate}
-        className="ml-1.5 size-6 rounded-full bg-orange-500 text-white transition-colors hover:bg-orange-600 hover:text-white"
+        label="Unscheduled events"
+        hotkey={isUnscheduledActive ? "Esc" : undefined}
+        ariaLabel="Toggle unscheduled events list"
+        onClick={onToggleUnscheduledView}
+        className={isUnscheduledActive ? "size-8 text-orange-500 transition-colors" : "size-8 text-white transition-colors"}
       >
-        <Plus className="h-4 w-4" strokeWidth={2.5} />
+        <CalendarX2 className="h-6 w-6" />
+      </HeaderIconButton>
+      <HeaderIconButton
+        label="Contacts"
+        ariaLabel="Open contacts"
+        onClick={() => navigate("/contacts")}
+        className="size-8 text-white transition-colors"
+      >
+        <Users className="h-6 w-6" />
       </HeaderIconButton>
     </>
   )
