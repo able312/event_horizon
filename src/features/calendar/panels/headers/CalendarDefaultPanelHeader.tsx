@@ -1,6 +1,6 @@
 import { Button } from "~/components/atoms/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/atoms/tooltip"
-import { CalendarX2, Plus, Search, Users } from 'lucide-react'
+import { CalendarX2, CirclePlus, Search, Users } from 'lucide-react'
 import { useNavigate } from "react-router"
 
 interface CalendarDefaultHeaderProps {
@@ -92,9 +92,9 @@ const CalendarDefaultPanelHeader: React.FC<CalendarDefaultHeaderProps> = ({
         hotkey={`${modifier}N`}
         ariaLabel="Create new event"
         onClick={onOpenCreate}
-        className="ml-1.5 size-6 rounded-full bg-orange-500 text-white transition-colors hover:bg-orange-600 hover:text-white"
+        className="text-orange-500 transition-colors"
       >
-        <Plus className="h-4 w-4" strokeWidth={2.5} />
+        <CirclePlus className="h-6 w-6" />
       </HeaderIconButton>
     </>
   )
