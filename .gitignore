@@ -18,6 +18,12 @@ dist-ssr
 .event-horizon/
 *.sqlite*
 
+# Secrets
+.env
+.env.local
+.env.*
+electron-builder.env
+
 # Agents and Internal Documentation
 .cursor/*
 .fallow/*

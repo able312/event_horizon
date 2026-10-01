@@ -11,7 +11,7 @@
         "category": "public.app-category.productivity",
         "hardenedRuntime": true,
         "gatekeeperAssess": false,
-        "identity": "-"
+        "identity": "LNC Internal Signature"
     },
     "dmg": {
         "contents": [
