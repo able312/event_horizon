@@ -1,10 +1,14 @@
-import { app, BrowserWindow, dialog, nativeImage } from 'electron';
+import { app, autoUpdater as nativeUpdater, BrowserWindow, dialog, nativeImage } from 'electron';
+import electronUpdater from 'electron-updater';
 import path from 'path';
-import { fileURLToPath } from 'url'
+import { fileURLToPath, pathToFileURL } from 'url'
 import { isDev } from './utils.js';
 import { registerAllIpcHandlers } from './ipcRoutes/index.js';
 import { rebuildAppMenu } from './appMenu.js';
 import { initDB } from './db/index.js';
+import { createUpdaterService, isUpdaterEnabled } from './services/updaterService.js';
+import { createUpdaterLogger } from './services/updaterLogger.js';
+import { registerUpdaterIpcHandlers } from './ipcRoutes/updaterHandler.js';
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -60,9 +64,24 @@ app.on("ready", () => {
 
     registerAllIpcHandlers()
 
+    const { autoUpdater } = electronUpdater
+    const logger = createUpdaterLogger(path.join(app.getPath("logs"), "updater.log"))
+    autoUpdater.logger = logger
+    const updater = createUpdaterService(autoUpdater, nativeUpdater,
+        isUpdaterEnabled(app.isPackaged, process.platform, process.arch), logger.error)
+    const rendererUrl = isDev() ? "http://localhost:42069/"
+        : pathToFileURL(path.join(app.getAppPath(), "dist-react/index.html")).href
+    const unregisterUpdater = registerUpdaterIpcHandlers(updater, rendererUrl)
+    app.once("will-quit", () => {
+        unregisterUpdater()
+        updater.stop()
+    })
+
     createWindow();
 
     rebuildAppMenu()
+
+    updater.start()
 
     app.on("window-all-closed", () => {
         if (process.platform !== "darwin") app.quit()

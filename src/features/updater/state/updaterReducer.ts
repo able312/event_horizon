@@ -1,13 +1,7 @@
 // src/features/updater/state/updaterReducer.ts
 
-export type UpdaterStatus =
-  | { phase: "idle" }
-  | { phase: "checking" }
-  | { phase: "downloading"; version: string; percent: number }
-  // Download finished but the update is not yet installable (no progress is reported here).
-  | { phase: "preparing"; version: string }
-  | { phase: "ready"; version: string }
-  | { phase: "error"; message: string }
+import type { UpdaterStatus } from "../../../definitions/updater"
+export type { UpdaterStatus } from "../../../definitions/updater"
 
 export type UpdaterPhase = UpdaterStatus["phase"]
 

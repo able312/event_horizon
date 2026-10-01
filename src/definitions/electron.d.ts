@@ -1,7 +1,9 @@
 export {}
+import type { UpdaterApi } from "./updater"
 
 declare global {
   interface Window {
+    api?: { updater: UpdaterApi }
     electron: {
       ipcRenderer: {
         invoke: (channel: string, ...args: unknown[]) => Promise<unknown>
