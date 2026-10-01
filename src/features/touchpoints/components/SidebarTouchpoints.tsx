@@ -27,8 +27,19 @@ export const SidebarTouchpoints: React.FC = () => {
   const sections = useMemo(() => groupSidebarTouchpoints(data), [data])
   const returnTo = `${location.pathname}${location.search}`
 
-  if (isLoading || sections.length === 0) {
+  if (isLoading) {
     return null
+  }
+
+  if (sections.length === 0) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col border-t border-white/10 px-3 py-3">
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">
+          Touchpoints
+        </h3>
+        <p className="text-xs text-stone-500">No touchpoints due</p>
+      </div>
+    )
   }
 
   return (
