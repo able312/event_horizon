@@ -92,9 +92,9 @@ const CalendarDefaultPanelHeader: React.FC<CalendarDefaultHeaderProps> = ({
         hotkey={`${modifier}N`}
         ariaLabel="Create new event"
         onClick={onOpenCreate}
-        className="ml-1 size-7 rounded-full bg-orange-500 text-white transition-colors hover:bg-orange-600 hover:text-white"
+        className="ml-1.5 size-6 rounded-full bg-orange-500 text-white transition-colors hover:bg-orange-600 hover:text-white"
       >
-        <Plus className="h-5 w-5" />
+        <Plus className="h-4 w-4" strokeWidth={2.5} />
       </HeaderIconButton>
     </>
   )
