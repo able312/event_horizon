@@ -1,6 +1,6 @@
 import { Button } from "~/components/atoms/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/atoms/tooltip"
-import { CalendarX2, CirclePlus, Plus, Search, Users } from 'lucide-react'
+import { CalendarX2, CirclePlus, Search, Users } from 'lucide-react'
 import { useNavigate } from "react-router"
 
 interface CalendarDefaultHeaderProps {
