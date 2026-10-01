@@ -1,5 +1,4 @@
 import React, { type ReactNode } from "react"
-import { SidebarFooter } from "./SidebarFooter"
 
 const Root: React.FC<{ children: ReactNode }> = ({ children }) => {
     return (
@@ -11,14 +10,10 @@ const Root: React.FC<{ children: ReactNode }> = ({ children }) => {
     )
 }
 
-const PanelWrapper: React.FC<{ children: ReactNode; footer?: ReactNode }> = ({
-    children,
-    footer = <SidebarFooter />,
-}) => {
+const PanelWrapper: React.FC<{ children: ReactNode }> = ({ children }) => {
     return (
       <aside className="dark print:hidden flex w-1/5 min-w-[260px] max-w-[360px] shrink-0 min-h-0 flex-col border-r border-white/20 bg-stone-900 text-stone-100">
         { children }
-        { footer }
       </aside>
     )
 }

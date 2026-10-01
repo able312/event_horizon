@@ -92,22 +92,6 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-@theme {
-  --animate-update-bounce: update-bounce 0.6s ease-out 1;
-
-  @keyframes update-bounce {
-    0%, 55%, 100% {
-      transform: translateY(0);
-    }
-    30% {
-      transform: translateY(-8px);
-    }
-    78% {
-      transform: translateY(-3px);
-    }
-  }
-}
-
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);

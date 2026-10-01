@@ -9,7 +9,6 @@ import EventsRoute from '~/routes/Events'
 //Hook
 import { useIpcNavigation } from './hooks/useIpcNavigation'
 import { useGenerateMenuState } from './hooks/useGenerateMenuState'
-import { UpdaterProvider } from './features/updater/state/UpdaterProvider'
 
 const EventDetail = lazy(() => import('~/routes/EventDetail'))
 const Preview = lazy(() => import('~/routes/Preview'))
@@ -34,7 +33,7 @@ function App() {
   useGenerateMenuState()
 
   return (
-    <UpdaterProvider>
+    <>
 
       <Routes>
         <Route path="/" element={<EventsRoute />} />
@@ -104,7 +103,7 @@ function App() {
         />
       </Routes>
       <Toaster richColors />
-    </UpdaterProvider>
+    </>
   )
 }
 

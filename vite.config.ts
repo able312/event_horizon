@@ -1,12 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from "path";
-import { readFileSync } from "node:fs";
 import tailwindcss from "@tailwindcss/vite";
-
-const { version: appVersion } = JSON.parse(
-  readFileSync(path.resolve(__dirname, "package.json"), "utf-8"),
-) as { version: string };
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -15,9 +10,6 @@ export default defineConfig({
     alias: {
       "~": path.resolve(__dirname, "./src"),
     },
-  },
-  define: {
-    __APP_VERSION__: JSON.stringify(appVersion),
   },
   base: "./",
   build: {
