@@ -135,11 +135,16 @@ real updater installation. It cannot replace the installation test on both Macs.
 - Dependency audits reported 14 existing findings, including three in the
   production audit. No dependencies or lockfile entries changed in this stage.
 
-## Remaining acceptance work
+## Acceptance status
 
-- Confirm the second Mac's certificate fingerprint and code-signing trust.
-- Record quarantine and Gatekeeper behavior on that Mac.
-- Back up event data, manually install the updater-enabled baseline, and test a
-  published newer version on both Macs as described in the plan.
+Both Macs updated to the published `0.1.1` release through the updater on
+October 2, 2026. See [AUTO_UPDATER_IMPLEMENTATION.md](AUTO_UPDATER_IMPLEMENTATION.md)
+for the checks that have not been recorded.
+
+- The second Mac's certificate fingerprint and its quarantine/Gatekeeper
+  behavior before `xattr -cr` have not been recorded here.
+- The certificate expires September 30, 2027. Installed apps verify updates
+  against the current certificate, so a replacement certificate will likely
+  require a manual reinstall on each Mac. Plan the renewal before that date.
 
 Configuration reference: [Electron Builder 26 macOS options](https://www.electron.build/v26/docs/mac/).

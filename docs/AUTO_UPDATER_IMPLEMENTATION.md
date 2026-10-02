@@ -2,8 +2,9 @@
 
 The local implementation covers steps 2–5 of [AUTO_UPDATER_PLAN.md](AUTO_UPDATER_PLAN.md).
 Step 1's local signing evidence is in [MACOS_SIGNING.md](MACOS_SIGNING.md).
-The two-Mac installation test is still required before considering this feature
-accepted. Release CI remains deferred until that test passes.
+The published `0.1.1` release was detected, downloaded, and installed through the
+updater on both the build Mac and the second Mac (October 2, 2026). Release CI
+(step 7) is the follow-up phase.
 
 ## Behavior
 
@@ -128,15 +129,22 @@ were reused. No database schema or migration changes were needed.
 Potential follow-up cleanup: review build-only packages currently present in
 runtime dependencies to reduce packaging size. No dependencies were removed here.
 
-## Outstanding acceptance work
+## Acceptance results (October 2, 2026)
 
-- Resolve/review the dependency audit findings before release.
-- Confirm the second Mac's public-certificate fingerprint and trust. Record the
-  launch result before the existing `xattr -cr` baseline-install workaround.
-- Back up event data, install signed baseline `0.1.0`, publish signed `0.1.1`, and
-  verify detection, progress, cancellation, ordinary quit, confirmed installation,
-  version display, and data persistence on both Macs.
-- Exercise offline startup, renderer reload during download, and macOS window recreation.
-- Add release CI only after that local installation path passes.
+Signed `0.1.1` was published to GitHub and both Macs updated to it through the
+updater without issues.
+
+The following checks from step 6 of the plan have not been recorded as run:
+
+- Cancelling the restart dialog, and an ordinary quit not installing the update.
+- Event data persistence across the update on both Macs.
+- Offline startup, renderer reload during download, and macOS window recreation.
+- The second Mac's public-certificate fingerprint, and its launch result before
+  the existing `xattr -cr` baseline-install workaround.
+
+## Follow-up work
+
+- Resolve/review the remaining dependency audit findings.
+- Add release CI (step 7 of the plan).
 
 Reference: [Electron Builder 26 auto-update guide](https://www.electron.build/v26/docs/features/auto-update/).
