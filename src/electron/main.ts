@@ -1,10 +1,14 @@
-import { app, BrowserWindow, dialog, nativeImage } from 'electron';
+import { app, autoUpdater as nativeUpdater, BrowserWindow, dialog, nativeImage } from 'electron';
+import electronUpdater from 'electron-updater';
 import path from 'path';
-import { fileURLToPath } from 'url'
+import { fileURLToPath, pathToFileURL } from 'url'
 import { isDev } from './utils.js';
 import { registerAllIpcHandlers } from './ipcRoutes/index.js';
 import { rebuildAppMenu } from './appMenu.js';
 import { initDB } from './db/index.js';
+import { createUpdaterService, isUpdaterEnabled } from './services/updaterService.js';
+import { createUpdaterLogger } from './services/updaterLogger.js';
+import { registerUpdaterIpcHandlers } from './ipcRoutes/updaterHandler.js';
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -15,6 +19,11 @@ const resolveWindowIconPath = () => {
     }
     return path.join(app.getAppPath(), 'dist-react/icon-512.png')
 }
+
+// Single source for the page the window loads and the origin updater IPC accepts.
+const resolveRendererUrl = () => isDev()
+    ? "http://localhost:42069/"
+    : pathToFileURL(path.join(app.getAppPath(), "dist-react/index.html")).href
 
 const createWindow = () => {
     const iconPath = resolveWindowIconPath()
@@ -38,13 +47,23 @@ const createWindow = () => {
 
     mainWindow.maximize()
 
-    if (isDev()) {
-        console.log("Loading localhost:42069")
-        mainWindow.loadURL("http://localhost:42069")
-    } else {
-        console.log(app.getAppPath(),"/dist-react/index.html")
-        mainWindow.loadFile(path.join(app.getAppPath(), "/dist-react/index.html"));
-    }
+    const rendererUrl = resolveRendererUrl()
+    console.log("Loading", rendererUrl)
+    mainWindow.loadURL(rendererUrl)
+}
+
+const setupUpdater = () => {
+    const { autoUpdater } = electronUpdater
+    const logger = createUpdaterLogger(path.join(app.getPath("logs"), "updater.log"))
+    autoUpdater.logger = logger
+    const updater = createUpdaterService(autoUpdater, nativeUpdater,
+        isUpdaterEnabled(app.isPackaged, process.platform, process.arch), logger.error)
+    const unregisterUpdater = registerUpdaterIpcHandlers(updater, resolveRendererUrl())
+    app.once("will-quit", () => {
+        unregisterUpdater()
+        updater.stop()
+    })
+    return updater
 }
 
 app.on("ready", () => {
@@ -60,9 +79,13 @@ app.on("ready", () => {
 
     registerAllIpcHandlers()
 
+    const updater = setupUpdater()
+
     createWindow();
 
     rebuildAppMenu()
+
+    updater.start()
 
     app.on("window-all-closed", () => {
         if (process.platform !== "darwin") app.quit()

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+import type { UpdaterApi } from "../definitions/updater"
 
 type ExposedApi = {
   ipcRenderer: {
@@ -13,6 +14,7 @@ async function loadPreload() {
   vi.resetModules()
 
   let exposedApi: ExposedApi | undefined
+  let updaterApi: UpdaterApi | undefined
 
   const ipcRenderer = {
     invoke: vi.fn(async () => undefined),
@@ -22,10 +24,11 @@ async function loadPreload() {
   }
 
   const contextBridge = {
-    exposeInMainWorld: vi.fn((key: string, api: ExposedApi) => {
+    exposeInMainWorld: vi.fn((key: string, api: ExposedApi | { updater: UpdaterApi }) => {
       if (key === "electron") {
-        exposedApi = api
+        exposedApi = api as ExposedApi
       }
+      if (key === "api" && "updater" in api) updaterApi = api.updater
     }),
   }
 
@@ -33,14 +36,30 @@ async function loadPreload() {
 
   await import("./preload.cts")
 
-  if (!exposedApi) {
+  if (!exposedApi || !updaterApi) {
     throw new Error("preload did not expose API")
   }
 
-  return { api: exposedApi, ipcRenderer, contextBridge }
+  return { api: exposedApi, updaterApi, ipcRenderer, contextBridge }
 }
 
 describe("preload allowlist", () => {
+  it("exposes explicit updater operations without opening generic channels", async () => {
+    const { updaterApi, ipcRenderer, api } = await loadPreload()
+    await updaterApi.getStatus()
+    await updaterApi.restartAndInstall()
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith("updater:get-status")
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith("updater:restart-and-install")
+    expect(() => api.ipcRenderer.invoke("updater:restart-and-install")).toThrow("Blocked IPC")
+    const listener = vi.fn()
+    const cleanup = updaterApi.onStatusChanged(listener)
+    const wrapped = ipcRenderer.on.mock.calls[0][1] as (...args: unknown[]) => void
+    const snapshot = { revision: 1, status: { phase: "ready", version: "0.1.1" } }
+    wrapped({ privileged: "event" }, snapshot)
+    expect(listener).toHaveBeenCalledExactlyOnceWith(snapshot)
+    cleanup()
+    expect(ipcRenderer.removeListener).toHaveBeenCalledExactlyOnceWith("updater:status-changed", wrapped)
+  })
   it("allows invoke channels and forwards args", async () => {
     const { api, ipcRenderer } = await loadPreload()
 

@@ -27,7 +27,7 @@ export const SidebarTouchpoints: React.FC = () => {
   const sections = useMemo(() => groupSidebarTouchpoints(data), [data])
   const returnTo = `${location.pathname}${location.search}`
 
-  if (isLoading || sections.length === 0) {
+  if (isLoading) {
     return null
   }
 
@@ -36,6 +36,7 @@ export const SidebarTouchpoints: React.FC = () => {
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">
         Touchpoints
       </h3>
+      {sections.length === 0 ? <p className="text-xs text-stone-500">No touchpoints due</p> : null}
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
         {sections.map((section) => {
           const isExpanded = Boolean(expanded[section.key])

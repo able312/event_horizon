@@ -1,4 +1,16 @@
 import { contextBridge, ipcRenderer } from "electron"
+import type { UpdaterApi, UpdaterSnapshot } from "../definitions/updater.js"
+
+const updaterApi: UpdaterApi = {
+  getStatus: () => ipcRenderer.invoke("updater:get-status"),
+  restartAndInstall: () => ipcRenderer.invoke("updater:restart-and-install"),
+  onStatusChanged: listener => {
+    const wrapped = (_event: Electron.IpcRendererEvent, snapshot: UpdaterSnapshot) => listener(snapshot)
+    ipcRenderer.on("updater:status-changed", wrapped)
+    return () => { ipcRenderer.removeListener("updater:status-changed", wrapped) }
+  },
+}
+contextBridge.exposeInMainWorld("api", { updater: updaterApi })
 
 const ALLOWED_INVOKE_CHANNELS = new Set([
   "beverage-items:delete",
