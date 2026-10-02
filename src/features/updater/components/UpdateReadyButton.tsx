@@ -8,6 +8,7 @@ import { RestartConfirmDialog } from "./RestartConfirmDialog"
 
 interface UpdateReadyButtonProps {
   version: string
+  installFailed?: boolean
   shouldAnnounce: boolean
   onAnnounced: () => void
   onInstall: () => void
@@ -15,11 +16,16 @@ interface UpdateReadyButtonProps {
 
 export const UpdateReadyButton: React.FC<UpdateReadyButtonProps> = ({
   version,
+  installFailed = false,
   shouldAnnounce,
   onAnnounced,
   onInstall,
 }) => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
+
+  const label = installFailed
+    ? `Could not install v${version}. Click to try again`
+    : `Update to v${version} and restart`
 
   const handleConfirm = () => {
     setIsConfirmOpen(false)
@@ -34,7 +40,7 @@ export const UpdateReadyButton: React.FC<UpdateReadyButtonProps> = ({
             type="button"
             onClick={() => setIsConfirmOpen(true)}
             onAnimationEnd={onAnnounced}
-            aria-label={`Update to v${version} and restart`}
+            aria-label={label}
             className={cn(
               "flex size-6 items-center justify-center rounded-full text-orange-500 transition-colors hover:text-orange-400",
               shouldAnnounce && "motion-safe:animate-update-bounce",
@@ -43,7 +49,7 @@ export const UpdateReadyButton: React.FC<UpdateReadyButtonProps> = ({
             <CircleArrowUp className="size-5" />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="top">Update to v{version} and restart</TooltipContent>
+        <TooltipContent side="top">{label}</TooltipContent>
       </Tooltip>
 
       <RestartConfirmDialog

@@ -91,7 +91,7 @@ describe("updater service", () => {
     updater.emit("download-progress", { percent: NaN })
     expect(service.getStatus().status).toMatchObject({ percent: 0 })
     updater.emit("update-downloaded", { version: "0.1.1" })
-    expect(statuses.slice(-2)).toEqual(["preparing", "ready"])
+    expect(statuses.slice(-2)).toEqual(["downloading", "ready"])
     service.stop()
     const cached = setup()
     cached.service.start()
@@ -100,28 +100,49 @@ describe("updater service", () => {
     cached.service.stop()
   })
 
-  it("handles rejected checks and emitted errors, then recovers on a scheduled check", async () => {
+  it("keeps a failed check out of the UI and handles its emitted and rejected error once", async () => {
     const { updater, service, log } = setup()
-    updater.checkForUpdates.mockRejectedValueOnce(new Error("secret feed details"))
+    const statuses: string[] = []
+    service.subscribe(snapshot => statuses.push(snapshot.status.phase))
+    updater.checkForUpdates.mockImplementationOnce(async () => {
+      const error = new Error("offline")
+      updater.emit("checking-for-update")
+      updater.emit("error", error)
+      throw error
+    })
     service.start()
     await vi.advanceTimersByTimeAsync(0)
+    expect(statuses).toEqual(["checking", "idle"])
+    expect(log).toHaveBeenCalledOnce()
+    updater.emit("error", new Error("offline while idle"))
+    expect(service.getStatus().status.phase).toBe("idle")
+    service.stop()
+  })
+
+  it("shows a failed download as an error, then recovers on a scheduled check", async () => {
+    const { updater, service, log } = setup()
+    service.start()
+    await vi.advanceTimersByTimeAsync(0)
+    updater.emit("update-available", { version: "0.1.1" })
+    updater.emit("error", new Error("secret feed details"))
     expect(service.getStatus().status).toMatchObject({ phase: "error" })
     expect(JSON.stringify(service.getStatus())).not.toContain("secret")
-    expect(log).toHaveBeenCalled()
+    expect(log).toHaveBeenCalledOnce()
     await vi.advanceTimersByTimeAsync(UPDATE_CHECK_INTERVAL_MS)
     expect(service.getStatus().status.phase).toBe("idle")
-    updater.emit("error", new Error("offline"))
-    expect(service.getStatus().status.phase).toBe("error")
     service.stop()
   })
 
   it("observes automatic download promise rejection", async () => {
     const { updater, service } = setup()
-    updater.checkForUpdates.mockImplementationOnce(async () => ({
-      isUpdateAvailable: true,
-      updateInfo: { version: "0.1.1", files: [], releaseDate: "2026-10-01" },
-      downloadPromise: Promise.reject(new Error("download failed")),
-    }))
+    updater.checkForUpdates.mockImplementationOnce(async () => {
+      updater.emit("update-available", { version: "0.1.1" })
+      return {
+        isUpdateAvailable: true,
+        updateInfo: { version: "0.1.1", files: [], releaseDate: "2026-10-01" },
+        downloadPromise: Promise.reject(new Error("download failed")),
+      }
+    })
     service.start()
     await vi.advanceTimersByTimeAsync(0)
     expect(service.getStatus().status.phase).toBe("error")
@@ -150,28 +171,31 @@ describe("updater service", () => {
     updater.emit("update-downloaded", { version: "0.1.1" })
     service.restartAndInstall()
     updater.emit("error", new Error("signature verification failed"))
-    expect(service.getStatus().status).toMatchObject({ phase: "error", message: expect.stringContaining("prepare") })
+    expect(service.getStatus().status).toEqual({ phase: "ready", version: "0.1.1", installFailed: true })
     native.emit("update-downloaded")
     expect(existing).toHaveBeenCalledOnce()
     expect(install).not.toHaveBeenCalled()
     service.stop()
   })
 
-  it("handles synchronous native failure and a preparation timeout without leaving a spinner", async () => {
+  it("re-offers the update after a synchronous native failure or a preparation timeout", async () => {
     const { updater, service, native } = setup()
     service.start()
     updater.emit("update-downloaded", { version: "0.1.1" })
     updater.quitAndInstall.mockImplementationOnce(() => { throw new Error("native unavailable") })
     expect(() => service.restartAndInstall()).toThrow("Could not prepare")
-    expect(service.getStatus().status.phase).toBe("error")
+    const failed = { phase: "ready", version: "0.1.1", installFailed: true }
+    expect(service.getStatus().status).toEqual(failed)
     const install = vi.fn()
     updater.quitAndInstall.mockImplementation(() => { native.on("update-downloaded", install) })
-    updater.emit("update-downloaded", { version: "0.1.1" })
     service.restartAndInstall()
+    expect(service.getStatus().status).toEqual({ phase: "preparing", version: "0.1.1" })
     await vi.advanceTimersByTimeAsync(INSTALL_PREPARATION_TIMEOUT_MS)
-    expect(service.getStatus().status.phase).toBe("error")
+    expect(service.getStatus().status).toEqual(failed)
     native.emit("update-downloaded")
     expect(install).not.toHaveBeenCalled()
+    service.restartAndInstall()
+    expect(updater.quitAndInstall).toHaveBeenCalledTimes(3)
     service.stop()
   })
 
@@ -185,7 +209,7 @@ describe("updater service", () => {
       updater.emit("error", new Error("synchronous native error"))
     })
     service.restartAndInstall()
-    expect(service.getStatus().status.phase).toBe("error")
+    expect(service.getStatus().status).toMatchObject({ phase: "ready", installFailed: true })
     native.emit("update-downloaded")
     expect(install).not.toHaveBeenCalled()
     service.stop()

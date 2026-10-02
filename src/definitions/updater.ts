@@ -3,7 +3,7 @@ export type UpdaterStatus =
   | { phase: "checking" }
   | { phase: "downloading"; version: string; percent: number }
   | { phase: "preparing"; version: string }
-  | { phase: "ready"; version: string }
+  | { phase: "ready"; version: string; installFailed?: boolean }
   | { phase: "error"; message: string }
 
 export interface UpdaterSnapshot {

@@ -29,6 +29,7 @@ export const UpdaterIndicator: React.FC = () => {
       return (
         <UpdateReadyButton
           version={status.version}
+          installFailed={status.installFailed}
           shouldAnnounce={shouldAnnounceReady(updater, isWindowFocused)}
           onAnnounced={() => dispatch({ type: ACTIONS.READY_ANNOUNCED })}
           onInstall={restartAndInstall}

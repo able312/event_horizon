@@ -57,5 +57,6 @@ export const SIMULATED_STATUSES: { label: string; status: UpdaterStatus }[] = [
   { label: "Downloading 42%", status: { phase: "downloading", version: SIMULATED_VERSION, percent: 42 } },
   { label: "Preparing", status: { phase: "preparing", version: SIMULATED_VERSION } },
   { label: "Ready", status: { phase: "ready", version: SIMULATED_VERSION } },
+  { label: "Ready (install failed)", status: { phase: "ready", version: SIMULATED_VERSION, installFailed: true } },
   { label: "Error", status: { phase: "error", message: "Could not download the update." } },
 ]

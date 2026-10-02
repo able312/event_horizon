@@ -16,11 +16,15 @@ updater on both the build Mac and the second Mac (October 2, 2026). Release CI
   completion event does, including cached downloads without progress events.
 - Confirmation changes the status to preparing and calls Electron Updater's
   `quitAndInstall()`. macOS native staging begins at this point. Native failures
-  or a two-minute preparation timeout produce a friendly error without quitting.
+  or a two-minute preparation timeout return the status to ready, flagged as a
+  failed install, so the update can be retried immediately without quitting.
   The handoff's install-on-download listener is removed on failure so a late
-  native completion cannot unexpectedly close the app.
-- Checks recover from emitted errors and rejected check/download promises on
-  subsequent scheduled checks. Raw details stay in the local updater log.
+  native completion cannot unexpectedly close the app. If Squirrel finishes
+  staging after that timeout, macOS applies the staged update on the next quit.
+- A failed check (for example an offline startup) is logged and returns to idle
+  without showing an error. Only a failed download shows the error indicator,
+  which clears on the next scheduled check. Raw details stay in the local
+  updater log.
 - Development retains the simulation controls and cannot request real installation.
 - The existing ready announcement, progress ring, restart dialog, and unsaved
   changes warning are reused. Cancelling the dialog leaves the app running.

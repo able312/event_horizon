@@ -20,6 +20,11 @@ const resolveWindowIconPath = () => {
     return path.join(app.getAppPath(), 'dist-react/icon-512.png')
 }
 
+// Single source for the page the window loads and the origin updater IPC accepts.
+const resolveRendererUrl = () => isDev()
+    ? "http://localhost:42069/"
+    : pathToFileURL(path.join(app.getAppPath(), "dist-react/index.html")).href
+
 const createWindow = () => {
     const iconPath = resolveWindowIconPath()
     const windowIcon = nativeImage.createFromPath(iconPath)
@@ -42,13 +47,23 @@ const createWindow = () => {
 
     mainWindow.maximize()
 
-    if (isDev()) {
-        console.log("Loading localhost:42069")
-        mainWindow.loadURL("http://localhost:42069")
-    } else {
-        console.log(app.getAppPath(),"/dist-react/index.html")
-        mainWindow.loadFile(path.join(app.getAppPath(), "/dist-react/index.html"));
-    }
+    const rendererUrl = resolveRendererUrl()
+    console.log("Loading", rendererUrl)
+    mainWindow.loadURL(rendererUrl)
+}
+
+const setupUpdater = () => {
+    const { autoUpdater } = electronUpdater
+    const logger = createUpdaterLogger(path.join(app.getPath("logs"), "updater.log"))
+    autoUpdater.logger = logger
+    const updater = createUpdaterService(autoUpdater, nativeUpdater,
+        isUpdaterEnabled(app.isPackaged, process.platform, process.arch), logger.error)
+    const unregisterUpdater = registerUpdaterIpcHandlers(updater, resolveRendererUrl())
+    app.once("will-quit", () => {
+        unregisterUpdater()
+        updater.stop()
+    })
+    return updater
 }
 
 app.on("ready", () => {
@@ -64,18 +79,7 @@ app.on("ready", () => {
 
     registerAllIpcHandlers()
 
-    const { autoUpdater } = electronUpdater
-    const logger = createUpdaterLogger(path.join(app.getPath("logs"), "updater.log"))
-    autoUpdater.logger = logger
-    const updater = createUpdaterService(autoUpdater, nativeUpdater,
-        isUpdaterEnabled(app.isPackaged, process.platform, process.arch), logger.error)
-    const rendererUrl = isDev() ? "http://localhost:42069/"
-        : pathToFileURL(path.join(app.getAppPath(), "dist-react/index.html")).href
-    const unregisterUpdater = registerUpdaterIpcHandlers(updater, rendererUrl)
-    app.once("will-quit", () => {
-        unregisterUpdater()
-        updater.stop()
-    })
+    const updater = setupUpdater()
 
     createWindow();
 

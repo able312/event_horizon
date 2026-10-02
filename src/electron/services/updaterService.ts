@@ -28,6 +28,7 @@ export function createUpdaterService(
   let checkTimer: ReturnType<typeof setInterval> | undefined
   let preparationTimer: ReturnType<typeof setTimeout> | undefined
   let handoffListeners: ReturnType<NativeUpdater["listeners"]> = []
+  let lastError: unknown
 
   function publish(status: UpdaterStatus) {
     if (!started) return
@@ -47,13 +48,22 @@ export function createUpdaterService(
   }
 
   function fail(error: unknown) {
+    // electron-updater emits "error" and also rejects the pending promise with the same error.
+    if (error === lastError) return
+    lastError = error
     logError(error)
-    const wasInstalling = installing
-    installing = false
-    clearHandoff()
-    publish({ phase: "error", message: wasInstalling
-      ? "Could not prepare the update. Please keep working and try again later."
-      : "Could not check for or download the update. We’ll try again later." })
+    const { status } = snapshot
+    if (installing && status.phase === "preparing") {
+      installing = false
+      clearHandoff()
+      // The download is still on disk, so offer it again rather than hiding it until the next check.
+      publish({ phase: "ready", version: status.version, installFailed: true })
+    } else if (status.phase === "downloading") {
+      publish({ phase: "error", message: "Could not download the update. We’ll try again later." })
+    } else if (status.phase === "checking") {
+      // A failed check (e.g. offline startup) is not actionable, so it stays out of the UI.
+      publish({ phase: "idle" })
+    }
   }
 
   function isBusy() {
@@ -74,7 +84,6 @@ export function createUpdaterService(
     if (installing) return
     // This is electron-updater's completion event, including cached downloads.
     // Native Squirrel staging is deliberately deferred until confirmation.
-    publish({ phase: "preparing", version: info.version })
     publish({ phase: "ready", version: info.version })
   }
 

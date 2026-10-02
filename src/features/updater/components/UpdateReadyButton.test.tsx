@@ -15,3 +15,12 @@ it("installs only after confirmation and leaves cancellation usable", () => {
   fireEvent.click(screen.getByRole("button", { name: "Update and restart" }))
   expect(install).toHaveBeenCalledOnce()
 })
+
+it("offers a retry after a failed install", () => {
+  const install = vi.fn()
+  render(<UpdateReadyButton version="0.1.1" installFailed shouldAnnounce={false}
+    onAnnounced={vi.fn()} onInstall={install} />)
+  fireEvent.click(screen.getByRole("button", { name: "Could not install v0.1.1. Click to try again" }))
+  fireEvent.click(screen.getByRole("button", { name: "Update and restart" }))
+  expect(install).toHaveBeenCalledOnce()
+})
