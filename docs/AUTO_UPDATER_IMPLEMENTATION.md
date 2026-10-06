@@ -3,7 +3,8 @@
 The local implementation covers steps 2–5 of [AUTO_UPDATER_PLAN.md](AUTO_UPDATER_PLAN.md).
 Step 1's local signing evidence is in [MACOS_SIGNING.md](MACOS_SIGNING.md).
 The published `0.1.1` release was detected, downloaded, and installed through the
-updater on both the build Mac and the second Mac (October 2, 2026). Release CI
+updater on both the build Mac and the second Mac (October 2, 2026). `0.1.2` and
+`0.1.3` followed on October 5, 2026 (see acceptance results). Release CI
 (step 7) is the follow-up phase.
 
 ## Behavior
@@ -68,18 +69,28 @@ Check that the metadata references the uploaded artifact names, that both bundle
 and nested signatures verify, and that the packaged app launches.
 
 Electron Builder's local files use `Event Horizon-…`; the GitHub publisher uses
-the generated safe names `Event-Horizon-…` referenced by the metadata. The release
-command handles this rename automatically. If uploading artifacts manually,
+the generated safe names `Event-Horizon-…` referenced by the metadata. The ZIP
+blockmap is the exception: it uploads under its local name, which GitHub turns
+into `Event.Horizon-…-arm64-mac.zip.blockmap`. Rename that asset to
+`Event-Horizon-…` before publishing. A misnamed blockmap only disables
+differential downloads; full updates still work. If uploading artifacts manually,
 use the exact metadata names, including the blockmaps' corresponding names.
 
-When ready to create the draft, provide `GH_TOKEN` in the build machine's shell
-environment, then run:
+Create the draft before running the release command. Without one, the parallel
+DMG and ZIP uploads each create their own draft for the same tag. `--target`
+needs the full commit SHA or a branch name, and the commit must be pushed:
 
 ```sh
-npm run release:mac
+gh release create vX.Y.Z --repo able312/event_horizon --draft \
+  --target "$(git rev-parse HEAD)" --title X.Y.Z --notes ""
+GH_TOKEN=$(gh auth token) npm run release:mac
 ```
 
 This signs, builds, and uploads using `--publish always` with `releaseType: draft`.
+Delete any assets left on the draft by a failed run before retrying: a leftover
+`Event.Horizon-…` blockmap makes the upload fail with `already_exists` before
+`latest-mac.yml` is uploaded. The command can stay open after the last upload;
+stop it once `latest-mac.yml` appears on the draft.
 Inspect the draft and its generated metadata/artifacts before publishing manually.
 Installed clients download anonymously from public releases. Credentials and
 certificate archives do not belong in repository files or app artifacts.
@@ -112,7 +123,7 @@ were reused. No database schema or migration changes were needed.
 
 ## Automated verification
 
-- `npm run test -- --maxWorkers=2`: 133 files and 732 tests passed.
+- `npm run test -- --maxWorkers=2`: 133 files and 734 tests passed.
 - `npm run build`: passed, including the strict Electron TypeScript check.
 - `npm run lint`: passed with three existing React Refresh warnings.
 - Updated Electron Updater's transitive `js-yaml` dependency to compatible patch
@@ -137,6 +148,14 @@ runtime dependencies to reduce packaging size. No dependencies were removed here
 
 Signed `0.1.1` was published to GitHub and both Macs updated to it through the
 updater without issues.
+
+## Acceptance results (October 5, 2026)
+
+- `0.1.2` contains the failed-check and failed-install fixes. The daily Mac
+  updated to it from `0.1.1`, which exercised the `0.1.1` updater code.
+- `0.1.3` was published so the `0.1.2` code could install an update. Its draft
+  metadata matched the built ZIP's hash and size before publishing. The
+  `0.1.2` → `0.1.3` result has not yet been recorded here.
 
 The following checks from step 6 of the plan have not been recorded as run:
 
