@@ -4,7 +4,8 @@ The local implementation covers steps 2–5 of [AUTO_UPDATER_PLAN.md](AUTO_UPDAT
 Step 1's local signing evidence is in [MACOS_SIGNING.md](MACOS_SIGNING.md).
 The published `0.1.1` release was detected, downloaded, and installed through the
 updater on both the build Mac and the second Mac (October 2, 2026). `0.1.2` and
-`0.1.3` followed on October 5, 2026 (see acceptance results). Release CI
+`0.1.3` followed on October 5, 2026, the latter exercising this branch's updater
+code (see acceptance results). Release CI
 (step 7) is the follow-up phase.
 
 ## Behavior
@@ -154,8 +155,11 @@ updater without issues.
 - `0.1.2` contains the failed-check and failed-install fixes. The daily Mac
   updated to it from `0.1.1`, which exercised the `0.1.1` updater code.
 - `0.1.3` was published so the `0.1.2` code could install an update. Its draft
-  metadata matched the built ZIP's hash and size before publishing. The
-  `0.1.2` → `0.1.3` result has not yet been recorded here.
+  metadata matched the built ZIP's hash and size before publishing. The daily
+  Mac updated from `0.1.2` to `0.1.3` through the updater. Turning Wi-Fi off
+  during the update showed the download error; after relaunching online, the
+  update downloaded, installed, and the app restarted on `0.1.3`. Development
+  continues from `0.1.3` on `main`.
 
 The following checks from step 6 of the plan have not been recorded as run:
 
