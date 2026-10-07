@@ -40,8 +40,8 @@ function tagSha(version: string): string | null {
 }
 
 function preflight(build: boolean): void {
-  if (build && (process.platform !== "darwin" || process.arch !== "arm64")) {
-    throw new Error("Release builds require an Apple Silicon Mac with the signing identity installed.")
+  if (process.platform !== "darwin" || process.arch !== "arm64") {
+    throw new Error("Releasing and publishing verify signed macOS packages and require an Apple Silicon Mac.")
   }
   if (run("git", ["branch", "--show-current"]) !== "main") {
     throw new Error("Run this command from main. If a bump PR is waiting, merge it and pull main first.")
@@ -87,6 +87,9 @@ async function verifyUploaded(release: Release, version: string): Promise<void> 
     }
     const inspected = await inspectArtifacts(directory, version)
     verifyAssets(inspected.metadata, release.assets, inspected.files)
+    // Hashes only prove self-consistency; re-check signatures, bundle identity and launch on what was downloaded.
+    console.log("Verifying downloaded package signatures and isolated launch…")
+    await verifyPackages(directory, inspected.metadata)
   } finally { rmSync(directory, { recursive: true, force: true }) }
 }
 
@@ -143,7 +146,11 @@ function landBump(version: string): void {
   const prs = JSON.parse(gh(["pr", "list", "--repo", repository, "--head", branch, "--base", "main", "--state", "open", "--json", "url"])) as { url: string }[]
   const url = prs[0]?.url ?? gh(["pr", "create", "--repo", repository, "--head", branch, "--base", "main", "--title", `chore: bump version to ${version}`, "--body", `Update package.json and package-lock.json to ${version}. Release tests, lint and build run on the merged main commit before packaging.`])
   console.log(`Version PR: ${url}`)
-  const head = JSON.parse(gh(["pr", "view", url, "--repo", repository, "--json", "headRefOid"])) as { headRefOid: string }
+  const head = JSON.parse(gh(["pr", "view", url, "--repo", repository, "--json", "headRefOid,mergeStateStatus"])) as { headRefOid: string; mergeStateStatus: string }
+  // gh would otherwise enable auto-merge or queue the PR, letting main advance after this command stops.
+  if (head.mergeStateStatus !== "CLEAN") {
+    throw new Error(`The bump PR is not ready to merge immediately (${head.mergeStateStatus}): ${url}. Resolve required reviews/checks, merge it, pull main and rerun npm run release.`)
+  }
   try { gh(["pr", "merge", url, "--repo", repository, "--merge", "--match-head-commit", head.headRefOid]) }
   catch (error) {
     throw new Error(`The bump PR could not merge: ${url}. Resolve required reviews/checks, merge it, pull main and rerun npm run release. ${error instanceof Error ? error.message : String(error)}`)

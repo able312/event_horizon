@@ -53,6 +53,7 @@ let localVersion: string
 let pendingVersion: string
 let headSha: string
 let mergeBlocked: boolean
+let mergeStateStatus: string
 let versionFails: boolean
 
 function artifactsFor(targetVersion: string) {
@@ -75,6 +76,7 @@ beforeEach(() => {
   pendingVersion = version
   headSha = sha
   mergeBlocked = false
+  mergeStateStatus = "CLEAN"
   versionFails = false
   vi.spyOn(console, "log").mockImplementation(() => {})
   vi.mocked(inspectArtifacts).mockImplementation(async (_directory, targetVersion) => artifactsFor(targetVersion))
@@ -111,7 +113,7 @@ beforeEach(() => {
       if (args[0] === "release" && args[1] === "edit") { current = { ...draft, draft: false }; tag = sha; return "" }
       if (args[0] === "pr" && args[1] === "list") return "[]"
       if (args[0] === "pr" && args[1] === "create") return "https://github.com/able312/event_horizon/pull/99"
-      if (args[0] === "pr" && args[1] === "view") return args.includes("headRefOid") ? JSON.stringify({ headRefOid: "b".repeat(40) }) : JSON.stringify({ state: "MERGED", mergeCommit: { oid: "c".repeat(40) } })
+      if (args[0] === "pr" && args[1] === "view") return args.includes("headRefOid,mergeStateStatus") ? JSON.stringify({ headRefOid: "b".repeat(40), mergeStateStatus }) : JSON.stringify({ state: "MERGED", mergeCommit: { oid: "c".repeat(40) } })
       if (args[0] === "pr" && args[1] === "merge") {
         if (mergeBlocked) throw new Error("required reviews")
         return ""
@@ -149,6 +151,13 @@ describe("release orchestration", () => {
     expect(localVersion).toBe("0.1.4")
     expect(branch).toBe("main")
   })
+  it("does not merge a bump PR that would only be queued or auto-merged", async () => {
+    current = { ...draft, draft: false }
+    mergeStateStatus = "BLOCKED"
+    await expect(runRelease([])).rejects.toThrow("not ready to merge immediately")
+    expect(ghWrites().some(([, args]) => args[0] === "pr" && args[1] === "merge")).toBe(false)
+    expect(npm).not.toHaveBeenCalled()
+  })
   it("stops at a protected bump PR before building or creating a draft", async () => {
     current = { ...draft, draft: false }
     mergeBlocked = true
@@ -160,9 +169,15 @@ describe("release orchestration", () => {
   it("reuses a complete draft without builds or GitHub writes", async () => {
     await runRelease([])
     expect(npm).not.toHaveBeenCalled()
-    expect(verifyPackages).not.toHaveBeenCalled()
+    expect(verifyPackages).toHaveBeenCalledOnce()
     expect(ghWrites()).toEqual([])
     expect(inspectArtifacts).toHaveBeenCalledOnce()
+  })
+  it("repairs a reused draft whose downloaded packages fail verification", async () => {
+    vi.mocked(verifyPackages).mockRejectedValueOnce(new ArtifactValidationError("unsigned"))
+    await runRelease([])
+    expect(verifyPackages).toHaveBeenCalledTimes(2)
+    expect(npm).toHaveBeenCalled()
   })
   it("repairs a partial draft at the same version after all gates pass", async () => {
     current = { ...draft, assets: assets.slice(1) }
@@ -232,6 +247,7 @@ describe("release orchestration", () => {
     await runRelease([], true)
     expect(npm).not.toHaveBeenCalled()
     expect(inspectArtifacts).toHaveBeenCalledOnce()
+    expect(verifyPackages).toHaveBeenCalledOnce()
     expect(ghWrites()).toHaveLength(1)
     expect(ghWrites()[0][1]).toEqual(["release", "edit", `v${version}`, "--repo", "able312/event_horizon", "--draft=false", "--latest"])
   })
@@ -241,6 +257,10 @@ describe("release orchestration", () => {
     current = structuredClone(draft)
     vi.mocked(inspectArtifacts).mockRejectedValueOnce(new ArtifactValidationError("hash mismatch"))
     await expect(runRelease([], true)).rejects.toThrow("hash mismatch")
+    expect(ghWrites()).toEqual([])
+    current = structuredClone(draft)
+    vi.mocked(verifyPackages).mockRejectedValueOnce(new ArtifactValidationError("unsigned"))
+    await expect(runRelease([], true)).rejects.toThrow("unsigned")
     expect(ghWrites()).toEqual([])
   })
   it.each([null, { ...draft, draft: false }])("refuses publication without a current draft", async (release) => {
