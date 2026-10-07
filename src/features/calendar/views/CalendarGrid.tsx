@@ -2,13 +2,13 @@
  * CalendarGrid Component
  * 
  * Renders the main calendar grid showing days of the month with events.
- * Displays events as colored chips within each day cell.
+ * Displays events as status cards within each day cell.
  * 
  * Features:
  * - Shows all days in the current month
  * - Highlights today's date
  * - Keeps week rows equal height across the calendar
- * - Displays up to three events per day with overflow in a popover
+ * - Displays as many events as fit (up to three) per day with overflow in a popover
  * - Click events to navigate to event detail
  * 
  * Location: src/features/calendar/views/CalendarGrid.tsx
@@ -16,14 +16,11 @@
 
 import React from "react"
 import { useLocation, useNavigate } from "react-router"
-import { AlertTriangle } from "lucide-react"
-import { EVENT_TYPE_COLORS } from "~/definitions/events/ui"
 import type { PrimaryClient } from "~/definitions/contacts"
 import type { Event } from "~/definitions/database"
 import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
 import { buildEventDetailEntryPath } from "~/features/event-detail/workspace/lib/eventDetailRouteState"
-import { Popover, PopoverContent, PopoverTrigger } from "~/components/atoms/popover"
-import EventItemContextMenu from "../interactions/EventItemContextMenu"
+import CalendarDayEventList from "../components/CalendarDayEventList"
 
 const MAX_VISIBLE_DAY_EVENTS = 3
 
@@ -148,10 +145,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     }
   }
 
-  const needsGoogleCalendarWarning = (event: Event): boolean => {
-    return !event.calendarId || event.calendarId.trim().length === 0
-  }
-
   return (
     /**
      * Calendar Grid Container
@@ -184,8 +177,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       {Array.from({ length: daysInMonth }).map((_, i) => {
         const day = i + 1
         const dayEvents = getEventsForDay(day)
-        const visibleDayEvents = dayEvents.slice(0, MAX_VISIBLE_DAY_EVENTS)
-        const hiddenDayEventsCount = Math.max(0, dayEvents.length - MAX_VISIBLE_DAY_EVENTS)
         const draftForDay = getDraftPreviewForDay(day)
 
         return (
@@ -211,7 +202,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 
             {/* Events for this day */}
             <div
-              className="min-h-0 flex-1 space-y-1 overflow-hidden"
+              className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden"
               data-testid={`calendar-day-events-${day}`}
             >
               {draftForDay ? (
@@ -219,113 +210,22 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                   onClick={(e) => {
                     e.stopPropagation()
                   }}
-                  className="w-full truncate rounded border border-dashed border-stone-400 bg-stone-100/80 px-1 py-0.5 text-[10px] text-stone-600"
+                  className="w-full shrink-0 truncate rounded border border-dashed border-stone-400 bg-stone-100/80 px-1 py-0.5 text-[10px] text-stone-600"
                   title={draftForDay.title}
                   data-testid={`calendar-draft-chip-${day}`}
                 >
                   {draftForDay.title}
                 </div>
               ) : null}
-              {visibleDayEvents.map(event => (
-                <EventItemContextMenu
-                  key={event.id}
-                  event={event}
-                  onEdit={onEventEdit}
-                  onDelete={onEventDelete}
-                >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleEventClick(event.id)
-                    }}
-                    className={`w-full text-left px-1 py-0.5 rounded text-[10px] truncate hover:opacity-80 ${
-                      EVENT_TYPE_COLORS[event.type as keyof typeof EVENT_TYPE_COLORS] || 'bg-stone-100'
-                    }`}
-                    title={event.title}
-                  >
-                    <div className="flex items-center gap-1">
-                      <span className="truncate">{event.title}</span>
-                      {needsGoogleCalendarWarning(event) ? (
-                        <span
-                          title="Not uploaded to Google Calendar."
-                          aria-label="Not uploaded to Google Calendar."
-                          className="inline-flex"
-                        >
-                          <AlertTriangle
-                            className="h-3 w-3 shrink-0 text-yellow-600"
-                            aria-hidden="true"
-                          />
-                        </span>
-                      ) : null}
-                    </div>
-                    <p>{clientsByEventId?.[event.id]?.displayName}</p>
-                    <p>{!event.guestCountFinal ? event.minGuests + " - " : "" }{event.maxGuests} guests</p>
-                    <p>{event.status}</p>
-                  </button>
-                </EventItemContextMenu>
-              ))}
-              {hiddenDayEventsCount > 0 ? (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                      }}
-                      className="w-full rounded border border-dashed border-stone-300 px-1 py-0.5 text-left text-[10px] text-muted-foreground hover:bg-stone-50"
-                      aria-label={`+${hiddenDayEventsCount} more events`}
-                    >
-                      +{hiddenDayEventsCount} more
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="w-72 p-2"
-                    align="start"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                    }}
-                  >
-                    <div className="max-h-64 space-y-1 overflow-y-auto">
-                      {dayEvents.map((event) => (
-                        <EventItemContextMenu
-                          key={`more-${day}-${event.id}`}
-                          event={event}
-                          onEdit={onEventEdit}
-                          onDelete={onEventDelete}
-                        >
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleEventClick(event.id)
-                            }}
-                            className={`w-full rounded px-2 py-1 text-left text-xs hover:opacity-80 ${
-                              EVENT_TYPE_COLORS[event.type as keyof typeof EVENT_TYPE_COLORS] || "bg-stone-100"
-                            }`}
-                            title={event.title}
-                          >
-                            <span className="flex items-center gap-1">
-                              <span className="truncate">{event.title}</span>
-                              {needsGoogleCalendarWarning(event) ? (
-                                <span
-                                  title="Not uploaded to Google Calendar."
-                                  aria-label="Not uploaded to Google Calendar."
-                                  className="inline-flex"
-                                >
-                                  <AlertTriangle
-                                    className="h-3.5 w-3.5 shrink-0 text-yellow-600"
-                                    aria-hidden="true"
-                                  />
-                                </span>
-                              ) : null}
-                            </span>
-                          </button>
-                        </EventItemContextMenu>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              ) : null}
+              <CalendarDayEventList
+                day={day}
+                events={dayEvents}
+                maxVisible={MAX_VISIBLE_DAY_EVENTS}
+                clientsByEventId={clientsByEventId}
+                onEventClick={handleEventClick}
+                onEventEdit={onEventEdit}
+                onEventDelete={onEventDelete}
+              />
             </div>
           </div>
         )

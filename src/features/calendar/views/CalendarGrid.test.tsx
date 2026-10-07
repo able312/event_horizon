@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import type { PrimaryClient } from "~/definitions/contacts"
 import type { Event } from "~/definitions/database"
 import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
 import CalendarGrid from "./CalendarGrid"
@@ -31,6 +32,7 @@ function makeEvent(day: number, index: number, overrides: Partial<Event> = {}): 
 
 function renderGrid({
   events = [],
+  clientsByEventId,
   year = 2026,
   month = 3,
   startingDay = 2,
@@ -42,6 +44,7 @@ function renderGrid({
   onEventDelete,
 }: {
   events?: Event[]
+  clientsByEventId?: Record<string, PrimaryClient>
   year?: number
   month?: number
   startingDay?: number
@@ -56,6 +59,7 @@ function renderGrid({
     <MemoryRouter initialEntries={[route]}>
       <CalendarGrid
         events={events}
+        clientsByEventId={clientsByEventId}
         year={year}
         month={month}
         startingDay={startingDay}
@@ -139,10 +143,10 @@ describe("CalendarGrid row stability and event rendering", () => {
     fireEvent.click(screen.getByRole("button", { name: "+2 more events" }))
     expect(onDayCellClick).not.toHaveBeenCalled()
 
-    expect(screen.getByRole("button", { name: "Event 10-4" })).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Event 10-5" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: /Event 10-4/ })).toBeTruthy()
+    expect(screen.getByRole("button", { name: /Event 10-5/ })).toBeTruthy()
 
-    fireEvent.click(screen.getByRole("button", { name: "Event 10-4" }))
+    fireEvent.click(screen.getByRole("button", { name: /Event 10-4/ }))
 
     expect(navigateMock).toHaveBeenCalledWith(
       "/events/event-10-4?returnTo=%2Fevents%3Fview%3Dcalendar%26date%3D2026-04",
@@ -195,7 +199,7 @@ describe("CalendarGrid row stability and event rendering", () => {
     renderGrid({ events, onDayCellClick, onEventEdit })
 
     fireEvent.click(screen.getByRole("button", { name: "+2 more events" }))
-    fireEvent.contextMenu(screen.getByRole("button", { name: "Event 10-4" }))
+    fireEvent.contextMenu(screen.getByRole("button", { name: /Event 10-4/ }))
     fireEvent.click(screen.getByRole("menuitem", { name: "Edit" }))
 
     expect(onEventEdit).toHaveBeenCalledWith(events[3])
@@ -337,5 +341,35 @@ describe("CalendarGrid row stability and event rendering", () => {
     fireEvent.click(screen.getByRole("button", { name: "+2 more events" }))
 
     expect(screen.getAllByTitle("Not uploaded to Google Calendar.").length).toBeGreaterThan(0)
+  })
+
+  it("renders the status band, guest count and client, and names the card in reading order", () => {
+    renderGrid({
+      events: [makeEvent(10, 1, { status: "confirmed", minGuests: 120, maxGuests: 150, guestCountFinal: 0 })],
+      clientsByEventId: {
+        "event-10-1": { contactId: "c1", displayName: "Maya Henderson", email: null, phone: null },
+      },
+    })
+
+    const card = screen.getByRole("button", {
+      name: "Confirmed: Event 10-1, Maya Henderson, 120 to 150 guests",
+    })
+    expect(card.textContent).toContain("Confirmed")
+    expect(card.textContent).toContain("120–150")
+    expect(card.textContent).not.toContain("guests")
+    expect(screen.getByTitle("Maya Henderson")).toBeTruthy()
+  })
+
+  it("hides the guest count when it is unknown", () => {
+    renderGrid({ events: [makeEvent(10, 1, { minGuests: null, maxGuests: null })] })
+
+    const band = screen.getByTestId("calendar-event-card-band")
+    expect(band.textContent).toBe("New lead")
+  })
+
+  it("does not use event type colours on cards", () => {
+    renderGrid({ events: [makeEvent(10, 1, { type: "wedding" })] })
+
+    expect(screen.getByTitle("Event 10-1").className).not.toContain("purple")
   })
 })
