@@ -90,17 +90,23 @@ function detach(mount: string): boolean {
   return false
 }
 
+// A hash-consistent archive that cannot be extracted or mounted is a corrupt package, which a rebuild repairs.
+function unpackable(action: () => void): void {
+  try { action() }
+  catch (error) { throw new ArtifactValidationError(error instanceof Error ? error.message : String(error)) }
+}
+
 export async function verifyPackages(directory: string, metadata: Metadata): Promise<void> {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "event-horizon-smoke-")))
   let stillMounted = false
   try {
     const zip = metadata.files.find((file) => file.name.endsWith(".zip"))!
-    run("ditto", ["-x", "-k", join(directory, zip.name), join(root, "zip")])
+    unpackable(() => run("ditto", ["-x", "-k", join(directory, zip.name), join(root, "zip")]))
     const appPath = join(root, "zip/Event Horizon.app")
     verifySignature(appPath, metadata.version)
     const dmg = metadata.files.find((file) => file.name.endsWith(".dmg"))!
     const mount = join(root, "dmg")
-    run("hdiutil", ["attach", "-readonly", "-nobrowse", "-mountpoint", mount, join(directory, dmg.name)])
+    unpackable(() => run("hdiutil", ["attach", "-readonly", "-nobrowse", "-mountpoint", mount, join(directory, dmg.name)]))
     try { verifySignature(join(mount, "Event Horizon.app"), metadata.version) }
     finally { stillMounted = !detach(mount) }
     await smokeLaunch(appPath, root)
