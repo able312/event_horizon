@@ -11,7 +11,18 @@ release instructions are in [AUTO_UPDATER_IMPLEMENTATION.md](AUTO_UPDATER_IMPLEM
 `npm run dist:mac` rebuilds SQLite for Electron, compiles the app, and produces
 arm64 DMG and ZIP packages under `dist/`. It explicitly uses `--publish never`.
 The GitHub feed is configured for public releases in `able312/event_horizon`.
-`npm run release:mac` is the separate command that uploads to a draft release.
+`npm run release` runs the quality gate, lands a version bump through a PR when
+needed, builds and verifies signed packages, and uploads them using `gh` to a
+draft. `npm run release:publish` verifies and publishes that draft without
+rebuilding. Electron Builder never uploads. See the
+[release workflow](AUTO_UPDATER_IMPLEMENTATION.md#release-workflow) for
+prerequisites and retry behavior.
+
+`artifactName` explicitly produces `Event-Horizon-X.Y.Z-arm64.dmg` and
+`Event-Horizon-X.Y.Z-arm64.zip`, including correctly named blockmaps. Release
+builds go under `dist/release-vX.Y.Z/`; `dist:mac` alone still writes to `dist/`.
+The release script checks both ZIP and DMG signatures and launches the extracted
+ZIP app with temporary user data before uploading.
 
 The app identifier stays `com.latenightcreation.event-horizon`. macOS packaging
 requires the `LNC Internal Signature` identity and uses `forceCodeSigning: true`
@@ -148,3 +159,21 @@ for the checks that have not been recorded.
   require a manual reinstall on each Mac. Plan the renewal before that date.
 
 Configuration reference: [Electron Builder 26 macOS options](https://www.electron.build/v26/docs/mac/).
+
+## Release workflow verification (October 7, 2026)
+
+- A local `0.1.3` build with `--publish never` completed and exited on its own.
+  It was a packaging proof, and was not uploaded over the published release.
+- Explicit artifact names matched `latest-mac.yml` for both ZIP and DMG;
+  both `.blockmap` filenames matched without renaming.
+- The release verifier confirmed sizes and SHA-512 hashes, strict/deep
+  signatures on ZIP extraction and DMG mounting, the expected authority and
+  identifier, hardened runtime, source version and arm64.
+- The ZIP-extracted app stayed running for ten seconds and migrated its
+  throwaway database successfully. macOS's `/var` → `/private/var` alias is
+  resolved before the smoke launch, so its logged path matches the isolated
+  directory.
+- The first real draft/upload/publication run remains to be exercised with the
+  next actual version. The GitHub workflow has simulated tests for bump PRs,
+  merge protection, partial drafts, complete-draft retries, SHA checks and
+  publication failures.

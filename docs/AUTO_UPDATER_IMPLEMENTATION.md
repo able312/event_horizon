@@ -44,65 +44,144 @@ Diagnostics go to `updater.log` under Electron's logs directory. It rotates at
 5 MiB into one `.previous` file, and logging failures do not interrupt event work.
 This uses Node filesystem facilities without another logging dependency.
 
-## Local builds and draft releases
+## Release workflow
 
-The baseline source version is `0.1.0`. Before each actual release, update both
-`package.json` and the lockfile to the new standard version and rebuild all assets.
-Use a matching `v0.1.0`, `v0.1.1`, etc. tag on the corresponding committed source.
-Use normal releases; the UI's Alpha badge does not enable a prerelease feed.
+Run these commands from a clean `main` checkout that exactly matches
+`public/main`, using Node 22.16 or newer:
 
 ```sh
-npm run test -- --maxWorkers=2
-npm run build
-npm run lint
-npm audit
-npm audit --omit=dev
-npm run dist:mac
+npm run release                       # default: patch
+# Or: npm run release -- minor        # or major
+npm run release:publish
 ```
 
-Packaging rebuilds SQLite for Electron after the Node test rebuild. Ordinary macOS
-and Windows distribution commands explicitly use `--publish never`.
+`release` stops at a GitHub draft. Installed apps see the release only after
+`release:publish`. Optionally install the draft DMG and inspect the app between
+commands. Ordinary releases use `vX.Y.Z` tags; the Alpha badge does not enable a
+prerelease feed.
 
-Electron Builder generates the bundled `app-update.yml` from the GitHub provider
-configuration; the application does not construct feed URLs or set publishing
-tokens. Verify `dist/latest-mac.yml`, DMG, ZIP, and both generated blockmaps.
-Check that the metadata references the uploaded artifact names, that both bundle
-and nested signatures verify, and that the packaged app launches.
+### Prerequisites
 
-Electron Builder's local files use `Event Horizon-…`; the GitHub publisher uses
-the generated safe names `Event-Horizon-…` referenced by the metadata. The ZIP
-blockmap is the exception: it uploads under its local name, which GitHub turns
-into `Event.Horizon-…-arm64-mac.zip.blockmap`. Rename that asset to
-`Event-Horizon-…` before publishing. A misnamed blockmap only disables
-differential downloads; full updates still work. If uploading artifacts manually,
-use the exact metadata names, including the blockmaps' corresponding names.
+- The remote is named `public` and points to the GitHub repository configured in
+  `electron-builder.json`. Fetch and push URLs must agree. The script never
+  assumes `origin`.
+- `git`, `gh`, `npm` and installed dependencies are available. Authenticate with
+  `gh auth login`; the script obtains the token through `gh auth token` and keeps
+  it in memory. No token file or `.env` is needed.
+- Building requires macOS arm64 and the `LNC Internal Signature` code-signing
+  identity with its private key in an unlocked keychain. Provision keychain
+  access before unattended builds. Publication does not require that identity.
+- Both commands require clean, current `main`. If it is behind, run
+  `git pull --ff-only public main` first. In a worktree setup, run releases from
+  the checkout that owns `main`.
 
-Create the draft before running the release command. Without one, the parallel
-DMG and ZIP uploads each create their own draft for the same tag. `--target`
-needs the full commit SHA or a branch name, and the commit must be pushed:
+### Build to a draft
 
-```sh
-gh release create vX.Y.Z --repo able312/event_horizon --draft \
-  --target "$(git rev-parse HEAD)" --title X.Y.Z --notes ""
-GH_TOKEN=$(gh auth token) npm run release:mac
-```
+The script determines the version before doing any packaging:
 
-This signs, builds, and uploads using `--publish always` with `releaseType: draft`.
-Delete any assets left on the draft by a failed run before retrying: a leftover
-`Event.Horizon-…` blockmap makes the upload fail with `already_exists` before
-`latest-mac.yml` is uploaded. The command can stay open after the last upload;
-stop it once `latest-mac.yml` appears on the draft.
-Inspect the draft and its generated metadata/artifacts before publishing manually.
-Installed clients download anonymously from public releases. Credentials and
-certificate archives do not belong in repository files or app artifacts.
+| Current version on GitHub | Result |
+| --- | --- |
+| No release | Build that version, including retries after a merged bump |
+| Incomplete or invalid draft | Rebuild and replace the draft at the same version |
+| Complete, verified draft | Print/open its URL; keep the existing artifacts |
+| Published release | Bump patch, minor or major |
 
-Do not use the early signing-proof packages for this release: their package
-version overrides intentionally did not rebuild the sidebar version, and the B
-proof omitted timestamps while Apple's service was failing. Normal builds still
-request trusted timestamps.
+A bump updates `package.json` and `package-lock.json` with
+`npm version --no-git-tag-version`, commits to `release/vX.Y.Z`, opens a
+`chore: bump version to X.Y.Z` PR, merges it and pulls `main`. A retry can reuse
+an existing bump branch/PR. Required reviews or checks are respected: if merging
+is blocked, the command prints the PR URL and stops. Resolve the requirements,
+merge, pull `main`, then rerun. It does not enable auto-merge or bypass protection.
+
+On the merged commit, the quality gate runs tests with two workers, lint, the
+release-script TypeScript check and the production build. Dependency audits are
+excluded from this gate because of the existing findings recorded below.
+Packaging reuses `dist:mac`, which rebuilds SQLite for Electron, transpiles the
+main process, builds the renderer, and invokes
+`electron-builder --mac --arm64 --publish never`. Output is isolated under
+`dist/release-vX.Y.Z/`; stale output there is removed before rebuilding.
+
+The explicit artifact name produces `Event-Horizon-X.Y.Z-arm64.dmg` and
+`Event-Horizon-X.Y.Z-arm64.zip`, with matching `.blockmap` files. No manual rename
+is needed. Electron Builder generates `latest-mac.yml` and the bundled
+`app-update.yml` from the existing public GitHub provider configuration.
+
+Before creating or replacing a draft, the script checks:
+
+- Update metadata version, exact filenames, byte sizes and SHA-512 hashes.
+- Both blockmaps are present and nonempty.
+- Strict, deep signature verification of the ZIP-extracted and DMG-mounted apps,
+  the expected authority and app identifier, hardened runtime, version and arm64.
+- A ten-second launch of the ZIP-extracted app with a temporary user-data
+  directory. The isolated database must be created and migrations must complete.
+  DNS is blocked for the smoke launch, keeping updater requests offline.
+
+The draft targets the full source commit SHA. An existing remote tag, including
+an annotated tag's peeled commit, must match that SHA; the script refuses to move
+mismatched tags. It checks that an existing draft's source is an ancestor of
+current `main` and contains the intended package version.
+
+Only a checked draft can be deleted for replacement. Published releases are
+never deleted. The replacement gets generated release notes, then `gh release
+upload` uploads exactly the DMG, ZIP, both blockmaps and `latest-mac.yml`. The
+script checks the remote asset list and sizes against the local verified files,
+prints the draft URL, opens it in interactive use, and exits.
+
+### Publish the inspected draft
+
+`release:publish` requires the current version's normal draft. It verifies the
+source and tag SHA, downloads the uploaded files to a temporary directory, checks
+metadata and artifact hashes/sizes, and rechecks that the draft has not changed.
+It then runs `gh release edit vX.Y.Z --draft=false --latest`. No rebuild occurs,
+so the uploaded artifacts are exactly the ones published. A complete-draft retry
+uses the same remote verification; network/authentication failures stop without
+rebuilding or replacing the draft. Downloads take additional time but also let
+publication work without local build output.
+
+Installed clients download anonymously from public releases on their next
+startup/six-hour check, and restart only after the user's confirmation.
+Credentials and certificate archives never belong in repository files or app
+artifacts.
+
+### Recovery and unattended use
+
+A failed build or upload leaves the version reusable. Rerun `release` from clean,
+current `main`. An incomplete draft is replaced only after the new build passes
+verification. If the draft source has an existing tag at a different SHA, stop
+and reconcile it manually; the script deliberately does not force-push tags.
+
+If a version command or commit fails and leaves a dirty release branch, inspect
+its `package.json`/lockfile changes before recovering; the script does not discard
+local changes. A committed local bump can be pushed and reused on retry from
+`main`.
+
+A repository-wide lock prevents simultaneous local release commands. Normal
+completion or failure removes it; after killing a process, remove the lock path
+reported by the next run only once the old process has stopped. Coordinate
+releases across different machines as well: GitHub does not offer an atomic
+compare-and-publish operation. The commands require no terminal input themselves
+and skip opening a browser when stdout is not a terminal or `CI=true`.
+
+`npm run dist:mac` remains available for local packaging without GitHub changes.
+Do not use the early signing-proof packages for a release: their version
+overrides did not rebuild the sidebar version, and one proof omitted timestamps.
+Normal builds still request trusted timestamps.
+
+Existing databases with pending migrations are backed up under their `backups/`
+directory before migrations run (`src/electron/db/migrationBackup.ts`). A backup
+failure prevents migration and app startup. This workflow does not change schema
+or migration behavior.
 
 ## Files and boundaries
 
+- `scripts/release.ts`, `scripts/release-publish.ts`: separate build/draft and
+  publication entry points, with git/GitHub orchestration.
+- `scripts/release-logic.ts`: tested version, draft, SHA, metadata and asset rules.
+- `scripts/release-artifacts.ts`: streamed hashing, signed ZIP/DMG verification
+  and temporary-data launch checks; `scripts/release-commands.ts`: argument-based
+  subprocess execution with timeouts.
+- `scripts/release-logic.test.ts`, `scripts/release.test.ts`: pure validation and
+  simulated workflow tests; `scripts/tsconfig.json`: strict script type checking.
 - `electron-builder.json`, `package.json`, and `package-lock.json`: release feed,
   build commands, source version, and runtime dependency.
 - `build/entitlements.mac.plist`: the existing certificate's signing requirements.
@@ -123,6 +202,20 @@ synchronization from rendering. Existing updater components and reducer logic
 were reused. No database schema or migration changes were needed.
 
 ## Automated verification
+
+Release workflow verification (October 7, 2026):
+
+- `npm run test -- --maxWorkers=2`: 135 files and 827 tests passed, including
+  93 release validation/workflow tests.
+- `npm run typecheck:release`, `npm run build` and `npm run lint`: passed;
+  lint retains the three existing React Refresh warnings.
+- Signed local packaging, both blockmaps, metadata, ZIP/DMG signatures and the
+  isolated launch passed. Details are in [MACOS_SIGNING.md](MACOS_SIGNING.md).
+- Real GitHub draft upload and publication are reserved for the next actual
+  release; automated workflow tests simulate those operations without contacting
+  GitHub.
+
+Earlier updater verification:
 
 - `npm run test -- --maxWorkers=2`: 133 files and 734 tests passed.
 - `npm run build`: passed, including the strict Electron TypeScript check.
