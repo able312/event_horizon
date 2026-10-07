@@ -93,8 +93,8 @@ an existing bump branch/PR. Required reviews or checks are respected: if merging
 is blocked, the command prints the PR URL and stops. Resolve the requirements,
 merge, pull `main`, then rerun. It does not enable auto-merge or bypass protection.
 
-On the merged commit, the quality gate runs tests with two workers, lint, the
-release-script TypeScript check and the production build. Dependency audits are
+On the merged commit, the quality gate runs tests with two workers, lint and the
+release-script TypeScript check; the production build runs once, inside packaging. Dependency audits are
 excluded from this gate because of the existing findings recorded below.
 Packaging reuses `dist:mac`, which rebuilds SQLite for Electron, transpiles the
 main process, builds the renderer, and invokes
@@ -112,8 +112,11 @@ Before creating or replacing a draft, the script checks:
 - Both blockmaps are present and nonempty.
 - Strict, deep signature verification of the ZIP-extracted and DMG-mounted apps,
   the expected authority and app identifier, hardened runtime, version and arm64.
-- A ten-second launch of the ZIP-extracted app with a temporary user-data
-  directory. The isolated database must be created and migrations must complete.
+- A launch of the ZIP-extracted app with a temporary user-data directory. The
+  isolated database must be created, migrations must complete and the app must
+  stay running for at least ten seconds; a slow first launch gets up to a minute.
+  A DMG that will not detach is reported and left for manual cleanup instead of
+  hiding the verification result.
   DNS is blocked for the smoke launch, keeping updater requests offline.
 
 The draft targets the full source commit SHA. An existing remote tag, including
@@ -121,9 +124,12 @@ an annotated tag's peeled commit, must match that SHA; the script refuses to mov
 mismatched tags. It checks that an existing draft's source is an ancestor of
 current `main` and contains the intended package version.
 
-Only a checked draft can be deleted for replacement. Published releases are
+Drafts are found by listing releases, because GitHub's tag lookup omits drafts.
+More than one release for the version stops the command. A draft whose target
+is not a full commit SHA (for example, after editing it in the GitHub UI) is
+rebuilt like an incomplete draft. Only a checked draft can be deleted for replacement. Published releases are
 never deleted. The replacement gets generated release notes, then `gh release
-upload` uploads exactly the DMG, ZIP, both blockmaps and `latest-mac.yml`. The
+upload` (allowed up to an hour) uploads exactly the DMG, ZIP, both blockmaps and `latest-mac.yml`. The
 script checks the remote asset list and sizes against the local verified files,
 prints the draft URL, opens it in interactive use, and exits.
 
@@ -150,10 +156,10 @@ current `main`. An incomplete draft is replaced only after the new build passes
 verification. If the draft source has an existing tag at a different SHA, stop
 and reconcile it manually; the script deliberately does not force-push tags.
 
-If a version command or commit fails and leaves a dirty release branch, inspect
-its `package.json`/lockfile changes before recovering; the script does not discard
-local changes. A committed local bump can be pushed and reused on retry from
-`main`.
+If the version command or commit fails, the script discards the bump's
+`package.json`/lockfile edits, returns to `main` and deletes the local release
+branch; preflight's clean-tree check guarantees no other changes are lost. A
+committed local bump whose push failed is kept and reused on retry from `main`.
 
 A repository-wide lock prevents simultaneous local release commands. Normal
 completion or failure removes it; after killing a process, remove the lock path

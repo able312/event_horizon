@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
-import { ArtifactValidationError, assertDraft, assertTagSha, assertUnchangedDraft, assertVersion, assertVersionOnlyBump, decideVersion, expectedAssetNames, githubRepository, parseMetadata, verifyAssets, verifyFiles } from "./release-logic.ts"
+import { ArtifactValidationError, assertDraft, assertTagSha, assertUnchangedDraft, assertVersion, assertVersionOnlyBump, decideVersion, expectedAssetNames, githubRepository, parseMetadata, selectRelease, verifyAssets, verifyFiles } from "./release-logic.ts"
 import type { FileInfo, Release } from "./release-logic.ts"
 
 const version = "1.2.3"
@@ -82,7 +82,15 @@ describe("draft and source safety", () => {
     expect(() => assertTagSha("b".repeat(40), draft.target_commitish)).toThrow("Refusing to move")
   })
   it.each(["main", "abcdef", "", "z".repeat(40)])("requires an exact source SHA: %s", (sha) => {
-    expect(() => assertTagSha(null, sha)).toThrow()
+    expect(() => assertTagSha(null, sha)).toThrow(ArtifactValidationError)
+  })
+  it("finds drafts and published releases across listed pages", () => {
+    const published = { ...draft, id: 2, tag_name: "v0.1.2", draft: false }
+    expect(selectRelease([[published], [draft]], version)).toBe(draft)
+    expect(selectRelease([[published], []], version)).toBeNull()
+  })
+  it("refuses to choose between releases sharing a tag", () => {
+    expect(() => selectRelease([[draft], [{ ...draft, id: 2 }]], version)).toThrow("Found 2 releases")
   })
   it.each(["https://github.com/able312/event_horizon.git", "git@github.com:able312/event_horizon.git", "ssh://git@github.com/able312/event_horizon", "https://github.com/able312/event_horizon"])("recognizes public remote %s", (remote) => {
     expect(githubRepository(remote)).toBe("able312/event_horizon")

@@ -2,18 +2,19 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { ArtifactValidationError, assertDraft, assertTagSha, assertUnchangedDraft, assertVersion, assertVersionOnlyBump, decideVersion, expectedAssetNames, githubRepository, parseMetadata, verifyAssets } from "./release-logic.ts"
+import { ArtifactValidationError, assertDraft, assertTagSha, assertUnchangedDraft, assertVersion, assertVersionOnlyBump, decideVersion, expectedAssetNames, githubRepository, parseMetadata, selectRelease, verifyAssets } from "./release-logic.ts"
 import type { Bump, Release } from "./release-logic.ts"
 import { inspectArtifacts, verifyPackages } from "./release-artifacts.ts"
 import { npm, run } from "./release-commands.ts"
 
 const root = fileURLToPath(new URL("..", import.meta.url))
-process.chdir(root)
+// Asset uploads and downloads can be several hundred MB on a slow connection.
+const transferTimeout = 60 * 60_000
 let ghEnv: NodeJS.ProcessEnv
 let repository: string
 
-function gh(args: string[]): string {
-  return run("gh", args, { env: ghEnv, timeout: 10 * 60_000 })
+function gh(args: string[], timeout = 10 * 60_000): string {
+  return run("gh", args, { env: ghEnv, timeout })
 }
 
 function packageVersion(): string {
@@ -27,11 +28,8 @@ function packageVersion(): string {
 }
 
 function findRelease(version: string): Release | null {
-  try { return JSON.parse(gh(["api", `repos/${repository}/releases/tags/v${version}`])) as Release }
-  catch (error) {
-    if (error instanceof Error && error.message.includes("HTTP 404")) return null
-    throw error
-  }
+  const pages = JSON.parse(gh(["api", "--paginate", "--slurp", `repos/${repository}/releases?per_page=100`])) as Release[][]
+  return selectRelease(pages, version)
 }
 
 function tagSha(version: string): string | null {
@@ -85,11 +83,24 @@ async function verifyUploaded(release: Release, version: string): Promise<void> 
     verifyAssets(metadata, release.assets)
     console.log("Verifying uploaded draft hashes…")
     for (const name of expectedAssetNames(metadata).filter((name) => name !== "latest-mac.yml")) {
-      gh(["release", "download", release.tag_name, "--repo", repository, "--pattern", name, "--dir", directory])
+      gh(["release", "download", release.tag_name, "--repo", repository, "--pattern", name, "--dir", directory], transferTimeout)
     }
     const inspected = await inspectArtifacts(directory, version)
     verifyAssets(inspected.metadata, release.assets, inspected.files)
   } finally { rmSync(directory, { recursive: true, force: true }) }
+}
+
+function abandonBumpBranch(branch: string, error: unknown): never {
+  const message = error instanceof Error ? error.message : String(error)
+  try {
+    // Preflight required a clean tree, so the only changes are this bump's.
+    run("git", ["reset", "--hard", "HEAD"])
+    run("git", ["switch", "main"])
+    run("git", ["branch", "-D", branch])
+  } catch (cleanup) {
+    throw new Error(`${message}. Cleanup also failed (${cleanup instanceof Error ? cleanup.message : String(cleanup)}); discard the bump, switch to main and delete ${branch} before retrying.`)
+  }
+  throw error
 }
 
 function landBump(version: string): void {
@@ -122,10 +133,12 @@ function landBump(version: string): void {
       run("npm", ["version", version, "--no-git-tag-version", "--ignore-scripts"])
       run("git", ["add", "package.json", "package-lock.json"])
       run("git", ["commit", "-m", `chore: bump version to ${version}`])
-      run("git", ["push", "public", `HEAD:refs/heads/${branch}`])
-    } finally {
-      if (!run("git", ["status", "--porcelain"])) run("git", ["switch", "main"])
+    } catch (error) {
+      abandonBumpBranch(branch, error)
     }
+    // A committed bump is kept so a retry can push and reuse it.
+    try { run("git", ["push", "public", `HEAD:refs/heads/${branch}`]) }
+    finally { run("git", ["switch", "main"]) }
   }
   const prs = JSON.parse(gh(["pr", "list", "--repo", repository, "--head", branch, "--base", "main", "--state", "open", "--json", "url"])) as { url: string }[]
   const url = prs[0]?.url ?? gh(["pr", "create", "--repo", repository, "--head", branch, "--base", "main", "--title", `chore: bump version to ${version}`, "--body", `Update package.json and package-lock.json to ${version}. Release tests, lint and build run on the merged main commit before packaging.`])
@@ -155,8 +168,8 @@ async function buildRelease(bump: Bump): Promise<void> {
   const current = packageVersion()
   const existing = findRelease(current)
   if (existing?.draft) {
-    verifySource(existing, current)
     try {
+      verifySource(existing, current)
       await verifyUploaded(existing, current)
       const fresh = findRelease(current)
       assertUnchangedDraft(existing, fresh, current)
@@ -176,7 +189,6 @@ async function buildRelease(bump: Bump): Promise<void> {
   npm("test", ["--maxWorkers=2"])
   npm("lint")
   npm("typecheck:release")
-  npm("build")
   const directory = resolve("dist", `release-v${version}`)
   rmSync(directory, { recursive: true, force: true })
   npm("dist:mac", [`-c.directories.output=${directory}`])
@@ -200,7 +212,7 @@ async function buildRelease(bump: Bump): Promise<void> {
   const draft = findRelease(version)
   assertDraft(draft, version)
   if (draft.target_commitish !== sha) throw new Error("Created draft targets the wrong source commit.")
-  gh(["release", "upload", `v${version}`, "--repo", repository, ...expectedAssetNames(inspected.metadata).map((name) => join(directory, name))])
+  gh(["release", "upload", `v${version}`, "--repo", repository, ...expectedAssetNames(inspected.metadata).map((name) => join(directory, name))], transferTimeout)
   const uploaded = findRelease(version)
   assertDraft(uploaded, version)
   verifySource(uploaded, version)
@@ -235,6 +247,7 @@ export async function runRelease(args = process.argv.slice(2), publish = false):
   if (extra.length || !["patch", "minor", "major"].includes(bump) || (publish && args.length)) {
     throw new Error("Usage: npm run release -- [patch|minor|major], or npm run release:publish.")
   }
+  process.chdir(root)
   preflight(!publish)
   const lock = resolve(run("git", ["rev-parse", "--git-common-dir"]), "event-horizon-release.lock")
   try { mkdirSync(lock) }

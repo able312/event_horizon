@@ -53,6 +53,7 @@ let localVersion: string
 let pendingVersion: string
 let headSha: string
 let mergeBlocked: boolean
+let versionFails: boolean
 
 function artifactsFor(targetVersion: string) {
   const info = { version: targetVersion, files: metadata.files.map((file) => ({ ...file, name: file.name.replace(version, targetVersion) })) }
@@ -74,6 +75,7 @@ beforeEach(() => {
   pendingVersion = version
   headSha = sha
   mergeBlocked = false
+  versionFails = false
   vi.spyOn(console, "log").mockImplementation(() => {})
   vi.mocked(inspectArtifacts).mockImplementation(async (_directory, targetVersion) => artifactsFor(targetVersion))
   vi.mocked(verifyPackages).mockResolvedValue()
@@ -82,6 +84,7 @@ beforeEach(() => {
     if (command === "git") {
       if (args[0] === "branch") return args[1] === "--list" ? "" : branch
       if (args[0] === "status") return dirty ? " M package.json" : ""
+      if (args[0] === "reset") { dirty = false; return "" }
       if (args[0] === "remote") return "https://github.com/able312/event_horizon.git"
       if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return "node_modules/.release-test-git"
       if (args[0] === "rev-parse") return headSha
@@ -95,9 +98,9 @@ beforeEach(() => {
     if (command === "gh") {
       if (args[0] === "auth") return "test-token"
       if (args[0] === "api" && args[1] === "--method" && args[2] === "DELETE") { current = null; return "" }
-      if (args[0] === "api") {
-        if (!current || !args[1].endsWith(`/tags/${current.tag_name}`)) throw new Error("gh api failed: HTTP 404")
-        return JSON.stringify(current)
+      // Like GitHub, drafts are only visible by listing releases, never through releases/tags.
+      if (args[0] === "api" && args.includes("--slurp") && args.at(-1) === "repos/able312/event_horizon/releases?per_page=100") {
+        return JSON.stringify([current ? [current] : []])
       }
       if (args[0] === "release" && args[1] === "download") {
         if (downloadsFail) throw new Error("network unavailable")
@@ -114,7 +117,11 @@ beforeEach(() => {
         return ""
       }
     }
-    if (command === "npm" && args[0] === "version") { localVersion = pendingVersion = args[1]; return "" }
+    if (command === "npm" && args[0] === "version") {
+      localVersion = pendingVersion = args[1]
+      if (versionFails) { dirty = true; throw new Error("npm version failed") }
+      return ""
+    }
     if (command === "open") return ""
     throw new Error(`Unexpected command in test: ${command} ${args.join(" ")}`)
   })
@@ -160,13 +167,35 @@ describe("release orchestration", () => {
   it("repairs a partial draft at the same version after all gates pass", async () => {
     current = { ...draft, assets: assets.slice(1) }
     await runRelease([])
-    expect(vi.mocked(npm).mock.calls.map(([script]) => script)).toEqual(["test", "lint", "typecheck:release", "build", "dist:mac"])
+    expect(vi.mocked(npm).mock.calls.map(([script]) => script)).toEqual(["test", "lint", "typecheck:release", "dist:mac"])
     expect(verifyPackages).toHaveBeenCalledOnce()
     const writes = ghWrites()
     expect(writes.map(([, args]) => args[1])).toEqual(["--method", "create", "upload"])
     expect(writes[1][1]).toContain(`v${version}`)
     expect(writes[1][1]).toContain("--draft")
     expect(writes[1][1]).toContain(sha)
+  })
+  it("repairs a draft whose target was changed to a branch name", async () => {
+    current = { ...draft, target_commitish: "main" }
+    await runRelease([])
+    expect(verifyPackages).toHaveBeenCalledOnce()
+    expect(ghWrites().map(([, args]) => args[1])).toEqual(["--method", "create", "upload"])
+  })
+  it("gives asset uploads a longer timeout than other GitHub calls", async () => {
+    current = { ...draft, assets: [] }
+    await runRelease([])
+    const upload = vi.mocked(run).mock.calls.find(([command, args]) => command === "gh" && args[1] === "upload")!
+    expect(upload[2]?.timeout).toBeGreaterThan(10 * 60_000)
+  })
+  it("returns to a clean main without a leftover branch when the bump fails", async () => {
+    current = { ...draft, draft: false }
+    versionFails = true
+    await expect(runRelease([])).rejects.toThrow("npm version failed")
+    const git = vi.mocked(run).mock.calls.filter(([command]) => command === "git").map(([, args]) => args)
+    expect(git).toContainEqual(["branch", "-D", "release/v0.1.4"])
+    expect(branch).toBe("main")
+    expect(dirty).toBe(false)
+    expect(ghWrites()).toEqual([])
   })
   it("builds an unreleased merged version without another bump", async () => {
     current = null

@@ -44,10 +44,20 @@ export function assertDraft(release: Release | null, version: string): asserts r
 }
 
 export function assertTagSha(tagSha: string | null, buildSha: string): void {
-  if (!/^[a-f0-9]{40}$/.test(buildSha)) throw new Error("Draft target must be a full source commit SHA.")
+  // Repairable: a draft edited in the GitHub UI can target a branch name instead of a SHA.
+  if (!/^[a-f0-9]{40}$/.test(buildSha)) throw new ArtifactValidationError("Draft target must be a full source commit SHA.")
   if (tagSha !== null && tagSha !== buildSha) {
     throw new Error(`Existing tag points to ${tagSha}, but the build commit is ${buildSha}. Refusing to move the tag.`)
   }
+}
+
+// GitHub's releases/tags endpoint omits drafts, so releases are found by listing them.
+export function selectRelease(pages: Release[][], version: string): Release | null {
+  const matches = pages.flat().filter((release) => release.tag_name === `v${version}`)
+  if (matches.length > 1) {
+    throw new Error(`Found ${matches.length} releases for v${version}. Delete the extra drafts on GitHub, then retry.`)
+  }
+  return matches[0] ?? null
 }
 
 export function assertUnchangedDraft(before: Release, after: Release | null, version: string): asserts after is Release {
