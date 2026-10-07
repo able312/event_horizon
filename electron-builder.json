@@ -1,6 +1,7 @@
 {
     "appId": "com.latenightcreation.event-horizon",
     "productName": "Event Horizon",
+    "artifactName": "Event-Horizon-${version}-${arch}.${ext}",
     "copyright": "Copyright © 2026",
     "files": ["dist-electron", "dist-react"],
     "icon": "./src/assets/eventHorizon.icns",
