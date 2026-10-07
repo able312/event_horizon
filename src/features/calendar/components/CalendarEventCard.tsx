@@ -14,6 +14,7 @@ import {
   buildEventCardAccessibleName,
   formatGuestCount,
   getGuestCountRange,
+  isMissingGoogleCalendarId,
 } from "../lib/eventCardContent"
 import { EVENT_CARD_STATUS_STYLES } from "./eventCardStatus"
 
@@ -23,10 +24,6 @@ type CalendarEventCardProps = {
   event: Event
   clientName?: string | null
   onClick: () => void
-}
-
-const isMissingGoogleCalendarId = (event: Event): boolean => {
-  return !event.calendarId || event.calendarId.trim().length === 0
 }
 
 function CalendarEventCard({ event, clientName, onClick }: CalendarEventCardProps) {
@@ -43,7 +40,7 @@ function CalendarEventCard({ event, clientName, onClick }: CalendarEventCardProp
         onClick()
       }}
       className={cn(
-        "flex w-full flex-col overflow-hidden rounded-lg text-left outline-none hover:opacity-80 focus-visible:ring-[3px] focus-visible:ring-ring/50",
+        "flex w-full flex-col overflow-hidden rounded-md text-left outline-none hover:opacity-80 focus-visible:ring-[3px] focus-visible:ring-ring/50",
         status.cardClassName,
       )}
       title={event.title}
@@ -56,34 +53,37 @@ function CalendarEventCard({ event, clientName, onClick }: CalendarEventCardProp
       })}
     >
       <span
-        className={cn("flex w-full items-center gap-1.5 px-3 py-[7px]", status.bandClassName)}
+        className={cn("flex w-full flex-wrap items-center gap-x-1 gap-y-0.5 px-2 py-1", status.bandClassName)}
         data-testid="calendar-event-card-band"
       >
-        <Icon className={cn("size-[13px] shrink-0", status.iconClassName)} aria-hidden="true" />
-        <span className="truncate text-[11px] font-semibold uppercase leading-none tracking-[0.06em]">
-          {status.label}
+        {/* Label never truncates; the guest count wraps to its own line when the cell is narrow */}
+        <span className="flex shrink-0 items-center gap-1">
+          <Icon className={cn("size-3 shrink-0", status.className)} aria-hidden="true" />
+          <span className="text-[10px] font-semibold uppercase leading-none tracking-[0.05em]">
+            {status.label}
+          </span>
         </span>
         {guestCount ? (
-          <span className="ml-auto flex shrink-0 items-center gap-1 text-xs font-medium leading-none tabular-nums">
-            <Users className="size-[13px]" aria-hidden="true" />
+          <span className="ml-auto flex shrink-0 items-center gap-0.5 text-[11px] font-medium leading-none tabular-nums">
+            <Users className="size-3" aria-hidden="true" />
             {formatGuestCount(guestCount)}
           </span>
         ) : null}
       </span>
 
-      <span className="flex w-full flex-col gap-1 px-3 pt-2.5 pb-3">
+      <span className="flex w-full flex-col gap-0.5 px-2 pt-1.5 pb-2">
         <span className="flex items-start gap-1">
-          <span className={cn("line-clamp-2 min-w-0 flex-1 text-[15px] leading-[1.3]", status.titleClassName)}>
+          <span className={cn("line-clamp-2 min-w-0 flex-1 text-[13px] leading-[1.3]", status.titleClassName)}>
             {event.title}
           </span>
           {showUploadWarning ? (
             <span title={NOT_UPLOADED_WARNING} className="inline-flex pt-0.5">
-              <AlertTriangle className="size-3.5 shrink-0 text-yellow-600" aria-hidden="true" />
+              <AlertTriangle className="size-3 shrink-0 text-yellow-600" aria-hidden="true" />
             </span>
           ) : null}
         </span>
         {clientName ? (
-          <span className="truncate text-[13px] leading-[1.35] text-muted-foreground" title={clientName}>
+          <span className="truncate text-[11px] leading-[1.35] text-muted-foreground" title={clientName}>
             {clientName}
           </span>
         ) : null}

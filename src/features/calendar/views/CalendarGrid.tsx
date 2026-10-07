@@ -9,20 +9,44 @@
  * - Highlights today's date
  * - Keeps week rows equal height across the calendar
  * - Displays as many events as fit (up to three) per day with overflow in a popover
+ * - Collapses events to compact lines when columns are narrow (whole grid)
+ *   or a day's full cards don't fit (that week row only)
  * - Click events to navigate to event detail
  * 
  * Location: src/features/calendar/views/CalendarGrid.tsx
  */
 
-import React from "react"
+import React, { useMemo, useRef } from "react"
 import { useLocation, useNavigate } from "react-router"
 import type { PrimaryClient } from "~/definitions/contacts"
-import type { Event } from "~/definitions/database"
+import type { Event, EventStatus } from "~/definitions/database"
 import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
 import { buildEventDetailEntryPath } from "~/features/event-detail/workspace/lib/eventDetailRouteState"
 import CalendarDayEventList from "../components/CalendarDayEventList"
+import { useCalendarDensity } from "../hooks/useCalendarDensity"
+import { buildCardCountsByRow, sortEventsByCompactStatus } from "../lib/calendarDensity"
 
 const MAX_VISIBLE_DAY_EVENTS = 3
+
+/**
+ * Events starting on a specific day, in start-time order
+ */
+const getEventsForDay = (events: Event[], year: number, month: number, day: number): Event[] => {
+  return events
+    .filter((event) => {
+      if (!event.startDateTime) return false
+      const eventDate = new Date(event.startDateTime)
+      return (
+        eventDate.getFullYear() === year &&
+        eventDate.getMonth() === month &&
+        eventDate.getDate() === day
+      )
+    })
+    .sort((a, b) => {
+      if (!a.startDateTime || !b.startDateTime) return 0
+      return a.startDateTime.localeCompare(b.startDateTime)
+    })
+}
 
 interface CalendarGridProps {
   /** Events to display on the calendar */
@@ -45,6 +69,8 @@ interface CalendarGridProps {
   onEventEdit?: (event: Event) => void
   /** Callback when deleting a calendar event chip */
   onEventDelete?: (eventId: string) => void
+  /** Callback when changing status from a compact line's popover */
+  onEventStatusChange?: (eventId: string, status: EventStatus) => void
 }
 
 /**
@@ -64,6 +90,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   draftPreview,
   onEventEdit,
   onEventDelete,
+  onEventStatusChange,
 }) => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -80,24 +107,19 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     (_, i) => i + 1,
   )
 
-  /**
-   * Filter events for a specific day
-   */
-  const getEventsForDay = (day: number): Event[] => {
-    return events
-      .filter((event) => {
-        if (!event.startDateTime) return false
-        const eventDate = new Date(event.startDateTime)
-        return (
-          eventDate.getFullYear() === year &&
-          eventDate.getMonth() === month &&
-          eventDate.getDate() === day
-        )
-      })
-      .sort((a, b) => {
-        if (!a.startDateTime || !b.startDateTime) return 0
-        return a.startDateTime.localeCompare(b.startDateTime)
-      })
+  const gridRef = useRef<HTMLDivElement>(null)
+  const eventsByDay = useMemo(
+    () => Array.from({ length: daysInMonth }, (_, i) => getEventsForDay(events, year, month, i + 1)),
+    [events, year, month, daysInMonth],
+  )
+  const cardCountsByRow = useMemo(
+    () => buildCardCountsByRow(eventsByDay.map((dayEvents) => dayEvents.length), startingDay, MAX_VISIBLE_DAY_EVENTS),
+    [eventsByDay, startingDay],
+  )
+  const density = useCalendarDensity(gridRef, `${year}-${month}`, cardCountsByRow)
+  const isDayCompact = (day: number): boolean => {
+    const row = Math.floor((startingDay + day - 1) / 7)
+    return density.isNarrow || density.compactRows[row] === true
   }
 
   /**
@@ -151,6 +173,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
      * - 7-column grid for days of the week
      */
     <div
+      ref={gridRef}
       className="grid h-[calc(100%-37px)] grid-cols-7"
       style={{ gridTemplateRows: `repeat(${weekRows}, minmax(0, 1fr))` }}
       data-testid="calendar-grid"
@@ -176,13 +199,14 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       {/* Days of the month */}
       {Array.from({ length: daysInMonth }).map((_, i) => {
         const day = i + 1
-        const dayEvents = getEventsForDay(day)
+        const compact = isDayCompact(day)
+        const dayEvents = compact ? sortEventsByCompactStatus(eventsByDay[i]) : eventsByDay[i]
         const draftForDay = getDraftPreviewForDay(day)
 
         return (
           <div
             key={day}
-            className={`min-h-0 overflow-hidden border-b border-r py-1 px-2 flex flex-col ${
+            className={`relative min-h-0 overflow-hidden border-b border-r py-1 px-2 flex flex-col ${
               isToday(day) ? 'bg-orange-50/50' : ''
             }`}
             onClick={() => handleDayCellClick(day)}
@@ -221,10 +245,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                 day={day}
                 events={dayEvents}
                 maxVisible={MAX_VISIBLE_DAY_EVENTS}
+                compact={compact}
                 clientsByEventId={clientsByEventId}
                 onEventClick={handleEventClick}
                 onEventEdit={onEventEdit}
                 onEventDelete={onEventDelete}
+                onEventStatusChange={onEventStatusChange}
               />
             </div>
           </div>

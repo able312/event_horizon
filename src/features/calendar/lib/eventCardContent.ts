@@ -1,5 +1,9 @@
 import type { Event } from "~/definitions/database"
 
+export const isMissingGoogleCalendarId = (event: Pick<Event, "calendarId">): boolean => {
+  return !event.calendarId || event.calendarId.trim().length === 0
+}
+
 type GuestCountFields = Pick<Event, "minGuests" | "maxGuests" | "guestCountFinal">
 
 export type GuestCountRange = {
@@ -66,4 +70,12 @@ export function buildEventCardAccessibleName({
   ].filter((part): part is string => Boolean(part))
 
   return `${statusLabel}: ${details.join(", ")}`
+}
+
+/** "Saturday, October 10", for the compact line popover. Null when the event has no valid date. */
+export function formatEventPopoverDate(startDateTime: string | null): string | null {
+  if (!startDateTime) return null
+  const date = new Date(startDateTime)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })
 }

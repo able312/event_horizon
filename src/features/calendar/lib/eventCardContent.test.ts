@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   buildEventCardAccessibleName,
   describeGuestCount,
+  formatEventPopoverDate,
   formatGuestCount,
   getGuestCountRange,
 } from "./eventCardContent"
@@ -71,5 +72,16 @@ describe("buildEventCardAccessibleName", () => {
     expect(
       buildEventCardAccessibleName({ statusLabel: "Tentative", title: "Gala", notUploadedToGoogleCalendar: true }),
     ).toBe("Tentative: Gala, not uploaded to Google Calendar")
+  })
+})
+
+describe("formatEventPopoverDate", () => {
+  it("reads weekday, month and day", () => {
+    expect(formatEventPopoverDate("2026-10-10T18:00:00")).toBe("Saturday, October 10")
+  })
+
+  it("returns null for missing or invalid dates", () => {
+    expect(formatEventPopoverDate(null)).toBeNull()
+    expect(formatEventPopoverDate("not a date")).toBeNull()
   })
 })

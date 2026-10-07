@@ -4,6 +4,7 @@ import { Calendar, ChevronDown, Users } from "lucide-react"
 
 import {
   EVENT_STATUS_COLORS,
+  EVENT_STATUS_ICONS,
   EVENT_STATUS_LABELS,
   EVENT_TYPE_COLORS,
   EVENT_TYPE_LABELS,
@@ -18,6 +19,7 @@ import {
 } from "~/components/event-detail/EventDialogs"
 import { DetailsTitleBarSkeleton } from "~/features/event-detail/components/DetailsTitleBarSkeleton"
 import { formatDateMonthDay, formatTime, isSameDay } from "~/lib/formatters"
+import { cn } from "~/lib/utils"
 
 import type { EventStatus, EventType } from "~/definitions/database"
 import { usePrimaryClient } from "~/hooks/useEventContacts"
@@ -25,6 +27,11 @@ import type { EventResource } from "../types"
 
 interface DetailsTitleBarProps {
   eventResource: EventResource
+}
+
+function StatusIcon({ status }: { status: EventStatus }) {
+  const { Icon, className } = EVENT_STATUS_ICONS[status]
+  return <Icon className={cn("size-3 shrink-0", className)} aria-hidden="true" />
 }
 
 const DetailsTitleBar: React.FC<DetailsTitleBarProps> = ({ eventResource }) => {
@@ -104,6 +111,7 @@ const DetailsTitleBar: React.FC<DetailsTitleBarProps> = ({ eventResource }) => {
                           onClick={() => setStatusDropdownOpen((prev) => !prev)}
                           className={`px-2 py-0.5 rounded-md text-xs font-medium flex items-center gap-1 ${EVENT_STATUS_COLORS[event.status]} hover:opacity-80`}
                         >
+                          <StatusIcon status={event.status} />
                           {EVENT_STATUS_LABELS[event.status]}
                           <ChevronDown className="h-3 w-3" />
                         </button>
@@ -114,10 +122,11 @@ const DetailsTitleBar: React.FC<DetailsTitleBarProps> = ({ eventResource }) => {
                                 key={status}
                                 type="button"
                                 onClick={() => onStatusChange(status)}
-                                className={`w-full text-left px-3 py-2 text-sm hover:bg-stone-50 ${
-                                  event.status === status ? EVENT_STATUS_COLORS[status] : ""
+                                className={`flex w-full items-center gap-2 text-left px-3 py-2 text-sm ${
+                                  event.status === status ? `${EVENT_STATUS_COLORS[status]} hover:opacity-80` : "hover:bg-stone-50"
                                 }`}
                               >
+                                <StatusIcon status={status} />
                                 {EVENT_STATUS_LABELS[status]}
                               </button>
                             ))}

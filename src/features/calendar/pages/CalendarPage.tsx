@@ -1,7 +1,7 @@
 
 import EventsCalendar from "../views/EventsCalendar"
 import type { UseEventsQueryStateReturn } from "~/hooks/useEventsQueryState"
-import type { Event } from "~/definitions/database"
+import type { Event, EventStatus } from "~/definitions/database"
 import { useCalendarPanelState } from "../state/useCalendarPanelState"
 import { ACTIONS } from "../state/calendarSidePanelReducer"
 import { toIsoForDayUsingCurrentTime } from "~/lib/formatters"
@@ -19,7 +19,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ queryState, eventsHook, onD
 
   const {ui, dispatch} = useCalendarPanelState()  
   const { state, setDate } = queryState
-  const { monthEvents } = eventsHook
+  const { monthEvents, updateEvent } = eventsHook
   const primaryClients = usePrimaryClients(monthEvents.map((event) => event.id))
 
   const handleCalendarDayCellClick = (prefillIso: Date) => {
@@ -27,6 +27,10 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ queryState, eventsHook, onD
   }
   const handleEditEvent = (event: Event) => {
     dispatch({type: ACTIONS.OPEN_EDIT, event})
+  }
+  const handleEventStatusChange = (eventId: string, status: EventStatus) => {
+    // Failures roll back and toast inside useEvents
+    updateEvent({ id: eventId, updates: { status } }).catch(() => undefined)
   }
   return (
     <>
@@ -40,6 +44,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ queryState, eventsHook, onD
         draftPreview={ui.sidebarMode === "create" ? ui.createDraftPreview : null}
         onEventEdit={handleEditEvent}
         onEventDelete={onDeleteRequest}
+        onEventStatusChange={handleEventStatusChange}
       />
     </>
   )

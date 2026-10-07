@@ -1,8 +1,8 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { PrimaryClient } from "~/definitions/contacts"
-import type { Event } from "~/definitions/database"
+import type { Event, EventStatus } from "~/definitions/database"
 import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
 import CalendarGrid from "./CalendarGrid"
 
@@ -42,6 +42,7 @@ function renderGrid({
   draftPreview,
   onEventEdit,
   onEventDelete,
+  onEventStatusChange,
 }: {
   events?: Event[]
   clientsByEventId?: Record<string, PrimaryClient>
@@ -54,6 +55,7 @@ function renderGrid({
   draftPreview?: CalendarDraftPreview | null
   onEventEdit?: (event: Event) => void
   onEventDelete?: (eventId: string) => void
+  onEventStatusChange?: (eventId: string, status: EventStatus) => void
 } = {}) {
   return render(
     <MemoryRouter initialEntries={[route]}>
@@ -68,6 +70,7 @@ function renderGrid({
         draftPreview={draftPreview}
         onEventEdit={onEventEdit}
         onEventDelete={onEventDelete}
+        onEventStatusChange={onEventStatusChange}
       />
     </MemoryRouter>,
   )
@@ -76,7 +79,20 @@ function renderGrid({
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
+  vi.restoreAllMocks()
 })
+
+/** jsdom has no layout; give every element this client size so the grid can measure itself. */
+function mockGridSize(width: number, height: number) {
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(width)
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(height)
+}
+
+// Day columns 150px wide: below the 160px narrow threshold.
+const NARROW_GRID_WIDTH = (150 + 17) * 7
+// Day columns ~268px wide, and 5 rows with 200px for events: one full card fits, three don't.
+const WIDE_GRID_WIDTH = 2000
+const ONE_CARD_GRID_HEIGHT = (200 + 32) * 5
 
 describe("CalendarGrid row stability and event rendering", () => {
   it("uses 5 equal rows for months that span 5 calendar weeks", () => {
@@ -364,12 +380,151 @@ describe("CalendarGrid row stability and event rendering", () => {
     renderGrid({ events: [makeEvent(10, 1, { minGuests: null, maxGuests: null })] })
 
     const band = screen.getByTestId("calendar-event-card-band")
-    expect(band.textContent).toBe("New lead")
+    expect(band.textContent).toBe("New Lead")
   })
 
   it("does not use event type colours on cards", () => {
     renderGrid({ events: [makeEvent(10, 1, { type: "wedding" })] })
 
     expect(screen.getByTitle("Event 10-1").className).not.toContain("purple")
+  })
+})
+
+describe("CalendarGrid compact lines", () => {
+  it("shows full cards until the grid has been measured", () => {
+    renderGrid({ events: [makeEvent(10, 1)] })
+
+    expect(screen.queryByTestId("calendar-compact-line")).toBeNull()
+    expect(screen.getByTestId("calendar-event-card-band")).toBeTruthy()
+  })
+
+  it("collapses every day to compact lines when columns are narrow", () => {
+    mockGridSize(NARROW_GRID_WIDTH, 5000)
+    renderGrid({
+      events: [
+        makeEvent(1, 1),
+        makeEvent(10, 1, { status: "confirmed", minGuests: 120, maxGuests: 150, guestCountFinal: 0 }),
+      ],
+    })
+
+    expect(screen.getAllByTestId("calendar-compact-line")).toHaveLength(2)
+    expect(screen.queryByTestId("calendar-event-card-band")).toBeNull()
+
+    const line = screen.getByRole("button", { name: "Confirmed: Event 10-1, 120 to 150 guests" })
+    expect(line.getAttribute("title")).toBe("Confirmed: Event 10-1")
+    expect(line.textContent).toBe("Event 10-1120–150")
+    expect(line.querySelector('[data-glyph="dot"]')?.getAttribute("aria-hidden")).toBe("true")
+  })
+
+  it("collapses only the week row whose day doesn't fit full cards", () => {
+    mockGridSize(WIDE_GRID_WIDTH, ONE_CARD_GRID_HEIGHT)
+    // April 2026 starts on Wednesday: the 10th is in row 2, the 20th in row 4.
+    renderGrid({
+      events: [makeEvent(10, 1), makeEvent(10, 2), makeEvent(10, 3), makeEvent(20, 1)],
+    })
+
+    const busyRow = screen.getByTestId("calendar-day-events-10")
+    const quietRow = screen.getByTestId("calendar-day-events-20")
+    const sameRowDay = screen.getByTestId("calendar-day-events-11")
+    expect(within(busyRow).getAllByTestId("calendar-compact-line")).toHaveLength(3)
+    expect(sameRowDay.querySelector('[data-density="compact"]')).toBeTruthy()
+    expect(within(quietRow).queryByTestId("calendar-compact-line")).toBeNull()
+    expect(within(quietRow).getByTestId("calendar-event-card-band")).toBeTruthy()
+  })
+
+  it("sorts compact lines by status and keeps start-time order within a status", () => {
+    mockGridSize(NARROW_GRID_WIDTH, 5000)
+    renderGrid({
+      events: [
+        makeEvent(10, 1, { status: "closed", startDateTime: "2026-04-10T09:00:00.000Z" }),
+        makeEvent(10, 2, { status: "confirmed", startDateTime: "2026-04-10T10:00:00.000Z" }),
+        makeEvent(10, 3, { status: "new_lead", startDateTime: "2026-04-10T11:00:00.000Z" }),
+        makeEvent(10, 4, { status: "confirmed", startDateTime: "2026-04-10T08:00:00.000Z" }),
+      ],
+    })
+
+    const titles = within(screen.getByTestId("calendar-day-events-10"))
+      .getAllByTestId("calendar-compact-line")
+      .slice(0, 3)
+      .map((line) => line.getAttribute("title"))
+    expect(titles).toEqual(["New Lead: Event 10-3", "Confirmed: Event 10-4", "Confirmed: Event 10-2"])
+    expect(screen.getByRole("button", { name: "+1 more events" })).toBeTruthy()
+  })
+
+  it("opens a details popover from a line without opening the day, and navigates from it", () => {
+    mockGridSize(NARROW_GRID_WIDTH, 5000)
+    const onDayCellClick = vi.fn()
+    renderGrid({
+      events: [makeEvent(10, 1, { minGuests: 120, maxGuests: 150, guestCountFinal: 0 })],
+      clientsByEventId: {
+        "event-10-1": { contactId: "c1", displayName: "Maya Henderson", email: null, phone: null },
+      },
+      onDayCellClick,
+    })
+
+    const line = screen.getByTestId("calendar-compact-line")
+    fireEvent.click(line)
+
+    const dialog = screen.getByRole("dialog", { name: "Event 10-1" })
+    expect(line.getAttribute("data-state")).toBe("open")
+    expect(dialog.textContent).toContain("New Lead")
+    expect(dialog.textContent).toContain("Friday, April 10")
+    expect(dialog.textContent).toContain("Maya Henderson")
+    expect(dialog.textContent).toContain("120 to 150 guests")
+    expect(onDayCellClick).not.toHaveBeenCalled()
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Open event" }))
+    expect(navigateMock).toHaveBeenCalledWith(
+      "/events/event-10-1?returnTo=%2Fevents%3Fview%3Dcalendar%26date%3D2026-04",
+    )
+    expect(onDayCellClick).not.toHaveBeenCalled()
+  })
+
+  it("closes the popover with the close button", () => {
+    mockGridSize(NARROW_GRID_WIDTH, 5000)
+    renderGrid({ events: [makeEvent(10, 1)] })
+
+    fireEvent.click(screen.getByTestId("calendar-compact-line"))
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Close" }))
+
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(screen.getByTestId("calendar-compact-line").getAttribute("data-state")).toBe("closed")
+  })
+
+  it("only offers Change status when a handler is wired", () => {
+    mockGridSize(NARROW_GRID_WIDTH, 5000)
+    renderGrid({ events: [makeEvent(10, 1)] })
+
+    fireEvent.click(screen.getByTestId("calendar-compact-line"))
+
+    expect(within(screen.getByRole("dialog")).queryByRole("button", { name: "Change status" })).toBeNull()
+  })
+
+  it("changes status from the popover", () => {
+    mockGridSize(NARROW_GRID_WIDTH, 5000)
+    const onEventStatusChange = vi.fn()
+    const onDayCellClick = vi.fn()
+    renderGrid({ events: [makeEvent(10, 1)], onEventStatusChange, onDayCellClick })
+
+    fireEvent.click(screen.getByTestId("calendar-compact-line"))
+    fireEvent.keyDown(within(screen.getByRole("dialog")).getByRole("button", { name: "Change status" }), {
+      key: "Enter",
+    })
+    fireEvent.click(screen.getByRole("menuitem", { name: "Confirmed" }))
+
+    expect(onEventStatusChange).toHaveBeenCalledWith("event-10-1", "confirmed")
+    expect(onDayCellClick).not.toHaveBeenCalled()
+  })
+
+  it("keeps the right-click menu on compact lines", () => {
+    mockGridSize(NARROW_GRID_WIDTH, 5000)
+    const onEventEdit = vi.fn()
+    const event = makeEvent(10, 1)
+    renderGrid({ events: [event], onEventEdit })
+
+    fireEvent.contextMenu(screen.getByTestId("calendar-compact-line"))
+    fireEvent.click(screen.getByRole("menuitem", { name: "Edit" }))
+
+    expect(onEventEdit).toHaveBeenCalledWith(event)
   })
 })

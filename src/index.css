@@ -58,11 +58,17 @@
   --status-new-border: #C2410C;
   --status-tentative-bg: #FCEFC7;
   --status-tentative-fg: #7A4A00;
-  --status-confirmed-bg: #EAF0FF;
-  --status-confirmed-fg: #1D4ED8;
+  --status-confirmed-bg: #E3F3E6;
+  --status-confirmed-fg: #1E6B34;
   --status-complete-bg: #ECEBE7;
   --status-complete-fg: #5F5E5A;
   --status-complete-card-bg: #FAFAF8;
+  /* Event status (compact calendar lines) */
+  --status-new-row-bg: #FFEBDD;
+  --status-new-row-bg-hover: #FDDCC6;
+  --status-new-row-fg: #9A3412;
+  --status-tentative-glyph: #A16207;
+  --status-complete-glyph: #8A8984;
 }
 
 @theme inline {
@@ -111,6 +117,11 @@
   --color-status-complete-bg: var(--status-complete-bg);
   --color-status-complete-fg: var(--status-complete-fg);
   --color-status-complete-card-bg: var(--status-complete-card-bg);
+  --color-status-new-row-bg: var(--status-new-row-bg);
+  --color-status-new-row-bg-hover: var(--status-new-row-bg-hover);
+  --color-status-new-row-fg: var(--status-new-row-fg);
+  --color-status-tentative-glyph: var(--status-tentative-glyph);
+  --color-status-complete-glyph: var(--status-complete-glyph);
 }
 
 @theme {

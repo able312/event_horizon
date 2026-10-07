@@ -3,36 +3,47 @@
  *
  * The event cards inside one calendar day cell. Shows as many cards as fit
  * (up to maxVisible) and moves the rest behind a "+N more" popover.
+ * The "+N more" trigger is absolutely positioned into the top-right corner of
+ * the day cell (the parent cell must be `relative`), across from the date, so
+ * it doesn't take vertical space away from the cards.
+ * In compact mode each visible event is a single CompactEventLine instead of
+ * a card; the fit and "+N more" rules are the same in both modes.
  *
  * Location: src/features/calendar/components/CalendarDayEventList.tsx
  */
 
 import { useRef } from "react"
 import type { PrimaryClient } from "~/definitions/contacts"
-import type { Event } from "~/definitions/database"
+import type { Event, EventStatus } from "~/definitions/database"
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/atoms/popover"
 import { useFittingItemCount } from "../hooks/useFittingItemCount"
 import EventItemContextMenu from "../interactions/EventItemContextMenu"
 import CalendarEventCard from "./CalendarEventCard"
+import CompactEventLine from "./CompactEventLine"
 
 type CalendarDayEventListProps = {
   day: number
   events: Event[]
   maxVisible: number
+  /** Show single compact lines instead of full cards */
+  compact?: boolean
   clientsByEventId?: Record<string, PrimaryClient>
   onEventClick: (eventId: string) => void
   onEventEdit?: (event: Event) => void
   onEventDelete?: (eventId: string) => void
+  onEventStatusChange?: (eventId: string, status: EventStatus) => void
 }
 
 function CalendarDayEventList({
   day,
   events,
   maxVisible,
+  compact = false,
   clientsByEventId,
   onEventClick,
   onEventEdit,
   onEventDelete,
+  onEventStatusChange,
 }: CalendarDayEventListProps) {
   const listRef = useRef<HTMLDivElement>(null)
   const candidateEvents = events.slice(0, maxVisible)
@@ -49,13 +60,30 @@ function CalendarDayEventList({
     </EventItemContextMenu>
   )
 
+  const renderCompactLine = (event: Event) => (
+    <EventItemContextMenu event={event} onEdit={onEventEdit} onDelete={onEventDelete}>
+      <CompactEventLine
+        event={event}
+        clientName={clientsByEventId?.[event.id]?.displayName}
+        onOpenEvent={() => onEventClick(event.id)}
+        onStatusChange={
+          onEventStatusChange ? (status) => onEventStatusChange(event.id, status) : undefined
+        }
+      />
+    </EventItemContextMenu>
+  )
+
   return (
     <>
-      {/* Cards that don't fit stay in layout (invisible) so they can still be measured */}
-      <div ref={listRef} className="min-h-0 flex-1 space-y-1 overflow-hidden">
+      {/* Items that don't fit stay in layout (invisible) so they can still be measured */}
+      <div
+        ref={listRef}
+        className={`min-h-0 flex-1 overflow-hidden ${compact ? "space-y-0.5" : "space-y-1"}`}
+        data-density={compact ? "compact" : "full"}
+      >
         {candidateEvents.map((event, index) => (
           <div key={event.id} className={index >= fittingCount ? "invisible" : undefined}>
-            {renderCard(event)}
+            {compact ? renderCompactLine(event) : renderCard(event)}
           </div>
         ))}
       </div>
@@ -67,7 +95,7 @@ function CalendarDayEventList({
               onClick={(e) => {
                 e.stopPropagation()
               }}
-              className="w-full shrink-0 rounded border border-dashed border-stone-300 px-1 py-0.5 text-left text-[10px] text-muted-foreground hover:bg-stone-50"
+              className="absolute right-1 top-1 h-5 rounded px-1 text-[10px] leading-5 text-muted-foreground hover:bg-stone-100 hover:text-foreground"
               aria-label={`+${hiddenCount} more events`}
             >
               +{hiddenCount} more
@@ -75,7 +103,7 @@ function CalendarDayEventList({
           </PopoverTrigger>
           <PopoverContent
             className="w-72 p-2"
-            align="start"
+            align="end"
             onClick={(e) => {
               e.stopPropagation()
             }}
