@@ -55,6 +55,7 @@ let headSha: string
 let mergeBlocked: boolean
 let mergeStateStatus: string
 let mergeQueue: boolean
+let nextDraft: typeof draft | null
 let versionFails: boolean
 
 function artifactsFor(targetVersion: string) {
@@ -79,6 +80,7 @@ beforeEach(() => {
   mergeBlocked = false
   mergeStateStatus = "CLEAN"
   mergeQueue = false
+  nextDraft = null
   versionFails = false
   vi.spyOn(console, "log").mockImplementation(() => {})
   vi.mocked(inspectArtifacts).mockImplementation(async (_directory, targetVersion) => artifactsFor(targetVersion))
@@ -97,6 +99,7 @@ beforeEach(() => {
       if (args[0] === "switch") { branch = args[args.length - 1]; if (branch === "main") localVersion = version; return "" }
       if (args[0] === "pull") { localVersion = pendingVersion; headSha = "c".repeat(40); return "" }
       if (["add", "commit", "push"].includes(args[0])) return ""
+      if (args[0] === "merge-base" && args.includes("d".repeat(40))) throw new Error("not an ancestor")
       if (["fetch", "merge-base"].includes(args[0])) return ""
     }
     if (command === "gh") {
@@ -104,7 +107,7 @@ beforeEach(() => {
       if (args[0] === "api" && args[1] === "--method" && args[2] === "DELETE") { current = null; return "" }
       // Like GitHub, drafts are only visible by listing releases, never through releases/tags.
       if (args[0] === "api" && args.includes("--slurp") && args.at(-1) === "repos/able312/event_horizon/releases?per_page=100") {
-        return JSON.stringify([current ? [current] : []])
+        return JSON.stringify([[...(current ? [current] : []), ...(nextDraft ? [nextDraft] : [])]])
       }
       if (args[0] === "release" && args[1] === "download") {
         if (downloadsFail) throw new Error("network unavailable")
@@ -166,6 +169,14 @@ describe("release orchestration", () => {
     mergeQueue = true
     await expect(runRelease([])).rejects.toThrow("merge queue")
     expect(ghWrites().some(([, args]) => args[0] === "pr" && args[1] === "merge")).toBe(false)
+    expect(npm).not.toHaveBeenCalled()
+  })
+  it("refuses to replace a next-version draft that targets an unrelated commit", async () => {
+    current = { ...draft, draft: false }
+    tag = sha
+    nextDraft = { ...draft, tag_name: "v0.1.4", target_commitish: "d".repeat(40) }
+    await expect(runRelease([])).rejects.toThrow()
+    expect(ghWrites().some(([, args]) => args.includes("DELETE"))).toBe(false)
     expect(npm).not.toHaveBeenCalled()
   })
   it("stops at a protected bump PR before building or creating a draft", async () => {

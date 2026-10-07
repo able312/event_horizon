@@ -196,7 +196,11 @@ async function buildRelease(bump: Bump): Promise<void> {
   const version = decideVersion(current, bump, existing)
   const next = version === current ? existing : findRelease(version)
   if (next && !next.draft) throw new Error(`v${version} is already published. Reconcile main's version before releasing.`)
-  if (version !== current) landBump(version)
+  if (version !== current) {
+    landBump(version)
+    // A pre-existing draft for the new version is replaced later; only replace one that belongs to this source.
+    if (next) verifySource(next, version)
+  }
   const sha = run("git", ["rev-parse", "HEAD"])
   assertTagSha(tagSha(version), sha)
   npm("test", ["--maxWorkers=2"])

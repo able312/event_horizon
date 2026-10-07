@@ -23,6 +23,9 @@ export async function inspectArtifacts(directory: string, version: string): Prom
   return { metadata, files }
 }
 
+// SHA-256 of the leaf signing certificate recorded in docs/MACOS_SIGNING.md; a matching display name is not enough.
+const signingCertificateSha256 = "CE28BFB44F06DA80059275F67E67B9AC8A326B567F5E89965573EEBBF748F4D7"
+
 // Deterministic package defects are repairable by rebuilding; extraction and mounting failures stay plain errors.
 function verifySignature(appPath: string, version: string): void {
   try { checkSignature(appPath, version) }
@@ -37,6 +40,13 @@ function checkSignature(appPath: string, version: string): void {
       !details.includes("Identifier=com.latenightcreation.event-horizon\n")) {
     throw new Error("Package must have the expected signing authority, app identifier and hardened runtime.")
   }
+  const certificates = mkdtempSync(join(tmpdir(), "event-horizon-cert-"))
+  try {
+    // codesign writes the signing chain as <prefix>0 (leaf), <prefix>1, … DER files.
+    run("codesign", ["--display", `--extract-certificates=${join(certificates, "cert")}`, appPath], { captureStderr: true })
+    const leaf = createHash("sha256").update(readFileSync(join(certificates, "cert0"))).digest("hex").toUpperCase()
+    if (leaf !== signingCertificateSha256) throw new Error("Package is not signed by the pinned LNC Internal Signature certificate.")
+  } finally { rmSync(certificates, { recursive: true, force: true }) }
   const plist = join(appPath, "Contents/Info.plist")
   if (run("plutil", ["-extract", "CFBundleShortVersionString", "raw", "-o", "-", plist]) !== version ||
       run("lipo", ["-archs", join(appPath, "Contents/MacOS/Event Horizon")]) !== "arm64") {
