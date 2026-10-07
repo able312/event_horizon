@@ -7,7 +7,7 @@
  * the day cell (the parent cell must be `relative`), across from the date, so
  * it doesn't take vertical space away from the cards.
  * In compact mode each visible event is a single CompactEventLine instead of
- * a card; the fit and "+N more" rules are the same in both modes.
+ * a card, and maxVisible doesn't apply: lines fill whatever height the cell has.
  *
  * Location: src/features/calendar/components/CalendarDayEventList.tsx
  */
@@ -24,6 +24,7 @@ import CompactEventLine from "./CompactEventLine"
 type CalendarDayEventListProps = {
   day: number
   events: Event[]
+  /** Most full cards to show; compact lines are limited only by height */
   maxVisible: number
   /** Show single compact lines instead of full cards */
   compact?: boolean
@@ -46,7 +47,7 @@ function CalendarDayEventList({
   onEventStatusChange,
 }: CalendarDayEventListProps) {
   const listRef = useRef<HTMLDivElement>(null)
-  const candidateEvents = events.slice(0, maxVisible)
+  const candidateEvents = compact ? events : events.slice(0, maxVisible)
   const fittingCount = useFittingItemCount(listRef, candidateEvents.length)
   const hiddenCount = events.length - fittingCount
 

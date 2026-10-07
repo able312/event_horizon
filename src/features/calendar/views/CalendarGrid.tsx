@@ -8,7 +8,8 @@
  * - Shows all days in the current month
  * - Highlights today's date
  * - Keeps week rows equal height across the calendar
- * - Displays as many events as fit (up to three) per day with overflow in a popover
+ * - Displays as many events as fit per day (up to three full cards, or as many
+ *   compact lines as the cell's height allows) with overflow in a popover
  * - Collapses events to compact lines when columns are narrow (whole grid)
  *   or a day's full cards don't fit (that week row only)
  * - Click events to navigate to event detail

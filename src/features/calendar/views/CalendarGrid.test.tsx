@@ -416,6 +416,15 @@ describe("CalendarGrid compact lines", () => {
     expect(line.querySelector('[data-glyph="dot"]')?.getAttribute("aria-hidden")).toBe("true")
   })
 
+  it("fills the cell with compact lines past the full-card limit", () => {
+    mockGridSize(NARROW_GRID_WIDTH, 5000)
+    renderGrid({ events: Array.from({ length: 6 }, (_, i) => makeEvent(10, i + 1)) })
+
+    const day = screen.getByTestId("calendar-day-events-10")
+    expect(within(day).getAllByTestId("calendar-compact-line")).toHaveLength(6)
+    expect(screen.queryByRole("button", { name: /more events/ })).toBeNull()
+  })
+
   it("collapses only the week row whose day doesn't fit full cards", () => {
     mockGridSize(WIDE_GRID_WIDTH, ONE_CARD_GRID_HEIGHT)
     // April 2026 starts on Wednesday: the 10th is in row 2, the 20th in row 4.
@@ -445,10 +454,13 @@ describe("CalendarGrid compact lines", () => {
 
     const titles = within(screen.getByTestId("calendar-day-events-10"))
       .getAllByTestId("calendar-compact-line")
-      .slice(0, 3)
       .map((line) => line.getAttribute("title"))
-    expect(titles).toEqual(["New Lead: Event 10-3", "Confirmed: Event 10-4", "Confirmed: Event 10-2"])
-    expect(screen.getByRole("button", { name: "+1 more events" })).toBeTruthy()
+    expect(titles).toEqual([
+      "New Lead: Event 10-3",
+      "Confirmed: Event 10-4",
+      "Confirmed: Event 10-2",
+      "Complete: Event 10-1",
+    ])
   })
 
   it("opens a details popover from a line without opening the day, and navigates from it", () => {
