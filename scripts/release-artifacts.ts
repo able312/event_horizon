@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { spawn } from "node:child_process"
 import { setTimeout as delay } from "node:timers/promises"
-import { expectedAssetNames, parseMetadata, verifyFiles } from "./release-logic.ts"
+import { ArtifactValidationError, expectedAssetNames, parseMetadata, verifyFiles } from "./release-logic.ts"
 import type { FileInfo, Metadata } from "./release-logic.ts"
 import { run } from "./release-commands.ts"
 
@@ -23,7 +23,13 @@ export async function inspectArtifacts(directory: string, version: string): Prom
   return { metadata, files }
 }
 
+// Deterministic package defects are repairable by rebuilding; extraction and mounting failures stay plain errors.
 function verifySignature(appPath: string, version: string): void {
+  try { checkSignature(appPath, version) }
+  catch (error) { throw new ArtifactValidationError(error instanceof Error ? error.message : String(error)) }
+}
+
+function checkSignature(appPath: string, version: string): void {
   run("codesign", ["--verify", "--deep", "--strict", appPath])
   // codesign writes its display output to stderr even on success.
   const details = run("codesign", ["--display", "--verbose=4", appPath], { captureStderr: true })
@@ -62,7 +68,7 @@ async function smokeLaunch(appPath: string, root: string): Promise<void> {
       const migrated = existsSync(database) && output.includes(`Database migrated: ${database}`)
       const elapsed = Date.now() - started
       if (running && migrated && elapsed >= 10_000) break
-      if (!running || elapsed >= 60_000) throw new Error(`Isolated app launch failed: ${failure?.message ?? output}`)
+      if (!running || elapsed >= 60_000) throw new ArtifactValidationError(`Isolated app launch failed: ${failure?.message ?? output}`)
       await delay(500)
     }
   } finally {

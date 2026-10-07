@@ -151,6 +151,12 @@ function landBump(version: string): void {
   if (head.mergeStateStatus !== "CLEAN") {
     throw new Error(`The bump PR is not ready to merge immediately (${head.mergeStateStatus}): ${url}. Resolve required reviews/checks, merge it, pull main and rerun npm run release.`)
   }
+  // gh adds a CLEAN PR to a required merge queue instead of merging it, which would advance main after this command stops.
+  const [owner, name] = repository.split("/")
+  const queue = JSON.parse(gh(["api", "graphql", "-f", `query=query { repository(owner: "${owner}", name: "${name}") { mergeQueue(branch: "main") { id } } }`])) as { data: { repository: { mergeQueue: { id: string } | null } } }
+  if (queue.data.repository.mergeQueue) {
+    throw new Error(`main uses a merge queue, which this command cannot wait on: ${url}. Merge it through the queue, pull main and rerun npm run release.`)
+  }
   try { gh(["pr", "merge", url, "--repo", repository, "--merge", "--match-head-commit", head.headRefOid]) }
   catch (error) {
     throw new Error(`The bump PR could not merge: ${url}. Resolve required reviews/checks, merge it, pull main and rerun npm run release. ${error instanceof Error ? error.message : String(error)}`)

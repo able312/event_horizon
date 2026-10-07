@@ -54,6 +54,7 @@ let pendingVersion: string
 let headSha: string
 let mergeBlocked: boolean
 let mergeStateStatus: string
+let mergeQueue: boolean
 let versionFails: boolean
 
 function artifactsFor(targetVersion: string) {
@@ -77,6 +78,7 @@ beforeEach(() => {
   headSha = sha
   mergeBlocked = false
   mergeStateStatus = "CLEAN"
+  mergeQueue = false
   versionFails = false
   vi.spyOn(console, "log").mockImplementation(() => {})
   vi.mocked(inspectArtifacts).mockImplementation(async (_directory, targetVersion) => artifactsFor(targetVersion))
@@ -111,6 +113,7 @@ beforeEach(() => {
       if (args[0] === "release" && args[1] === "create") { current = { ...draft, tag_name: args[2], target_commitish: headSha, assets: [] }; return "" }
       if (args[0] === "release" && args[1] === "upload") { current = { ...draft, tag_name: args[2], target_commitish: headSha, assets: artifactsFor(localVersion).files.map((file) => ({ name: file.name, size: file.size, state: "uploaded" })) }; return "" }
       if (args[0] === "release" && args[1] === "edit") { current = { ...draft, draft: false }; tag = sha; return "" }
+      if (args[0] === "api" && args[1] === "graphql") return JSON.stringify({ data: { repository: { mergeQueue: mergeQueue ? { id: "q" } : null } } })
       if (args[0] === "pr" && args[1] === "list") return "[]"
       if (args[0] === "pr" && args[1] === "create") return "https://github.com/able312/event_horizon/pull/99"
       if (args[0] === "pr" && args[1] === "view") return args.includes("headRefOid,mergeStateStatus") ? JSON.stringify({ headRefOid: "b".repeat(40), mergeStateStatus }) : JSON.stringify({ state: "MERGED", mergeCommit: { oid: "c".repeat(40) } })
@@ -155,6 +158,13 @@ describe("release orchestration", () => {
     current = { ...draft, draft: false }
     mergeStateStatus = "BLOCKED"
     await expect(runRelease([])).rejects.toThrow("not ready to merge immediately")
+    expect(ghWrites().some(([, args]) => args[0] === "pr" && args[1] === "merge")).toBe(false)
+    expect(npm).not.toHaveBeenCalled()
+  })
+  it("does not merge a bump PR when main uses a merge queue", async () => {
+    current = { ...draft, draft: false }
+    mergeQueue = true
+    await expect(runRelease([])).rejects.toThrow("merge queue")
     expect(ghWrites().some(([, args]) => args[0] === "pr" && args[1] === "merge")).toBe(false)
     expect(npm).not.toHaveBeenCalled()
   })
