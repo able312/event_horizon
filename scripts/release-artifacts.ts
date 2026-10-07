@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { createReadStream, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs"
+import { createReadStream, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { spawn } from "node:child_process"
@@ -106,6 +106,7 @@ export async function verifyPackages(directory: string, metadata: Metadata): Pro
     verifySignature(appPath, metadata.version)
     const dmg = metadata.files.find((file) => file.name.endsWith(".dmg"))!
     const mount = join(root, "dmg")
+    mkdirSync(mount)
     unpackable(() => run("hdiutil", ["attach", "-readonly", "-nobrowse", "-mountpoint", mount, join(directory, dmg.name)]))
     try { verifySignature(join(mount, "Event Horizon.app"), metadata.version) }
     finally { stillMounted = !detach(mount) }
