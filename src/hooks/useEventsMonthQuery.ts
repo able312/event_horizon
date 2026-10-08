@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query"
 
 import type { Event } from "~/definitions/database"
-import * as eventsApi from "~/lib/ipc/ipcEventsQueries"
+import * as eventsApi from "~/lib/data/events"
 import { getCurrentMonthParam, normalizeMonthParam } from "~/lib/months"
 
 import { getEventsMonthQueryKey } from "./eventsCache"

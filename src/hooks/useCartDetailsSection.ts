@@ -2,7 +2,7 @@ import { useParams } from "react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { CartDetails, UpdateCartDetails } from "~/definitions/database"
-import * as cartDetailsApi from "~/lib/ipc/cartDetails"
+import * as cartDetailsApi from "~/lib/data/cartDetails"
 
 export function useCartDetailsSection(enabled = true) {
   const { id: eventId } = useParams<{ id: string }>()

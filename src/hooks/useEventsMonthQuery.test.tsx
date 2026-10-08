@@ -4,12 +4,12 @@ import type { ReactNode } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Event } from "~/definitions/database"
-import * as eventsApi from "~/lib/ipc/ipcEventsQueries"
+import * as eventsApi from "~/lib/data/events"
 import { createTestQueryClient, renderHookWithProviders } from "~/test/renderHookWithProviders"
 import { getEventsMonthQueryKey } from "./eventsCache"
 import { useEventsMonthQuery } from "./useEventsMonthQuery"
 
-vi.mock("~/lib/ipc/ipcEventsQueries", () => ({
+vi.mock("~/lib/data/events", () => ({
   getEventsByMonth: vi.fn(),
 }))
 

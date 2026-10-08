@@ -4,8 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Contact, EventContactsPanel } from "~/definitions/contacts"
 import { ContactsError } from "~/lib/contacts/contactsError"
-import * as contactsIpc from "~/lib/ipc/contacts"
-import * as eventContactsIpc from "~/lib/ipc/eventContacts"
+import * as contactsIpc from "~/lib/data/contacts"
+import * as eventContactsIpc from "~/lib/data/eventContacts"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
 
 import {
@@ -20,7 +20,7 @@ import {
   useUpdateContact,
 } from "./useEventContacts"
 
-vi.mock("~/lib/ipc/eventContacts", () => ({
+vi.mock("~/lib/data/eventContacts", () => ({
   getEventContactsPanel: vi.fn(),
   assignEventContact: vi.fn(),
   updateEventContact: vi.fn(),
@@ -31,7 +31,7 @@ vi.mock("~/lib/ipc/eventContacts", () => ({
   getPrimaryClients: vi.fn(),
 }))
 
-vi.mock("~/lib/ipc/contacts", () => ({
+vi.mock("~/lib/data/contacts", () => ({
   createContact: vi.fn(),
   updateContact: vi.fn(),
   archiveContact: vi.fn(),
@@ -41,13 +41,13 @@ vi.mock("~/lib/ipc/contacts", () => ({
   getContactById: vi.fn(),
 }))
 
-vi.mock("~/lib/ipc/contactRoles", () => ({
+vi.mock("~/lib/data/contactRoles", () => ({
   getContactRoles: vi.fn(),
   ensureContactRole: vi.fn(),
   removeContactRole: vi.fn(),
 }))
 
-vi.mock("~/lib/ipc/vendorCategories", () => ({
+vi.mock("~/lib/data/vendorCategories", () => ({
   getVendorCategories: vi.fn(),
 }))
 

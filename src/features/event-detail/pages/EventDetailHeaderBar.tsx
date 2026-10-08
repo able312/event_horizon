@@ -19,8 +19,8 @@ import {
   buildGoogleCalendarUpdateUrl,
   type GoogleCalendarEventInput,
 } from "~/lib/googleCalendar"
-import { getEventContactsPanel } from "~/lib/ipc/eventContacts"
-import { getIncompleteTouchpointsByEventId } from "~/lib/ipc/touchpoints"
+import { getEventContactsPanel } from "~/lib/data/eventContacts"
+import { getIncompleteTouchpointsByEventId } from "~/lib/data/touchpoints"
 import { openExternalUrl } from "~/lib/ipc/system"
 import {
   DEFAULT_EVENT_DETAIL_RETURN_TO,

@@ -25,4 +25,30 @@ export default tseslint.config(
       ],
     },
   },
+  // Backend boundary: only src/lib/data talks to the data backend, and only it and
+  // src/lib/ipc talk to Electron. Swapping backends should only touch src/lib/data.
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/lib/data/**', 'src/lib/ipc/**', 'src/electron/**', 'src/test/**', 'src/**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "MemberExpression[object.name='window'][property.name='electron']",
+          message: 'Use a function from ~/lib/data (data) or ~/lib/ipc (Electron features) instead of window.electron.',
+        },
+      ],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['convex', 'convex/*', '@convex-dev/*', '**/convex/_generated/*'],
+              message: 'Only ~/lib/data may talk to the data backend.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 )

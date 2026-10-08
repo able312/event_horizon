@@ -1,5 +1,5 @@
 import type { NewVendorCategory, UpdateVendorCategory, VendorCategory } from "~/definitions/contacts"
-import { invokeContactsChannel } from "./contactsIpcResult"
+import { invokeContactsChannel } from "./contactsResult"
 
 export function getVendorCategories(options?: { includeArchived?: boolean }): Promise<VendorCategory[]> {
   return invokeContactsChannel("vendor-categories:get-many", options)

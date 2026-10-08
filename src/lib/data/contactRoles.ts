@@ -1,5 +1,5 @@
 import type { ContactRole, ContactRoleType } from "~/definitions/contacts"
-import { invokeContactsChannel } from "./contactsIpcResult"
+import { invokeContactsChannel } from "./contactsResult"
 
 export function getContactRoles(contactId: string): Promise<ContactRole[]> {
   return invokeContactsChannel("contact-roles:get-by-contact-id", contactId)

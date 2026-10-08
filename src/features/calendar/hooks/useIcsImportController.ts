@@ -5,7 +5,8 @@ import type {
   IcsImportCommitResult,
   IcsImportReviewPayload,
 } from "~/definitions/events/icsImport"
-import { commitIcsImport, onIcsImportReview } from "~/lib/ipc/ipcEventsQueries"
+import { commitIcsImport } from "~/lib/data/events"
+import { onIcsImportReview } from "~/lib/ipc/icsImport"
 import type { UseEventsReturn } from "~/hooks/useEvents"
 
 export type IcsImportPhase = "idle" | "review" | "committing" | "report"

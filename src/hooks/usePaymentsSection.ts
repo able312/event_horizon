@@ -2,7 +2,7 @@ import { useParams } from "react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { Payment, UpdatePayment } from "~/definitions/database"
-import * as paymentApi from "~/lib/ipc/payments"
+import * as paymentApi from "~/lib/data/payments"
 
 function sortPayments(payments: Payment[]): Payment[] {
   return [...payments].sort((a, b) => {

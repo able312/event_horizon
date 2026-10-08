@@ -1,14 +1,14 @@
 import { act, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { Event, NewEvent } from "~/definitions/database"
-import * as eventsApi from "~/lib/ipc/ipcEventsQueries"
+import * as eventsApi from "~/lib/data/events"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
 import { EVENTS_SEARCH_QUERY_KEY_PREFIX } from "./eventsCache"
 import { useEvents } from "./useEvents"
 import { PRIMARY_CLIENTS_QUERY_KEY_PREFIX } from "./useEventContacts"
 import { useEventsMonthQuery } from "./useEventsMonthQuery"
 
-vi.mock("~/lib/ipc/ipcEventsQueries", () => ({
+vi.mock("~/lib/data/events", () => ({
   getAllEvents: vi.fn(),
   getEventsByMonth: vi.fn(),
   getUnscheduledEvents: vi.fn(),

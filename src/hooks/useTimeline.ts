@@ -1,7 +1,7 @@
 import { useParams } from "react-router"
 import { useQuery } from "@tanstack/react-query"
 import type { TimelineTimeblock } from "~/definitions/timeblocks/timeblocks-types"
-import * as timeblocksIpc from "~/lib/ipc/timeblocks"
+import * as timeblocksIpc from "~/lib/data/timeblocks"
 import { useTimeblockMutations } from "./useTimeblockMutations"
 
 export function useTimeline() {

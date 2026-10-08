@@ -15,10 +15,10 @@ import {
   selectPrimaryClient,
   selectPrintableContactGroups,
 } from "~/features/contacts/lib/eventContactsPanel"
-import * as contactRolesApi from "~/lib/ipc/contactRoles"
-import * as contactsApi from "~/lib/ipc/contacts"
-import * as eventContactsApi from "~/lib/ipc/eventContacts"
-import * as vendorCategoriesApi from "~/lib/ipc/vendorCategories"
+import * as contactRolesApi from "~/lib/data/contactRoles"
+import * as contactsApi from "~/lib/data/contacts"
+import * as eventContactsApi from "~/lib/data/eventContacts"
+import * as vendorCategoriesApi from "~/lib/data/vendorCategories"
 
 const CONTACT_SEARCH_LIMIT = 20
 

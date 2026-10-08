@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { NewContact } from "~/definitions/contacts"
 import type { Event, NewEvent, UpdateEvent } from "~/definitions/database"
-import * as eventsApi from "~/lib/ipc/ipcEventsQueries"
+import * as eventsApi from "~/lib/data/events"
 import {
   EVENTS_MONTH_QUERY_KEY_PREFIX,
   EVENTS_SEARCH_QUERY_KEY_PREFIX,

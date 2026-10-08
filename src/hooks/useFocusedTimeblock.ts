@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import * as timeblocksIpc from "~/lib/ipc/timeblocks"
+import * as timeblocksIpc from "~/lib/data/timeblocks"
 
 export function focusedTimeblockQueryKey(timeblockId: string) {
   return ["timeblock", timeblockId] as const

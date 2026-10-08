@@ -1,7 +1,7 @@
 import { act, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { Event } from "~/definitions/database"
-import * as eventsApi from "~/lib/ipc/ipcEventsQueries"
+import * as eventsApi from "~/lib/data/events"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
 import { EVENTS_SEARCH_QUERY_KEY_PREFIX } from "./eventsCache"
 import { useEvent } from "./useEvent"
@@ -17,7 +17,7 @@ vi.mock("react-router", async () => {
   }
 })
 
-vi.mock("~/lib/ipc/ipcEventsQueries", () => ({
+vi.mock("~/lib/data/events", () => ({
   getAllEvents: vi.fn(),
   getEventById: vi.fn(),
   createEvent: vi.fn(),

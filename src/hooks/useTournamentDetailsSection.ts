@@ -2,7 +2,7 @@ import { useParams } from "react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { TournamentDetails, UpdateTournamentDetails } from "~/definitions/database"
-import * as tournamentDetailsApi from "~/lib/ipc/tournamentDetails"
+import * as tournamentDetailsApi from "~/lib/data/tournamentDetails"
 
 export function useTournamentDetailsSection(enabled = true) {
   const { id: eventId } = useParams<{ id: string }>()

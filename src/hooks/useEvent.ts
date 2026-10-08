@@ -2,7 +2,7 @@ import { useParams, useNavigate } from "react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { Event, UpdateEvent } from "~/definitions/database"
-import { getEventById, updateEvent, deleteEvent } from "~/lib/ipc/ipcEventsQueries"
+import { getEventById, updateEvent, deleteEvent } from "~/lib/data/events"
 import {
   EVENTS_SEARCH_QUERY_KEY_PREFIX,
   findCachedEventById,

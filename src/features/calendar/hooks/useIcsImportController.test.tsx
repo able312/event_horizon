@@ -3,11 +3,14 @@ import { describe, expect, it, vi } from "vitest"
 import { toast } from "sonner"
 
 import type { IcsImportReviewPayload } from "~/definitions/events/icsImport"
-import { commitIcsImport, onIcsImportReview } from "~/lib/ipc/ipcEventsQueries"
+import { commitIcsImport } from "~/lib/data/events"
+import { onIcsImportReview } from "~/lib/ipc/icsImport"
 import { useIcsImportController } from "./useIcsImportController"
 
-vi.mock("~/lib/ipc/ipcEventsQueries", () => ({
+vi.mock("~/lib/data/events", () => ({
   commitIcsImport: vi.fn(),
+}))
+vi.mock("~/lib/ipc/icsImport", () => ({
   onIcsImportReview: vi.fn(),
 }))
 

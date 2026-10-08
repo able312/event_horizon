@@ -6,7 +6,7 @@ import type {
   Page,
   UpdateContact,
 } from "~/definitions/contacts"
-import { invokeContactsChannel } from "./contactsIpcResult"
+import { invokeContactsChannel } from "./contactsResult"
 
 export function getContactById(id: string): Promise<Contact | null> {
   return invokeContactsChannel("contacts:get-by-id", id)

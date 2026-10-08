@@ -2,7 +2,7 @@ import { useParams } from "react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { ChargeCategory, MenuOfChargeItem, UpdateMenuOfChargeItem } from "~/definitions/database"
-import * as menuOfChargeItemApi from "~/lib/ipc/menuOfChargeItems"
+import * as menuOfChargeItemApi from "~/lib/data/menuOfChargeItems"
 
 function sortMenuItems(items: MenuOfChargeItem[]): MenuOfChargeItem[] {
   return [...items].sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""))

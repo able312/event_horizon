@@ -8,7 +8,7 @@ import type {
   Touchpoint,
   UpdateTouchpoint,
 } from "~/definitions/database"
-import * as touchpointApi from "~/lib/ipc/touchpoints"
+import * as touchpointApi from "~/lib/data/touchpoints"
 
 function sortTouchpoints(items: Touchpoint[]): Touchpoint[] {
   return [...items].sort((a, b) => {

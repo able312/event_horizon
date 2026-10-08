@@ -4,7 +4,6 @@ import type { EventSearchRequest, EventSearchResponse } from "~/definitions/ipc"
 import type {
   IcsImportCommitRequest,
   IcsImportCommitResult,
-  IcsImportReviewPayload,
 } from "~/definitions/events/icsImport"
 
 export function getAllEvents(): Promise<Event[]> {
@@ -42,20 +41,4 @@ export function deleteEvent(id: string): Promise<boolean> {
 
 export function commitIcsImport(payload: IcsImportCommitRequest): Promise<IcsImportCommitResult> {
   return window.electron.ipcRenderer.invoke("events:import-ics:commit", payload) as Promise<IcsImportCommitResult>
-}
-
-export function onIcsImportReview(
-  listener: (payload: IcsImportReviewPayload) => void,
-): () => void {
-  const wrapped = (...args: unknown[]) => {
-    const payload = args[0] as IcsImportReviewPayload | undefined
-    if (!payload) return
-    listener(payload)
-  }
-
-  window.electron.ipcRenderer.on("events:import-ics:review", wrapped)
-
-  return () => {
-    window.electron.ipcRenderer.removeListener("events:import-ics:review", wrapped)
-  }
 }

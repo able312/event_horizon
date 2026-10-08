@@ -1,7 +1,7 @@
 import { useParams } from "react-router"
 import { useQuery } from "@tanstack/react-query"
 import { useTimeblockMutations, type AddTimeblockInput } from "./useTimeblockMutations"
-import * as timeblocksIpc from "~/lib/ipc/timeblocks"
+import * as timeblocksIpc from "~/lib/data/timeblocks"
 
 export interface AddSetupInstructionOptions {
   prefill?: "blank" | "default"

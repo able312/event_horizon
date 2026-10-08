@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { BeverageItemType, Timeblock } from "~/definitions/database"
 import type { BeverageItemWithAssignments, BeverageSectionPayload } from "~/definitions/beverage/beverage-types"
-import * as beverageItemsIpc from "~/lib/ipc/beverageItems"
+import * as beverageItemsIpc from "~/lib/data/beverageItems"
 import { focusedTimeblockQueryKey } from "./useFocusedTimeblock"
 import { useTimeblockMutations } from "./useTimeblockMutations"
 import {

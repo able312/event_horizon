@@ -3,7 +3,7 @@ import { toast } from "sonner"
 
 import type { ConvertTimeblockInput } from "~/definitions/timeblocks/timeblock-conversion"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
-import * as timeblocksIpc from "~/lib/ipc/timeblocks"
+import * as timeblocksIpc from "~/lib/data/timeblocks"
 import { focusedTimeblockQueryKey } from "./useFocusedTimeblock"
 
 function invalidateConversionCaches(queryClient: ReturnType<typeof useQueryClient>, eventId: string, timeblockId: string) {

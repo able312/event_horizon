@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 
 import type { EventSearchResponse } from "~/definitions/ipc"
 import type { EventStatus, EventType } from "~/definitions/database"
-import * as eventsApi from "~/lib/ipc/ipcEventsQueries"
+import * as eventsApi from "~/lib/data/events"
 
 export type EventsSearchParams = {
   query: string

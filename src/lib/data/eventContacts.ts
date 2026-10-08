@@ -11,7 +11,7 @@ import type {
   UpdateContact,
   UpdateEventContact,
 } from "~/definitions/contacts"
-import { invokeContactsChannel } from "./contactsIpcResult"
+import { invokeContactsChannel } from "./contactsResult"
 
 export function getEventContactsPanel(eventId: string): Promise<EventContactsPanel> {
   return invokeContactsChannel("event-contacts:get-panel", eventId)
