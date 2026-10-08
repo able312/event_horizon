@@ -10,7 +10,13 @@
 
 import type * as beverageItems from "../beverageItems.js";
 import type * as cartDetails from "../cartDetails.js";
+import type * as contactRoles from "../contactRoles.js";
+import type * as contacts from "../contacts.js";
+import type * as eventContacts from "../eventContacts.js";
+import type * as events from "../events.js";
 import type * as foodItems from "../foodItems.js";
+import type * as lib_contactOperations from "../lib/contactOperations.js";
+import type * as lib_contactValidators from "../lib/contactValidators.js";
 import type * as lib_records from "../lib/records.js";
 import type * as lib_validators from "../lib/validators.js";
 import type * as menuOfChargeItems from "../menuOfChargeItems.js";
@@ -18,6 +24,7 @@ import type * as payments from "../payments.js";
 import type * as timeblocks from "../timeblocks.js";
 import type * as touchpoints from "../touchpoints.js";
 import type * as tournamentDetails from "../tournamentDetails.js";
+import type * as vendorCategories from "../vendorCategories.js";
 
 import type {
   ApiFromModules,
@@ -28,7 +35,13 @@ import type {
 declare const fullApi: ApiFromModules<{
   beverageItems: typeof beverageItems;
   cartDetails: typeof cartDetails;
+  contactRoles: typeof contactRoles;
+  contacts: typeof contacts;
+  eventContacts: typeof eventContacts;
+  events: typeof events;
   foodItems: typeof foodItems;
+  "lib/contactOperations": typeof lib_contactOperations;
+  "lib/contactValidators": typeof lib_contactValidators;
   "lib/records": typeof lib_records;
   "lib/validators": typeof lib_validators;
   menuOfChargeItems: typeof menuOfChargeItems;
@@ -36,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   timeblocks: typeof timeblocks;
   touchpoints: typeof touchpoints;
   tournamentDetails: typeof tournamentDetails;
+  vendorCategories: typeof vendorCategories;
 }>;
 
 /**
