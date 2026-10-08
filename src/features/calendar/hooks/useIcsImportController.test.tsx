@@ -1,14 +1,15 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { toast } from "sonner"
 
-import type { IcsImportReviewPayload } from "~/definitions/events/icsImport"
-import { commitIcsImport } from "~/lib/data/events"
+import type { IcsImportParsedPayload, IcsImportReviewPayload } from "~/definitions/events/icsImport"
 import { onIcsImportReview } from "~/lib/ipc/icsImport"
+import { commitIcsImport, reviewIcsImport } from "../lib/icsImport"
 import { useIcsImportController } from "./useIcsImportController"
 
-vi.mock("~/lib/data/events", () => ({
+vi.mock("../lib/icsImport", () => ({
   commitIcsImport: vi.fn(),
+  reviewIcsImport: vi.fn(),
 }))
 vi.mock("~/lib/ipc/icsImport", () => ({
   onIcsImportReview: vi.fn(),
@@ -16,7 +17,6 @@ vi.mock("~/lib/ipc/icsImport", () => ({
 
 function makeReviewPayload(): IcsImportReviewPayload {
   return {
-    sessionId: "session-1",
     sourceFileName: "events.ics",
     generatedAtIso: "2026-05-03T12:00:00.000Z",
     rows: [],
@@ -39,6 +39,13 @@ function makeEventsHook() {
   } as unknown as Parameters<typeof useIcsImportController>[0]
 }
 
+beforeEach(() => {
+  vi.mocked(reviewIcsImport).mockImplementation(async (parsed: IcsImportParsedPayload) => ({
+    ...parsed,
+    summary: makeReviewPayload().summary,
+  }))
+})
+
 describe("useIcsImportController", () => {
   it("subscribes on mount and unsubscribes on unmount", () => {
     const unsubscribe = vi.fn()
@@ -53,7 +60,7 @@ describe("useIcsImportController", () => {
   })
 
   it("moves to review phase when a review payload arrives", async () => {
-    let listener: ((payload: IcsImportReviewPayload) => void) | null = null
+    let listener: ((payload: IcsImportParsedPayload) => void) | null = null
     vi.mocked(onIcsImportReview).mockImplementation((nextListener) => {
       listener = nextListener
       return () => undefined
@@ -73,7 +80,7 @@ describe("useIcsImportController", () => {
   })
 
   it("commits rows successfully and refetches event queries", async () => {
-    let listener: ((payload: IcsImportReviewPayload) => void) | null = null
+    let listener: ((payload: IcsImportParsedPayload) => void) | null = null
     vi.mocked(onIcsImportReview).mockImplementation((nextListener) => {
       listener = nextListener
       return () => undefined
@@ -93,15 +100,13 @@ describe("useIcsImportController", () => {
     act(() => {
       listener?.(makeReviewPayload())
     })
+    await waitFor(() => expect(result.current.phase).toBe("review"))
 
     await act(async () => {
       await result.current.commitSelectedRows(["row-1"])
     })
 
-    expect(commitIcsImport).toHaveBeenCalledWith({
-      sessionId: "session-1",
-      selectedRowIds: ["row-1"],
-    })
+    expect(commitIcsImport).toHaveBeenCalledWith(makeReviewPayload(), ["row-1"])
     expect(eventsHook.monthQuery.refetch).toHaveBeenCalledTimes(1)
     expect(eventsHook.unscheduledQuery.refetch).toHaveBeenCalledTimes(1)
     expect(result.current.phase).toBe("report")
@@ -109,7 +114,7 @@ describe("useIcsImportController", () => {
   })
 
   it("returns to review phase and shows error toast when commit fails", async () => {
-    let listener: ((payload: IcsImportReviewPayload) => void) | null = null
+    let listener: ((payload: IcsImportParsedPayload) => void) | null = null
     vi.mocked(onIcsImportReview).mockImplementation((nextListener) => {
       listener = nextListener
       return () => undefined
@@ -122,6 +127,7 @@ describe("useIcsImportController", () => {
     act(() => {
       listener?.(makeReviewPayload())
     })
+    await waitFor(() => expect(result.current.phase).toBe("review"))
 
     await act(async () => {
       await result.current.commitSelectedRows(["row-1"])
@@ -132,7 +138,7 @@ describe("useIcsImportController", () => {
   })
 
   it("does not close while committing, and closes during report", async () => {
-    let listener: ((payload: IcsImportReviewPayload) => void) | null = null
+    let listener: ((payload: IcsImportParsedPayload) => void) | null = null
     vi.mocked(onIcsImportReview).mockImplementation((nextListener) => {
       listener = nextListener
       return () => undefined
@@ -160,6 +166,7 @@ describe("useIcsImportController", () => {
     act(() => {
       listener?.(makeReviewPayload())
     })
+    await waitFor(() => expect(result.current.phase).toBe("review"))
 
     let commitPromise: Promise<void> | null = null
     act(() => {
@@ -186,5 +193,27 @@ describe("useIcsImportController", () => {
     expect(result.current.phase).toBe("idle")
     expect(result.current.reviewPayload).toBeNull()
     expect(result.current.commitResult).toBeNull()
+  })
+
+  it("stays idle and shows an error toast when the duplicate check fails", async () => {
+    let listener: ((payload: IcsImportParsedPayload) => void) | null = null
+    vi.mocked(onIcsImportReview).mockImplementation((nextListener) => {
+      listener = nextListener
+      return () => undefined
+    })
+    vi.mocked(reviewIcsImport).mockRejectedValueOnce(new Error("lookup failed"))
+    vi.spyOn(console, "error").mockImplementation(() => undefined)
+
+    const { result } = renderHook(() => useIcsImportController(makeEventsHook()))
+
+    act(() => {
+      listener?.(makeReviewPayload())
+    })
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Failed to check imported events for duplicates"),
+    )
+    expect(result.current.phase).toBe("idle")
+    expect(result.current.reviewPayload).toBeNull()
   })
 })

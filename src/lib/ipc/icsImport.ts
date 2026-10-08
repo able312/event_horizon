@@ -1,10 +1,10 @@
-import type { IcsImportReviewPayload } from "~/definitions/events/icsImport"
+import type { IcsImportParsedPayload } from "~/definitions/events/icsImport"
 
 export function onIcsImportReview(
-  listener: (payload: IcsImportReviewPayload) => void,
+  listener: (payload: IcsImportParsedPayload) => void,
 ): () => void {
   const wrapped = (...args: unknown[]) => {
-    const payload = args[0] as IcsImportReviewPayload | undefined
+    const payload = args[0] as IcsImportParsedPayload | undefined
     if (!payload) return
     listener(payload)
   }

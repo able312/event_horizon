@@ -1,10 +1,7 @@
 import type { NewContact } from "~/definitions/contacts"
 import type { NewEvent, Event, UpdateEvent } from "~/definitions/database"
 import type { EventSearchRequest, EventSearchResponse } from "~/definitions/ipc"
-import type {
-  IcsImportCommitRequest,
-  IcsImportCommitResult,
-} from "~/definitions/events/icsImport"
+import type { IcsImportEventInput, IcsImportInsertResult } from "~/definitions/events/icsImport"
 
 export function getAllEvents(): Promise<Event[]> {
   return window.electron.ipcRenderer.invoke("events:get-many") as Promise<Event[]>
@@ -39,6 +36,16 @@ export function deleteEvent(id: string): Promise<boolean> {
   return window.electron.ipcRenderer.invoke("events:delete", id) as Promise<boolean>
 }
 
-export function commitIcsImport(payload: IcsImportCommitRequest): Promise<IcsImportCommitResult> {
-  return window.electron.ipcRenderer.invoke("events:import-ics:commit", payload) as Promise<IcsImportCommitResult>
+export function getEventsByCalendarIds(calendarIds: string[]): Promise<Event[]> {
+  return window.electron.ipcRenderer.invoke("events:get-by-calendar-ids", calendarIds) as Promise<Event[]>
+}
+
+/** Events starting at or after `startFrom` and before `startTo` (ISO datetimes). */
+export function getEventsStartingBetween(startFrom: string, startTo: string): Promise<Event[]> {
+  return window.electron.ipcRenderer.invoke("events:get-by-start-range", startFrom, startTo) as Promise<Event[]>
+}
+
+/** Creates events from calendar rows, skipping calendar ids that already belong to an event. */
+export function importCalendarEvents(rows: IcsImportEventInput[]): Promise<IcsImportInsertResult> {
+  return window.electron.ipcRenderer.invoke("events:import-ics:insert", rows) as Promise<IcsImportInsertResult>
 }

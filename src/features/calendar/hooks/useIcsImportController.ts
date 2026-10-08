@@ -5,9 +5,9 @@ import type {
   IcsImportCommitResult,
   IcsImportReviewPayload,
 } from "~/definitions/events/icsImport"
-import { commitIcsImport } from "~/lib/data/events"
 import { onIcsImportReview } from "~/lib/ipc/icsImport"
 import type { UseEventsReturn } from "~/hooks/useEvents"
+import { commitIcsImport, reviewIcsImport } from "../lib/icsImport"
 
 export type IcsImportPhase = "idle" | "review" | "committing" | "report"
 
@@ -17,13 +17,24 @@ export function useIcsImportController(eventsHook: UseEventsReturn) {
   const [commitResult, setCommitResult] = useState<IcsImportCommitResult | null>(null)
 
   useEffect(() => {
-    const unsubscribe = onIcsImportReview((payload) => {
-      setReviewPayload(payload)
-      setCommitResult(null)
-      setPhase("review")
+    let active = true
+
+    const unsubscribe = onIcsImportReview((parsed) => {
+      reviewIcsImport(parsed)
+        .then((payload) => {
+          if (!active) return
+          setReviewPayload(payload)
+          setCommitResult(null)
+          setPhase("review")
+        })
+        .catch((err: unknown) => {
+          console.error("Failed to check ICS rows against existing events:", err)
+          if (active) toast.error("Failed to check imported events for duplicates")
+        })
     })
 
     return () => {
+      active = false
       unsubscribe()
     }
   }, [])
@@ -42,10 +53,7 @@ export function useIcsImportController(eventsHook: UseEventsReturn) {
       setPhase("committing")
 
       try {
-        const result = await commitIcsImport({
-          sessionId: reviewPayload.sessionId,
-          selectedRowIds,
-        })
+        const result = await commitIcsImport(reviewPayload, selectedRowIds)
 
         setCommitResult(result)
         setPhase("report")

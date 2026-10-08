@@ -1,7 +1,7 @@
 // electron/menu.ts
 import { app, ipcMain, BrowserWindow, Menu, dialog, type MenuItemConstructorOptions } from "electron"
 import { isDev } from "./utils.js"
-import { prepareIcsImportReview } from "./services/icsImportService.js"
+import { parseIcsImportFile } from "./services/icsImportService.js"
 import type { GenerateMenuContext } from "~/definitions/ipc.js"
 
 const windowState = new Map<number, GenerateMenuContext>()
@@ -93,15 +93,15 @@ export function rebuildAppMenu(targetWindowId?: number) {
           }
 
           try {
-            const reviewPayload = await prepareIcsImportReview(pickerResult.filePaths[0]!)
+            const parsedPayload = await parseIcsImportFile(pickerResult.filePaths[0]!)
             targetWindow.webContents.send("navigate", "/events")
 
             // Give the renderer route a brief moment to mount listeners after navigation.
             setTimeout(() => {
-              targetWindow.webContents.send("events:import-ics:review", reviewPayload)
+              targetWindow.webContents.send("events:import-ics:review", parsedPayload)
             }, 150)
           } catch (error) {
-            console.error("Error preparing ICS review payload:", error)
+            console.error("Error parsing ICS file:", error)
           }
         },
       },

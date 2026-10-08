@@ -29,10 +29,15 @@ const createEventClientArg: Parameters<typeof eventsIpc.createEvent>[1] = {
   email: "alex@example.com",
 }
 const updateEventArg = { title: "Updated Event" } as Parameters<typeof eventsIpc.updateEvent>[1]
-const icsImportCommitArg = {
-  sessionId: "session-1",
-  selectedRowIds: ["row-1", "row-2"],
-} as Parameters<typeof eventsIpc.commitIcsImport>[0]
+const icsImportRowsArg: Parameters<typeof eventsIpc.importCalendarEvents>[0] = [
+  {
+    calendarId: "uid-1",
+    title: "Imported Event",
+    startDateTime: "2026-06-14T17:00:00.000Z",
+    endDateTime: "2026-06-14T18:00:00.000Z",
+    internalNotes: null,
+  },
+]
 const searchEventsArg = {
   query: "alpha",
   type: null,
@@ -105,10 +110,22 @@ const wrapperCases: WrapperCase[] = [
     invokeWrapper: eventsIpc.searchEvents as unknown as (...args: unknown[]) => Promise<unknown>,
   },
   {
-    name: "events.commitIcsImport",
-    channel: "events:import-ics:commit",
-    args: [icsImportCommitArg],
-    invokeWrapper: eventsIpc.commitIcsImport as unknown as (...args: unknown[]) => Promise<unknown>,
+    name: "events.getEventsByCalendarIds",
+    channel: "events:get-by-calendar-ids",
+    args: [["uid-1", "uid-2"]],
+    invokeWrapper: eventsIpc.getEventsByCalendarIds as unknown as (...args: unknown[]) => Promise<unknown>,
+  },
+  {
+    name: "events.getEventsStartingBetween",
+    channel: "events:get-by-start-range",
+    args: ["2026-06-13T00:00:00.000Z", "2026-06-16T00:00:00.000Z"],
+    invokeWrapper: eventsIpc.getEventsStartingBetween as unknown as (...args: unknown[]) => Promise<unknown>,
+  },
+  {
+    name: "events.importCalendarEvents",
+    channel: "events:import-ics:insert",
+    args: [icsImportRowsArg],
+    invokeWrapper: eventsIpc.importCalendarEvents as unknown as (...args: unknown[]) => Promise<unknown>,
   },
   {
     name: "timeblocks.getTimeblocksByEventAndSection",
