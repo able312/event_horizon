@@ -1,5 +1,20 @@
 import { relations, sql } from "drizzle-orm";
 import { check, index, sqliteTable, text, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
+import type { CartGrid } from "../../definitions/database.js";
+import {
+  BEVERAGE_SERVICE_STYLES,
+  BEVERAGE_TYPES,
+  CART_LAYOUTS,
+  CHARGE_CATEGORIES,
+  CONTACT_KINDS,
+  CONTACT_ROLE_TYPES,
+  EVENT_STATUSES,
+  EVENT_TYPES,
+  FOOD_SERVICE_STYLES,
+  PLAY_FORMATS,
+  START_FORMATS,
+  TIMEBLOCK_SECTION_TYPES,
+} from "../../definitions/enums.js";
 
 
 /**
@@ -13,14 +28,8 @@ export const events = sqliteTable("events", {
   
   // Core event info
   title: text("title").notNull(),
-  type: text("type", { enum: ["tournament", "wedding", "function"] }).notNull().default("function"), // tournament, wedding, function
-  status: text("status", {enum: [
-    "new_lead",
-    "tentative",
-    "confirmed",
-    "closed",
-    "lost"
-  ]}).notNull().default("new_lead"),
+  type: text("type", { enum: EVENT_TYPES }).notNull().default("function"), // tournament, wedding, function
+  status: text("status", { enum: EVENT_STATUSES }).notNull().default("new_lead"),
   
   // Scheduling
   startDateTime: text("start_date_time"), // ISO datetime string
@@ -63,8 +72,8 @@ export const tournamentDetails = sqliteTable("tournament_details", {
   id: text("id").primaryKey(),
   eventId: text("event_id").references(() => events.id, { onDelete: "cascade" }).notNull(),
   time: text("time"), // HH:mm format
-  startFormat: text("start_format", { enum: ["Shotgun", "Tee Times"] }),
-  playFormat: text("play_format", { enum: ["Scramble", "Best Ball", "Stroke Play", "Modified Stableford"] }),
+  startFormat: text("start_format", { enum: START_FORMATS }),
+  playFormat: text("play_format", { enum: PLAY_FORMATS }),
   numberOfPlayers: integer("number_of_players"),
   paceOfPlay: text("pace_of_play"),
   leadCarts: text("lead_carts"),
@@ -88,14 +97,14 @@ export const cartDetails = sqliteTable('cart_details', {
   time: text('time'), // "08:30" format (HH:MM)
 
   // "template-12-hole-shotgun" or "custom"
-  layout: text('layout', { enum: ['template-12-hole-shotgun', 'custom'] })
+  layout: text('layout', { enum: CART_LAYOUTS })
     .notNull()
     .default('template-12-hole-shotgun'),
   
   // Custom grid stored as JSON string
   // Structure: [[7,5,9,10,3,1], [7,5,9,10,3,1], ..., ["Lead","Lead","Lead",null,null,null]]
   // null when layout is template-based
-  customGrid: text('custom_grid', { mode: 'json' }).$type<(number | string | null)[][]>(),
+  customGrid: text('custom_grid', { mode: 'json' }).$type<CartGrid>(),
   
   whatGoesOnCarts: text('what_goes_on_carts').default(''),
   assignedTo: text('assigned_to').default(''),
@@ -152,7 +161,7 @@ export const menuOfChargeItems = sqliteTable("menu_of_charge_items", {
   eventId: text("event_id").references(() => events.id, { onDelete: "cascade" }).notNull(),
   name: text("name").notNull(),
   quantity: integer("quantity"),
-  category: text("charge_type", {enum: ["Goods", "Service", "Golf", "Food & Beverage", "Venue"]}),
+  category: text("charge_type", { enum: CHARGE_CATEGORIES }),
   includes: text("includes"),
   unitPriceCents: integer("unit_price_cents"),
   createdAt: text("created_at").notNull(),
@@ -174,7 +183,7 @@ export const timeblocks = sqliteTable("timeblocks", {
   title: text("title").notNull(),
   time: text("time"), // HH:mm format - if set, appears on timeline
   details: text("details"),
-  sectionType: text("section_type", { enum: ["food", "beverage", "setup_instruction", "note", "tournament_detail", "cart_detail"] }).notNull(),
+  sectionType: text("section_type", { enum: TIMEBLOCK_SECTION_TYPES }).notNull(),
   assignedTo: text("assigned_to"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at")
@@ -199,7 +208,7 @@ export const foodItems = sqliteTable("food_items", {
   timeblockId: text("timeblock_id").references(() => timeblocks.id, { onDelete: "cascade" }).notNull(),
   name: text("name").notNull(),
   quantity: integer("quantity"),
-  serviceStyle: text("service_style", {enum: ["Buffet", "Family-Style", "Plated", "Passed"]}),
+  serviceStyle: text("service_style", { enum: FOOD_SERVICE_STYLES }),
   includes: text("includes"),
   unitPriceCents: integer("unit_price_cents"),
 });
@@ -217,8 +226,8 @@ export const beverageItems = sqliteTable("beverage_items", {
   eventId: text("event_id").references(() => events.id, { onDelete: "cascade" }).notNull(),
   name: text("name").notNull(),
   quantity: integer("quantity"),
-  type: text("type", { enum: ["Special Orders", "Beer", "Wine", "Coolers", "Rails", "Non-Alcoholic"] }).notNull(),
-  serviceStyle: text("service_style", {enum: ["Consumption Bar", "Cash Bar", "Open Bar", "Ticketed Bar"]}),
+  type: text("type", { enum: BEVERAGE_TYPES }).notNull(),
+  serviceStyle: text("service_style", { enum: BEVERAGE_SERVICE_STYLES }),
   includes: text("includes"),
   unitPriceCents: integer("unit_price_cents"),
 });
@@ -250,9 +259,6 @@ export const beverageItemTimeblocksRelations = relations(beverageItemTimeblocks,
 // ============================================================================
 // Contacts - one row per real person or company, described by roles
 // ============================================================================
-
-export const CONTACT_KINDS = ["individual", "organization"] as const
-export const CONTACT_ROLE_TYPES = ["client", "coordinator", "vendor"] as const
 
 // Identity: who is this person or company, and how do we reach them?
 export const contacts = sqliteTable("contacts", {

@@ -30,7 +30,7 @@ function formatUnitPrice(unitPriceCents: number | null): string {
 export interface PlanningTimeblockItemRowProps<TItem extends WorkspaceItemBase> {
   timeblockId: string
   item: TItem
-  serviceStyleOptions: string[]
+  serviceStyleOptions: readonly string[]
   disabled?: boolean
   updateItem: (payload: { timeblockId: string; itemId: string; updates: Partial<TItem> }) => void
   removeItem: (payload: { timeblockId: string; itemId: string }) => void

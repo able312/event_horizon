@@ -15,7 +15,7 @@ interface ItemCardProps {
   item: BaseItem
   updateItem: (field: keyof BaseItem, value: BaseItem[keyof BaseItem]) => void
   removeItem: () => void
-  serviceStyleOptions: string[]
+  serviceStyleOptions: readonly string[]
   includesPlaceholder?: string
   color?: string
 }

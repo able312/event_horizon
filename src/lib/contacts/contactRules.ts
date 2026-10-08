@@ -5,7 +5,7 @@ import type {
   EventContactsPanelItem,
   RecipientResolution,
 } from "../../definitions/contacts.js"
-import { CONTACT_KINDS, CONTACT_ROLE_TYPES } from "../../electron/db/schema.js"
+import { CONTACT_KINDS, CONTACT_ROLE_TYPES } from "../../definitions/enums.js"
 import { ContactsError } from "./contactsError.js"
 
 /** Panel groups always come back in this order, even when empty. */

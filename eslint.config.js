@@ -46,6 +46,10 @@ export default tseslint.config(
               group: ['convex', 'convex/*', '@convex-dev/*', '**/convex/_generated/*'],
               message: 'Only ~/lib/data may talk to the data backend.',
             },
+            {
+              group: ['~/electron/*', '**/electron/*', 'drizzle-orm', 'drizzle-orm/*', 'better-sqlite3'],
+              message: 'Renderer code must not depend on main-process or storage code. Use types from ~/definitions.',
+            },
           ],
         },
       ],

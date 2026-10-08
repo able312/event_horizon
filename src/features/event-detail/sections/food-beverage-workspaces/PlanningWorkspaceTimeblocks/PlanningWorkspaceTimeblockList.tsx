@@ -21,7 +21,7 @@ interface PlanningWorkspaceTimeblockListProps<TItem extends WorkspaceItemBase> {
   addTimeblockLabel: string
   addItemLabel: string
   titlePlaceholder: string
-  serviceStyleOptions: string[]
+  serviceStyleOptions: readonly string[]
   timeblocks: TimeblockWithItems[]
   isLoading?: boolean
   getItems: (timeblock: TimeblockWithItems) => TItem[]
