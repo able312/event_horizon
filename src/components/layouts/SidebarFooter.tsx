@@ -1,5 +1,6 @@
 import { UpdaterIndicator } from "~/features/updater/components/UpdaterIndicator"
 import { UpdaterDevControls } from "~/features/updater/dev/UpdaterDevControls"
+import { AuthButton } from "~/features/auth"
 
 export const SidebarFooter: React.FC = () => {
   return (
@@ -14,7 +15,10 @@ export const SidebarFooter: React.FC = () => {
         </span>
         {import.meta.env.DEV && <UpdaterDevControls />}
       </div>
-      <UpdaterIndicator />
+      <div className="flex items-center gap-2">
+        <AuthButton variant="ghost" size="sm" showUserName={false} />
+        <UpdaterIndicator />
+      </div>
     </div>
   )
 }

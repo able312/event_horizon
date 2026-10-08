@@ -14,6 +14,7 @@ import { UpdaterProvider } from './features/updater/state/UpdaterProvider'
 const EventDetail = lazy(() => import('~/routes/EventDetail'))
 const Preview = lazy(() => import('~/routes/Preview'))
 const Contacts = lazy(() => import('~/routes/Contacts'))
+const Login = lazy(() => import('~/routes/Login'))
 const NotFound = lazy(() =>
   import('./routes/NotFound').then((module) => ({
     default: module.NotFound,
@@ -90,6 +91,15 @@ function App() {
           element={
             <Suspense fallback={<RouteFallback />}>
               <Contacts />
+            </Suspense>
+          }
+        />
+
+        <Route
+          path="/login"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <Login />
             </Suspense>
           }
         />

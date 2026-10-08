@@ -9,6 +9,8 @@ import { initDB } from './db/index.js';
 import { createUpdaterService, isUpdaterEnabled } from './services/updaterService.js';
 import { createUpdaterLogger } from './services/updaterLogger.js';
 import { registerUpdaterIpcHandlers } from './ipcRoutes/updaterHandler.js';
+import { createAuthService } from './services/authService.js';
+import { registerAuthIpcHandlers } from './ipcRoutes/authHandler.js';
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -66,6 +68,16 @@ const setupUpdater = () => {
     return updater
 }
 
+const setupAuth = () => {
+    const authService = createAuthService()
+    const unregisterAuth = registerAuthIpcHandlers(authService)
+    app.once("will-quit", () => {
+        unregisterAuth()
+        authService.stop()
+    })
+    return authService
+}
+
 app.on("ready", () => {
     try {
         initDB()
@@ -80,6 +92,7 @@ app.on("ready", () => {
     registerAllIpcHandlers()
 
     const updater = setupUpdater()
+    setupAuth()
 
     createWindow();
 
