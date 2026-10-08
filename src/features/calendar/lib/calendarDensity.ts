@@ -1,7 +1,11 @@
 import type { Event, EventStatus } from "~/definitions/database"
 
-/** Full cards are at least this tall, so fit is plain arithmetic rather than live measurement. */
-export const FULL_CARD_MIN_HEIGHT = 132
+/**
+ * Tallest a full card can render, so fit is plain arithmetic rather than live measurement.
+ * Worst case in CalendarEventCard: 2px border each side, the status band wrapped onto two
+ * lines (34px), a two-line title plus client name (~65px). Keep in sync with that layout.
+ */
+export const FULL_CARD_MAX_HEIGHT = 104
 /** Gap between stacked cards in a day cell (`space-y-1`). */
 export const FULL_CARD_GAP = 4
 /** Columns narrower than this switch the whole grid to compact lines... */
@@ -41,7 +45,7 @@ export const INITIAL_CALENDAR_DENSITY: CalendarDensity = {
 /** Height of n stacked full cards. */
 export function fullCardsHeight(cardCount: number): number {
   if (cardCount <= 0) return 0
-  return cardCount * FULL_CARD_MIN_HEIGHT + (cardCount - 1) * FULL_CARD_GAP
+  return cardCount * FULL_CARD_MAX_HEIGHT + (cardCount - 1) * FULL_CARD_GAP
 }
 
 /** Narrow below 160px; once narrow, stays narrow until 176px. */

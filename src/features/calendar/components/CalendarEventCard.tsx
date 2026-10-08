@@ -3,6 +3,7 @@
  *
  * One event on the calendar grid: a status header band (icon, label, guest count)
  * over a neutral body (title, primary client). The whole card is a single button.
+ * Its tallest layout must stay within FULL_CARD_MAX_HEIGHT (lib/calendarDensity).
  *
  * Location: src/features/calendar/components/CalendarEventCard.tsx
  */

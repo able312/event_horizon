@@ -18,10 +18,10 @@ const gridWidthFor = (columnWidth: number) => (columnWidth + DAY_CELL_HORIZONTAL
 const gridHeightFor = (availableHeight: number, rows: number) => (availableHeight + DAY_CELL_CHROME_HEIGHT) * rows
 
 describe("fullCardsHeight", () => {
-  it("stacks 132px cards with the gap between them", () => {
+  it("stacks 104px cards with the gap between them", () => {
     expect(fullCardsHeight(0)).toBe(0)
-    expect(fullCardsHeight(1)).toBe(132)
-    expect(fullCardsHeight(2)).toBe(268)
+    expect(fullCardsHeight(1)).toBe(104)
+    expect(fullCardsHeight(2)).toBe(212)
   })
 })
 
@@ -43,13 +43,13 @@ describe("resolveNarrowColumns", () => {
 
 describe("resolveCompactRow", () => {
   it("goes compact when any day overflows", () => {
-    expect(resolveCompactRow([0, 1, 2], 267, false)).toBe(true)
-    expect(resolveCompactRow([0, 1, 2], 268, false)).toBe(false)
+    expect(resolveCompactRow([0, 1, 2], 211, false)).toBe(true)
+    expect(resolveCompactRow([0, 1, 2], 212, false)).toBe(false)
   })
 
   it("returns to full cards only with 16px to spare", () => {
-    expect(resolveCompactRow([1], 147, true)).toBe(true)
-    expect(resolveCompactRow([1], 148, true)).toBe(false)
+    expect(resolveCompactRow([1], 119, true)).toBe(true)
+    expect(resolveCompactRow([1], 120, true)).toBe(false)
   })
 
   it("keeps empty rows as full cards", () => {
@@ -93,10 +93,10 @@ describe("resolveCalendarDensity", () => {
     const compact = resolveCalendarDensity(INITIAL_CALENDAR_DENSITY, {
       viewKey: "2026-10",
       gridWidth: roomy.gridWidth,
-      gridHeight: gridHeightFor(131, 1),
+      gridHeight: gridHeightFor(103, 1),
       cardCountsByRow: [[1]],
     })
-    const nearEdge = { gridWidth: roomy.gridWidth, gridHeight: gridHeightFor(140, 1), cardCountsByRow: [[1]] }
+    const nearEdge = { gridWidth: roomy.gridWidth, gridHeight: gridHeightFor(110, 1), cardCountsByRow: [[1]] }
 
     expect(resolveCalendarDensity(compact, { viewKey: "2026-10", ...nearEdge }).compactRows).toEqual([true])
     expect(resolveCalendarDensity(compact, { viewKey: "2026-11", ...nearEdge }).compactRows).toEqual([false])
