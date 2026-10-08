@@ -4,6 +4,8 @@ export const LETTER_HEIGHT_PX = 1056
 export const PAGE_MARGIN_PX = 72 // 0.75in
 export const PAGE_CONTENT_WIDTH_PX = LETTER_WIDTH_PX - PAGE_MARGIN_PX * 2
 export const PAGE_CONTENT_HEIGHT_PX = LETTER_HEIGHT_PX - PAGE_MARGIN_PX * 2
+/** Sub-pixel rounding in measured heights should not push a block to the next page. */
+const FIT_TOLERANCE_PX = 0.5
 
 export type MeasurableBlockMeta = {
   id: string
@@ -24,7 +26,12 @@ export type MeasuredBlock = MeasurableBlockMeta & {
   breakOffsets?: number[]
 }
 
-export type BlockFragment = { offset: number; height: number }
+export type BlockFragment = {
+  offset: number
+  height: number
+  /** No safe break fit on the page, so this fragment ends partway through a line or row. */
+  endsMidLine?: true
+}
 
 export type PackedPage = {
   blockIds: string[]
@@ -104,7 +111,7 @@ export function packBlocksIntoPages(
   for (const block of blocks) {
     const pageNonEmpty = current.blockIds.length > 0
     const needsBreak = Boolean(block.breakBefore) && pageNonEmpty
-    const fits = usedHeight + block.height <= availableHeight()
+    const fits = usedHeight + block.height <= availableHeight() + FIT_TOLERANCE_PX
 
     if (needsBreak) {
       // Fresh section start — do not show "(continued)" on this page.
@@ -119,19 +126,22 @@ export function packBlocksIntoPages(
       .sort((a, b) => a - b)
     do {
       const capacity = availableHeight() - usedHeight
-      const remaining = block.height - offset
-      let height = Math.min(remaining, capacity)
-      if (remaining > capacity) {
+      let end = block.height
+      let endsMidLine = false
+      if (block.height - offset > capacity + FIT_TOLERANCE_PX) {
         const safeEnd = [...breakOffsets].reverse().find((value) => value > offset && value <= offset + capacity)
-        if (safeEnd !== undefined) height = safeEnd - offset
+        endsMidLine = safeEnd === undefined
+        end = safeEnd ?? offset + capacity
       }
+      const height = end - offset
       current.blockIds.push(block.id)
-      if (offset > 0 || height < block.height) {
+      if (offset > 0 || end < block.height) {
         current.fragments ??= {}
-        current.fragments[block.id] = { offset, height }
+        current.fragments[block.id] = endsMidLine ? { offset, height, endsMidLine: true } : { offset, height }
       }
       usedHeight += height
-      offset += height
+      // Assign the end directly so floating-point drift cannot leave a sliver for an extra page.
+      offset = end
       if (offset < block.height) openContinuationPage(block)
     } while (offset < block.height)
   }

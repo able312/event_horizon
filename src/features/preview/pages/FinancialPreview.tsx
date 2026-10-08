@@ -151,7 +151,12 @@ export default function FinancialPreview() {
     isError: eventError,
     isFetching: eventFetching,
   } = useEvent()
-  const { data: client } = usePrimaryClient(event?.id)
+  const {
+    data: client,
+    isSuccess: clientReady,
+    isError: clientError,
+    isFetching: clientFetching,
+  } = usePrimaryClient(event?.id)
   const {
     data: chargeItems,
     isSuccess: chargeReady,
@@ -225,8 +230,9 @@ export default function FinancialPreview() {
 
   return (
     <PreviewDocument
-      dataError={eventError || chargeError || foodError || beverageError || paymentsError}
-      dataReady={eventReady && !eventFetching && chargeReady && !chargeFetching &&
+      dataError={eventError || clientError || chargeError || foodError || beverageError || paymentsError}
+      dataReady={eventReady && !eventFetching && clientReady && !clientFetching &&
+        chargeReady && !chargeFetching &&
         foodReady && !foodFetching && beverageReady && !beverageFetching &&
         paymentsReady && !paymentsFetching && state.defaultsApplied.financialPayments}
       continuationHeadings={{

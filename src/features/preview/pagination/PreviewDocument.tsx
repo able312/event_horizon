@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react"
 
+import { PreviewDataError } from "~/features/preview/components/PreviewDataError"
 import { cn } from "~/lib/utils"
 import { measureBlockBreaks } from "./measureBlockBreaks"
 import { useReportPreviewReadiness } from "./PreviewReadinessContext"
@@ -88,9 +89,11 @@ export function PreviewDocument({
   dataError = false,
 }: PreviewDocumentProps) {
   const measureRef = useRef<HTMLDivElement>(null)
-  const [pages, setPages] = useState<PackedPage[]>([])
+  // null until the first measurement; afterwards the last layout stays visible while remeasuring.
+  const [pages, setPages] = useState<PackedPage[] | null>(null)
   const [ready, setReady] = useState(false)
   const generationRef = useRef(0)
+  const requestedMarkupRef = useRef<string | null>(null)
   useReportPreviewReadiness(ready && dataReady && !dataError)
 
   const blocks = useMemo(() => collectBlocks(children), [children])
@@ -119,7 +122,8 @@ export function PreviewDocument({
   const remeasure = useCallback(async () => {
     const generation = ++generationRef.current
     const root = measureRef.current
-    if (!root || root.getBoundingClientRect().height === 0) return
+    // print:hidden collapses the measure root's width; an empty document still has width.
+    if (!root || root.getBoundingClientRect().width === 0) return
     setReady(false)
 
     if (typeof document !== "undefined" && "fonts" in document) {
@@ -137,9 +141,8 @@ export function PreviewDocument({
 
     if (generation !== generationRef.current) return
 
-    // Skip when print:hidden collapses the measure root to 0 height so we
-    // never feed the packer zeros while a print dialog is open.
-    if (root.getBoundingClientRect().height === 0) return
+    // Never feed the packer zeros while a print dialog is open.
+    if (root.getBoundingClientRect().width === 0) return
 
     const headingHeights: Record<string, number> = {}
     root.querySelectorAll<HTMLElement>("[data-preview-continuation-key]").forEach((node) => {
@@ -167,20 +170,41 @@ export function PreviewDocument({
 
     if (generation !== generationRef.current) return
 
-    setPages(
-      packBlocksIntoPages(measured, {
-        contentHeightPx: PAGE_CONTENT_HEIGHT_PX,
-        continuationHeadingHeights: headingHeights,
-      }),
-    )
+    const packed = packBlocksIntoPages(measured, {
+      contentHeightPx: PAGE_CONTENT_HEIGHT_PX,
+      continuationHeadingHeights: headingHeights,
+    })
+
+    if (import.meta.env.DEV) {
+      for (const page of packed) {
+        for (const [id, fragment] of Object.entries(page.fragments ?? {})) {
+          if (!fragment.endsMidLine) continue
+          console.warn(
+            `[PreviewDocument] Block "${id}" has no safe break within a page, ` +
+              `so it is cut mid-line at ${Math.round(fragment.offset + fragment.height)}px.`,
+          )
+        }
+      }
+    }
+
+    setPages(packed)
     setReady(true)
   }, [])
 
+  // Parents pass fresh children and heading objects on every render, so compare
+  // the measured markup itself and only remeasure when it actually changed.
   useLayoutEffect(() => {
+    const markup = measureRef.current?.innerHTML ?? null
+    if (markup === requestedMarkupRef.current) return
+    requestedMarkupRef.current = markup
     setReady(false)
     void remeasure()
-    return () => { generationRef.current += 1 }
-  }, [blocks, continuationHeadings, dataReady, remeasure])
+  }, [blocks, continuationHeadings, remeasure])
+
+  useEffect(() => () => {
+    generationRef.current += 1
+    requestedMarkupRef.current = null
+  }, [])
 
   useEffect(() => {
     const root = measureRef.current
@@ -215,13 +239,10 @@ export function PreviewDocument({
       </div>
 
       {dataError ? (
-        <div className="p-8 text-sm" role="alert">
-          <p>Some event details could not be loaded.</p>
-          <button className="mt-2 underline" onClick={() => window.location.reload()}>Reload preview</button>
-        </div>
+        <PreviewDataError />
       ) : !dataReady ? (
         <p className="p-8 text-sm text-muted-foreground">Loading event details…</p>
-      ) : !ready ? (
+      ) : pages === null ? (
         <div
           className="preview-page mx-auto bg-white shadow-[0_4px_32px_rgba(0,0,0,0.18)] print:shadow-none"
           style={{

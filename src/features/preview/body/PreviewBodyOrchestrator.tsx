@@ -81,8 +81,9 @@ const PreviewBodyOrchestrator: React.FC = () => {
     setDocumentStatus((previous) => previous.key === documentKey && previous.ready === ready
       ? previous : { key: documentKey, ready })
   }, [documentKey])
-  const canExport = contactsLoaded && !contactsFetching &&
-    documentStatus.key === documentKey && documentStatus.ready
+  // The file name needs the client; documents that print contacts gate their own readiness on them,
+  // so a background contacts refetch does not silently disable export here.
+  const canExport = contactsLoaded && documentStatus.key === documentKey && documentStatus.ready
 
   const handlePrint = () => {
     if (!canExport) return

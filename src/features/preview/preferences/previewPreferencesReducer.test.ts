@@ -35,30 +35,29 @@ describe("previewPreferencesReducer", () => {
     expect(state.beo.selectedTimeblockIds.food).toEqual(["f1", "f2"])
   })
 
-  it("applies data-derived defaults only once", () => {
+  it("applies data-derived defaults only once per section", () => {
     let state = createInitialPreviewPreferences()
     state = previewPreferencesReducer(state, {
       type: "beo/applyDefaultTimeblocks",
-      selections: {
-        food: ["f1"],
-        beverage: ["b1"],
-        setup: [],
-        notes: [],
-      },
+      section: "food",
+      ids: ["f1"],
     })
     state = previewPreferencesReducer(state, {
       type: "beo/applyDefaultTimeblocks",
-      selections: {
-        food: ["f2"],
-        beverage: ["b2"],
-        setup: [],
-        notes: [],
-      },
+      section: "food",
+      ids: ["f2"],
+    })
+    state = previewPreferencesReducer(state, {
+      type: "beo/applyDefaultTimeblocks",
+      section: "beverage",
+      ids: ["b1"],
     })
 
     expect(state.beo.selectedTimeblockIds.food).toEqual(["f1"])
     expect(state.beo.selectedTimeblockIds.beverage).toEqual(["b1"])
-    expect(state.defaultsApplied.beoTimeblocks).toBe(true)
+    expect(state.defaultsApplied.beoTimeblocks).toEqual({
+      food: true, beverage: true, setup: false, notes: false,
+    })
   })
 
   it("defaults financial payment status from whether payments exist", () => {

@@ -5,6 +5,7 @@ import {
 } from "~/features/preview/components/SectionFrame"
 import { PreviewBlock, PreviewDocument } from "~/features/preview/pagination/PreviewDocument"
 import { usePreviewPreferences } from "~/features/preview/preferences/PreviewPreferencesContext"
+import type { BeoTimeblockSectionId } from "~/features/preview/preferences/types"
 import {
   filterSelectedIds,
   hasBeverageSectionContent,
@@ -79,19 +80,16 @@ export function EventOverviewPreview() {
   const availableSetupIds = (setup ?? []).map((tb) => tb.id)
   const availableNoteIds = (notes ?? []).map((tb) => tb.id)
 
-  // Until one-time defaults are applied, treat all available timeblocks as selected.
-  const selectedFoodIds = state.defaultsApplied.beoTimeblocks
-    ? filterSelectedIds(prefs.selectedTimeblockIds.food, availableFoodIds)
-    : availableFoodIds
-  const selectedBeverageIds = state.defaultsApplied.beoTimeblocks
-    ? filterSelectedIds(prefs.selectedTimeblockIds.beverage, availableBeverageIds)
-    : availableBeverageIds
-  const selectedSetupIds = state.defaultsApplied.beoTimeblocks
-    ? filterSelectedIds(prefs.selectedTimeblockIds.setup, availableSetupIds)
-    : availableSetupIds
-  const selectedNoteIds = state.defaultsApplied.beoTimeblocks
-    ? filterSelectedIds(prefs.selectedTimeblockIds.notes, availableNoteIds)
-    : availableNoteIds
+  // Until a section's one-time default is applied, treat all its available timeblocks as
+  // selected; that is exactly what the default selects, so readiness need not wait for it.
+  const selectedIdsFor = (section: BeoTimeblockSectionId, availableIds: string[]) =>
+    state.defaultsApplied.beoTimeblocks[section]
+      ? filterSelectedIds(prefs.selectedTimeblockIds[section], availableIds)
+      : availableIds
+  const selectedFoodIds = selectedIdsFor("food", availableFoodIds)
+  const selectedBeverageIds = selectedIdsFor("beverage", availableBeverageIds)
+  const selectedSetupIds = selectedIdsFor("setup", availableSetupIds)
+  const selectedNoteIds = selectedIdsFor("notes", availableNoteIds)
 
   const isTournament = event.type === "tournament"
   const showTournament = isTournament && prefs.sections.tournament
@@ -128,8 +126,14 @@ export function EventOverviewPreview() {
 
   return (
     <PreviewDocument
-      dataError={contacts.isError || eventError || foodError || beverageError || setupError || notesError || (showTournament && tournament.isError) || (showCart && cart.isError)}
-      dataReady={contacts.isSuccess && !contacts.isFetching && eventReady && !eventFetching && state.defaultsApplied.beoTimeblocks &&
+      dataError={contacts.isError || eventError ||
+        (prefs.sections.food && foodError) ||
+        (prefs.sections.beverage && beverageError) ||
+        (prefs.sections.setup && setupError) ||
+        (prefs.sections.notes && notesError) ||
+        (showTournament && tournament.isError) ||
+        (showCart && cart.isError)}
+      dataReady={contacts.isSuccess && !contacts.isFetching && eventReady && !eventFetching &&
         (!prefs.sections.food || (foodReady && !foodFetching)) &&
         (!prefs.sections.beverage || (beverageReady && !beverageFetching)) &&
         (!prefs.sections.setup || (setupReady && !setupFetching)) &&

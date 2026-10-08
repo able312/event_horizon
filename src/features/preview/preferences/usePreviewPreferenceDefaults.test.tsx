@@ -14,7 +14,7 @@ vi.mock("~/hooks/useNoteSection", () => ({ useNoteSection: mocks.notes }))
 vi.mock("~/hooks/usePaymentsSection", () => ({ usePaymentsSection: mocks.payments }))
 
 describe("usePreviewPreferenceDefaults", () => {
-  it("waits for every BEO section and preserves later user selections", () => {
+  it("applies each BEO section once it loads and preserves later user selections", () => {
     mocks.event.mockReturnValue({ data: { id: "event" } })
     mocks.food.mockReturnValue({ data: undefined })
     mocks.beverage.mockReturnValue({ data: undefined, timeblocks: [] })
@@ -25,13 +25,18 @@ describe("usePreviewPreferenceDefaults", () => {
       usePreviewPreferenceDefaults()
       return usePreviewPreferences()
     }, { wrapper: PreviewPreferencesProvider })
-    expect(result.current.state.defaultsApplied.beoTimeblocks).toBe(false)
+    expect(result.current.state.defaultsApplied.beoTimeblocks).toEqual({
+      food: false, beverage: false, setup: false, notes: false,
+    })
 
+    // Notes never loads (e.g. its query failed); the other sections must not wait for it.
     mocks.food.mockReturnValue({ data: [{ id: "food" }] })
     mocks.beverage.mockReturnValue({ data: { timeblocks: [{ id: "bar" }] }, timeblocks: [{ id: "bar" }] })
     mocks.setup.mockReturnValue({ data: [] })
     rerender()
-    expect(result.current.state.defaultsApplied.beoTimeblocks).toBe(false)
+    expect(result.current.state.defaultsApplied.beoTimeblocks).toEqual({
+      food: true, beverage: true, setup: true, notes: false,
+    })
 
     mocks.notes.mockReturnValue({ data: [{ id: "note" }] })
     rerender()

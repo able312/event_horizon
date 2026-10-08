@@ -72,9 +72,10 @@ describe("preview export readiness", () => {
     expect((screen.getByRole("button", { name: "Print" }) as HTMLButtonElement).disabled).toBe(true)
     act(() => { status.timeline = true; status.notify() })
     await waitFor(() => expect((screen.getByRole("button", { name: "Print" }) as HTMLButtonElement).disabled).toBe(false))
+    // A background contacts refetch is the document's concern; it must not silently disable export.
     status.fetchingContacts = true
     rerender(<App />)
-    expect((screen.getByRole("button", { name: "Print" }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole("button", { name: "Print" }) as HTMLButtonElement).disabled).toBe(false)
     print.mockRestore()
   })
 })

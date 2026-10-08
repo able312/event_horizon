@@ -1,4 +1,5 @@
 import { act, render, waitFor } from "@testing-library/react"
+import { StrictMode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { PreviewBlock, PreviewDocument } from "./PreviewDocument"
 import { PreviewReadinessContext } from "./PreviewReadinessContext"
@@ -101,6 +102,73 @@ describe("PreviewDocument pagination", () => {
     expect(report).toHaveBeenLastCalledWith(false)
     unmount()
     expect(report).toHaveBeenLastCalledWith(false)
+  })
+
+  it("becomes ready for an empty document whose measure root has no height", async () => {
+    const report = vi.fn()
+    heights[""] = 0
+    const { container } = render(
+      <PreviewReadinessContext.Provider value={report}><PreviewDocument>{null}</PreviewDocument></PreviewReadinessContext.Provider>,
+    )
+    await waitFor(() => expect(report).toHaveBeenLastCalledWith(true))
+    expect(container.textContent).toContain("Nothing to preview.")
+  })
+
+  it("keeps pages and readiness when a parent re-renders identical content", async () => {
+    const report = vi.fn()
+    heights.a = 200
+    const document = () => (
+      <PreviewReadinessContext.Provider value={report}>
+        <PreviewDocument continuationHeadings={{ food: <h2>Food continued</h2> }}>
+          <PreviewBlock id="a">Event details</PreviewBlock>
+        </PreviewDocument>
+      </PreviewReadinessContext.Provider>
+    )
+    const { container, rerender } = render(document())
+    await waitFor(() => expect(report).toHaveBeenLastCalledWith(true))
+    report.mockClear()
+    rerender(document())
+    rerender(document())
+    expect(report).not.toHaveBeenCalled()
+    expect(container.querySelector('[data-preview-ready="true"]')).toBeTruthy()
+  })
+
+  it("still measures when StrictMode replays effects with unchanged markup", async () => {
+    const report = vi.fn()
+    heights.a = 200
+    render(
+      <StrictMode>
+        <PreviewReadinessContext.Provider value={report}>
+          <PreviewDocument><PreviewBlock id="a">Event details</PreviewBlock></PreviewDocument>
+        </PreviewReadinessContext.Provider>
+      </StrictMode>,
+    )
+    await waitFor(() => expect(report).toHaveBeenLastCalledWith(true))
+  })
+
+  it("keeps the previous pages visible while changed content is remeasured", async () => {
+    const report = vi.fn()
+    heights.a = 200
+    const document = (text: string) => (
+      <PreviewReadinessContext.Provider value={report}>
+        <PreviewDocument><PreviewBlock id="a">{text}</PreviewBlock></PreviewDocument>
+      </PreviewReadinessContext.Provider>
+    )
+    const { container, rerender } = render(document("Before"))
+    await waitFor(() => expect(report).toHaveBeenLastCalledWith(true))
+    rerender(document("After"))
+    expect(report).toHaveBeenLastCalledWith(false)
+    expect(container.textContent).not.toContain("Preparing pages")
+    expect(container.querySelectorAll(".preview-page")).toHaveLength(1)
+    await waitFor(() => expect(report).toHaveBeenLastCalledWith(true))
+  })
+
+  it("warns in development when a block has to be cut mid-line", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    measurement.offsets = []
+    heights.wall = 1800
+    render(<PreviewDocument><PreviewBlock id="wall">Unbreakable</PreviewBlock></PreviewDocument>)
+    await waitFor(() => expect(warn).toHaveBeenCalledWith(expect.stringContaining('Block "wall"')))
   })
 
   it("remeasures individual blocks even when their total height stays the same", async () => {

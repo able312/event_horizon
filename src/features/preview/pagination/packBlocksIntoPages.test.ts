@@ -54,7 +54,7 @@ describe("packBlocksIntoPages", () => {
     )
 
     expect(pages.map((page) => page.blockIds)).toEqual([["a"], ["big"], ["big"]])
-    expect(pages[1]?.fragments?.big).toEqual({ offset: 0, height: 300 })
+    expect(pages[1]?.fragments?.big).toEqual({ offset: 0, height: 300, endsMidLine: true })
     expect(pages[2]?.fragments?.big).toEqual({ offset: 300, height: 200 })
   })
 
@@ -192,8 +192,39 @@ describe("fragment capacity and content preservation", () => {
       { id: "big", height: 700, continuationKey: "food" },
     ], { contentHeightPx: 300, continuationHeadingHeights: { food: 300 } })
     expect(pages.map((page) => page.fragments?.big)).toEqual([
-      { offset: 0, height: 300 }, { offset: 300, height: 300 }, { offset: 600, height: 100 },
+      { offset: 0, height: 300, endsMidLine: true },
+      { offset: 300, height: 300, endsMidLine: true },
+      { offset: 600, height: 100 },
     ])
+  })
+
+  it("keeps a block whole when it overshoots the page by sub-pixel rounding", () => {
+    const pages = packBlocksIntoPages([
+      { id: "a", height: 100 },
+      { id: "b", height: 200.4, breakOffsets: [100] },
+    ], 300)
+    expect(pages).toEqual([{ blockIds: ["a", "b"], continuationKeys: [] }])
+  })
+
+  it("does not emit a sliver page when fragment arithmetic drifts", () => {
+    // 228.31 + (892.8000000000001 - 228.31) === 892.8 in floating point.
+    const pages = packBlocksIntoPages([
+      { id: "big", height: 892.8000000000001, breakOffsets: [228.31] },
+    ], 700)
+    expect(pages.map((page) => page.fragments?.big)).toEqual([
+      { offset: 0, height: 228.31 },
+      { offset: 228.31, height: 892.8000000000001 - 228.31 },
+    ])
+  })
+
+  it("only marks fragments that had to cut through a line", () => {
+    const pages = packBlocksIntoPages([
+      { id: "rows", height: 500, breakOffsets: [250] },
+      { id: "wall", height: 500 },
+    ], 300)
+    expect(pages.flatMap((page) => Object.entries(page.fragments ?? {}))
+      .filter(([, fragment]) => fragment.endsMidLine)
+      .map(([id, fragment]) => [id, fragment.offset])).toEqual([["wall", 0]])
   })
 
   it("keeps every page within budget across mixed block sizes and breaks", () => {
