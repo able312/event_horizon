@@ -16,14 +16,14 @@ export function usePreviewPreferenceDefaults() {
   const { state, dispatch } = usePreviewPreferences()
   const { data: event } = useEvent()
   const { data: food } = useFoodSection()
-  const { timeblocks: beverageTimeblocks } = useBeverageSection()
+  const { timeblocks: beverageTimeblocks, data: beverageData } = useBeverageSection()
   const { data: setup } = useSetupInstructionSection()
   const { data: notes } = useNoteSection()
   const { data: payments } = usePaymentsSection()
 
   useEffect(() => {
     if (state.defaultsApplied.beoTimeblocks) return
-    if (!food && !beverageTimeblocks && !setup && !notes) return
+    if (food === undefined || beverageData === undefined || setup === undefined || notes === undefined) return
 
     dispatch({
       type: "beo/applyDefaultTimeblocks",
@@ -36,6 +36,7 @@ export function usePreviewPreferenceDefaults() {
     })
   }, [
     beverageTimeblocks,
+    beverageData,
     dispatch,
     food,
     notes,

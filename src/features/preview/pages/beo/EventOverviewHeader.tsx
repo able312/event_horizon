@@ -2,21 +2,21 @@ import type { Event } from "~/definitions/database"
 import { formatDate, getDateString } from "~/lib/formatters"
 import { SectionFrame } from "~/features/preview/components/SectionFrame"
 import { PrintContactTables } from "~/features/preview/pages/beo/PrintContactTables"
-import { usePrintableContactGroups } from "~/hooks/useEventContacts"
+import type { EventContactsPanelGroup } from "~/definitions/contacts"
 
 type PrintHeaderProps = {
   event: Event
   showContactInfo?: boolean
+  contactGroups?: EventContactsPanelGroup[]
   showInternalNotes?: boolean
 }
 
 export function PrintHeader({
   event,
   showContactInfo = true,
+  contactGroups = [],
   showInternalNotes = true,
 }: PrintHeaderProps) {
-  const { data: contactGroups } = usePrintableContactGroups(event?.id)
-
   if (!event) return null
 
   const contactVisible = showContactInfo && (contactGroups?.length ?? 0) > 0

@@ -11,8 +11,7 @@ export type MeasurableBlockMeta = {
   breakBefore?: boolean
   /**
    * Prefer keeping this block intact when it fits on a page.
-   * Blocks are always atomic in the packer; this flag only drives the
-   * rendered `break-inside-avoid` class in PreviewDocument.
+   * Oversized blocks still continue onto subsequent pages.
    */
   keepTogether?: boolean
   /** Optional heading repeated when this block continues onto a later page. */
@@ -21,12 +20,18 @@ export type MeasurableBlockMeta = {
 
 export type MeasuredBlock = MeasurableBlockMeta & {
   height: number
+  /** Safe vertical offsets between rendered lines or rows. */
+  breakOffsets?: number[]
 }
+
+export type BlockFragment = { offset: number; height: number }
 
 export type PackedPage = {
   blockIds: string[]
   /** IDs of continuation headings to prepend on this page. */
   continuationKeys: string[]
+  /** Only split blocks need a viewport into their original content. */
+  fragments?: Record<string, BlockFragment>
 }
 
 export type PackBlocksOptions = {
@@ -38,9 +43,8 @@ export type PackBlocksOptions = {
 /**
  * Pack measured blocks into pages of fixed content height.
  *
- * Blocks are atomic: the packer never splits a block across pages.
- * Oversized blocks (taller than the content height) are placed alone;
- * the caller may clip or allow overflow for those units.
+ * Keep blocks intact when they fit. Larger blocks are divided at measured
+ * line/row boundaries, with contiguous fragments covering all their content.
  * Forced breaks never create blank pages when the next section is empty
  * because empty sections should not emit blocks at all.
  */
@@ -56,6 +60,9 @@ export function packBlocksIntoPages(
       : contentHeightPxOrOptions
 
   const contentHeightPx = options.contentHeightPx ?? PAGE_CONTENT_HEIGHT_PX
+  if (!Number.isFinite(contentHeightPx) || contentHeightPx <= 0) {
+    throw new RangeError("Page content height must be positive and finite")
+  }
   const continuationHeadingHeights = options.continuationHeadingHeights ?? {}
 
   const pages: PackedPage[] = []
@@ -89,7 +96,7 @@ export function packBlocksIntoPages(
    */
   const openContinuationPage = (block: MeasuredBlock) => {
     pushPage()
-    if (block.continuationKey) {
+    if (block.continuationKey && headingHeightFor(block.continuationKey) < contentHeightPx) {
       current.continuationKeys.push(block.continuationKey)
     }
   }
@@ -97,22 +104,36 @@ export function packBlocksIntoPages(
   for (const block of blocks) {
     const pageNonEmpty = current.blockIds.length > 0
     const needsBreak = Boolean(block.breakBefore) && pageNonEmpty
-    const fits = usedHeight + block.height <= availableHeight() + 0.5
-    const isOversized = block.height > contentHeightPx
+    const fits = usedHeight + block.height <= availableHeight()
 
     if (needsBreak) {
       // Fresh section start — do not show "(continued)" on this page.
       pushPage()
-    } else if ((!fits || isOversized) && pageNonEmpty) {
+    } else if (!fits && pageNonEmpty) {
       openContinuationPage(block)
     }
 
-    current.blockIds.push(block.id)
-    usedHeight += block.height
-
-    if (isOversized) {
-      pushPage()
-    }
+    let offset = 0
+    const breakOffsets = (block.breakOffsets ?? [])
+      .filter((value) => Number.isFinite(value) && value > 0 && value < block.height)
+      .sort((a, b) => a - b)
+    do {
+      const capacity = availableHeight() - usedHeight
+      const remaining = block.height - offset
+      let height = Math.min(remaining, capacity)
+      if (remaining > capacity) {
+        const safeEnd = [...breakOffsets].reverse().find((value) => value > offset && value <= offset + capacity)
+        if (safeEnd !== undefined) height = safeEnd - offset
+      }
+      current.blockIds.push(block.id)
+      if (offset > 0 || height < block.height) {
+        current.fragments ??= {}
+        current.fragments[block.id] = { offset, height }
+      }
+      usedHeight += height
+      offset += height
+      if (offset < block.height) openContinuationPage(block)
+    } while (offset < block.height)
   }
 
   pushPage()

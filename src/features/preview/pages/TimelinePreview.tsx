@@ -8,13 +8,24 @@ import TimelineBlock from "./timeline/TimelineBlock"
 import { sortTimelineTimeblocks } from "./timeline/sortTimelineTimeblocks"
 
 export default function TimelinePreview() {
-  const { data: event } = useEvent()
+  const {
+    data: event,
+    isSuccess: eventReady,
+    isError: eventError,
+    isFetching: eventFetching,
+  } = useEvent()
   const { state } = usePreviewPreferences()
   const prefs = state.timeline
   const showInternalNotes =
     prefs.showInternalNotes && Boolean(event?.internalNotes?.trim())
 
-  const { data: allTimeblocks, isLoading } = useTimeline()
+  const {
+    data: allTimeblocks,
+    isLoading,
+    isSuccess: timelineReady,
+    isError: timelineError,
+    isFetching: timelineFetching,
+  } = useTimeline()
 
   const sortedTimeblocks = sortTimelineTimeblocks(allTimeblocks ?? []).filter((timeblock) =>
     prefs.includeSystemRows ? true : !isSystemTimelineRow(timeblock),
@@ -26,6 +37,8 @@ export default function TimelinePreview() {
 
   return (
     <PreviewDocument
+      dataError={eventError || timelineError}
+      dataReady={eventReady && !eventFetching && timelineReady && !timelineFetching}
       continuationHeadings={{
         timeline: (
           <h4 className="mb-3 text-sm font-medium text-stone-600">Event Timeline (continued)</h4>
@@ -56,7 +69,7 @@ export default function TimelinePreview() {
             </div>
 
             {showInternalNotes ? (
-              <pre className="col-span-2 my-4 text-sm italic">{event?.internalNotes}</pre>
+              <pre className="col-span-2 my-4 whitespace-pre-wrap break-words text-sm italic">{event?.internalNotes}</pre>
             ) : null}
           </div>
 

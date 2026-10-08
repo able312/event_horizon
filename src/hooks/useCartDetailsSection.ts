@@ -4,7 +4,7 @@ import { toast } from "sonner"
 import type { CartDetails, UpdateCartDetails } from "~/definitions/database"
 import * as cartDetailsApi from "~/lib/ipc/cartDetails"
 
-export function useCartDetailsSection() {
+export function useCartDetailsSection(enabled = true) {
   const { id: eventId } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
 
@@ -17,6 +17,7 @@ export function useCartDetailsSection() {
 
   const query = useQuery({
     queryKey,
+    enabled: Boolean(eventId) && enabled,
     queryFn: () => cartDetailsApi.getOrCreateCartDetailsByEventId(eventId!),
   })
 

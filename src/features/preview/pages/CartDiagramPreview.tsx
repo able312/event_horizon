@@ -1,3 +1,4 @@
+import { useReportPreviewReadiness } from "~/features/preview/pagination/PreviewReadinessContext"
 import { resolveCartGrid } from "~/features/preview/components/cartPreviewUtils"
 import {
   LETTER_HEIGHT_PX,
@@ -43,8 +44,14 @@ function LargeCartDiagram({ grid }: { grid: CartGrid }) {
 }
 
 export function CartDiagramPreview() {
-  const { data: event } = useEvent()
-  const { data: cartDetails, isLoading } = useCartDetailsSection()
+  const { data: event, isSuccess: eventReady, isFetching: eventFetching } = useEvent()
+  const {
+    data: cartDetails,
+    isLoading,
+    isSuccess: cartReady,
+    isFetching: cartFetching,
+  } = useCartDetailsSection()
+  useReportPreviewReadiness(eventReady && !eventFetching && cartReady && !cartFetching)
 
   const content = (() => {
     if (event && event.type !== "tournament") {

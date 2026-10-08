@@ -12,6 +12,9 @@ import {
 } from "~/features/preview/preferences/selectors"
 import { getVisibleBeverageTypeSections } from "~/features/event-detail/sections/food-beverage-workspaces/beverage/beverageTypeSections"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
+import { useTournamentDetailsSection } from "~/hooks/useTournamentDetailsSection"
+import { useCartDetailsSection } from "~/hooks/useCartDetailsSection"
+import { usePrintableContactGroups } from "~/hooks/useEventContacts"
 import { useEvent } from "~/hooks/useEvent"
 import { useFoodSection } from "~/hooks/useFoodSection"
 import { useNoteSection } from "~/hooks/useNoteSection"
@@ -29,14 +32,45 @@ import { SetupInstructionTimeblockDetails } from "./sections/SetupInstructionDet
 import { TournamentDetails } from "./sections/TournamentDetails"
 
 export function EventOverviewPreview() {
-  const { data: event } = useEvent()
+  const {
+    data: event,
+    isSuccess: eventReady,
+    isError: eventError,
+    isFetching: eventFetching,
+  } = useEvent()
   const { state } = usePreviewPreferences()
   const prefs = state.beo
 
-  const { data: food } = useFoodSection()
-  const { timeblocks: beverageTimeblocks, items: beverageItems } = useBeverageSection()
-  const { data: setup } = useSetupInstructionSection()
-  const { data: notes } = useNoteSection()
+  const {
+    data: food,
+    isSuccess: foodReady,
+    isError: foodError,
+    isFetching: foodFetching,
+  } = useFoodSection()
+  const {
+    timeblocks: beverageTimeblocks,
+    items: beverageItems,
+    isSuccess: beverageReady,
+    isError: beverageError,
+    isFetching: beverageFetching,
+  } = useBeverageSection()
+  const {
+    data: setup,
+    isSuccess: setupReady,
+    isError: setupError,
+    isFetching: setupFetching,
+  } = useSetupInstructionSection()
+  const {
+    data: notes,
+    isSuccess: notesReady,
+    isError: notesError,
+    isFetching: notesFetching,
+  } = useNoteSection()
+
+  const tournament = useTournamentDetailsSection(event?.type === "tournament" && prefs.sections.tournament)
+  const cart = useCartDetailsSection(event?.type === "tournament" && prefs.sections.cart)
+
+  const contacts = usePrintableContactGroups(event?.id)
 
   if (!event) return <p>No event data found.</p>
 
@@ -94,6 +128,14 @@ export function EventOverviewPreview() {
 
   return (
     <PreviewDocument
+      dataError={contacts.isError || eventError || foodError || beverageError || setupError || notesError || (showTournament && tournament.isError) || (showCart && cart.isError)}
+      dataReady={contacts.isSuccess && !contacts.isFetching && eventReady && !eventFetching && state.defaultsApplied.beoTimeblocks &&
+        (!prefs.sections.food || (foodReady && !foodFetching)) &&
+        (!prefs.sections.beverage || (beverageReady && !beverageFetching)) &&
+        (!prefs.sections.setup || (setupReady && !setupFetching)) &&
+        (!prefs.sections.notes || (notesReady && !notesFetching)) &&
+        (!showTournament || (tournament.isSuccess && !tournament.isFetching)) &&
+        (!showCart || (cart.isSuccess && !cart.isFetching))}
       continuationHeadings={{
         food: <SectionFrameHeading title="Food (continued)" />,
         beverage: <SectionFrameHeading title="Beverage (continued)" />,
@@ -104,6 +146,7 @@ export function EventOverviewPreview() {
       <PreviewBlock id="beo-overview" keepTogether>
         <PrintHeader
           event={event}
+          contactGroups={contacts.data}
           showContactInfo={prefs.showContactInfo}
           showInternalNotes={prefs.showInternalNotes}
         />
@@ -112,7 +155,7 @@ export function EventOverviewPreview() {
       {showTournament ? (
         <PreviewBlock id="beo-tournament" breakBefore keepTogether>
           <SectionFrame title="Tournament Details">
-            <TournamentDetails />
+            <TournamentDetails details={tournament.data} />
           </SectionFrame>
         </PreviewBlock>
       ) : null}
@@ -120,7 +163,7 @@ export function EventOverviewPreview() {
       {showCart ? (
         <PreviewBlock id="beo-cart" breakBefore={!showTournament} keepTogether>
           <SectionFrame title="Cart Details">
-            <CartDetails />
+            <CartDetails details={cart.data} />
           </SectionFrame>
         </PreviewBlock>
       ) : null}

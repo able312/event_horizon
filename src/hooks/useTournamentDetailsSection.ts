@@ -4,7 +4,7 @@ import { toast } from "sonner"
 import type { TournamentDetails, UpdateTournamentDetails } from "~/definitions/database"
 import * as tournamentDetailsApi from "~/lib/ipc/tournamentDetails"
 
-export function useTournamentDetailsSection() {
+export function useTournamentDetailsSection(enabled = true) {
   const { id: eventId } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
 
@@ -17,6 +17,7 @@ export function useTournamentDetailsSection() {
 
   const query = useQuery({
     queryKey,
+    enabled: Boolean(eventId) && enabled,
     queryFn: () => tournamentDetailsApi.getOrCreateTournamentDetailsByEventId(eventId!),
   })
 
