@@ -28,6 +28,7 @@
     "dist:win": "npm run rebuild:electron && npm run transpile:electron && npm run build && electron-builder --win --x64 --publish never"
   },
   "dependencies": {
+    "@convex-dev/react-query": "^0.1.0",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-dropdown-menu": "^2.1.15",
     "@radix-ui/react-label": "^2.1.7",
@@ -42,6 +43,7 @@
     "better-sqlite3": "^12.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "convex": "^1.46.0",
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.8.3",
     "electron-updater": "^6.8.9",
