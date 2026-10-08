@@ -8,7 +8,7 @@ import type {
 import { commitIcsImport, onIcsImportReview } from "~/lib/ipc/ipcEventsQueries"
 import type { UseEventsReturn } from "~/hooks/useEvents"
 
-export type IcsImportPhase = "idle" | "review" | "committing" | "report"
+type IcsImportPhase = "idle" | "review" | "committing" | "report"
 
 export function useIcsImportController(eventsHook: UseEventsReturn) {
   const [phase, setPhase] = useState<IcsImportPhase>("idle")
@@ -69,5 +69,3 @@ export function useIcsImportController(eventsHook: UseEventsReturn) {
     commitSelectedRows,
   }
 }
-
-export type UseIcsImportControllerReturn = ReturnType<typeof useIcsImportController>

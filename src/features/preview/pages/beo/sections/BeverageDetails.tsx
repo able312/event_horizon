@@ -1,13 +1,9 @@
 import type { BeverageItem, BeverageItemType } from "~/definitions/database"
 import type { Timeblock } from "~/definitions/database"
-import {
-  getVisibleBeverageTypeSections,
-} from "~/features/event-detail/sections/food-beverage-workspaces/beverage/beverageTypeSections"
 import { toCurrency } from "~/features/event-detail/workspace/lib/financial"
 import {
   formatPreviewPrice,
   formatPreviewQuantity,
-  sortTimeblocksByTime,
 } from "~/features/preview/preferences/selectors"
 import { PreviewMarkdownContent } from "~/lib/markdown/PreviewMarkdownContent"
 
@@ -106,54 +102,5 @@ export function BeverageTypeSectionList({
         )
       })}
     </div>
-  )
-}
-
-type BeverageDetailsProps = {
-  timeblocks?: Timeblock[] | null
-  items?: BeverageItem[] | null
-  selectedTimeblockIds?: string[]
-  showPricing?: boolean
-}
-
-export const BeverageDetails = ({
-  timeblocks = [],
-  items = [],
-  selectedTimeblockIds,
-  showPricing = false,
-}: BeverageDetailsProps) => {
-  const selectedSet = selectedTimeblockIds ? new Set(selectedTimeblockIds) : null
-  const sortedTimeblocks = sortTimeblocksByTime(timeblocks).filter((tb) =>
-    selectedSet ? selectedSet.has(tb.id) : true,
-  )
-
-  const typeSections = getVisibleBeverageTypeSections(items ?? [], {
-    hideEmptySpecialOrders: true,
-  }).filter((section) => section.items.length > 0)
-
-  const hasTimeblocks = sortedTimeblocks.length > 0
-  const hasBarList = typeSections.length > 0
-
-  if (!hasTimeblocks && !hasBarList) return null
-
-  return (
-    <>
-      {sortedTimeblocks.map((timeblock) => (
-        <BeverageTimeblockDetails key={timeblock.id} timeblock={timeblock} />
-      ))}
-
-      {hasBarList ? (
-        <div className={hasTimeblocks ? "mt-4" : undefined}>
-          <BeverageBarListHeading />
-          {typeSections.map((section) => (
-            <BeverageTypeSectionList
-              key={section.type}
-              section={section}
-              showPricing={showPricing}
-            />
-          ))}
-        </div>
-      ) : null}
-    </>
   )
 }

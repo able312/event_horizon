@@ -9,7 +9,7 @@ import { CONTACT_KINDS, CONTACT_ROLE_TYPES } from "../../electron/db/schema.js"
 import { ContactsError } from "./contactsError.js"
 
 /** Panel groups always come back in this order, even when empty. */
-export const PANEL_ROLE_ORDER: readonly ContactRoleType[] = ["client", "coordinator", "vendor"]
+const PANEL_ROLE_ORDER: readonly ContactRoleType[] = ["client", "coordinator", "vendor"]
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 

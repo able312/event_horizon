@@ -18,7 +18,6 @@ vi.mock("react-router", async () => {
 })
 
 vi.mock("~/lib/ipc/ipcEventsQueries", () => ({
-  getAllEvents: vi.fn(),
   getEventById: vi.fn(),
   createEvent: vi.fn(),
   updateEvent: vi.fn(),

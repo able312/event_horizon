@@ -67,7 +67,7 @@ export function CartPreview({
   )
 }
 
-export function CartDiagram({
+function CartDiagram({
   grid,
   compact = false,
 }: {

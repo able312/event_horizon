@@ -3,7 +3,6 @@ import {
     timeblocks, 
     foodItems, 
     beverageItems,
-    beverageItemTimeblocks,
     payments,
     touchpoints,
     tournamentDetails,
@@ -46,7 +45,6 @@ export type UpdateCartDetails = Partial<Omit<CartDetails, "id" | "createdAt" | "
 // ============================================================================
 
 export type MenuOfChargeItem = InferSelectModel<typeof menuOfChargeItems>
-export type NewMenuOfChargeItem = InferInsertModel<typeof menuOfChargeItems>
 export type UpdateMenuOfChargeItem = Partial<Omit<MenuOfChargeItem, "id" | "createdAt" | "updatedAt">>
 // Menu of Charge Enums
 export type ChargeCategory = (typeof menuOfChargeItems.category.enumValues)[number]
@@ -76,7 +74,6 @@ export type IncompleteTouchpointWithEvent = Touchpoint & {
 // ============================================================================
 
 export type Timeblock = InferSelectModel<typeof timeblocks>
-export type NewTimeblock = InferInsertModel<typeof timeblocks>
 /** Allowlisted fields for ordinary timeblock patches from the renderer. */
 export type UpdateTimeblock = {
   title?: string
@@ -101,7 +98,3 @@ export type BeverageItem = InferSelectModel<typeof beverageItems>
 export type NewBeverageItem = InferInsertModel<typeof beverageItems>
 export type UpdateBeverageItem = Partial<Omit<BeverageItem, "id">>
 export type BeverageItemType = (typeof beverageItems.type.enumValues)[number]
-
-export type BeverageItemTimeblock = InferSelectModel<typeof beverageItemTimeblocks>
-export type NewBeverageItemTimeblock = InferInsertModel<typeof beverageItemTimeblocks>
-

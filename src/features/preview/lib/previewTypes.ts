@@ -7,7 +7,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-export const PREVIEW_TYPE_IDS = [
+const PREVIEW_TYPE_IDS = [
   "beo",
   "beo-food",
   "timeline",
@@ -25,7 +25,7 @@ export type PreviewTypeDefinition = {
   icon: LucideIcon
 }
 
-export const PREVIEW_TYPES: PreviewTypeDefinition[] = [
+const PREVIEW_TYPES: PreviewTypeDefinition[] = [
   {
     id: "beo",
     label: "Full BEO",
@@ -55,7 +55,7 @@ export const PREVIEW_TYPES: PreviewTypeDefinition[] = [
 
 const PREVIEW_TYPE_SET = new Set<string>(PREVIEW_TYPE_IDS)
 
-export function isPreviewTypeId(value: string): value is PreviewTypeId {
+function isPreviewTypeId(value: string): value is PreviewTypeId {
   return PREVIEW_TYPE_SET.has(value)
 }
 

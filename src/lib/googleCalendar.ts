@@ -48,7 +48,7 @@ function cleanText(value: string | null | undefined): string | null {
   return trimmed.length > 0 ? trimmed : null
 }
 
-export function formatGoogleCalendarDateUtc(isoDate: string): string {
+function formatGoogleCalendarDateUtc(isoDate: string): string {
   const date = toValidDate(isoDate)
   return `${toDateDigits(date)}T${toTimeDigits(date)}Z`
 }
@@ -58,7 +58,7 @@ export type GoogleCalendarDescriptionOptions = {
   client?: Pick<PrimaryClient, "displayName" | "email" | "phone"> | null
 }
 
-export function buildGoogleCalendarDescription(
+function buildGoogleCalendarDescription(
   event: GoogleCalendarEventInput,
   options: GoogleCalendarDescriptionOptions = {},
 ): string {

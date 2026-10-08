@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { CreateEventSidebarForm } from "./CreateEventSidebarForm"
+import CreateEventSidebarForm from "./CreateEventSidebarForm"
 
 function createDeferred<T>() {
   let resolve: (value: T | PromiseLike<T>) => void = () => undefined

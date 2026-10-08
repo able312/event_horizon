@@ -5,7 +5,7 @@ import { SECTION_TYPE } from "./timeblock-constants.js"
  * Destinations supported by the conversion UI in this iteration.
  * Extend as more types become convertible.
  */
-export const CONVERTIBLE_TIMEBLOCK_TYPES = [
+const CONVERTIBLE_TIMEBLOCK_TYPES = [
   SECTION_TYPE.NOTE,
   SECTION_TYPE.SETUP_INSTRUCTION,
   SECTION_TYPE.FOOD,

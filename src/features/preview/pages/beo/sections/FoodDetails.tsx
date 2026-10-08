@@ -3,7 +3,6 @@ import { toCurrency } from "~/features/event-detail/workspace/lib/financial"
 import {
   formatPreviewPrice,
   formatPreviewQuantity,
-  sortTimeblocksByTime,
 } from "~/features/preview/preferences/selectors"
 import { PreviewMarkdownContent } from "~/lib/markdown/PreviewMarkdownContent"
 
@@ -94,36 +93,5 @@ export function FoodTimeblockDetails({
         </div>
       ) : null}
     </div>
-  )
-}
-
-type FoodDetailsProps = {
-  timeblocks?: TimeblockWithItems[] | null
-  selectedIds?: string[]
-  showPricing?: boolean
-}
-
-export const FoodDetails = ({
-  timeblocks,
-  selectedIds,
-  showPricing = false,
-}: FoodDetailsProps) => {
-  const selectedSet = selectedIds ? new Set(selectedIds) : null
-  const sorted = sortTimeblocksByTime(timeblocks).filter((tb) =>
-    selectedSet ? selectedSet.has(tb.id) : true,
-  )
-
-  if (sorted.length === 0) return null
-
-  return (
-    <>
-      {sorted.map((timeblock) => (
-        <FoodTimeblockDetails
-          key={timeblock.id}
-          timeblock={timeblock}
-          showPricing={showPricing}
-        />
-      ))}
-    </>
   )
 }

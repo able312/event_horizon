@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   buildGoogleCalendarCreateUrl,
-  buildGoogleCalendarDescription,
   buildGoogleCalendarUpdateUrl,
-  formatGoogleCalendarDateUtc,
   type GoogleCalendarEventInput,
 } from "./googleCalendar"
 
@@ -25,17 +23,18 @@ function makeEvent(overrides: Partial<GoogleCalendarEventInput> = {}): GoogleCal
 
 describe("googleCalendar utils", () => {
   it("formats UTC dates for Google params", () => {
-    expect(formatGoogleCalendarDateUtc("2026-05-12T18:30:45.000Z")).toBe("20260512T183045Z")
+    const url = new URL(buildGoogleCalendarCreateUrl(makeEvent({ startDateTime: "2026-05-12T18:30:45.000Z" })))
+    expect(url.searchParams.get("dates")).toBe("20260512T183045Z/20260512T210000Z")
   })
 
   it("builds description and omits empty internal note", () => {
-    const description = buildGoogleCalendarDescription(
+    const description = new URL(buildGoogleCalendarCreateUrl(
       makeEvent({
         internalNotes: "   ",
         guestCountFinal: 1,
         maxGuests: 99,
       }),
-    )
+    )).searchParams.get("details")
 
     expect(description).not.toContain("internal")
     expect(description).toContain("GUESTS: 99 guests (final)")
@@ -45,9 +44,9 @@ describe("googleCalendar utils", () => {
   })
 
   it("lists the primary client's details under CLIENT INFO", () => {
-    const description = buildGoogleCalendarDescription(makeEvent(), {
+    const description = new URL(buildGoogleCalendarCreateUrl(makeEvent(), {
       client: { displayName: "Example Name", email: "example.email@nocompany.com", phone: null },
-    })
+    })).searchParams.get("details")
 
     expect(description).toContain("Name: Example Name")
     expect(description).toContain("Email: example.email@nocompany.com")
@@ -55,11 +54,11 @@ describe("googleCalendar utils", () => {
   })
 
   it("appends incomplete touchpoints to the description", () => {
-    const description = buildGoogleCalendarDescription(makeEvent(), {
+    const description = new URL(buildGoogleCalendarCreateUrl(makeEvent(), {
       incompleteTouchpoints: [
         { title: "Final guest count", dueDate: "2026-07-20T00:00:00.000Z" },
       ],
-    })
+    })).searchParams.get("details")
 
     expect(description).toContain("TOUCHPOINTS")
     expect(description).toContain("Final guest count")
