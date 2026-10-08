@@ -38,22 +38,22 @@ function useDebouncedElementSize(ref: RefObject<HTMLElement | null>): GridSize {
 
 /**
  * Decides which week rows show compact lines instead of full cards.
- * Recalculates on resize, view change (`viewKey`) and whenever the card counts change.
- * Memoise `cardCountsByRow` so it only changes when events do.
+ * Recalculates on resize, view change (`viewKey`) and whenever the day heights change.
+ * Memoise `dayHeightsByRow` so it only changes when its inputs do.
  */
 export function useCalendarDensity(
   gridRef: RefObject<HTMLElement | null>,
   viewKey: string,
-  cardCountsByRow: number[][],
+  dayHeightsByRow: number[][],
 ): CalendarDensity {
   const { width, height } = useDebouncedElementSize(gridRef)
   const [density, setDensity] = useState(INITIAL_CALENDAR_DENSITY)
 
   useEffect(() => {
     setDensity((previous) =>
-      resolveCalendarDensity(previous, { viewKey, gridWidth: width, gridHeight: height, cardCountsByRow }),
+      resolveCalendarDensity(previous, { viewKey, gridWidth: width, gridHeight: height, dayHeightsByRow }),
     )
-  }, [viewKey, width, height, cardCountsByRow])
+  }, [viewKey, width, height, dayHeightsByRow])
 
   return density
 }

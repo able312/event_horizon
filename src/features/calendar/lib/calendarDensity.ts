@@ -18,6 +18,10 @@ export const ROW_FIT_BUFFER = 16
 export const DAY_CELL_CHROME_HEIGHT = 32
 /** Day cell horizontal padding plus its right border. */
 export const DAY_CELL_HORIZONTAL_CHROME = 17
+/** Draft chip above the event list (border, padding, one 15px line) plus the 4px gap below it. */
+export const DRAFT_CHIP_RESERVED_HEIGHT = 25
+/** Today's day number is a 24px circle with margins, 8px taller than the plain number in DAY_CELL_CHROME_HEIGHT. */
+export const TODAY_MARKER_EXTRA_HEIGHT = 8
 
 export type CalendarDensity = {
   /** Key of the view the rows belong to; row state resets when it changes. */
@@ -32,8 +36,8 @@ export type CalendarDensityInput = {
   /** Grid content box; 0 means not measured yet. */
   gridWidth: number
   gridHeight: number
-  /** Number of cards each day would show, grouped by week row (7 per row). */
-  cardCountsByRow: number[][]
+  /** Height each day's content needs as full cards, grouped by week row (7 per row). */
+  dayHeightsByRow: number[][]
 }
 
 export const INITIAL_CALENDAR_DENSITY: CalendarDensity = {
@@ -55,9 +59,9 @@ export function resolveNarrowColumns(columnWidth: number, wasNarrow: boolean): b
 }
 
 /** Goes compact when any day overflows; returns to full cards only when every day fits with the buffer to spare. */
-export function resolveCompactRow(cardCounts: number[], availableHeight: number, wasCompact: boolean): boolean {
+export function resolveCompactRow(dayHeights: number[], availableHeight: number, wasCompact: boolean): boolean {
   if (availableHeight <= 0) return false
-  const tallestDay = Math.max(0, ...cardCounts.map(fullCardsHeight))
+  const tallestDay = Math.max(0, ...dayHeights)
   return wasCompact ? tallestDay + ROW_FIT_BUFFER > availableHeight : tallestDay > availableHeight
 }
 
@@ -67,13 +71,13 @@ export function resolveCompactRow(cardCounts: number[], availableHeight: number,
  */
 export function resolveCalendarDensity(previous: CalendarDensity, input: CalendarDensityInput): CalendarDensity {
   const sameView = previous.viewKey === input.viewKey
-  const rowCount = input.cardCountsByRow.length
+  const rowCount = input.dayHeightsByRow.length
   const columnWidth = input.gridWidth / 7 - DAY_CELL_HORIZONTAL_CHROME
   const availableHeight = rowCount > 0 ? input.gridHeight / rowCount - DAY_CELL_CHROME_HEIGHT : 0
 
   const isNarrow = resolveNarrowColumns(input.gridWidth > 0 ? columnWidth : 0, previous.isNarrow)
-  const compactRows = input.cardCountsByRow.map((counts, row) =>
-    resolveCompactRow(counts, input.gridHeight > 0 ? availableHeight : 0, sameView && previous.compactRows[row] === true),
+  const compactRows = input.dayHeightsByRow.map((heights, row) =>
+    resolveCompactRow(heights, input.gridHeight > 0 ? availableHeight : 0, sameView && previous.compactRows[row] === true),
   )
 
   const unchanged =
@@ -85,14 +89,20 @@ export function resolveCalendarDensity(previous: CalendarDensity, input: Calenda
   return unchanged ? previous : { viewKey: input.viewKey, isNarrow, compactRows }
 }
 
+export type DayContent = {
+  eventCount: number
+  /** Space taken above the cards in this cell, e.g. the draft chip or today's larger day number. */
+  reservedHeight: number
+}
+
 /**
- * Cards each day would show (capped at maxVisible, matching the "+N more" rule),
- * grouped into week rows of 7. Cells outside the month count as 0.
+ * Height each day needs as full cards (capped at maxVisible, matching the "+N more" rule)
+ * plus its reserved space, grouped into week rows of 7. Cells outside the month count as 0.
  */
-export function buildCardCountsByRow(eventCountsByDay: number[], startingDay: number, maxVisible: number): number[][] {
+export function buildDayHeightsByRow(days: DayContent[], startingDay: number, maxVisible: number): number[][] {
   const cells = [
     ...Array<number>(startingDay).fill(0),
-    ...eventCountsByDay.map((count) => Math.min(count, maxVisible)),
+    ...days.map((day) => fullCardsHeight(Math.min(day.eventCount, maxVisible)) + day.reservedHeight),
   ]
   const rowCount = Math.max(1, Math.ceil(cells.length / 7))
   return Array.from({ length: rowCount }, (_, row) => {

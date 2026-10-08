@@ -25,9 +25,25 @@ import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraft
 import { buildEventDetailEntryPath } from "~/features/event-detail/workspace/lib/eventDetailRouteState"
 import CalendarDayEventList from "../components/CalendarDayEventList"
 import { useCalendarDensity } from "../hooks/useCalendarDensity"
-import { buildCardCountsByRow, sortEventsByCompactStatus } from "../lib/calendarDensity"
+import {
+  buildDayHeightsByRow,
+  DRAFT_CHIP_RESERVED_HEIGHT,
+  sortEventsByCompactStatus,
+  TODAY_MARKER_EXTRA_HEIGHT,
+} from "../lib/calendarDensity"
 
 const MAX_VISIBLE_DAY_EVENTS = 3
+
+/**
+ * Day of the month the draft starts on, or null when it isn't in this month
+ */
+const getDraftDay = (draftPreview: CalendarDraftPreview | null | undefined, year: number, month: number): number | null => {
+  if (!draftPreview?.startDateTime) return null
+  const draftDate = new Date(draftPreview.startDateTime)
+  if (Number.isNaN(draftDate.getTime())) return null
+  if (draftDate.getFullYear() !== year || draftDate.getMonth() !== month) return null
+  return draftDate.getDate()
+}
 
 /**
  * Events starting on a specific day, in start-time order
@@ -113,11 +129,24 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     () => Array.from({ length: daysInMonth }, (_, i) => getEventsForDay(events, year, month, i + 1)),
     [events, year, month, daysInMonth],
   )
-  const cardCountsByRow = useMemo(
-    () => buildCardCountsByRow(eventsByDay.map((dayEvents) => dayEvents.length), startingDay, MAX_VISIBLE_DAY_EVENTS),
-    [eventsByDay, startingDay],
+  const draftDay = getDraftDay(draftPreview, year, month)
+  const now = new Date()
+  const todayDay = now.getFullYear() === year && now.getMonth() === month ? now.getDate() : null
+  const dayHeightsByRow = useMemo(
+    () =>
+      buildDayHeightsByRow(
+        eventsByDay.map((dayEvents, i) => ({
+          eventCount: dayEvents.length,
+          reservedHeight:
+            (i + 1 === draftDay ? DRAFT_CHIP_RESERVED_HEIGHT : 0) +
+            (i + 1 === todayDay ? TODAY_MARKER_EXTRA_HEIGHT : 0),
+        })),
+        startingDay,
+        MAX_VISIBLE_DAY_EVENTS,
+      ),
+    [eventsByDay, startingDay, draftDay, todayDay],
   )
-  const density = useCalendarDensity(gridRef, `${year}-${month}`, cardCountsByRow)
+  const density = useCalendarDensity(gridRef, `${year}-${month}`, dayHeightsByRow)
   const isDayCompact = (day: number): boolean => {
     const row = Math.floor((startingDay + day - 1) / 7)
     return density.isNarrow || density.compactRows[row] === true
@@ -126,14 +155,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   /**
    * Check if a day is today
    */
-  const isToday = (day: number): boolean => {
-    const today = new Date()
-    return (
-      today.getFullYear() === year &&
-      today.getMonth() === month &&
-      today.getDate() === day
-    )
-  }
+  const isToday = (day: number): boolean => day === todayDay
 
   /**
    * Handle clicking on an event - navigate to event detail
@@ -147,18 +169,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   }
 
   const getDraftPreviewForDay = (day: number): CalendarDraftPreview | null => {
-    if (!draftPreview || !draftPreview.startDateTime) return null
-
-    const draftDate = new Date(draftPreview.startDateTime)
-    if (Number.isNaN(draftDate.getTime())) return null
-
-    if (
-      draftDate.getFullYear() !== year ||
-      draftDate.getMonth() !== month ||
-      draftDate.getDate() !== day
-    ) {
-      return null
-    }
+    if (!draftPreview || day !== draftDay) return null
 
     const title =
       draftPreview.title.trim().length === 0 ? "Untitled" : draftPreview.title
