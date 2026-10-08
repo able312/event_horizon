@@ -9,6 +9,7 @@
     "allowSyntheticDefaultImports": true,
     "target": "ESNext",
     "lib": ["ES2023", "dom"],
+    "types": ["vite/client"],
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "isolatedModules": true,
