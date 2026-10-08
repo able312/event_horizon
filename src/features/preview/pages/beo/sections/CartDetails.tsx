@@ -1,8 +1,7 @@
-import { useCartDetailsSection } from "~/hooks/useCartDetailsSection"
+import type { CartDetails as CartDetailsData } from "~/definitions/database"
 import { CartPreview } from "~/features/preview/components/CartPreview"
 
-export const CartDetails = () => {
-  const { data: details } = useCartDetailsSection()
+export const CartDetails = ({ details }: { details: CartDetailsData | undefined }) => {
 
   if (!details) return null
 

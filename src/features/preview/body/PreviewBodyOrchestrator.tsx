@@ -1,8 +1,10 @@
-import { lazy, Suspense } from "react"
+import { lazy, Suspense, useCallback, useMemo, useState } from "react"
 import { ErrorBoundary } from "react-error-boundary"
 import { useNavigate, useParams, useSearchParams } from "react-router"
 import { ArrowLeft, Printer, Save } from "lucide-react"
 import { toast } from "sonner"
+
+import { PreviewReadinessContext } from "~/features/preview/pagination/PreviewReadinessContext"
 
 import { Button } from "~/components/atoms/button"
 import { buildPdfFileName } from "~/features/preview/lib/buildPdfFileName"
@@ -64,6 +66,7 @@ const PreviewBodyOrchestrator: React.FC = () => {
   const { id: eventId } = useParams()
   const [searchParams] = useSearchParams()
   const previewType = resolvePreviewType(searchParams)
+  const previewPage = useMemo(() => renderPreviewPage(previewType), [previewType])
   const { data: event } = useEvent()
   const {
     data: client,
@@ -72,8 +75,15 @@ const PreviewBodyOrchestrator: React.FC = () => {
     isFetching: contactsFetching,
     refetch: refetchContacts,
   } = usePrimaryClient(event?.id)
-  // Every document prints contact details, so exporting before they load would silently drop them.
-  const canExport = contactsLoaded
+  const documentKey = `${eventId ?? ""}:${previewType}`
+  const [documentStatus, setDocumentStatus] = useState({ key: "", ready: false })
+  const reportReadiness = useCallback((ready: boolean) => {
+    setDocumentStatus((previous) => previous.key === documentKey && previous.ready === ready
+      ? previous : { key: documentKey, ready })
+  }, [documentKey])
+  // The file name needs the client; documents that print contacts gate their own readiness on them,
+  // so a background contacts refetch does not silently disable export here.
+  const canExport = contactsLoaded && documentStatus.key === documentKey && documentStatus.ready
 
   const handlePrint = () => {
     if (!canExport) return
@@ -149,17 +159,20 @@ const PreviewBodyOrchestrator: React.FC = () => {
         Pages are composed by PreviewDocument inside each preview type.
       */}
       <div className="print:contents flex min-h-0 flex-1 items-start justify-center overflow-y-auto py-10 print:p-0">
-        <ErrorBoundary
-          fallback={
-            <div className="p-8 text-sm text-red-500">
-              Something went wrong rendering this document.
-            </div>
-          }
-        >
-          <Suspense fallback={<PreviewPageFallback />}>
-            {renderPreviewPage(previewType)}
-          </Suspense>
-        </ErrorBoundary>
+        <PreviewReadinessContext.Provider value={reportReadiness}>
+          <ErrorBoundary
+            key={documentKey}
+            fallback={
+              <div className="p-8 text-sm text-red-500">
+                Something went wrong rendering this document.
+              </div>
+            }
+          >
+            <Suspense fallback={<PreviewPageFallback />}>
+              {previewPage}
+            </Suspense>
+          </ErrorBoundary>
+        </PreviewReadinessContext.Provider>
       </div>
     </div>
   )

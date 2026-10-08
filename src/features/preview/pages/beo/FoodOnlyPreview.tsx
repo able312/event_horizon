@@ -8,16 +8,29 @@ import {
   filterSelectedIds,
   sortTimeblocksByTime,
 } from "~/features/preview/preferences/selectors"
+import { usePrintableContactGroups } from "~/hooks/useEventContacts"
 import { useEvent } from "~/hooks/useEvent"
 import { useFoodSection } from "~/hooks/useFoodSection"
 import { PrintHeader } from "./EventOverviewHeader"
 import { FoodTimeblockDetails } from "./sections/FoodDetails"
 
 export function FoodOnlyPreview() {
-  const { data: event } = useEvent()
+  const {
+    data: event,
+    isSuccess: eventReady,
+    isError: eventError,
+    isFetching: eventFetching,
+  } = useEvent()
   const { state } = usePreviewPreferences()
   const prefs = state["beo-food"]
-  const { data: food } = useFoodSection()
+  const {
+    data: food,
+    isSuccess: foodReady,
+    isError: foodError,
+    isFetching: foodFetching,
+  } = useFoodSection()
+
+  const contacts = usePrintableContactGroups(event?.id)
 
   if (!event) return <p>No event data found.</p>
 
@@ -33,6 +46,8 @@ export function FoodOnlyPreview() {
 
   return (
     <PreviewDocument
+      dataError={contacts.isError || eventError || foodError}
+      dataReady={contacts.isSuccess && !contacts.isFetching && eventReady && !eventFetching && foodReady && !foodFetching && state.defaultsApplied.foodBeoTimeblocks}
       continuationHeadings={{
         food: <SectionFrameHeading title="Food (continued)" />,
       }}
@@ -40,6 +55,7 @@ export function FoodOnlyPreview() {
       <PreviewBlock id="food-beo-overview" keepTogether>
         <PrintHeader
           event={event}
+          contactGroups={contacts.data}
           showContactInfo={prefs.showContactInfo}
           showInternalNotes={prefs.showInternalNotes}
         />

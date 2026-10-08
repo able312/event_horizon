@@ -1,8 +1,7 @@
-import { useTournamentDetailsSection } from "~/hooks/useTournamentDetailsSection"
+import type { TournamentDetails as TournamentDetailsData } from "~/definitions/database"
 import { PreviewMarkdownContent } from "~/lib/markdown/PreviewMarkdownContent"
 
-export const TournamentDetails = () => {
-    const { data: details } = useTournamentDetailsSection()
+export const TournamentDetails = ({ details }: { details: TournamentDetailsData | undefined }) => {
     return (
         <div>
            <dl className="flex justify-between">

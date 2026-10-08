@@ -12,7 +12,10 @@ import {
   type ReactNode,
 } from "react"
 
+import { PreviewDataError } from "~/features/preview/components/PreviewDataError"
 import { cn } from "~/lib/utils"
+import { measureBlockBreaks } from "./measureBlockBreaks"
+import { useReportPreviewReadiness } from "./PreviewReadinessContext"
 import {
   LETTER_HEIGHT_PX,
   LETTER_WIDTH_PX,
@@ -30,7 +33,7 @@ export type PreviewBlockProps = MeasurableBlockMeta & {
 }
 
 export function PreviewBlock({ children, className }: PreviewBlockProps) {
-  return <div className={cn(className)}>{children}</div>
+  return <div className="flow-root"><div className={cn("flow-root", className)}>{children}</div></div>
 }
 
 type PreviewBlockElement = ReactElement<PreviewBlockProps>
@@ -72,22 +75,30 @@ type PreviewDocumentProps = {
   children: ReactNode
   continuationHeadings?: Record<string, ReactNode>
   className?: string
+  dataReady?: boolean
+  dataError?: boolean
 }
+
+const EMPTY_CONTINUATION_HEADINGS: Record<string, ReactNode> = {}
 
 export function PreviewDocument({
   children,
-  continuationHeadings = {},
+  continuationHeadings = EMPTY_CONTINUATION_HEADINGS,
   className,
+  dataReady = true,
+  dataError = false,
 }: PreviewDocumentProps) {
   const measureRef = useRef<HTMLDivElement>(null)
-  const [pages, setPages] = useState<PackedPage[]>([])
+  // null until the first measurement; afterwards the last layout stays visible while remeasuring.
+  const [pages, setPages] = useState<PackedPage[] | null>(null)
   const [ready, setReady] = useState(false)
   const generationRef = useRef(0)
-  const previousSignatureRef = useRef<string | null>(null)
+  const requestedMarkupRef = useRef<string | null>(null)
+  useReportPreviewReadiness(ready && dataReady && !dataError)
 
   const blocks = useMemo(() => collectBlocks(children), [children])
   const blockSignature = useMemo(
-    () => blocks.map((block) => block.props.id).join("|"),
+    () => JSON.stringify(blocks.map(({ props }) => [props.id, props.breakBefore, props.keepTogether, props.continuationKey, props.className])),
     [blocks],
   )
   const continuationKeySignature = Object.keys(continuationHeadings).sort().join("|")
@@ -111,7 +122,9 @@ export function PreviewDocument({
   const remeasure = useCallback(async () => {
     const generation = ++generationRef.current
     const root = measureRef.current
-    if (!root) return
+    // print:hidden collapses the measure root's width; an empty document still has width.
+    if (!root || root.getBoundingClientRect().width === 0) return
+    setReady(false)
 
     if (typeof document !== "undefined" && "fonts" in document) {
       try {
@@ -128,9 +141,8 @@ export function PreviewDocument({
 
     if (generation !== generationRef.current) return
 
-    // Skip when print:hidden collapses the measure root to 0 height so we
-    // never feed the packer zeros while a print dialog is open.
-    if (root.getBoundingClientRect().height === 0) return
+    // Never feed the packer zeros while a print dialog is open.
+    if (root.getBoundingClientRect().width === 0) return
 
     const headingHeights: Record<string, number> = {}
     root.querySelectorAll<HTMLElement>("[data-preview-continuation-key]").forEach((node) => {
@@ -148,6 +160,7 @@ export function PreviewDocument({
         return {
           id,
           height: node.getBoundingClientRect().height,
+          breakOffsets: measureBlockBreaks(node, PAGE_CONTENT_HEIGHT_PX - (headingHeights[source?.props.continuationKey ?? ""] ?? 0)),
           breakBefore: source?.props.breakBefore,
           keepTogether: source?.props.keepTogether,
           continuationKey: source?.props.continuationKey,
@@ -157,51 +170,55 @@ export function PreviewDocument({
 
     if (generation !== generationRef.current) return
 
+    const packed = packBlocksIntoPages(measured, {
+      contentHeightPx: PAGE_CONTENT_HEIGHT_PX,
+      continuationHeadingHeights: headingHeights,
+    })
+
     if (import.meta.env.DEV) {
-      for (const entry of measured) {
-        if (entry.height > PAGE_CONTENT_HEIGHT_PX) {
+      for (const page of packed) {
+        for (const [id, fragment] of Object.entries(page.fragments ?? {})) {
+          if (!fragment.endsMidLine) continue
           console.warn(
-            `[PreviewDocument] Block "${entry.id}" is ${Math.round(entry.height)}px tall ` +
-              `(page content is ${PAGE_CONTENT_HEIGHT_PX}px). It will sit alone and may clip.`,
+            `[PreviewDocument] Block "${id}" has no safe break within a page, ` +
+              `so it is cut mid-line at ${Math.round(fragment.offset + fragment.height)}px.`,
           )
         }
       }
     }
 
-    setPages(
-      packBlocksIntoPages(measured, {
-        contentHeightPx: PAGE_CONTENT_HEIGHT_PX,
-        continuationHeadingHeights: headingHeights,
-      }),
-    )
+    setPages(packed)
     setReady(true)
   }, [])
 
+  // Parents pass fresh children and heading objects on every render, so compare
+  // the measured markup itself and only remeasure when it actually changed.
   useLayoutEffect(() => {
-    const signatureChanged = previousSignatureRef.current !== blockSignature
-    previousSignatureRef.current = blockSignature
-
-    // Only hide pages when the set of block ids changes (structure change).
-    // Content-only remeasures keep the previous pages visible to avoid flash.
-    if (signatureChanged) {
-      setReady(false)
-    }
+    const markup = measureRef.current?.innerHTML ?? null
+    if (markup === requestedMarkupRef.current) return
+    requestedMarkupRef.current = markup
+    setReady(false)
     void remeasure()
-  }, [blockSignature, remeasure])
+  }, [blocks, continuationHeadings, remeasure])
+
+  useEffect(() => () => {
+    generationRef.current += 1
+    requestedMarkupRef.current = null
+  }, [])
 
   useEffect(() => {
     const root = measureRef.current
     if (!root || typeof ResizeObserver === "undefined") return
-
-    const observer = new ResizeObserver(() => {
-      void remeasure()
-    })
+    const observer = new ResizeObserver(() => { void remeasure() })
     observer.observe(root)
+    // Observe individual blocks too: two changes can cancel out in the root height.
+    root.querySelectorAll<HTMLElement>("[data-preview-block-id], [data-preview-continuation-key]")
+      .forEach((node) => observer.observe(node))
     return () => observer.disconnect()
-  }, [remeasure])
+  }, [blockSignature, continuationKeySignature, remeasure])
 
   return (
-    <div className={cn("preview-document", className)}>
+    <div className={cn("preview-document", className)} data-preview-ready={ready && dataReady && !dataError}>
       <div
         aria-hidden
         className="pointer-events-none absolute -left-[99999px] top-0 opacity-0 print:hidden"
@@ -209,19 +226,23 @@ export function PreviewDocument({
       >
         <div ref={measureRef} className="flex flex-col">
           {continuationKeys.map((key) => (
-            <div key={`measure-cont-${key}`} data-preview-continuation-key={key} className="mb-2">
-              {continuationHeadings[key]}
+            <div key={`measure-cont-${key}`} data-preview-continuation-key={key} className="flow-root">
+              <div className="flow-root mb-2">{continuationHeadings[key]}</div>
             </div>
           ))}
           {blocks.map((block) => (
             <div key={`measure-${block.props.id}`} data-preview-block-id={block.props.id}>
-              {block.props.children}
+              <PreviewBlock {...block.props} />
             </div>
           ))}
         </div>
       </div>
 
-      {!ready ? (
+      {dataError ? (
+        <PreviewDataError />
+      ) : !dataReady ? (
+        <p className="p-8 text-sm text-muted-foreground">Loading event details…</p>
+      ) : pages === null ? (
         <div
           className="preview-page mx-auto bg-white shadow-[0_4px_32px_rgba(0,0,0,0.18)] print:shadow-none"
           style={{
@@ -260,29 +281,32 @@ export function PreviewDocument({
               }}
             >
               <div
-                className="flex flex-col overflow-hidden"
+                className="flex flex-col"
                 style={{
                   width: PAGE_CONTENT_WIDTH_PX,
                   height: PAGE_CONTENT_HEIGHT_PX,
                 }}
               >
                 {page.continuationKeys.map((key) => (
-                  <div key={`cont-${pageIndex}-${key}`} className="mb-2">
-                    {continuationHeadings[key] ?? null}
+                  <div key={`cont-${pageIndex}-${key}`} className="flow-root shrink-0">
+                    <div className="flow-root mb-2">{continuationHeadings[key] ?? null}</div>
                   </div>
                 ))}
                 {page.blockIds.map((id) => {
                   const block = blockById.get(id)
                   if (!block) return null
+                  const fragment = page.fragments?.[id]
                   return (
                     <div
                       key={`${pageIndex}-${id}`}
-                      className={cn(
-                        block.props.className,
-                        block.props.keepTogether ? "break-inside-avoid" : undefined,
-                      )}
+                      className="flow-root shrink-0 break-inside-avoid"
+                      style={fragment ? { height: fragment.height, overflow: "hidden" } : undefined}
+                      data-preview-fragment={fragment ? id : undefined}
+                      data-preview-offset={fragment?.offset}
                     >
-                      {block.props.children}
+                      <div style={fragment ? { transform: `translateY(-${fragment.offset}px)` } : undefined}>
+                        <PreviewBlock {...block.props} />
+                      </div>
                     </div>
                   )
                 })}

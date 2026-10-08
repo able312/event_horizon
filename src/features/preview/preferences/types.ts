@@ -10,7 +10,9 @@ export type BeoSectionId =
   | "setup"
   | "notes"
 
-export type BeoTimeblockSectionId = "food" | "beverage" | "setup" | "notes"
+export const BEO_TIMEBLOCK_SECTION_IDS = ["food", "beverage", "setup", "notes"] as const
+
+export type BeoTimeblockSectionId = (typeof BEO_TIMEBLOCK_SECTION_IDS)[number]
 
 export type BeoPreferences = {
   showContactInfo: boolean
@@ -49,7 +51,8 @@ export type PreviewPreferencesState = {
   "cart-diagram": CartDiagramPreferences
   /** Tracks which data-derived defaults have been applied once. */
   defaultsApplied: {
-    beoTimeblocks: boolean
+    /** Per section, so one slow or failed section does not hold back the others. */
+    beoTimeblocks: Record<BeoTimeblockSectionId, boolean>
     foodBeoTimeblocks: boolean
     financialPayments: boolean
   }
@@ -63,7 +66,7 @@ export type PreviewPreferencesAction =
   | { type: "beo/setTimeblockSelected"; section: BeoTimeblockSectionId; id: string; value: boolean }
   | { type: "beo/selectAllTimeblocks"; section: BeoTimeblockSectionId; ids: string[] }
   | { type: "beo/clearAllTimeblocks"; section: BeoTimeblockSectionId }
-  | { type: "beo/applyDefaultTimeblocks"; selections: Record<BeoTimeblockSectionId, string[]> }
+  | { type: "beo/applyDefaultTimeblocks"; section: BeoTimeblockSectionId; ids: string[] }
   | { type: "beo-food/setShowContactInfo"; value: boolean }
   | { type: "beo-food/setShowInternalNotes"; value: boolean }
   | { type: "beo-food/setShowPricing"; value: boolean }
@@ -134,7 +137,7 @@ export function createInitialPreviewPreferences(): PreviewPreferencesState {
     "financial-report": createInitialFinancialPreferences(),
     "cart-diagram": {},
     defaultsApplied: {
-      beoTimeblocks: false,
+      beoTimeblocks: { food: false, beverage: false, setup: false, notes: false },
       foodBeoTimeblocks: false,
       financialPayments: false,
     },

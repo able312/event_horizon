@@ -7,6 +7,10 @@ import { useNoteSection } from "~/hooks/useNoteSection"
 import { usePaymentsSection } from "~/hooks/usePaymentsSection"
 import { useSetupInstructionSection } from "~/hooks/useSetupInstrucionSection"
 import { usePreviewPreferences } from "~/features/preview/preferences/PreviewPreferencesContext"
+import {
+  BEO_TIMEBLOCK_SECTION_IDS,
+  type BeoTimeblockSectionId,
+} from "~/features/preview/preferences/types"
 
 /**
  * Applies one-time data-derived defaults after query data first arrives.
@@ -16,26 +20,31 @@ export function usePreviewPreferenceDefaults() {
   const { state, dispatch } = usePreviewPreferences()
   const { data: event } = useEvent()
   const { data: food } = useFoodSection()
-  const { timeblocks: beverageTimeblocks } = useBeverageSection()
+  const { timeblocks: beverageTimeblocks, data: beverageData } = useBeverageSection()
   const { data: setup } = useSetupInstructionSection()
   const { data: notes } = useNoteSection()
   const { data: payments } = usePaymentsSection()
 
   useEffect(() => {
-    if (state.defaultsApplied.beoTimeblocks) return
-    if (!food && !beverageTimeblocks && !setup && !notes) return
-
-    dispatch({
-      type: "beo/applyDefaultTimeblocks",
-      selections: {
-        food: (food ?? []).map((tb) => tb.id),
-        beverage: beverageTimeblocks.map((tb) => tb.id),
-        setup: (setup ?? []).map((tb) => tb.id),
-        notes: (notes ?? []).map((tb) => tb.id),
-      },
-    })
+    // undefined means the section has not loaded (or failed); apply each section as soon as it arrives.
+    const loaded: Record<BeoTimeblockSectionId, { id: string }[] | undefined> = {
+      food,
+      beverage: beverageData === undefined ? undefined : beverageTimeblocks,
+      setup,
+      notes,
+    }
+    for (const section of BEO_TIMEBLOCK_SECTION_IDS) {
+      const timeblocks = loaded[section]
+      if (state.defaultsApplied.beoTimeblocks[section] || timeblocks === undefined) continue
+      dispatch({
+        type: "beo/applyDefaultTimeblocks",
+        section,
+        ids: timeblocks.map((tb) => tb.id),
+      })
+    }
   }, [
     beverageTimeblocks,
+    beverageData,
     dispatch,
     food,
     notes,

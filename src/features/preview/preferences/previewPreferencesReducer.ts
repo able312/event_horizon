@@ -65,19 +65,20 @@ export function previewPreferencesReducer(
         },
       }
     case "beo/applyDefaultTimeblocks":
-      if (state.defaultsApplied.beoTimeblocks) return state
+      if (state.defaultsApplied.beoTimeblocks[action.section]) return state
       return {
         ...state,
         beo: {
           ...state.beo,
           selectedTimeblockIds: {
-            food: [...action.selections.food],
-            beverage: [...action.selections.beverage],
-            setup: [...action.selections.setup],
-            notes: [...action.selections.notes],
+            ...state.beo.selectedTimeblockIds,
+            [action.section]: [...action.ids],
           },
         },
-        defaultsApplied: { ...state.defaultsApplied, beoTimeblocks: true },
+        defaultsApplied: {
+          ...state.defaultsApplied,
+          beoTimeblocks: { ...state.defaultsApplied.beoTimeblocks, [action.section]: true },
+        },
       }
     case "beo-food/setShowContactInfo":
       return {

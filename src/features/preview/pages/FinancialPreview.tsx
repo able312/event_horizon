@@ -145,12 +145,42 @@ function buildChargeTableSpecs(params: {
 }
 
 export default function FinancialPreview() {
-  const { data: event } = useEvent()
-  const { data: client } = usePrimaryClient(event?.id)
-  const { data: chargeItems } = useMenuOfChargeItemsSection()
-  const { data: food } = useFoodSection()
-  const { items: beverageItems } = useBeverageSection()
-  const { data: payments } = usePaymentsSection()
+  const {
+    data: event,
+    isSuccess: eventReady,
+    isError: eventError,
+    isFetching: eventFetching,
+  } = useEvent()
+  const {
+    data: client,
+    isSuccess: clientReady,
+    isError: clientError,
+    isFetching: clientFetching,
+  } = usePrimaryClient(event?.id)
+  const {
+    data: chargeItems,
+    isSuccess: chargeReady,
+    isError: chargeError,
+    isFetching: chargeFetching,
+  } = useMenuOfChargeItemsSection()
+  const {
+    data: food,
+    isSuccess: foodReady,
+    isError: foodError,
+    isFetching: foodFetching,
+  } = useFoodSection()
+  const {
+    items: beverageItems,
+    isSuccess: beverageReady,
+    isError: beverageError,
+    isFetching: beverageFetching,
+  } = useBeverageSection()
+  const {
+    data: payments,
+    isSuccess: paymentsReady,
+    isError: paymentsError,
+    isFetching: paymentsFetching,
+  } = usePaymentsSection()
   const { state } = usePreviewPreferences()
   const prefs = state["financial-report"]
 
@@ -200,6 +230,11 @@ export default function FinancialPreview() {
 
   return (
     <PreviewDocument
+      dataError={eventError || clientError || chargeError || foodError || beverageError || paymentsError}
+      dataReady={eventReady && !eventFetching && clientReady && !clientFetching &&
+        chargeReady && !chargeFetching &&
+        foodReady && !foodFetching && beverageReady && !beverageFetching &&
+        paymentsReady && !paymentsFetching && state.defaultsApplied.financialPayments}
       continuationHeadings={{
         "beverage-appendix": (
           <h2 className="mb-2 text-lg font-bold">Beverage Availability (continued)</h2>
