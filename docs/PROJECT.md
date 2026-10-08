@@ -132,6 +132,24 @@ Security priorities:
 - When changing DB schema:
   - Add migration + confirm existing data survives.
 
+## Dependency Overrides
+
+`package.json` cannot hold comments, so every entry in `overrides` is recorded here. Re-check each one whenever its parent package is bumped, and delete it once upstream ships a fixed range (`npm audit` stays clean without it).
+
+- `@esbuild-kit/core-utils` → `esbuild ^0.25.12`
+  - Why: the esbuild version that core-utils requests is affected by an esbuild dev-server advisory. Dev-only (via drizzle-kit).
+  - Remove when: drizzle-kit no longer pulls in `@esbuild-kit/core-utils`, or core-utils depends on `esbuild >=0.25`.
+- `app-builder-lib@26.15.3` → `@electron/get@3.1.0` → `global-agent 4.1.3`
+  - Why: `global-agent@3` → `roarr@2` → `sprintf-js` (GHSA-hp3w-g68c-fv3c, moderate DoS). Build-time only (electron-builder downloads Electron with it).
+  - Compatibility: `@electron/get` only uses it in `proxy.js` (`require('global-agent').bootstrap()` when `ELECTRON_GET_USE_PROXY` is set). Checked that 3.0.0 and 4.1.3 resolve `GLOBAL_AGENT_HTTP(S)_PROXY`/`NO_PROXY` and install the same proxy agent.
+  - Scoped to the exact parent versions, so it stops applying once electron-builder is bumped. If `npm audit` flags it again after a bump, re-verify and update the versions.
+  - Remove when: app-builder-lib depends on `@electron/get >=4.0.4` (no global-agent dependency).
+- `@tailwindcss/typography` → `postcss-selector-parser 7.1.6`
+  - Why: typography 0.5.20 pins `postcss-selector-parser 6.0.10` (GHSA-rj75-hqrm-r3gf, moderate quadratic-parse DoS). Build-time only.
+  - Compatibility: the plugin only uses it in `commonTrailingPseudos`, which calls `remove()`/`prepend()` outside any parser iteration, so the 7.0.0 change to mutation during iteration doesn't affect it. Checked that it gives identical output on 6.0.10 and 7.1.6 for prose variant selectors.
+  - npm doesn't allow a version-keyed override on a direct dependency, so this one is unscoped and the child version is pinned exactly. Re-check it whenever typography is bumped.
+  - Remove when: typography depends on `postcss-selector-parser >=7.1.6`.
+
 ## Known Issues / Current Risks
 
 - docs/TASKS.md will have know issue tickets
