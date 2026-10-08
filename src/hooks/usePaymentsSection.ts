@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { Payment, UpdatePayment } from "~/definitions/database"
 import * as paymentApi from "~/lib/data/payments"
+import { paymentQueries } from "~/lib/data/queries"
 
 function sortPayments(payments: Payment[]): Payment[] {
   return [...payments].sort((a, b) => {
@@ -17,14 +18,12 @@ export function usePaymentsSection() {
   const { id: eventId } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
 
-  const queryKey = ["payments", eventId] as const
+  const paymentsQuery = paymentQueries.byEvent(eventId ?? "")
+  const queryKey = paymentsQuery.queryKey
 
   const query = useQuery({
-    queryKey,
-    queryFn: async () => {
-      const data = await paymentApi.getAllPayments()
-      return sortPayments(data.filter((p) => p.eventId === eventId))
-    },
+    ...paymentsQuery,
+    select: sortPayments,
   })
 
   const createMutation = useMutation({

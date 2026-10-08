@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 
 import type { EventSearchResponse } from "~/definitions/ipc"
 import type { EventStatus, EventType } from "~/definitions/database"
-import * as eventsApi from "~/lib/data/events"
+import { eventQueries } from "~/lib/data/queries"
 
 export type EventsSearchParams = {
   query: string
@@ -28,27 +28,15 @@ export function useEventsSearchQuery(params: EventsSearchParams) {
   const enabled = normalizedQuery.length >= 2
 
   const query = useQuery({
-    queryKey: [
-      "events",
-      "search",
-      normalizedQuery,
-      params.type,
-      params.status,
-      params.startFrom,
-      params.startTo,
-      params.page,
-      params.pageSize,
-    ],
-    queryFn: () =>
-      eventsApi.searchEvents({
-        query: normalizedQuery,
-        type: params.type,
-        status: params.status,
-        startFrom: params.startFrom,
-        startTo: params.startTo,
-        page: params.page,
-        pageSize: params.pageSize,
-      }),
+    ...eventQueries.search({
+      query: normalizedQuery,
+      type: params.type,
+      status: params.status,
+      startFrom: params.startFrom,
+      startTo: params.startTo,
+      page: params.page,
+      pageSize: params.pageSize,
+    }),
     enabled,
   })
 

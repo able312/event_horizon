@@ -3,22 +3,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { TournamentDetails, UpdateTournamentDetails } from "~/definitions/database"
 import * as tournamentDetailsApi from "~/lib/data/tournamentDetails"
+import { tournamentDetailsQueries, timeblockKeys } from "~/lib/data/queries"
 
 export function useTournamentDetailsSection(enabled = true) {
   const { id: eventId } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
 
-  const queryKey = ["tournament_details", eventId] as const
+  const detailsQuery = tournamentDetailsQueries.byEvent(eventId ?? "")
+  const queryKey = detailsQuery.queryKey
 
   const invalidateKeys = () => {
     queryClient.invalidateQueries({ queryKey })
-    queryClient.invalidateQueries({ queryKey: ["timeblocks", eventId] })
+    queryClient.invalidateQueries({ queryKey: timeblockKeys.timeline(eventId ?? "") })
   }
 
   const query = useQuery({
-    queryKey,
+    ...detailsQuery,
     enabled: Boolean(eventId) && enabled,
-    queryFn: () => tournamentDetailsApi.getOrCreateTournamentDetailsByEventId(eventId!),
   })
 
   const updateMutation = useMutation({

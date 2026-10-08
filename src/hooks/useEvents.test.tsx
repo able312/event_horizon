@@ -3,9 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import type { Event, NewEvent } from "~/definitions/database"
 import * as eventsApi from "~/lib/data/events"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
-import { EVENTS_SEARCH_QUERY_KEY_PREFIX } from "./eventsCache"
+import { eventContactKeys, eventKeys } from "~/lib/data/queries"
 import { useEvents } from "./useEvents"
-import { PRIMARY_CLIENTS_QUERY_KEY_PREFIX } from "./useEventContacts"
 import { useEventsMonthQuery } from "./useEventsMonthQuery"
 
 vi.mock("~/lib/data/events", () => ({
@@ -167,7 +166,7 @@ describe("useEvents month-scoped queries and mutations", () => {
     })
 
     expect(createEventMock).toHaveBeenCalledWith(newEvent, client)
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: PRIMARY_CLIENTS_QUERY_KEY_PREFIX })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: eventContactKeys.primaryClients() })
   })
 
   it("updateEvent returns a promise and rejects on mutation failure", async () => {
@@ -210,7 +209,7 @@ describe("useEvents month-scoped queries and mutations", () => {
       })
     })
 
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: EVENTS_SEARCH_QUERY_KEY_PREFIX })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: eventKeys.searches() })
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["touchpoints", "incomplete"] })
   })
 

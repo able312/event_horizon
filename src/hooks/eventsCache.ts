@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query"
 import type { Event } from "~/definitions/database"
+import { eventKeys } from "~/lib/data/queries"
 import { getMonthParamForDateTime, normalizeMonthParam } from "~/lib/months"
 
 export type EventScope =
@@ -11,17 +12,13 @@ export type EventScope =
       kind: "unscheduled"
     }
 
-export const EVENTS_MONTH_QUERY_KEY_PREFIX = ["events", "month"] as const
-export const EVENTS_UNSCHEDULED_QUERY_KEY = ["events", "unscheduled"] as const
-export const EVENTS_SEARCH_QUERY_KEY_PREFIX = ["events", "search"] as const
-
 export function getEventsMonthQueryKey(month: string) {
   const normalizedMonth = normalizeMonthParam(month)
   if (!normalizedMonth) {
     throw new Error(`Invalid month query key: ${month}`)
   }
 
-  return [...EVENTS_MONTH_QUERY_KEY_PREFIX, normalizedMonth] as const
+  return eventKeys.month(normalizedMonth)
 }
 
 export function getEventScopeFromStartDateTime(
@@ -45,7 +42,7 @@ export function getEventScopeFromEvent(
 export function getEventScopeQueryKey(scope: EventScope) {
   return scope.kind === "month"
     ? getEventsMonthQueryKey(scope.month)
-    : EVENTS_UNSCHEDULED_QUERY_KEY
+    : eventKeys.unscheduled()
 }
 
 async function invalidateEventScope(
@@ -82,10 +79,10 @@ export async function invalidateAllEventScopes(
   queryClient: QueryClient,
 ): Promise<void> {
   await queryClient.invalidateQueries({
-    queryKey: EVENTS_MONTH_QUERY_KEY_PREFIX,
+    queryKey: eventKeys.months(),
   })
   await queryClient.invalidateQueries({
-    queryKey: EVENTS_UNSCHEDULED_QUERY_KEY,
+    queryKey: eventKeys.unscheduled(),
   })
 }
 
@@ -93,7 +90,7 @@ export async function invalidateEventsSearchQueries(
   queryClient: QueryClient,
 ): Promise<void> {
   await queryClient.invalidateQueries({
-    queryKey: EVENTS_SEARCH_QUERY_KEY_PREFIX,
+    queryKey: eventKeys.searches(),
   })
 }
 
@@ -102,14 +99,14 @@ export function findCachedEventById(
   eventId: string,
 ): Event | null {
   for (const [, maybeEvents] of queryClient.getQueriesData<Event[]>({
-    queryKey: EVENTS_MONTH_QUERY_KEY_PREFIX,
+    queryKey: eventKeys.months(),
   })) {
     const found = maybeEvents?.find((event) => event.id === eventId)
     if (found) return found
   }
 
   const unscheduledEvents = queryClient.getQueryData<Event[]>(
-    EVENTS_UNSCHEDULED_QUERY_KEY,
+    eventKeys.unscheduled(),
   )
   return unscheduledEvents?.find((event) => event.id === eventId) ?? null
 }

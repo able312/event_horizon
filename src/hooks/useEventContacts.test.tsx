@@ -6,11 +6,10 @@ import type { Contact, EventContactsPanel } from "~/definitions/contacts"
 import { ContactsError } from "~/lib/contacts/contactsError"
 import * as contactsIpc from "~/lib/data/contacts"
 import * as eventContactsIpc from "~/lib/data/eventContacts"
+import { eventContactKeys } from "~/lib/data/queries"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
 
 import {
-  eventContactsQueryKey,
-  PRIMARY_CLIENTS_QUERY_KEY_PREFIX,
   useArchiveContact,
   useContactDirectory,
   useContactSearch,
@@ -131,7 +130,7 @@ describe("useEventContacts", () => {
     act(() => result.current.removeContact("ec-1"))
 
     await waitFor(() => {
-      const cached = queryClient.getQueryData<EventContactsPanel>(eventContactsQueryKey("event-1"))
+      const cached = queryClient.getQueryData<EventContactsPanel>(eventContactKeys.panel("event-1"))
       expect(cached?.groups[0]!.items).toHaveLength(0)
     })
 
@@ -140,7 +139,7 @@ describe("useEventContacts", () => {
     })
 
     await waitFor(() => {
-      const cached = queryClient.getQueryData<EventContactsPanel>(eventContactsQueryKey("event-1"))
+      const cached = queryClient.getQueryData<EventContactsPanel>(eventContactKeys.panel("event-1"))
       expect(cached?.groups[0]!.items).toHaveLength(1)
     })
   })
@@ -320,11 +319,5 @@ describe("useDeleteContact", () => {
 
     expect(error).toBeInstanceOf(ContactsError)
     expect((error as ContactsError).code).toBe("ContactInUse")
-  })
-})
-
-describe("PRIMARY_CLIENTS_QUERY_KEY_PREFIX", () => {
-  it("shares the event-contacts root, so a full-cache invalidation covers it too", () => {
-    expect(PRIMARY_CLIENTS_QUERY_KEY_PREFIX[0]).toBe("event-contacts")
   })
 })

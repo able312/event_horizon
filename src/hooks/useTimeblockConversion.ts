@@ -3,16 +3,16 @@ import { toast } from "sonner"
 
 import type { ConvertTimeblockInput } from "~/definitions/timeblocks/timeblock-conversion"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
+import { timeblockKeys } from "~/lib/data/queries"
 import * as timeblocksIpc from "~/lib/data/timeblocks"
-import { focusedTimeblockQueryKey } from "./useFocusedTimeblock"
 
 function invalidateConversionCaches(queryClient: ReturnType<typeof useQueryClient>, eventId: string, timeblockId: string) {
-  queryClient.invalidateQueries({ queryKey: ["note", eventId] })
-  queryClient.invalidateQueries({ queryKey: ["setupInstructions", eventId] })
-  queryClient.invalidateQueries({ queryKey: ["foodSection", eventId] })
-  queryClient.invalidateQueries({ queryKey: ["beverageSection", eventId] })
-  queryClient.invalidateQueries({ queryKey: ["timeblocks", eventId] })
-  queryClient.invalidateQueries({ queryKey: focusedTimeblockQueryKey(timeblockId) })
+  queryClient.invalidateQueries({ queryKey: timeblockKeys.notes(eventId) })
+  queryClient.invalidateQueries({ queryKey: timeblockKeys.setupInstructions(eventId) })
+  queryClient.invalidateQueries({ queryKey: timeblockKeys.foodSection(eventId) })
+  queryClient.invalidateQueries({ queryKey: timeblockKeys.beverageSection(eventId) })
+  queryClient.invalidateQueries({ queryKey: timeblockKeys.timeline(eventId) })
+  queryClient.invalidateQueries({ queryKey: timeblockKeys.byId(timeblockId) })
 }
 
 export function useTimeblockConversion(eventId: string | undefined) {
@@ -33,7 +33,7 @@ export function useTimeblockConversion(eventId: string | undefined) {
       // Keep the focused query immediately consistent so the orchestrator
       // can switch editors without waiting on a refetch race.
       queryClient.setQueryData<TimeblockWithItems>(
-        focusedTimeblockQueryKey(result.timeblock.id),
+        timeblockKeys.byId(result.timeblock.id),
         (old) => ({
           ...(old ?? (result.timeblock as TimeblockWithItems)),
           ...result.timeblock,

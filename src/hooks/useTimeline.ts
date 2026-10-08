@@ -1,19 +1,16 @@
 import { useParams } from "react-router"
 import { useQuery } from "@tanstack/react-query"
-import type { TimelineTimeblock } from "~/definitions/timeblocks/timeblocks-types"
-import * as timeblocksIpc from "~/lib/data/timeblocks"
+import { timeblockQueries } from "~/lib/data/queries"
 import { useTimeblockMutations } from "./useTimeblockMutations"
 
 export function useTimeline() {
   const { id } = useParams()
 
-  const queryKey = ["timeblocks", id!] as const
+  const timelineQuery = timeblockQueries.timeline(id ?? "")
+  const queryKey = timelineQuery.queryKey
 
-  const query = useQuery<TimelineTimeblock[]>({
-    queryKey,
-    queryFn: async () => {
-      return await timeblocksIpc.getAllTimelineBlocks(id!)
-    },
+  const query = useQuery({
+    ...timelineQuery,
     enabled: !!id,
   })
 

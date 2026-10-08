@@ -1,7 +1,7 @@
 import { useParams } from "react-router"
 import { useQuery } from "@tanstack/react-query"
 import { useTimeblockMutations, type AddTimeblockInput } from "./useTimeblockMutations"
-import * as timeblocksIpc from "~/lib/data/timeblocks"
+import { timeblockQueries } from "~/lib/data/queries"
 
 export interface AddSetupInstructionOptions {
   prefill?: "blank" | "default"
@@ -35,13 +35,11 @@ function mapSetupInstructionOptionsToCreateInput(options?: AddSetupInstructionOp
 export function useSetupInstructionSection() {
   const { id: eventId } = useParams()
 
-  const queryKey = ["setupInstructions", eventId] as const
+  const setupInstructionsQuery = timeblockQueries.setupInstructions(eventId ?? "")
+  const queryKey = setupInstructionsQuery.queryKey
 
   const query = useQuery({
-    queryKey,
-    queryFn: async () => {
-      return await timeblocksIpc.getTimeblocksByEventAndSection(eventId!, "setup_instruction")
-    },
+    ...setupInstructionsQuery,
     enabled: !!eventId,
   })
 

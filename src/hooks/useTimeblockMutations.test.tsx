@@ -209,7 +209,6 @@ describe("useTimeblockMutations", () => {
     await waitFor(() => expect(timeblocksIpc.createTimeblock).toHaveBeenCalledTimes(1))
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["beverageSection", "event-1"] })
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["beverage", "event-1"] })
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
   })
 
@@ -234,7 +233,6 @@ describe("useTimeblockMutations", () => {
     await waitFor(() => expect(timeblocksIpc.deleteTimeblock).toHaveBeenCalledWith("tb-1"))
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["beverageSection", "event-1"] })
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["beverage", "event-1"] })
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
   })
 
@@ -313,6 +311,36 @@ describe("useTimeblockMutations", () => {
     await waitFor(() => expect(timeblocksIpc.updateTimeblock).toHaveBeenCalledTimes(1))
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["foodSection", "event-1"] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
+  })
+
+  it("invalidates the edited block's own section list when it is edited from the timeline", async () => {
+    vi.mocked(timeblocksIpc.updateTimeblock).mockResolvedValue(
+      makeCreatedTimeblock({ title: "Lunch", sectionType: "food" })
+    )
+
+    const { result, queryClient } = renderHookWithProviders(() =>
+      useTimeblockMutations({
+        queryKey: ["timeblocks", "event-1"],
+        eventId: "event-1",
+        sectionType: "note",
+      })
+    )
+
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
+
+    act(() => {
+      result.current.updateTimeblock({
+        id: "tb-1",
+        updates: { title: "Lunch" },
+      })
+    })
+
+    await waitFor(() => expect(timeblocksIpc.updateTimeblock).toHaveBeenCalledTimes(1))
+
+    await waitFor(() =>
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["foodSection", "event-1"] })
+    )
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
   })
 })

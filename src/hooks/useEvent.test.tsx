@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import type { Event } from "~/definitions/database"
 import * as eventsApi from "~/lib/data/events"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
-import { EVENTS_SEARCH_QUERY_KEY_PREFIX } from "./eventsCache"
+import { eventKeys } from "~/lib/data/queries"
 import { useEvent } from "./useEvent"
 
 const navigateMock = vi.fn()
@@ -121,7 +121,7 @@ describe("useEvent async mutation contract", () => {
       await result.current.updateEvent({ title: "Updated title" })
     })
 
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: EVENTS_SEARCH_QUERY_KEY_PREFIX })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: eventKeys.searches() })
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["touchpoints", "incomplete"] })
   })
 

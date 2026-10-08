@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { ChargeCategory, MenuOfChargeItem, UpdateMenuOfChargeItem } from "~/definitions/database"
 import * as menuOfChargeItemApi from "~/lib/data/menuOfChargeItems"
+import { menuOfChargeItemQueries } from "~/lib/data/queries"
 
 function sortMenuItems(items: MenuOfChargeItem[]): MenuOfChargeItem[] {
   return [...items].sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""))
@@ -12,14 +13,12 @@ export function useMenuOfChargeItemsSection() {
   const { id: eventId } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
 
-  const queryKey = ["menuOfChargeItems", eventId] as const
+  const menuItemsQuery = menuOfChargeItemQueries.byEvent(eventId ?? "")
+  const queryKey = menuItemsQuery.queryKey
 
   const query = useQuery({
-    queryKey,
-    queryFn: async () => {
-      const data = await menuOfChargeItemApi.getMenuOfChargeItemsByEventId(eventId!)
-      return sortMenuItems(data)
-    },
+    ...menuItemsQuery,
+    select: sortMenuItems,
   })
 
   const createMutation = useMutation({

@@ -8,6 +8,7 @@ import type {
   Touchpoint,
   UpdateTouchpoint,
 } from "~/definitions/database"
+import { touchpointKeys, touchpointQueries } from "~/lib/data/queries"
 import * as touchpointApi from "~/lib/data/touchpoints"
 
 function sortTouchpoints(items: Touchpoint[]): Touchpoint[] {
@@ -23,22 +24,20 @@ function sortTouchpoints(items: Touchpoint[]): Touchpoint[] {
   })
 }
 
-const incompleteQueryKey = ["touchpoints", "incomplete"] as const
+const incompleteQueryKey = touchpointKeys.incomplete()
 
 export function useTouchpointsSection(eventIdOverride?: string) {
   const { id: routeEventId } = useParams<{ id: string }>()
   const eventId = eventIdOverride ?? routeEventId
   const queryClient = useQueryClient()
 
-  const queryKey = ["touchpoints", eventId] as const
+  const touchpointsQuery = touchpointQueries.byEvent(eventId ?? "")
+  const queryKey = touchpointsQuery.queryKey
 
   const query = useQuery({
-    queryKey,
+    ...touchpointsQuery,
     enabled: Boolean(eventId),
-    queryFn: async () => {
-      const data = await touchpointApi.getTouchpointsByEventId(eventId!)
-      return sortTouchpoints(data)
-    },
+    select: sortTouchpoints,
   })
 
   const invalidateRelated = () => {
@@ -133,10 +132,7 @@ export function useTouchpointsSection(eventIdOverride?: string) {
 export function useIncompleteTouchpoints() {
   const queryClient = useQueryClient()
 
-  const query = useQuery({
-    queryKey: incompleteQueryKey,
-    queryFn: () => touchpointApi.getIncompleteTouchpoints(),
-  })
+  const query = useQuery(touchpointQueries.incomplete())
 
   const completeMutation = useMutation({
     mutationFn: ({ id }: { id: string; eventId: string }) =>
@@ -159,7 +155,7 @@ export function useIncompleteTouchpoints() {
     },
     onSettled: (_data, _err, vars) => {
       void queryClient.invalidateQueries({ queryKey: incompleteQueryKey })
-      void queryClient.invalidateQueries({ queryKey: ["touchpoints", vars.eventId] })
+      void queryClient.invalidateQueries({ queryKey: touchpointKeys.byEvent(vars.eventId) })
     },
   })
 

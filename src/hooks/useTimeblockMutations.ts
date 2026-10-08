@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient, type QueryKey } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { UpdateTimeblock } from "~/definitions/database"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
@@ -6,16 +6,16 @@ import type { TimeblockType } from "~/definitions/timeblocks/timeblocks-types"
 import type { BeverageSectionPayload } from "~/definitions/beverage/beverage-types"
 import type { CreateTimeblockInput, TimeblockPrefillRequest } from "~/definitions/timeblocks/timeblock-create"
 import { getSectionDefaultPrefill } from "~/definitions/timeblocks/setupInstructionPrefill"
+import { timeblockKeys } from "~/lib/data/queries"
 import * as timeblocksIpc from "~/lib/data/timeblocks"
 import {
   appendBeverageTimeblock,
   removeTimeblockFromBeverageSection,
   updateBeverageTimeblock,
 } from "./util/optimisticBeverageSectionCache"
-import { focusedTimeblockQueryKey } from "./useFocusedTimeblock"
 
 interface UseTimeblockMutationsOptions {
-  queryKey: readonly [string, string | undefined]
+  queryKey: QueryKey
   eventId: string
   sectionType: TimeblockType
   cacheShape?: "timeblockList" | "beverageSection"
@@ -53,10 +53,16 @@ function resolveOptimisticValues(sectionType: TimeblockType, input?: AddTimebloc
 export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheShape = "timeblockList" }: UseTimeblockMutationsOptions) {
   const queryClient = useQueryClient()
 
-  const invalidateKeys = (type: string) => {
+  /** Invalidates this hook's list, the section list for blocks of `type`, and the timeline. */
+  const invalidateKeys = (type: TimeblockType) => {
     queryClient.invalidateQueries({ queryKey })
-    queryClient.invalidateQueries({ queryKey: [type, eventId] })
-    queryClient.invalidateQueries({ queryKey: ["timeblocks", eventId] })
+    invalidateSectionList(type)
+    queryClient.invalidateQueries({ queryKey: timeblockKeys.timeline(eventId) })
+  }
+
+  const invalidateSectionList = (type: TimeblockType) => {
+    const sectionKey = timeblockKeys.section(type, eventId)
+    if (sectionKey) queryClient.invalidateQueries({ queryKey: sectionKey })
   }
 
   const addTimeblockMutation = useMutation({
@@ -173,11 +179,11 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheSha
         updates.details !== undefined
 
       queryClient.invalidateQueries({ queryKey })
-      queryClient.invalidateQueries({ queryKey: [type, eventId] })
-      queryClient.invalidateQueries({ queryKey: focusedTimeblockQueryKey(variables.id) })
+      invalidateSectionList(type)
+      queryClient.invalidateQueries({ queryKey: timeblockKeys.byId(variables.id) })
 
       if (shouldRefreshTimeline) {
-        queryClient.invalidateQueries({ queryKey: ["timeblocks", eventId] })
+        queryClient.invalidateQueries({ queryKey: timeblockKeys.timeline(eventId) })
       }
     },
   })

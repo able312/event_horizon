@@ -18,24 +18,24 @@ import {
 import * as contactRolesApi from "~/lib/data/contactRoles"
 import * as contactsApi from "~/lib/data/contacts"
 import * as eventContactsApi from "~/lib/data/eventContacts"
-import * as vendorCategoriesApi from "~/lib/data/vendorCategories"
+import {
+  contactKeys,
+  contactQueries,
+  eventContactKeys,
+  eventContactQueries,
+  vendorCategoryQueries,
+} from "~/lib/data/queries"
 
 const CONTACT_SEARCH_LIMIT = 20
 
-const eventContactsRootKey = ["event-contacts"] as const
-export const eventContactsQueryKey = (eventId: string) => [...eventContactsRootKey, eventId] as const
-/** Batched primary clients for list views; any contact change on any event can affect them. */
-export const PRIMARY_CLIENTS_QUERY_KEY_PREFIX = [...eventContactsRootKey, "primary-clients"] as const
-const contactsRootKey = ["contacts"] as const
-
 /** Invalidates the whole event-contacts cache: every event's panel plus the primary-clients batch. */
 function invalidateAllEventContacts(queryClient: ReturnType<typeof useQueryClient>) {
-  void queryClient.invalidateQueries({ queryKey: eventContactsRootKey })
+  void queryClient.invalidateQueries({ queryKey: eventContactKeys.all() })
 }
 
 /** Invalidates the directory: search results, by-id lookups, standing roles, and event history. */
 function invalidateContactsDirectory(queryClient: ReturnType<typeof useQueryClient>) {
-  void queryClient.invalidateQueries({ queryKey: contactsRootKey })
+  void queryClient.invalidateQueries({ queryKey: contactKeys.all() })
 }
 
 export type AssignEventContactVariables = {
@@ -63,22 +63,21 @@ function withoutEventContact(panel: EventContactsPanel, eventContactId: string):
 
 export function useEventContacts(eventId: string) {
   const queryClient = useQueryClient()
-  const queryKey = eventContactsQueryKey(eventId)
+  const queryKey = eventContactKeys.panel(eventId)
 
   const query = useQuery({
-    queryKey,
+    ...eventContactQueries.panel(eventId),
     enabled: Boolean(eventId),
-    queryFn: () => eventContactsApi.getEventContactsPanel(eventId),
   })
 
   const invalidatePanel = () => {
     void queryClient.invalidateQueries({ queryKey })
-    void queryClient.invalidateQueries({ queryKey: PRIMARY_CLIENTS_QUERY_KEY_PREFIX })
+    void queryClient.invalidateQueries({ queryKey: eventContactKeys.primaryClients() })
   }
 
   // Assigning/saving can create or change a contact, which changes directory search and by-id results
   const invalidateDirectory = () => {
-    void queryClient.invalidateQueries({ queryKey: contactsRootKey })
+    void queryClient.invalidateQueries({ queryKey: contactKeys.all() })
   }
 
   /** Errors are left to the caller so the add dialog can react to EmailTaken inline. */
@@ -142,9 +141,8 @@ export function useEventContacts(eventId: string) {
 /** The event's primary client. Shares the panel's cache, so it updates as soon as contacts are edited. */
 export function usePrimaryClient(eventId: string | undefined) {
   return useQuery({
-    queryKey: eventContactsQueryKey(eventId ?? ""),
+    ...eventContactQueries.panel(eventId ?? ""),
     enabled: Boolean(eventId),
-    queryFn: () => eventContactsApi.getEventContactsPanel(eventId!),
     select: selectPrimaryClient,
   })
 }
@@ -152,9 +150,8 @@ export function usePrimaryClient(eventId: string | undefined) {
 /** Every client, coordinator and vendor with contact details, grouped by role, for printed documents. */
 export function usePrintableContactGroups(eventId: string | undefined) {
   return useQuery({
-    queryKey: eventContactsQueryKey(eventId ?? ""),
+    ...eventContactQueries.panel(eventId ?? ""),
     enabled: Boolean(eventId),
-    queryFn: () => eventContactsApi.getEventContactsPanel(eventId!),
     select: selectPrintableContactGroups,
   })
 }
@@ -163,10 +160,9 @@ export function usePrintableContactGroups(eventId: string | undefined) {
 export function usePrimaryClients(eventIds: string[]) {
   const ids = [...new Set(eventIds)].sort()
   return useQuery({
-    queryKey: [...PRIMARY_CLIENTS_QUERY_KEY_PREFIX, ids],
+    ...eventContactQueries.primaryClients(ids),
     enabled: ids.length > 0,
     placeholderData: keepPreviousData,
-    queryFn: () => eventContactsApi.getPrimaryClients(ids),
   })
 }
 
@@ -178,25 +174,15 @@ export type ContactSearchFilters = {
 
 /** Directory search, used by both the add-contact dialog and the Contacts page. Keeps the last results visible while typing. */
 export function useContactSearch(query: string, enabled: boolean, filters?: ContactSearchFilters) {
-  const trimmed = query.trim()
   return useQuery({
-    queryKey: [
-      ...contactsRootKey,
-      "search",
-      trimmed,
-      filters?.role ?? null,
-      filters?.includeArchived ?? false,
-      filters?.limit ?? CONTACT_SEARCH_LIMIT,
-    ],
+    ...contactQueries.search({
+      query: query.trim(),
+      role: filters?.role ?? null,
+      includeArchived: filters?.includeArchived ?? false,
+      limit: filters?.limit ?? CONTACT_SEARCH_LIMIT,
+    }),
     enabled,
     placeholderData: keepPreviousData,
-    queryFn: () =>
-      contactsApi.searchContacts({
-        query: trimmed,
-        limit: filters?.limit ?? CONTACT_SEARCH_LIMIT,
-        role: filters?.role,
-        includeArchived: filters?.includeArchived,
-      }),
   })
 }
 
@@ -208,42 +194,27 @@ export type ContactDirectoryFilters = {
 
 /** Contacts page list: loads one page at a time and appends the next on request, so no contact is out of reach. */
 export function useContactDirectory(query: string, filters: ContactDirectoryFilters) {
-  const trimmed = query.trim()
   return useInfiniteQuery({
-    queryKey: [
-      ...contactsRootKey,
-      "directory",
-      trimmed,
-      filters.role ?? null,
-      filters.includeArchived ?? false,
-      filters.pageSize,
-    ],
+    ...contactQueries.directory({
+      query: query.trim(),
+      role: filters.role ?? null,
+      includeArchived: filters.includeArchived ?? false,
+      limit: filters.pageSize,
+    }),
     placeholderData: keepPreviousData,
-    initialPageParam: null as string | null,
-    queryFn: ({ pageParam }) =>
-      contactsApi.searchContacts({
-        query: trimmed,
-        limit: filters.pageSize,
-        cursor: pageParam,
-        role: filters.role,
-        includeArchived: filters.includeArchived,
-      }),
-    getNextPageParam: (lastPage) => lastPage.nextCursor,
   })
 }
 
 export function useContact(contactId: string | null) {
   return useQuery({
-    queryKey: [...contactsRootKey, "by-id", contactId],
+    ...contactQueries.byId(contactId ?? ""),
     enabled: Boolean(contactId),
-    queryFn: () => contactsApi.getContactById(contactId!),
   })
 }
 
 export function useVendorCategories() {
   return useQuery({
-    queryKey: ["vendor-categories"],
-    queryFn: () => vendorCategoriesApi.getVendorCategories(),
+    ...vendorCategoryQueries.all(),
     staleTime: Infinity,
   })
 }
@@ -313,9 +284,8 @@ export function useDeleteContact() {
 
 export function useContactRoles(contactId: string | null) {
   return useQuery({
-    queryKey: [...contactsRootKey, "roles", contactId],
+    ...contactQueries.roles(contactId ?? ""),
     enabled: Boolean(contactId),
-    queryFn: () => contactRolesApi.getContactRoles(contactId!),
   })
 }
 
@@ -345,8 +315,7 @@ export function useRemoveContactRole() {
 
 export function useContactEventHistory(contactId: string | null) {
   return useQuery({
-    queryKey: [...contactsRootKey, "history", contactId],
+    ...contactQueries.history(contactId ?? ""),
     enabled: Boolean(contactId),
-    queryFn: () => eventContactsApi.getContactEventHistory(contactId!),
   })
 }

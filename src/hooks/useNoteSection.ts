@@ -1,19 +1,17 @@
 import { useParams } from "react-router"
 import { useQuery } from "@tanstack/react-query"
 import { useTimeblockMutations } from "./useTimeblockMutations"
-import * as timeblocksIpc from "~/lib/data/timeblocks"
+import { timeblockQueries } from "~/lib/data/queries"
 
 
 export function useNoteSection() {
   const { id: eventId } = useParams()
 
-  const queryKey = ["note", eventId] as const
+  const notesQuery = timeblockQueries.notes(eventId ?? "")
+  const queryKey = notesQuery.queryKey
 
   const query = useQuery({
-    queryKey,
-    queryFn: async () => {
-      return await timeblocksIpc.getTimeblocksByEventAndSection(eventId!, "note")
-    },
+    ...notesQuery,
     enabled: !!eventId,
   })
 

@@ -4,7 +4,7 @@ import { toast } from "sonner"
 import type { FoodItem } from "~/definitions/database"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import * as foodItemsIpc from "~/lib/data/foodItems"
-import { focusedTimeblockQueryKey } from "./useFocusedTimeblock"
+import { timeblockKeys, timeblockQueries } from "~/lib/data/queries"
 import { useTimeblockMutations } from "./useTimeblockMutations"
 import {
   appendListItem,
@@ -53,21 +53,19 @@ export function useFoodSection() {
   const { id: eventId } = useParams()
   const queryClient = useQueryClient()
 
-  const queryKey = ["foodSection", eventId] as const
+  const sectionQuery = timeblockQueries.foodSection(eventId ?? "")
+  const queryKey = sectionQuery.queryKey
 
   const invalidateKeys = (focusedTimeblockId?: string) => {
     queryClient.invalidateQueries({ queryKey })
-    queryClient.invalidateQueries({ queryKey: ["timeblocks", eventId] })
+    queryClient.invalidateQueries({ queryKey: timeblockKeys.timeline(eventId ?? "") })
     if (focusedTimeblockId) {
-      queryClient.invalidateQueries({ queryKey: focusedTimeblockQueryKey(focusedTimeblockId) })
+      queryClient.invalidateQueries({ queryKey: timeblockKeys.byId(focusedTimeblockId) })
     }
   }
 
   const query = useQuery({
-    queryKey,
-    queryFn: async () => {
-      return await foodItemsIpc.getFoodSectionWithItems(eventId!)
-    },
+    ...sectionQuery,
     enabled: !!eventId,
   })
 
@@ -88,7 +86,7 @@ export function useFoodSection() {
         unitPriceCents: newItem?.unitPriceCents ?? undefined,
       }),
     onMutate: async ({ timeblockId, newItem }) => {
-      const focusedQueryKey = focusedTimeblockQueryKey(timeblockId)
+      const focusedQueryKey = timeblockKeys.byId(timeblockId)
       await Promise.all([
         queryClient.cancelQueries({ queryKey }),
         queryClient.cancelQueries({ queryKey: focusedQueryKey }),
@@ -123,7 +121,7 @@ export function useFoodSection() {
         replaceListItemByTempId(old, context.timeblockId, "foodItems", context.tempId, createdItem)
       )
       queryClient.setQueryData<TimeblockWithItems>(
-        focusedTimeblockQueryKey(context.timeblockId),
+        timeblockKeys.byId(context.timeblockId),
         (old) => updateFocusedFoodItems(
           old,
           (items) => items.map((item) => item.id === context.tempId ? createdItem : item),
@@ -135,7 +133,7 @@ export function useFoodSection() {
         restoreQueryData(queryClient, queryKey, context.previousData)
         restoreQueryData(
           queryClient,
-          focusedTimeblockQueryKey(variables.timeblockId),
+          timeblockKeys.byId(variables.timeblockId),
           context.previousFocusedData,
         )
       }
@@ -156,7 +154,7 @@ export function useFoodSection() {
         unitPriceCents: updates.unitPriceCents ?? undefined,
       }),
     onMutate: async ({ timeblockId, itemId, updates }) => {
-      const focusedQueryKey = focusedTimeblockQueryKey(timeblockId)
+      const focusedQueryKey = timeblockKeys.byId(timeblockId)
       await Promise.all([
         queryClient.cancelQueries({ queryKey }),
         queryClient.cancelQueries({ queryKey: focusedQueryKey }),
@@ -184,7 +182,7 @@ export function useFoodSection() {
         updateListItem(old, variables.timeblockId, "foodItems", updatedItem.id, confirmedUpdates),
       )
       queryClient.setQueryData<TimeblockWithItems>(
-        focusedTimeblockQueryKey(variables.timeblockId),
+        timeblockKeys.byId(variables.timeblockId),
         (old) => updateFocusedFoodItems(
           old,
           (items) => items.map((item) =>
@@ -198,7 +196,7 @@ export function useFoodSection() {
         restoreQueryData(queryClient, queryKey, context.previousData)
         restoreQueryData(
           queryClient,
-          focusedTimeblockQueryKey(variables.timeblockId),
+          timeblockKeys.byId(variables.timeblockId),
           context.previousFocusedData,
         )
       }
@@ -213,7 +211,7 @@ export function useFoodSection() {
     mutationFn: ({ itemId }: { timeblockId: string; itemId: string }) =>
       foodItemsIpc.deleteFoodItem(itemId),
     onMutate: async ({ timeblockId, itemId }) => {
-      const focusedQueryKey = focusedTimeblockQueryKey(timeblockId)
+      const focusedQueryKey = timeblockKeys.byId(timeblockId)
       await Promise.all([
         queryClient.cancelQueries({ queryKey }),
         queryClient.cancelQueries({ queryKey: focusedQueryKey }),
@@ -235,7 +233,7 @@ export function useFoodSection() {
         restoreQueryData(queryClient, queryKey, context.previousData)
         restoreQueryData(
           queryClient,
-          focusedTimeblockQueryKey(variables.timeblockId),
+          timeblockKeys.byId(variables.timeblockId),
           context.previousFocusedData,
         )
       }

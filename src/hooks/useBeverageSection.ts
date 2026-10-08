@@ -4,7 +4,7 @@ import { toast } from "sonner"
 import type { BeverageItemType, Timeblock } from "~/definitions/database"
 import type { BeverageItemWithAssignments, BeverageSectionPayload } from "~/definitions/beverage/beverage-types"
 import * as beverageItemsIpc from "~/lib/data/beverageItems"
-import { focusedTimeblockQueryKey } from "./useFocusedTimeblock"
+import { timeblockKeys, timeblockQueries } from "~/lib/data/queries"
 import { useTimeblockMutations } from "./useTimeblockMutations"
 import {
   appendBeverageItem,
@@ -28,28 +28,26 @@ export function useBeverageSection() {
   const { id: eventId } = useParams()
   const queryClient = useQueryClient()
 
-  const queryKey = ["beverageSection", eventId] as const
+  const sectionQuery = timeblockQueries.beverageSection(eventId ?? "")
+  const queryKey = sectionQuery.queryKey
 
   const invalidateKeys = (focusedTimeblockId?: string) => {
     queryClient.invalidateQueries({ queryKey })
-    queryClient.invalidateQueries({ queryKey: ["timeblocks", eventId] })
+    queryClient.invalidateQueries({ queryKey: timeblockKeys.timeline(eventId ?? "") })
     if (focusedTimeblockId) {
-      queryClient.invalidateQueries({ queryKey: focusedTimeblockQueryKey(focusedTimeblockId) })
+      queryClient.invalidateQueries({ queryKey: timeblockKeys.byId(focusedTimeblockId) })
     }
   }
 
   const invalidateAllFocusedBeverageTimeblocks = () => {
     const section = queryClient.getQueryData<BeverageSectionPayload>(queryKey)
     for (const timeblock of section?.timeblocks ?? []) {
-      queryClient.invalidateQueries({ queryKey: focusedTimeblockQueryKey(timeblock.id) })
+      queryClient.invalidateQueries({ queryKey: timeblockKeys.byId(timeblock.id) })
     }
   }
 
   const query = useQuery({
-    queryKey,
-    queryFn: async () => {
-      return await beverageItemsIpc.getBeverageSectionWithItems(eventId!)
-    },
+    ...sectionQuery,
     enabled: !!eventId,
   })
 
@@ -259,7 +257,7 @@ export function useBeverageSection() {
     onSettled: (_data, _error, _variables, context) => {
       invalidateKeys()
       for (const timeblockId of context?.affectedTimeblockIds ?? []) {
-        queryClient.invalidateQueries({ queryKey: focusedTimeblockQueryKey(timeblockId) })
+        queryClient.invalidateQueries({ queryKey: timeblockKeys.byId(timeblockId) })
       }
     },
   })

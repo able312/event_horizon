@@ -1,17 +1,9 @@
 import { useQuery } from "@tanstack/react-query"
-import * as timeblocksIpc from "~/lib/data/timeblocks"
-
-export function focusedTimeblockQueryKey(timeblockId: string) {
-  return ["timeblock", timeblockId] as const
-}
+import { timeblockQueries } from "~/lib/data/queries"
 
 export function useFocusedTimeblock(timeblockId: string | null | undefined) {
   return useQuery({
-    queryKey: focusedTimeblockQueryKey(timeblockId ?? ""),
-    queryFn: async () => {
-      if (!timeblockId) throw new Error("timeblockId is required")
-      return timeblocksIpc.getTimeblockById(timeblockId)
-    },
+    ...timeblockQueries.byId(timeblockId ?? ""),
     enabled: !!timeblockId,
     retry: 1,
   })

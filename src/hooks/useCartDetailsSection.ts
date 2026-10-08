@@ -3,22 +3,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { CartDetails, UpdateCartDetails } from "~/definitions/database"
 import * as cartDetailsApi from "~/lib/data/cartDetails"
+import { cartDetailsQueries, timeblockKeys } from "~/lib/data/queries"
 
 export function useCartDetailsSection(enabled = true) {
   const { id: eventId } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
 
-  const queryKey = ["cart_details", eventId] as const
+  const detailsQuery = cartDetailsQueries.byEvent(eventId ?? "")
+  const queryKey = detailsQuery.queryKey
 
   const invalidateKeys = () => {
     queryClient.invalidateQueries({ queryKey })
-    queryClient.invalidateQueries({ queryKey: ["timeblocks", eventId] })
+    queryClient.invalidateQueries({ queryKey: timeblockKeys.timeline(eventId ?? "") })
   }
 
   const query = useQuery({
-    queryKey,
+    ...detailsQuery,
     enabled: Boolean(eventId) && enabled,
-    queryFn: () => cartDetailsApi.getOrCreateCartDetailsByEventId(eventId!),
   })
 
   const updateMutation = useMutation({
