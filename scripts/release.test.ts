@@ -57,6 +57,8 @@ let mergeStateStatus: string
 let mergeQueue: boolean
 let nextDraft: typeof draft | null
 let versionFails: boolean
+let listLags: boolean
+let unlisted: number | null
 
 function artifactsFor(targetVersion: string) {
   const info = { version: targetVersion, files: metadata.files.map((file) => ({ ...file, name: file.name.replace(version, targetVersion) })) }
@@ -82,6 +84,8 @@ beforeEach(() => {
   mergeQueue = false
   nextDraft = null
   versionFails = false
+  listLags = false
+  unlisted = null
   vi.spyOn(console, "log").mockImplementation(() => {})
   vi.mocked(inspectArtifacts).mockImplementation(async (_directory, targetVersion) => artifactsFor(targetVersion))
   vi.mocked(verifyPackages).mockResolvedValue()
@@ -107,14 +111,25 @@ beforeEach(() => {
       if (args[0] === "api" && args[1] === "--method" && args[2] === "DELETE") { current = null; return "" }
       // Like GitHub, drafts are only visible by listing releases, never through releases/tags.
       if (args[0] === "api" && args.includes("--slurp") && args.at(-1) === "repos/able312/event_horizon/releases?per_page=100") {
-        return JSON.stringify([[...(current ? [current] : []), ...(nextDraft ? [nextDraft] : [])]])
+        const listed = current && current.id !== unlisted ? [current] : []
+        return JSON.stringify([[...listed, ...(nextDraft ? [nextDraft] : [])]])
+      }
+      if (args[0] === "api" && args[1] === "--method" && args[2] === "POST") {
+        const field = (key: string) => args.find((arg) => arg.startsWith(`${key}=`))!.slice(key.length + 1)
+        current = { ...draft, id: 2, tag_name: field("tag_name"), target_commitish: field("target_commitish"), assets: [] }
+        // Like GitHub, a just-created draft may be missing from the release list for a moment.
+        if (listLags) unlisted = current.id
+        return JSON.stringify(current)
+      }
+      if (args[0] === "api" && args.length === 2 && args[1].startsWith("repos/able312/event_horizon/releases/")) {
+        if (!current || `${current.id}` !== args[1].split("/").at(-1)) throw new Error("HTTP 404: Not Found")
+        return JSON.stringify(current)
       }
       if (args[0] === "release" && args[1] === "download") {
         if (downloadsFail) throw new Error("network unavailable")
         return ""
       }
-      if (args[0] === "release" && args[1] === "create") { current = { ...draft, tag_name: args[2], target_commitish: headSha, assets: [] }; return "" }
-      if (args[0] === "release" && args[1] === "upload") { current = { ...draft, tag_name: args[2], target_commitish: headSha, assets: artifactsFor(localVersion).files.map((file) => ({ name: file.name, size: file.size, state: "uploaded" })) }; return "" }
+      if (args[0] === "release" && args[1] === "upload") { current = { ...current!, assets: artifactsFor(localVersion).files.map((file) => ({ name: file.name, size: file.size, state: "uploaded" })) }; return "" }
       if (args[0] === "release" && args[1] === "edit") { current = { ...draft, draft: false }; tag = sha; return "" }
       if (args[0] === "api" && args[1] === "graphql") return JSON.stringify({ data: { repository: { mergeQueue: mergeQueue ? { id: "q" } : null } } })
       if (args[0] === "pr" && args[1] === "list") return "[]"
@@ -141,7 +156,8 @@ afterEach(() => {
 })
 
 const ghWrites = () => vi.mocked(run).mock.calls.filter(([command, args]) => command === "gh" &&
-  (args.includes("DELETE") || ["create", "upload", "edit"].includes(args[1])))
+  (args.includes("DELETE") || args.includes("POST") || ["upload", "edit"].includes(args[1])))
+const writeKinds = () => ghWrites().map(([, args]) => args[1] === "--method" ? args[2] : args[1])
 
 describe("release orchestration", () => {
   it("lands a bump PR, then builds and targets its merged main commit", async () => {
@@ -151,9 +167,9 @@ describe("release orchestration", () => {
     const calls = vi.mocked(run).mock.calls
     expect(calls).toContainEqual(["npm", ["version", "0.1.4", "--no-git-tag-version", "--ignore-scripts"]])
     expect(calls.some(([command, args]) => command === "gh" && args[0] === "pr" && args[1] === "merge" && args.includes("--match-head-commit"))).toBe(true)
-    const create = ghWrites().find(([, args]) => args[1] === "create" && args[0] === "release")!
-    expect(create[1]).toContain("v0.1.4")
-    expect(create[1]).toContain("c".repeat(40))
+    const create = ghWrites().find(([, args]) => args.includes("POST"))!
+    expect(create[1]).toContain("tag_name=v0.1.4")
+    expect(create[1]).toContain(`target_commitish=${"c".repeat(40)}`)
     expect(localVersion).toBe("0.1.4")
     expect(branch).toBe("main")
   })
@@ -205,17 +221,17 @@ describe("release orchestration", () => {
     await runRelease([])
     expect(vi.mocked(npm).mock.calls.map(([script]) => script)).toEqual(["test", "lint", "typecheck:release", "dist:mac"])
     expect(verifyPackages).toHaveBeenCalledOnce()
-    const writes = ghWrites()
-    expect(writes.map(([, args]) => args[1])).toEqual(["--method", "create", "upload"])
-    expect(writes[1][1]).toContain(`v${version}`)
-    expect(writes[1][1]).toContain("--draft")
-    expect(writes[1][1]).toContain(sha)
+    expect(writeKinds()).toEqual(["DELETE", "POST", "upload"])
+    const create = ghWrites()[1][1]
+    expect(create).toContain(`tag_name=v${version}`)
+    expect(create).toContain("draft=true")
+    expect(create).toContain(`target_commitish=${sha}`)
   })
   it("repairs a draft whose target was changed to a branch name", async () => {
     current = { ...draft, target_commitish: "main" }
     await runRelease([])
     expect(verifyPackages).toHaveBeenCalledOnce()
-    expect(ghWrites().map(([, args]) => args[1])).toEqual(["--method", "create", "upload"])
+    expect(writeKinds()).toEqual(["DELETE", "POST", "upload"])
   })
   it("gives asset uploads a longer timeout than other GitHub calls", async () => {
     current = { ...draft, assets: [] }
@@ -237,7 +253,14 @@ describe("release orchestration", () => {
     current = null
     await runRelease(["minor"])
     expect(npm).toHaveBeenCalled()
-    expect(ghWrites().map(([, args]) => args[1])).toEqual(["create", "upload"])
+    expect(writeKinds()).toEqual(["POST", "upload"])
+  })
+  it("uploads to and verifies a new draft before it appears in the release list", async () => {
+    current = { ...draft, assets: [] }
+    listLags = true
+    await runRelease([])
+    expect(writeKinds()).toEqual(["DELETE", "POST", "upload"])
+    expect(current?.assets).toHaveLength(assets.length)
   })
   it("preserves an incomplete draft when a quality gate fails", async () => {
     current = { ...draft, assets: [] }

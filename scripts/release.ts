@@ -32,6 +32,11 @@ function findRelease(version: string): Release | null {
   return selectRelease(pages, version)
 }
 
+// Unlike the list, which can lag behind a just-created draft, a release ID lookup is immediately consistent.
+function getRelease(id: number): Release {
+  return JSON.parse(gh(["api", `repos/${repository}/releases/${id}`])) as Release
+}
+
 function tagSha(version: string): string | null {
   const tag = `refs/tags/v${version}`
   const refs = run("git", ["ls-remote", "public", tag, `${tag}^{}`]).split("\n").filter(Boolean)
@@ -225,12 +230,13 @@ async function buildRelease(bump: Bump): Promise<void> {
     gh(["api", "--method", "DELETE", `repos/${repository}/releases/${previous.id}`])
   }
   console.log(`\nUploading verified artifacts to draft v${version}…`)
-  gh(["release", "create", `v${version}`, "--repo", repository, "--draft", "--target", sha, "--title", version, "--generate-notes"])
-  const draft = findRelease(version)
+  const created = JSON.parse(gh(["api", "--method", "POST", `repos/${repository}/releases`, "-f", `tag_name=v${version}`,
+    "-f", `target_commitish=${sha}`, "-f", `name=${version}`, "-F", "draft=true", "-F", "generate_release_notes=true"])) as Release
+  const draft = getRelease(created.id)
   assertDraft(draft, version)
   if (draft.target_commitish !== sha) throw new Error("Created draft targets the wrong source commit.")
   gh(["release", "upload", `v${version}`, "--repo", repository, ...expectedAssetNames(inspected.metadata).map((name) => join(directory, name))], transferTimeout)
-  const uploaded = findRelease(version)
+  const uploaded = getRelease(draft.id)
   assertDraft(uploaded, version)
   verifySource(uploaded, version)
   verifyAssets(inspected.metadata, uploaded.assets, inspected.files)
