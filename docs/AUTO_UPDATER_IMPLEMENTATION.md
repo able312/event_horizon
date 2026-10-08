@@ -1,12 +1,11 @@
 # macOS updater implementation
 
-The local implementation covers steps 2–5 of [AUTO_UPDATER_PLAN.md](AUTO_UPDATER_PLAN.md).
-Step 1's local signing evidence is in [MACOS_SIGNING.md](MACOS_SIGNING.md).
+Local signing evidence is in [MACOS_SIGNING.md](MACOS_SIGNING.md).
 The published `0.1.1` release was detected, downloaded, and installed through the
 updater on both the build Mac and the second Mac (October 2, 2026). `0.1.2` and
 `0.1.3` followed on October 5, 2026, the latter exercising this branch's updater
-code (see acceptance results). Release CI
-(step 7) is the follow-up phase.
+code (see acceptance results). Releases are built and published locally with
+`npm run release` and `npm run release:publish` (see the release workflow).
 
 ## Behavior
 
@@ -260,7 +259,7 @@ updater without issues.
   update downloaded, installed, and the app restarted on `0.1.3`. Development
   continues from `0.1.3` on `main`.
 
-The following checks from step 6 of the plan have not been recorded as run:
+The following update acceptance checks have not been recorded as run:
 
 - Cancelling the restart dialog, and an ordinary quit not installing the update.
 - Event data persistence across the update on both Macs.
@@ -271,6 +270,5 @@ The following checks from step 6 of the plan have not been recorded as run:
 ## Follow-up work
 
 - Resolve/review the remaining dependency audit findings.
-- Add release CI (step 7 of the plan).
 
 Reference: [Electron Builder 26 auto-update guide](https://www.electron.build/v26/docs/features/auto-update/).

@@ -1,6 +1,6 @@
 # Dead Code Cleanup Inventory
 
-Generated: 2026-07-04
+Generated: 2026-07-04 · Completed items removed: 2026-10-08
 
 This document lists dead code identified via static analysis ([fallow](https://docs.fallow.tools)) and manual verification against the current codebase. Items are grouped by cleanup action: whole-file deletion vs. partial cleanup (specific exports, functions, types, or dependencies).
 
@@ -19,10 +19,10 @@ This document lists dead code identified via static analysis ([fallow](https://d
 
 | Category | Count |
 |---|---|
-| Whole files to delete | 13 files (+ 7 associated test files) |
-| Partial cleanups (exports / functions / types) | ~35 symbols across 15 files |
+| Whole files to delete | 6 files (+ 3 associated test files) |
+| Partial cleanups (exports / functions / types) | ~31 symbols across 13 files |
 | Unused npm dependencies | 4 |
-| Stale config references | 2 |
+| Stale config references | 1 |
 
 ---
 
@@ -36,22 +36,6 @@ These files are unreachable from production entry points. Several were supersede
 |---|---|---|
 | `src/electron/db/validation.ts` | **Delete file** | Stub module with `selectEventSchema` and `insertEventSchema`. Nothing imports it. The header comment says it is intentionally empty pending future use. |
 
-### Calendar — legacy modal UI (replaced by sidebar forms)
-
-Create/edit now flows through `CreateEventSidebarForm` / `EditEventSidebarForm` in `CalendarPanelOrchestrator.tsx`. These modal components are only referenced by their own tests.
-
-| File | Status | Notes |
-|---|---|---|
-| `src/features/calendar/dialogs/CreateEventModal.tsx` | **Delete file** | Superseded by `src/features/calendar/forms/CreateEventSidebarForm.tsx`. |
-| `src/features/calendar/dialogs/CreateEventModal.test.tsx` | **Delete file** | Tests the removed modal. Coverage exists on `CreateEventSidebarForm.test.tsx`. |
-| `src/features/calendar/dialogs/EditEventModal.tsx` | **Delete file** | Superseded by `src/features/calendar/forms/EditEventSidebarForm.tsx`. |
-| `src/features/calendar/dialogs/EditEventModal.test.tsx` | **Delete file** | Tests the removed modal. Coverage exists on `EditEventSidebarForm.test.tsx`. |
-
-Within those modal files, also remove before deletion (or they go away with the file):
-
-- `export default CreateEventModal` / `export default EditEventModal` — redundant default exports; named exports were only used in tests.
-- `export const CreateEventModal` / `export const EditEventModal` — the components themselves.
-
 ### Event detail — legacy food section UI
 
 Food editing now lives in `src/features/event-detail/sections/food-beverage-workspaces/FoodWorkspaceSection.tsx`. The old detail-section component chain is orphaned.
@@ -63,15 +47,6 @@ Food editing now lives in `src/features/event-detail/sections/food-beverage-work
 | `src/components/atoms/DetailsTimeblock.tsx` | **Delete file** | Only imported by `FoodSection.tsx`. `GolfDetailsTimeblock.tsx` is the live equivalent for golf/cart sections. |
 | `src/components/atoms/GenericItemCard.tsx` | **Delete file** | Only imported by `FoodSection.tsx`. |
 | `src/components/atoms/GenericItemCard.test.tsx` | **Delete file** | Tests the removed card component. |
-
-### Timeline — unused sort helper
-
-`EventTimeline.tsx` inlines equivalent sort logic (lines 25–33) and never imports this module.
-
-| File | Status | Notes |
-|---|---|---|
-| `src/components/event-detail/detail-sections/sections/timeline/sortTimelineTimeblocks.ts` | **Delete file** | Exported function `sortTimelineTimeblocks` is never called from production code. |
-| `src/components/event-detail/detail-sections/sections/timeline/sortTimelineTimeblocks.test.ts` | **Delete file** | Tests the unused helper. Consider extracting shared sort logic into one place if you want to keep the test coverage. |
 
 ### Search utilities — orphaned hook chain
 
@@ -128,13 +103,6 @@ Production code default-imports these; the named exports are never imported else
 | File | Symbol | Action |
 |---|---|---|
 | `src/definitions/timeblocks/setupInstructionPrefill.ts` | `export const SECTION_DEFAULT_PREFILLS` | **Remove export** — used only by `getSetupInstructionPrefill()` in the same file. |
-
-#### Route state helpers — over-exported internals
-
-| File | Symbol | Action |
-|---|---|---|
-| `src/features/event-detail/workspace/lib/eventDetailRouteState.ts` | `export function sectionFromNodeId` | **Remove export** — used internally by `resolveEventDetailRouteState` and friends. |
-| `src/features/event-detail/workspace/lib/eventDetailRouteState.ts` | `export function getDefaultSelectedNodeId` | **Remove export** — used internally; only referenced externally in tests. |
 
 #### Google Calendar helpers — over-exported internals
 
@@ -212,14 +180,6 @@ Live functions: `getOrCreateTournamentDetailsByEventId`, `updateTournamentDetail
 | `createTournamentDetails` | **Delete function** |
 | `deleteTournamentDetails` | **Delete function** |
 
-**`src/lib/ipc/vendorItems.ts`**
-
-Live functions: `getVendorsByEvent`, `createVendor`, `updateVendor` (via `useVendorSection.ts`). Deletion uses `useTimeblockMutations.removeTimeblock` instead.
-
-| Function | Action |
-|---|---|
-| `deleteVendor` | **Delete function** — only referenced in `ipcContracts.test.ts` and `useVendorSection.test.tsx` mocks. |
-
 ### 2d. Unused exported types
 
 These types are exported but never imported elsewhere. Remove the `export` keyword (keep the type if it documents a hook return value locally).
@@ -232,7 +192,6 @@ These types are exported but never imported elsewhere. Remove the `export` keywo
 | `src/features/calendar/hooks/useEventDeleteConfirmation.ts` | `UseEventDeleteConfirmationReturn` | **Remove export** |
 | `src/features/calendar/hooks/useIcsImportController.ts` | `IcsImportPhase` | **Remove export** |
 | `src/features/calendar/hooks/useIcsImportController.ts` | `UseIcsImportControllerReturn` | **Remove export** |
-| `src/hooks/useSetupInstrucionSection.ts` | `AddSetupInstructionOptions` | **Remove export** |
 | `src/lib/months.ts` | `MonthParts` | **Remove export** |
 
 ---
@@ -262,7 +221,6 @@ Verified: no imports of these packages anywhere under `src/`. The corresponding 
 | File | Issue | Action |
 |---|---|---|
 | `tailwind.config.js` | Legacy Tailwind v3-style config. The app builds with Tailwind v4 via `@tailwindcss/vite` in `vite.config.ts` and `src/index.css`. Still referenced by `components.json` for shadcn CLI scaffolding. | Remove `@tailwindcss/line-clamp` plugin entry. Consider migrating shadcn config to v4 CSS-based setup and deleting this file when convenient. |
-| `src/features/calendar/views/CalendarGrid.test.tsx` | Imports `./calendarDraftPreview` but the module lives at `src/features/calendar/lib/calendarDraftPreview.ts`. | **Fix import path** — broken test import, not dead code in the module itself. |
 
 ---
 
@@ -282,8 +240,8 @@ Do **not** delete these based on static analysis alone:
 
 ## 6. Suggested cleanup order
 
-1. **High confidence, user-visible legacy UI** — delete modal and `FoodSection` chains (Section 1).
-2. **Dead utilities** — delete `validation.ts`, `useSearchView` / `debounce`, `sortTimelineTimeblocks` (Section 1).
+1. **High confidence, user-visible legacy UI** — delete the `FoodSection` chain (Section 1).
+2. **Dead utilities** — delete `validation.ts`, `useSearchView` / `debounce` (Section 1).
 3. **IPC wrapper trim** — remove unused renderer IPC functions; optionally remove matching main-process handlers (Section 2c).
 4. **Dependency prune** — remove four unused Radix / react-hook-form packages (Section 3).
 5. **Export hygiene** — drop unnecessary exports and test-only financial helpers (Section 2).

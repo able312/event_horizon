@@ -1,6 +1,6 @@
 # Local macOS signing proof
 
-This records the first stage of [AUTO_UPDATER_PLAN.md](AUTO_UPDATER_PLAN.md).
+This records the local signing proof for the macOS auto-updater.
 The initial packages in `dist/signing-proof-a` and `dist/signing-proof-b` were
 built before updater integration. They are signing proofs, not an updater-enabled
 baseline. Do not publish them as update releases. Current updater behavior and

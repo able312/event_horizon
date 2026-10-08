@@ -94,6 +94,6 @@ Baseline implementation is applied on Events route.
 Reference files:
 - `src/routes/Events.tsx`
 - `src/features/calendar/CalendarWorkspace.tsx`
-- `src/components/ui/route-blocking-error.tsx`
+- `src/components/atoms/route-blocking-error.tsx`
 - `src/features/calendar/CalendarWorkspace.test.tsx`
 - `src/routes/Events.test.tsx`

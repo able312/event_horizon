@@ -150,10 +150,6 @@ Security priorities:
   - npm doesn't allow a version-keyed override on a direct dependency, so this one is unscoped and the child version is pinned exactly. Re-check it whenever typography is bumped.
   - Remove when: typography depends on `postcss-selector-parser >=7.1.6`.
 
-## Known Issues / Current Risks
-
-- docs/TASKS.md will have know issue tickets
-
 ## Error Handling Standard
 
 - Follow the canonical architecture in `docs/ERROR_HANDLING_ARCHITECTURE.md`.
