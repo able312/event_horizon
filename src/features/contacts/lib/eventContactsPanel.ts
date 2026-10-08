@@ -14,7 +14,7 @@ export const ROLE_LABELS: Record<ContactRoleType, { singular: string; plural: st
   vendor: { singular: "Vendor", plural: "Vendors" },
 }
 
-export function getPanelItems(panel: EventContactsPanel | undefined): EventContactsPanelItem[] {
+function getPanelItems(panel: EventContactsPanel | undefined): EventContactsPanelItem[] {
   return panel?.groups.flatMap((group) => group.items) ?? []
 }
 

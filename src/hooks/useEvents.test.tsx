@@ -9,7 +9,6 @@ import { PRIMARY_CLIENTS_QUERY_KEY_PREFIX } from "./useEventContacts"
 import { useEventsMonthQuery } from "./useEventsMonthQuery"
 
 vi.mock("~/lib/ipc/ipcEventsQueries", () => ({
-  getAllEvents: vi.fn(),
   getEventsByMonth: vi.fn(),
   getUnscheduledEvents: vi.fn(),
   getEventById: vi.fn(),

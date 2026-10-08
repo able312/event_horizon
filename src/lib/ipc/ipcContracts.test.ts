@@ -57,12 +57,6 @@ const updateTournamentDetailsArg = { notes: "Updated tournament notes" } as Para
 
 const wrapperCases: WrapperCase[] = [
   {
-    name: "events.getAllEvents",
-    channel: "events:get-many",
-    args: [],
-    invokeWrapper: eventsIpc.getAllEvents as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
     name: "events.getEventsByMonth",
     channel: "events:get-by-month",
     args: [monthParam],
@@ -159,52 +153,16 @@ const wrapperCases: WrapperCase[] = [
     invokeWrapper: timeblocksIpc.deleteTimeblock as unknown as (...args: unknown[]) => Promise<unknown>,
   },
   {
-    name: "cartDetails.getCartDetails",
-    channel: "cart-details:get-many",
-    args: [],
-    invokeWrapper: cartDetailsIpc.getCartDetails as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "cartDetails.getCartDetailsByEventId",
-    channel: "cart-details:get-by-event-id",
-    args: [eventId],
-    invokeWrapper: cartDetailsIpc.getCartDetailsByEventId as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
     name: "cartDetails.getOrCreateCartDetailsByEventId",
     channel: "cart-details:get-or-create-by-event-id",
     args: [eventId],
     invokeWrapper: cartDetailsIpc.getOrCreateCartDetailsByEventId as unknown as (...args: unknown[]) => Promise<unknown>,
   },
   {
-    name: "cartDetails.createCartDetails",
-    channel: "cart-details:post",
-    args: [eventId],
-    invokeWrapper: cartDetailsIpc.createCartDetails as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
     name: "cartDetails.updateCartDetails",
     channel: "cart-details:patch",
     args: [recordId, updateCartDetailsArg],
     invokeWrapper: cartDetailsIpc.updateCartDetails as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "cartDetails.deleteCartDetails",
-    channel: "cart-details:delete",
-    args: [recordId],
-    invokeWrapper: cartDetailsIpc.deleteCartDetails as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "tournamentDetails.getTournamentDetails",
-    channel: "tournament-details:get-many",
-    args: [],
-    invokeWrapper: tournamentDetailsIpc.getTournamentDetails as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "tournamentDetails.getTournamentDetailsByEventId",
-    channel: "tournament-details:get-by-event-id",
-    args: [eventId],
-    invokeWrapper: tournamentDetailsIpc.getTournamentDetailsByEventId as unknown as (...args: unknown[]) => Promise<unknown>,
   },
   {
     name: "tournamentDetails.getOrCreateTournamentDetailsByEventId",
@@ -215,22 +173,10 @@ const wrapperCases: WrapperCase[] = [
     ) => Promise<unknown>,
   },
   {
-    name: "tournamentDetails.createTournamentDetails",
-    channel: "tournament-details:post",
-    args: [eventId],
-    invokeWrapper: tournamentDetailsIpc.createTournamentDetails as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
     name: "tournamentDetails.updateTournamentDetails",
     channel: "tournament-details:patch",
     args: [recordId, updateTournamentDetailsArg],
     invokeWrapper: tournamentDetailsIpc.updateTournamentDetails as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "tournamentDetails.deleteTournamentDetails",
-    channel: "tournament-details:delete",
-    args: [recordId],
-    invokeWrapper: tournamentDetailsIpc.deleteTournamentDetails as unknown as (...args: unknown[]) => Promise<unknown>,
   },
   {
     name: "beverageItems.getBeverageSectionWithItems",

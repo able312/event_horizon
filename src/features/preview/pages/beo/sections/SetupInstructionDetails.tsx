@@ -1,5 +1,4 @@
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
-import { sortTimeblocksByTime } from "~/features/preview/preferences/selectors"
 import { PreviewMarkdownContent } from "~/lib/markdown/PreviewMarkdownContent"
 
 export function SetupInstructionTimeblockDetails({
@@ -24,30 +23,5 @@ export function SetupInstructionTimeblockDetails({
         </div>
       ) : null}
     </div>
-  )
-}
-
-type SetupInstructionDetailsProps = {
-  timeblocks?: TimeblockWithItems[] | null
-  selectedIds?: string[]
-}
-
-export const SetupInstructionDetails = ({
-  timeblocks,
-  selectedIds,
-}: SetupInstructionDetailsProps) => {
-  const selectedSet = selectedIds ? new Set(selectedIds) : null
-  const sorted = sortTimeblocksByTime(timeblocks).filter((tb) =>
-    selectedSet ? selectedSet.has(tb.id) : true,
-  )
-
-  if (sorted.length === 0) return null
-
-  return (
-    <>
-      {sorted.map((timeblock) => (
-        <SetupInstructionTimeblockDetails key={timeblock.id} timeblock={timeblock} />
-      ))}
-    </>
   )
 }

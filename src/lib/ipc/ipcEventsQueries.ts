@@ -7,10 +7,6 @@ import type {
   IcsImportReviewPayload,
 } from "~/definitions/events/icsImport"
 
-export function getAllEvents(): Promise<Event[]> {
-  return window.electron.ipcRenderer.invoke("events:get-many") as Promise<Event[]>
-}
-
 export function getEventsByMonth(month: string): Promise<Event[]> {
   return window.electron.ipcRenderer.invoke("events:get-by-month", month) as Promise<Event[]>
 }

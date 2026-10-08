@@ -56,22 +56,12 @@ export const WORKSPACE_CATEGORIES = [
   },
 ] as const satisfies readonly WorkspaceCategoryDefinition[]
 
-export const WORKSPACE_CATEGORY_IDS = WORKSPACE_CATEGORIES.map((category) => category.id)
+const WORKSPACE_CATEGORY_IDS = WORKSPACE_CATEGORIES.map((category) => category.id)
 
 const CATEGORY_ID_SET = new Set<string>(WORKSPACE_CATEGORY_IDS)
 
 export function isWorkspaceCategoryId(value: string): value is WorkspaceCategoryId {
   return CATEGORY_ID_SET.has(value)
-}
-
-export function getWorkspaceCategoryDefinition(
-  categoryId: WorkspaceCategoryId,
-): WorkspaceCategoryDefinition {
-  const match = WORKSPACE_CATEGORIES.find((category) => category.id === categoryId)
-  if (!match) {
-    throw new Error(`Unknown workspace category: ${categoryId}`)
-  }
-  return match
 }
 
 export function getAvailableWorkspaceCategories(
@@ -162,9 +152,6 @@ function getCategoryIdForSystemSource(source: string): WorkspaceCategoryId {
 export type NavigationTarget =
   | { kind: "focused-timeblock"; timeblockId: string }
   | { kind: "category"; categoryId: WorkspaceCategoryId }
-
-/** @deprecated Use focused-timeblock — kept as a type alias for gradual migration */
-export type LegacyIndividualNoteTarget = { kind: "individual-note"; timeblockId: string }
 
 export function getNavigationTarget(node: WorkspaceNavNode): NavigationTarget {
   if (node.nodeType === "system" && node.sourceRef.kind === "system") {
@@ -267,11 +254,4 @@ export function findCategoryNode(
         (categoryId === "financial" && node.nodeType === "financial"),
     ) ?? null
   )
-}
-
-/** @deprecated Use getAggregateCategoryIdForSectionType — kept as a thin alias for gradual migration */
-export function getWorkspaceCategoryIdForSectionType(
-  sectionType: TimeblockType | undefined,
-): WorkspaceCategoryId | null {
-  return getAggregateCategoryIdForSectionType(sectionType)
 }

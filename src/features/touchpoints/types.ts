@@ -1,7 +1,5 @@
 import type { LucideIcon } from "lucide-react"
 
-export type { CommonTouchpointTemplate } from "~/lib/touchpoints/buildCommonTouchpoints"
-
 export type TouchpointUrgency = "standard" | "upcoming" | "due today" | "past due"
 
 export interface StatusStyle {

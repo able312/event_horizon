@@ -112,5 +112,3 @@ export function useCalendarWorkspaceViewModel(
     ],
   )
 }
-
-export type UseCalendarWorkspaceViewModelReturn = ReturnType<typeof useCalendarWorkspaceViewModel>

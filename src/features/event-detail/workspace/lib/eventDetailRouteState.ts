@@ -9,8 +9,6 @@ import {
   isWorkspaceCategoryId,
 } from "./navPolicy"
 
-export type WorkspaceSectionId = WorkspaceCategoryId
-
 export const DEFAULT_EVENT_DETAIL_RETURN_TO = "/events"
 
 export type EventDetailRouteParams = {
@@ -97,15 +95,6 @@ export function toFocusedTimeblockPath(
   )
 }
 
-/** @deprecated Prefer toFocusedTimeblockPath — legacy note URLs canonicalize to timeblock. */
-export function toNoteEditorPath(
-  eventId: string,
-  timeblockId: string,
-  returnTo: string = DEFAULT_EVENT_DETAIL_RETURN_TO,
-): string {
-  return toFocusedTimeblockPath(eventId, timeblockId, returnTo)
-}
-
 export function toEventDetailPath({
   eventId,
   selectedNodeId,
@@ -151,17 +140,6 @@ export function toEventDetailPath({
   return appendReturnToQuery(
     `/events/${eventId}/${navigationTarget.categoryId}`,
     normalizedReturnTo,
-  )
-}
-
-export function toCategoryPath(
-  eventId: string,
-  categoryId: WorkspaceCategoryId,
-  returnTo: string = DEFAULT_EVENT_DETAIL_RETURN_TO,
-): string {
-  return appendReturnToQuery(
-    `/events/${eventId}/${categoryId}`,
-    normalizeReturnTo(returnTo),
   )
 }
 
@@ -264,19 +242,6 @@ export function getCanonicalEventDetailPath({
   }
 
   return canonicalPath === currentPath ? null : canonicalPath
-}
-
-export function buildEventDetailNavigationPath(
-  eventId: string,
-  navModel: WorkspaceNavModel,
-  returnTo?: string,
-): string {
-  return toEventDetailPath({
-    eventId,
-    selectedNodeId: buildCategoryNodeId("overview"),
-    navModel,
-    returnTo,
-  })
 }
 
 export function buildEventDetailEntryPath(eventId: string, returnTo?: string): string {

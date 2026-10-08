@@ -23,7 +23,7 @@ function createFormValuesFromEvent(event: Event | null): EventFormValues {
   }
 }
 
-export const EditEventSidebarForm: React.FC<EditEventSidebarFormProps> = ({
+const EditEventSidebarForm: React.FC<EditEventSidebarFormProps> = ({
   event,
   onSave,
   onCancel,
