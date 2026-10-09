@@ -14,6 +14,7 @@ import * as charges from "./menuOfChargeItems"
 import * as assignments from "./eventContacts"
 import * as roles from "./contactRoles"
 import * as categories from "./vendorCategories"
+import * as users from "./users"
 import { desktopTimeZone } from "./sources"
 import { getMonthRangeUtcFromLocal } from "~/lib/months"
 
@@ -36,6 +37,7 @@ const contracts: Contract[] = [
   { name: "events.create", kind: "mutation", call: () => events.createEvent({ ...input, id, createdAt: "old" }, person), args: { input, client: person } },
   { name: "events.create", kind: "mutation", call: () => events.createEvent({ ...input, id, createdAt: "old" }), args: { input, client: null } },
   { name: "events.update", kind: "mutation", call: () => events.updateEvent(id, { title: "New", updatedAt: "old" }), args: { id, updates: { title: "New" } } },
+  { name: "events.update", kind: "mutation", call: () => events.updateEvent(id, { title: "New", updatedBy: "forged" } as Parameters<typeof events.updateEvent>[1]), args: { id, updates: { title: "New" } } },
   { name: "events.remove", kind: "mutation", call: () => events.deleteEvent(id), args: { id } },
   { name: "events.getByCalendarIds", kind: "query", call: () => events.getEventsByCalendarIds(["uid"]), args: { calendarIds: ["uid"] } },
   { name: "events.getStartingBetween", kind: "query", call: () => events.getEventsStartingBetween("start", "end"), args: { startFrom: "start", startTo: "end" } },
@@ -76,6 +78,7 @@ const contracts: Contract[] = [
   { name: "eventContacts.resolveRecipients", kind: "query", call: () => assignments.resolveEventRecipients(eventId, { eventContactIds: [id] }), args: { eventId, selection: { eventContactIds: [id] } } },
   { name: "contactRoles.listForContact", kind: "source", call: () => roles.getContactRoles(id), args: { contactId: id } },
   { name: "contactRoles.ensure", kind: "mutation", call: () => roles.ensureContactRole(id, "client"), args: { contactId: id, role: "client", vendorCategoryId: null } },
+  { name: "users.list", kind: "source", call: () => users.getUsers(), args: {} },
   { name: "vendorCategories.getAll", kind: "source", call: () => categories.getVendorCategories({ includeArchived: true }), args: { includeArchived: true } },
   { name: "vendorCategories.create", kind: "mutation", call: () => categories.createVendorCategory({ key: "food", label: "Food", colorToken: "blue", sortOrder: 1 }), args: { input: { key: "food", label: "Food", colorToken: "blue", sortOrder: 1 } } },
   { name: "vendorCategories.update", kind: "mutation", call: () => categories.updateVendorCategory(id, { label: "New" }), args: { id, patch: { label: "New" } } },

@@ -346,7 +346,7 @@ Verification: `npm test` 163 files, 1,265 tests passed; typecheck and `npm run l
 
 ### Audit fields and simultaneous edits: findings and recommendation (2026-10-09)
 
-**Status: waiting on two decisions from you.** Nothing has been changed yet.
+**Status: decided and implemented (see "Audit fields and changed-only saves" below).** Decisions: last save wins everywhere (no conflict warnings), and last editor only plus scheduled Convex backups (no change history yet). The findings below are kept for context.
 
 Already decided (from the request):
 - Store who created each record, who last edited it, and when.
@@ -374,6 +374,35 @@ Planned implementation (once the questions below are answered):
 - *Option B, an append-only `changes` table:* record, field, old value, new value, user, time. One entry is written by each mutation, and each record gets a viewable history. It's a moderate amount of work: a shared helper called by about 30 mutations, a history panel, and storage that grows forever (small at this scale).
 - *Option C, rely on Convex backups / snapshot exports* for "what did this look like last week". These are coarse and must be restored manually.
 - **Recommendation: A now, plus scheduled Convex backups (C) for disaster recovery.** Add B later if you find you need to answer "who changed this payment and from what?". If financial disputes are a real possibility, B for payments and charges only is a cheap middle ground.
+
+### Audit fields and changed-only saves (2026-10-09)
+
+**Status: implemented and tested; desktop check pending.** Decisions from you: last save wins everywhere, and last editor only (plus scheduled Convex backups) for now. A full change log is a possible future feature, and the structure below leaves room for it.
+
+Server (`convex/`):
+- `lib/audit.ts`: `companyMutation` now passes every handler a database writer that stamps `createdBy`/`updatedBy` (the caller's `users` ID) on each insert, patch and replace to an audited table. Mutations don't set these fields themselves, so none can forget, and no mutation accepts them as input.
+  - Audited: every business table. Not audited: `beverageItemTimeblocks` (link rows) and `users`. A test fails if a new table is added to the schema without being classified.
+  - Tables that had no `updatedAt` (payments, touchpoints, charges, food, beverages, vendor categories, contact roles) now get an ISO `updatedAt` from the wrapper. The others keep setting their own, in the format they already use (Unix ms string for events and timeblocks, ISO elsewhere).
+  - The wrapper refuses the id-only `patch`/`replace` forms and `db.table()`, because it can't tell which table those write to.
+  - **Future change log:** every audited write already passes through `auditedWriter`. A change log can be added there (read the old document in `patch`, write a `changes` row) without touching the ~30 mutations.
+- `companyMutation` creates or refreshes the caller's `users` row (`lib/users.ts`) before the handler runs, so writes can be attributed even if `users.store` hasn't run yet. `users.store` is now just that step. New `users.list` returns every account's ID, name and email for display.
+- Schema: `createdBy`/`updatedBy` (`v.optional(v.id("users"))`) on audited tables, plus optional `updatedAt` on the tables listed above. They are optional, so existing local/dev documents still validate and the SQLite import can leave them absent (unknown author). No SQLite schema change; the SQLite conformance check ignores the Convex-only audit fields.
+- Edits that set no fields (`contacts.update` with `{}`, or the contact or assignment half of `eventContacts.updateWithContact`) are now skipped, so they don't make you the record's last editor.
+
+Renderer:
+- `src/hooks/useLiveDraft.ts`: `useLiveDraft` keeps the user's edits on top of the live record. Fields you've typed in keep your value; untouched fields show other people's changes as they arrive. `changedFields` diffs the form's payload against the live record's payload, so Save sends only the fields you actually changed. If nothing changed, the form closes without saving.
+- Used by the three forms that previously sent every field:
+  - `EditEventSidebarForm`: no longer resets its draft when the event updates; the draft resets only when a different event is opened (an inner component keyed by event ID).
+  - `ContactEditForm`
+  - `EditEventContactForm`: `ContactsList` now passes the row as currently cached, so its assignment fields follow live updates too.
+- "Last edited by X · time" (`src/components/molecules/LastEditedBy.tsx`, logic in `src/lib/audit/lastEdited.ts`) appears in the event detail header and under the contact name in the directory. It shows nothing when the editor is unknown, e.g. on imported records. It reflects edits to the event or contact record itself; edits to an event's sections stamp those section records, not the event.
+- `Event` and `Contact` types gain optional `createdBy`/`updatedBy`. Other records carry the fields at runtime, but their types don't declare them until something displays them.
+
+Tests: `convex/audit.test.ts` (8 tests): table coverage, creator/editor attribution across two users without `users.store`, updatedAt stamping, stamping inside shared helpers, rejection of client-sent audit fields, unaudited link rows, refusal of untyped writes, empty-patch no-ops, and `users.list`. Also: `useLiveDraft` and `changedFields` tests; changed-only, no-op and live-update tests for all three forms; `lastEdited` parsing and formatting tests; the header display; and data contracts for `users.list` and audit-field filtering. Five existing timestamp assertions now allow the stamped `updatedAt`.
+
+Verification: `npm test` 168 files, 1,300 tests passed. Convex typecheck, `npm run build` and `npm run lint` passed (the same seven existing warnings). `git diff --check` passed. The schema change isn't deployed yet; `npm run dev` in this worktree pushes it to the local deployment.
+
+**Human check (with the two-window test):** edit different fields of the same event in the calendar sidebar in each window, then save both. Both changes should survive. While typing in an edit form, a save from the other window should update the untouched fields and leave your typing alone. The event header and contact page should show "Last edited by <you>" after a save.
 
 ### Notes for the Step 2 detailed plan (found during Step 1)
 - Live updates: use the custom connector in `src/lib/data/liveQueries.ts`, preserving the existing key hierarchy. The unused `@convex-dev/react-query` adapter has been removed.

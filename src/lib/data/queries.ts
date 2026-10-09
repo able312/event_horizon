@@ -15,6 +15,7 @@ import * as paymentsApi from "./payments"
 import * as timeblocksApi from "./timeblocks"
 import * as touchpointsApi from "./touchpoints"
 import * as tournamentDetailsApi from "./tournamentDetails"
+import * as usersApi from "./users"
 import * as vendorCategoriesApi from "./vendorCategories"
 import { liveMeta, livePagesMeta } from "./liveQueries"
 import { sources } from "./sources"
@@ -324,5 +325,21 @@ export const vendorCategoryQueries = {
     queryKey: vendorCategoryKeys.all(),
     queryFn: () => vendorCategoriesApi.getVendorCategories(),
     ...liveMeta(sources.vendorCategories.all()),
+  }),
+}
+
+// ============================================================================
+// Users
+// ============================================================================
+
+export const userKeys = {
+  all: () => ["users"] as const,
+}
+
+export const userQueries = {
+  all: () => queryOptions({
+    queryKey: userKeys.all(),
+    queryFn: () => usersApi.getUsers(),
+    ...liveMeta(sources.users.all()),
   }),
 }

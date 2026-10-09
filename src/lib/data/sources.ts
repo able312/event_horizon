@@ -79,6 +79,9 @@ export const sources = {
     }),
     roles: (contactId: string) => liveSource(api.contactRoles.listForContact, { contactId: toId<"contacts">(contactId) }),
   },
+  users: {
+    all: () => liveSource(api.users.list, {}),
+  },
   vendorCategories: {
     all: (options?: { includeArchived?: boolean }) => liveSource(api.vendorCategories.getAll, {
       ...(options?.includeArchived !== undefined ? { includeArchived: options.includeArchived } : {}),

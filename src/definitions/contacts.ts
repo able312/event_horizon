@@ -1,4 +1,4 @@
-import type { EventStatus } from "./database.js"
+import type { AuditFields, EventStatus } from "./database.js"
 import type { CONTACT_KINDS, CONTACT_ROLE_TYPES } from "./enums.js"
 
 // ============================================================================
@@ -26,7 +26,7 @@ export type Contact = {
   archivedAt: string | null
   createdAt: string
   updatedAt: string
-}
+} & AuditFields
 
 /** Fields the renderer may set when creating a contact. displayName is derived when omitted. */
 export type NewContact = {

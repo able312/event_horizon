@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react"
+import React, { useMemo, useState } from "react"
 import type { Event, UpdateEvent } from "~/definitions/database"
+import { changedFields, hasChanges, useLiveDraft } from "~/hooks/useLiveDraft"
 import EventFormFields, {
   type EventFormValues,
 } from "./EventFormFields"
@@ -11,15 +12,15 @@ interface EditEventSidebarFormProps {
   onCancel: () => void
 }
 
-function createFormValuesFromEvent(event: Event | null): EventFormValues {
+function createFormValuesFromEvent(event: Event): EventFormValues {
   return {
-    title: event?.title ?? "",
-    type: event?.type ?? "function",
-    status: event?.status ?? "new_lead",
-    startDateTime: event?.startDateTime ?? null,
-    endDateTime: event?.endDateTime ?? null,
-    minGuests: event?.minGuests ?? 0,
-    maxGuests: event?.maxGuests ?? 0,
+    title: event.title,
+    type: event.type,
+    status: event.status,
+    startDateTime: event.startDateTime,
+    endDateTime: event.endDateTime,
+    minGuests: event.minGuests ?? 0,
+    maxGuests: event.maxGuests ?? 0,
   }
 }
 
@@ -28,36 +29,6 @@ export const EditEventSidebarForm: React.FC<EditEventSidebarFormProps> = ({
   onSave,
   onCancel,
 }) => {
-  const [formValues, setFormValues] = useState<EventFormValues>(createFormValuesFromEvent(event))
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  useEffect(() => {
-    setFormValues(createFormValuesFromEvent(event))
-  }, [event])
-
-  const handleSave = async () => {
-    if (!event || !isEventFormValid(formValues) || isSubmitting) return
-
-    setIsSubmitting(true)
-    try {
-      const updates: UpdateEvent = {
-        title: formValues.title,
-        type: formValues.type,
-        status: formValues.status,
-        startDateTime: formValues.startDateTime,
-        endDateTime: formValues.endDateTime,
-        minGuests: formValues.minGuests,
-        maxGuests: formValues.maxGuests,
-      }
-      await onSave(updates)
-      onCancel()
-    } catch {
-      // Mutation errors are surfaced by hook-level toasts.
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
   if (!event) {
     return (
       <div className="space-y-4">
@@ -74,6 +45,36 @@ export const EditEventSidebarForm: React.FC<EditEventSidebarFormProps> = ({
     )
   }
 
+  // A different event starts a fresh draft; live updates to this one don't.
+  return <EditEventFields key={event.id} event={event} onSave={onSave} onCancel={onCancel} />
+}
+
+const EditEventFields: React.FC<EditEventSidebarFormProps & { event: Event }> = ({ event, onSave, onCancel }) => {
+  const source = useMemo(() => createFormValuesFromEvent(event), [event])
+  const { values: formValues, update } = useLiveDraft(source)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSave = async () => {
+    if (!isEventFormValid(formValues) || isSubmitting) return
+
+    // Only fields changed here, so other people's edits to the rest survive.
+    const updates: UpdateEvent = changedFields(source, formValues)
+    if (!hasChanges(updates)) {
+      onCancel()
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      await onSave(updates)
+      onCancel()
+    } catch {
+      // Mutation errors are surfaced by hook-level toasts.
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <div className="space-y-6 p-4">
       <div>
@@ -83,7 +84,7 @@ export const EditEventSidebarForm: React.FC<EditEventSidebarFormProps> = ({
 
       <EventFormFields
         values={formValues}
-        onChange={(updates) => setFormValues((current) => ({ ...current, ...updates }))}
+        onChange={update}
       />
 
       <div className="flex gap-3 pb-2">

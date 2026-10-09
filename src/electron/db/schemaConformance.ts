@@ -3,6 +3,7 @@
 // (and the UI that uses it) in the same change.
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm"
 import type {
+  AuditFields,
   BeverageItem,
   BeverageItemTimeblock,
   CartDetails,
@@ -28,9 +29,11 @@ import type * as schema from "./schema.js"
 /** Resolves to true only when A and B accept exactly the same values. */
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false
 type Expect<T extends true> = T
+/** Audit fields exist only in Convex; SQLite records have no known author. */
+type WithoutAudit<T> = Omit<T, keyof AuditFields>
 
 export type SchemaConformance = [
-  Expect<Same<InferSelectModel<typeof schema.events>, Event>>,
+  Expect<Same<InferSelectModel<typeof schema.events>, WithoutAudit<Event>>>,
   Expect<Same<InferInsertModel<typeof schema.events>, NewEvent>>,
   Expect<Same<InferSelectModel<typeof schema.tournamentDetails>, TournamentDetails>>,
   Expect<Same<InferSelectModel<typeof schema.cartDetails>, CartDetails>>,
@@ -48,7 +51,7 @@ export type SchemaConformance = [
   Expect<Same<InferInsertModel<typeof schema.beverageItems>, NewBeverageItem>>,
   Expect<Same<InferSelectModel<typeof schema.beverageItemTimeblocks>, BeverageItemTimeblock>>,
   Expect<Same<InferInsertModel<typeof schema.beverageItemTimeblocks>, NewBeverageItemTimeblock>>,
-  Expect<Same<InferSelectModel<typeof schema.contacts>, Contact>>,
+  Expect<Same<InferSelectModel<typeof schema.contacts>, WithoutAudit<Contact>>>,
   Expect<Same<InferSelectModel<typeof schema.contactRoles>, ContactRole>>,
   Expect<Same<InferSelectModel<typeof schema.vendorCategories>, VendorCategory>>,
   Expect<Same<InferSelectModel<typeof schema.eventContacts>, EventContact>>,

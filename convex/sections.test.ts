@@ -40,7 +40,7 @@ describe("food items", () => {
     const { t, food } = await setup()
     const item = await t.mutation(api.foodItems.create, { timeblockId: food.id, name: "Steak", quantity: 40 })
     expect(await t.mutation(api.foodItems.update, { id: item.id, updates: { quantity: null, serviceStyle: "Plated", includes: "GF", unitPriceCents: 4500 } }))
-      .toEqual({ ...item, quantity: null, serviceStyle: "Plated", includes: "GF", unitPriceCents: 4500 })
+      .toEqual({ ...item, updatedAt: expect.any(String), quantity: null, serviceStyle: "Plated", includes: "GF", unitPriceCents: 4500 })
     expect(await t.mutation(api.foodItems.remove, { id: item.id })).toBe(true)
     await expect(t.mutation(api.foodItems.remove, { id: item.id })).rejects.toThrow("record not found")
     await expect(t.mutation(api.foodItems.update, { id: item.id, updates: { name: "Gone" } })).rejects.toThrow("record not found")
@@ -110,7 +110,7 @@ describe("beverage items", () => {
     const { t, eventId, otherEventId } = await setup()
     const item = await t.mutation(api.beverageItems.create, { eventId, name: "Red", type: "Wine", quantity: 12 })
     expect(await t.mutation(api.beverageItems.update, { id: item.id, updates: { name: "White", quantity: null, type: "Special Orders", includes: "Dry" } }))
-      .toEqual({ ...item, name: "White", quantity: null, type: "Special Orders", includes: "Dry" })
+      .toEqual({ ...item, updatedAt: expect.any(String), name: "White", quantity: null, type: "Special Orders", includes: "Dry" })
     await expect(t.mutation(api.beverageItems.update, { id: item.id, updates: {} })).rejects.toThrow("Updates are required")
     // @ts-expect-error Parent reassignment must fail runtime validation.
     await expect(t.mutation(api.beverageItems.update, { id: item.id, updates: { eventId: otherEventId } })).rejects.toThrow()

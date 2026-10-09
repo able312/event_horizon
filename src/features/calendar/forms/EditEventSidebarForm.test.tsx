@@ -25,6 +25,14 @@ function makeEvent(overrides: Partial<Event> = {}): Event {
   } as Event
 }
 
+function titleInput(): HTMLInputElement {
+  return screen.getByPlaceholderText("e.g., Smith Wedding") as HTMLInputElement
+}
+
+function editTitle(title: string) {
+  fireEvent.change(titleInput(), { target: { value: title } })
+}
+
 afterEach(() => {
   vi.clearAllMocks()
   cleanup()
@@ -38,6 +46,7 @@ describe("EditEventSidebarForm save timing", () => {
 
     render(<EditEventSidebarForm event={makeEvent()} onSave={onSave} onCancel={onCancel} />)
 
+    editTitle("Renamed")
     fireEvent.click(screen.getByRole("button", { name: "Save" }))
 
     expect(onSave).toHaveBeenCalledTimes(1)
@@ -58,6 +67,7 @@ describe("EditEventSidebarForm save timing", () => {
 
     render(<EditEventSidebarForm event={makeEvent()} onSave={onSave} onCancel={onCancel} />)
 
+    editTitle("Renamed")
     fireEvent.click(screen.getByRole("button", { name: "Save" }))
 
     await waitFor(() => {
@@ -86,26 +96,68 @@ describe("EditEventSidebarForm save timing", () => {
     expect(screen.getByText("End must be on or after the start date")).toBeTruthy()
   })
 
-  it("preserves null dates when saving an unscheduled event", async () => {
+  it("sends only the fields changed in the form", async () => {
     const onSave = vi.fn(async () => undefined)
 
     render(
       <EditEventSidebarForm
-        event={makeEvent({ startDateTime: null, endDateTime: null })}
+        event={makeEvent({ startDateTime: null, endDateTime: null, minGuests: 10 })}
         onSave={onSave}
         onCancel={vi.fn()}
       />,
     )
 
+    editTitle("Renamed")
     fireEvent.click(screen.getByRole("button", { name: "Save" }))
 
     await waitFor(() => {
-      expect(onSave).toHaveBeenCalledWith(
-        expect.objectContaining({
-          startDateTime: null,
-          endDateTime: null,
-        }),
-      )
+      expect(onSave).toHaveBeenCalledWith({ title: "Renamed" })
     })
+  })
+
+  it("closes without saving when nothing changed", () => {
+    const onSave = vi.fn(async () => undefined)
+    const onCancel = vi.fn()
+
+    render(<EditEventSidebarForm event={makeEvent()} onSave={onSave} onCancel={onCancel} />)
+
+    editTitle("Event 1")
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+
+    expect(onSave).not.toHaveBeenCalled()
+    expect(onCancel).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps typed values when the event updates live, and shows other people's changes elsewhere", async () => {
+    const onSave = vi.fn(async () => undefined)
+    const { rerender } = render(<EditEventSidebarForm event={makeEvent()} onSave={onSave} onCancel={vi.fn()} />)
+
+    editTitle("My title")
+    rerender(
+      <EditEventSidebarForm
+        event={makeEvent({ title: "Their title", status: "confirmed" })}
+        onSave={onSave}
+        onCancel={vi.fn()}
+      />,
+    )
+
+    expect(titleInput().value).toBe("My title")
+    expect((screen.getByDisplayValue("Confirmed") as HTMLSelectElement).value).toBe("confirmed")
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith({ title: "My title" })
+    })
+  })
+
+  it("starts a fresh draft when a different event is opened", () => {
+    const { rerender } = render(<EditEventSidebarForm event={makeEvent()} onSave={vi.fn()} onCancel={vi.fn()} />)
+
+    editTitle("Draft for event 1")
+    rerender(
+      <EditEventSidebarForm event={makeEvent({ id: "event-2", title: "Event 2" })} onSave={vi.fn()} onCancel={vi.fn()} />,
+    )
+
+    expect(titleInput().value).toBe("Event 2")
   })
 })

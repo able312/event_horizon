@@ -22,6 +22,16 @@ import {
 // document maps to a record by renaming _id to id (see lib/records.ts).
 // Timestamps stay as strings to match the records the app already uses.
 
+// Who created and last edited a record (see lib/audit.ts, which sets them on every
+// write). Optional: records written before auditing, or imported from SQLite, have
+// no known author.
+const audit = {
+  createdBy: v.optional(v.id("users")),
+  updatedBy: v.optional(v.id("users")),
+}
+// For audited tables that had no updatedAt of their own; lib/audit.ts stamps it (ISO).
+const auditWithUpdatedAt = { ...audit, updatedAt: v.optional(v.string()) }
+
 export default defineSchema({
   events: defineTable({
     title: v.string(),
@@ -39,6 +49,7 @@ export default defineSchema({
     isInternal: nullable(v.number()),
     createdAt: v.string(),
     updatedAt: nullable(v.string()),
+    ...audit,
   })
     // Month ranges, and unscheduled events (null start) in creation order
     .index("by_start", ["startDateTime", "createdAt"])
@@ -55,6 +66,7 @@ export default defineSchema({
     notes: nullable(v.string()),
     createdAt: v.string(),
     updatedAt: nullable(v.string()),
+    ...audit,
   }).index("by_event", ["eventId"]),
 
   cartDetails: defineTable({
@@ -67,6 +79,7 @@ export default defineSchema({
     rentingCarts: v.boolean(),
     createdAt: v.string(),
     updatedAt: nullable(v.string()),
+    ...audit,
   }).index("by_event", ["eventId"]),
 
   payments: defineTable({
@@ -76,6 +89,7 @@ export default defineSchema({
     recieptNumber: nullable(v.string()),
     notes: nullable(v.string()),
     createdAt: v.string(),
+    ...auditWithUpdatedAt,
   }).index("by_event", ["eventId"]),
 
   touchpoints: defineTable({
@@ -84,6 +98,7 @@ export default defineSchema({
     dueDate: nullable(v.string()),
     completedAt: nullable(v.string()),
     createdAt: v.string(),
+    ...auditWithUpdatedAt,
   })
     .index("by_event", ["eventId"])
     .index("by_completedAt", ["completedAt"]),
@@ -96,6 +111,7 @@ export default defineSchema({
     includes: nullable(v.string()),
     unitPriceCents: nullable(v.number()),
     createdAt: v.string(),
+    ...auditWithUpdatedAt,
   }).index("by_event", ["eventId"]),
 
   timeblocks: defineTable({
@@ -107,6 +123,7 @@ export default defineSchema({
     assignedTo: nullable(v.string()),
     createdAt: v.string(),
     updatedAt: nullable(v.string()),
+    ...audit,
   }).index("by_event_section", ["eventId", "sectionType"]),
 
   foodItems: defineTable({
@@ -116,6 +133,7 @@ export default defineSchema({
     serviceStyle: nullable(foodServiceStyle),
     includes: nullable(v.string()),
     unitPriceCents: nullable(v.number()),
+    ...auditWithUpdatedAt,
   }).index("by_timeblock", ["timeblockId"]),
 
   beverageItems: defineTable({
@@ -126,6 +144,7 @@ export default defineSchema({
     serviceStyle: nullable(beverageServiceStyle),
     includes: nullable(v.string()),
     unitPriceCents: nullable(v.number()),
+    ...auditWithUpdatedAt,
   }).index("by_event", ["eventId"]),
 
   beverageItemTimeblocks: defineTable({
@@ -149,6 +168,7 @@ export default defineSchema({
     archivedAt: nullable(v.string()),
     createdAt: v.string(),
     updatedAt: v.string(),
+    ...audit,
   }).index("by_emailNormalized", ["emailNormalized"]),
 
   vendorCategories: defineTable({
@@ -157,6 +177,7 @@ export default defineSchema({
     colorToken: v.string(),
     sortOrder: v.number(),
     archivedAt: nullable(v.string()),
+    ...auditWithUpdatedAt,
   }).index("by_key", ["key"]),
 
   contactRoles: defineTable({
@@ -164,6 +185,7 @@ export default defineSchema({
     role: contactRoleType,
     vendorCategoryId: nullable(v.id("vendorCategories")),
     createdAt: v.string(),
+    ...auditWithUpdatedAt,
   })
     .index("by_contact", ["contactId"])
     .index("by_vendorCategory", ["vendorCategoryId"]),
@@ -180,6 +202,7 @@ export default defineSchema({
     removedAt: nullable(v.string()),
     createdAt: v.string(),
     updatedAt: v.string(),
+    ...audit,
   })
     .index("by_event", ["eventId"])
     .index("by_contact", ["contactId"])

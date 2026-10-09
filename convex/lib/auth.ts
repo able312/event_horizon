@@ -1,7 +1,10 @@
 import { ConvexError, type PropertyValidators, type ObjectType } from "convex/values"
 import type { UserIdentity } from "convex/server"
 
+import type { Id } from "../_generated/dataModel"
 import { mutation, query, type MutationCtx, type QueryCtx } from "../_generated/server"
+import { auditedWriter } from "./audit"
+import { upsertUser } from "./users"
 
 /** Only Google Workspace accounts on this exact domain may use the app. */
 export const COMPANY_EMAIL_DOMAIN = "westlinks.ca"
@@ -47,16 +50,24 @@ export function companyQuery<Args extends PropertyValidators, Returns>(definitio
   })
 }
 
-/** A public mutation that requires a company identity before its handler runs. */
+/** A mutation context whose database stamps the caller as creator/last editor (lib/audit.ts). */
+export type CompanyMutationCtx = MutationCtx & { userId: Id<"users"> }
+
+/**
+ * A public mutation that requires a company identity before its handler runs. The
+ * caller's user record is created if `users.store` hasn't run yet, so every write
+ * can be attributed.
+ */
 export function companyMutation<Args extends PropertyValidators, Returns>(definition: {
   args: Args
-  handler: (ctx: MutationCtx, args: ObjectType<Args>) => Returns | Promise<Returns>
+  handler: (ctx: CompanyMutationCtx, args: ObjectType<Args>) => Returns | Promise<Returns>
 }) {
   return mutation({
     args: definition.args,
     handler: async (ctx, args: ObjectType<Args>): Promise<Returns> => {
-      await requireCompanyUser(ctx)
-      return definition.handler(ctx, args)
+      const identity = await requireCompanyUser(ctx)
+      const userId = await upsertUser(ctx, identity)
+      return definition.handler({ ...ctx, db: auditedWriter(ctx.db, userId), userId }, args)
     },
   })
 }

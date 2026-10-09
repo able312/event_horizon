@@ -45,8 +45,14 @@ export async function createContact(ctx: MutationCtx, input: NewContact) {
   return requireContact(ctx, id)
 }
 
+/** An edit that sets no fields; it's skipped so the record's last editor doesn't change. */
+function isEmptyPatch(patch: object): boolean {
+  return Object.values(patch).every(value => value === undefined)
+}
+
 export async function updateContact(ctx: MutationCtx, id: Id<"contacts">, patch: UpdateContact) {
   const existing = await requireContact(ctx, id)
+  if (isEmptyPatch(patch)) return existing
   const nameParts = {
     kind: patch.kind ?? existing.kind,
     firstName: patch.firstName === undefined ? existing.firstName : patch.firstName,
@@ -133,6 +139,7 @@ export async function assignContact(ctx: MutationCtx, eventId: Id<"events">,
 type AssignmentPatch = Omit<UpdateEventContact, "vendorCategoryId"> & { vendorCategoryId?: Id<"vendorCategories"> | null }
 export async function updateAssignment(ctx: MutationCtx, id: Id<"eventContacts">, patch: AssignmentPatch) {
   const row = await activeAssignment(ctx, id)
+  if (isEmptyPatch(patch)) return toRecord(row)
   const categoryId = patch.vendorCategoryId === undefined ? row.vendorCategoryId : patch.vendorCategoryId
   if (categoryId !== row.vendorCategoryId) {
     assertRoleCategory(row.role, categoryId)

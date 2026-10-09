@@ -1,15 +1,6 @@
-import { companyMutation, companyQuery, requireCompanyUser, type CompanyIdentity } from "./lib/auth"
-import type { QueryCtx } from "./_generated/server"
+import { companyMutation, companyQuery, requireCompanyUser } from "./lib/auth"
 import { toRecord } from "./lib/records"
-
-function displayName(identity: CompanyIdentity): string | null {
-  const name = identity.name ?? [identity.givenName, identity.familyName].filter(Boolean).join(" ")
-  return name.trim() || null
-}
-
-async function findUser(ctx: Pick<QueryCtx, "db">, workosUserId: string) {
-  return ctx.db.query("users").withIndex("by_workosUserId", (q) => q.eq("workosUserId", workosUserId)).unique()
-}
+import { findUser } from "./lib/users"
 
 /** The signed-in user's record, or null until `store` has run for this account. */
 export const current = companyQuery({ args: {}, handler: async (ctx) => {
@@ -18,17 +9,11 @@ export const current = companyQuery({ args: {}, handler: async (ctx) => {
   return user ? toRecord(user) : null
 } })
 
-/** Called by the client after sign-in; creates or refreshes the user's record. */
-export const store = companyMutation({ args: {}, handler: async (ctx) => {
-  const identity = await requireCompanyUser(ctx)
-  const now = new Date().toISOString()
-  const fields = { email: identity.email.trim().toLowerCase(), name: displayName(identity) }
-  const existing = await findUser(ctx, identity.subject)
-  if (existing) {
-    if (existing.email !== fields.email || existing.name !== fields.name) {
-      await ctx.db.patch("users", existing._id, { ...fields, updatedAt: now })
-    }
-    return existing._id
-  }
-  return ctx.db.insert("users", { workosUserId: identity.subject, ...fields, createdAt: now, updatedAt: now })
+/** Called by the client after sign-in; creates or refreshes the user's record (companyMutation does the work). */
+export const store = companyMutation({ args: {}, handler: (ctx) => ctx.userId })
+
+/** Every company account's name and email, for showing who created or last edited a record. */
+export const list = companyQuery({ args: {}, handler: async (ctx) => {
+  const users = await ctx.db.query("users").collect()
+  return users.map((user) => ({ id: user._id, name: user.name, email: user.email }))
 } })

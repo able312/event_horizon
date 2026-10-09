@@ -16,6 +16,26 @@ import type {
 // checks that the SQLite schema still matches them.
 
 // ============================================================================
+// Audit
+// ============================================================================
+
+/**
+ * Who created and last edited a record (user IDs). The server sets them on every
+ * write; they're absent when unknown (records saved before auditing, or imported).
+ */
+export type AuditFields = {
+  createdBy?: string
+  updatedBy?: string
+}
+
+/** A company account, for showing who created or last edited a record. */
+export type UserSummary = {
+  id: string
+  name: string | null
+  email: string
+}
+
+// ============================================================================
 // Events
 // ============================================================================
 
@@ -48,7 +68,7 @@ export type Event = {
   createdAt: string
   /** Unix timestamp (ms) as a string */
   updatedAt: string | null
-}
+} & AuditFields
 export type NewEvent = {
   id: string
   title: string
@@ -67,7 +87,7 @@ export type NewEvent = {
   isInternal?: number | null
   updatedAt?: string | null
 }
-export type UpdateEvent = Partial<Omit<Event, "id" | "createdAt">>
+export type UpdateEvent = Partial<Omit<Event, "id" | "createdAt" | keyof AuditFields>>
 
 // ============================================================================
 // Tournament Details

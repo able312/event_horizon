@@ -53,7 +53,7 @@ describe("payments", () => {
     const updated = await t.mutation(api.payments.update, {
       id: record.id, updates: { amountCents: 12500, recieptNumber: null, notes: "Deposit" },
     })
-    expect(updated).toEqual({ ...record, amountCents: 12500, recieptNumber: null, notes: "Deposit" })
+    expect(updated).toEqual({ ...record, updatedAt: expect.any(String), amountCents: 12500, recieptNumber: null, notes: "Deposit" })
     expect(await t.mutation(api.payments.remove, { id: record.id })).toBe(true)
     expect(await t.query(api.payments.getByEventId, { eventId })).toEqual([])
     await expect(t.mutation(api.payments.update, { id: record.id, updates: { notes: "Gone" } })).rejects.toThrow("record not found")
@@ -89,7 +89,7 @@ describe("menu of charge items", () => {
     const record = await t.mutation(api.menuOfChargeItems.create, { eventId })
     expect(await t.mutation(api.menuOfChargeItems.update, {
       id: record.id, updates: { name: "Dinner", quantity: null, includes: null, unitPriceCents: 4500 },
-    })).toEqual({ ...record, name: "Dinner", quantity: null, includes: null, unitPriceCents: 4500 })
+    })).toEqual({ ...record, updatedAt: expect.any(String), name: "Dinner", quantity: null, includes: null, unitPriceCents: 4500 })
     expect(await t.mutation(api.menuOfChargeItems.remove, { id: record.id })).toBe(true)
     expect(await t.query(api.menuOfChargeItems.getByEventId, { eventId })).toEqual([])
     await expect(t.mutation(api.menuOfChargeItems.update, { id: record.id, updates: { name: "Gone" } })).rejects.toThrow("record not found")
@@ -193,7 +193,7 @@ describe("touchpoints", () => {
   it("updates, reopens, and removes touchpoints", async () => {
     const { t, eventId } = await setup()
     const record = await t.mutation(api.touchpoints.create, { eventId })
-    expect(await t.mutation(api.touchpoints.update, { id: record.id, updates: { title: "Confirm", completedAt: "2026-10-08T12:00:00Z" } })).toEqual({ ...record, title: "Confirm", completedAt: "2026-10-08T12:00:00Z" })
+    expect(await t.mutation(api.touchpoints.update, { id: record.id, updates: { title: "Confirm", completedAt: "2026-10-08T12:00:00Z" } })).toEqual({ ...record, updatedAt: expect.any(String), title: "Confirm", completedAt: "2026-10-08T12:00:00Z" })
     expect(await t.query(api.touchpoints.getIncompleteByEventId, { eventId })).toEqual([])
     await t.mutation(api.touchpoints.update, { id: record.id, updates: { completedAt: null } })
     expect(await t.query(api.touchpoints.getIncompleteByEventId, { eventId })).toHaveLength(1)

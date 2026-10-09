@@ -10,6 +10,9 @@ import type { Event } from "~/definitions/database"
 
 vi.mock("~/lib/data/touchpoints", () => ({ getIncompleteTouchpointsByEventId: vi.fn(async () => []) }))
 vi.mock("~/lib/data/eventContacts", () => ({ getEventContactsPanel: vi.fn(async () => contactsPanel) }))
+vi.mock("~/hooks/useUsers", () => ({
+  useUsers: () => ({ data: [{ id: "user-1", name: "Sam Staff", email: "sam@westlinks.ca" }] }),
+}))
 
 function makeEvent(overrides: Partial<Event> = {}): Event {
   return {
@@ -87,6 +90,24 @@ describe("EventDetailHeaderBar", () => {
     )
 
     expect(screen.getByRole("link", { name: /Back to Events/i })).toBeTruthy()
+  })
+
+  it("shows who last edited the event, when known", () => {
+    const { rerender } = render(
+      <MemoryRouter>
+        <EventDetailHeaderBar eventResource={makeEventResource()} />
+      </MemoryRouter>,
+    )
+    expect(screen.queryByText(/Last edited by/)).toBeNull()
+
+    rerender(
+      <MemoryRouter>
+        <EventDetailHeaderBar
+          eventResource={makeEventResource({ event: makeEvent({ updatedBy: "user-1", updatedAt: "1715550000000" }) })}
+        />
+      </MemoryRouter>,
+    )
+    expect(screen.getByText(/^Last edited by Sam Staff · /)).toBeTruthy()
   })
 
   it("reveals the calendar id input after create succeeds", async () => {

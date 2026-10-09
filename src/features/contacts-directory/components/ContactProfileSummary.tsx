@@ -1,3 +1,4 @@
+import { LastEditedBy } from "~/components/molecules/LastEditedBy"
 import type { Contact } from "~/definitions/contacts"
 import { deriveInitials } from "~/lib/contacts/contactRules"
 
@@ -24,6 +25,7 @@ export const ContactProfileSummary: React.FC<ContactProfileSummaryProps> = ({ co
           </span>
         ) : null}
       </div>
+      <LastEditedBy record={contact} className="mt-1" />
     </div>
   </div>
 )
