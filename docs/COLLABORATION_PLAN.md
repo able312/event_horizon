@@ -404,6 +404,35 @@ Verification: `npm test` 168 files, 1,300 tests passed. Convex typecheck, `npm r
 
 **Human check (with the two-window test):** edit different fields of the same event in the calendar sidebar in each window, then save both. Both changes should survive. While typing in an edit form, a save from the other window should update the untouched fields and leave your typing alone. The event header and contact page should show "Last edited by <you>" after a save.
 
+### SQLite → Convex migration (2026-10-09)
+
+**Status: implemented, tested, and rehearsed with the installed app's data in a throwaway deployment. Not run against any shared deployment.**
+
+How it works:
+- `convex/lib/legacyImport.ts` (pure, shared by the CLI and tests) maps every SQLite table and column to its Convex table and field. It converts 0/1 booleans (`rentingCarts`, `isPrimary`) and the JSON `customGrid`, and keeps each row's UUID as `legacyId`. Tables are inserted parents-first. Every reference (`eventId`, `timeblockId`, `contactId`, `vendorCategoryId`, `beverageItemId`) is rewritten through a legacy-ID → Convex-ID map. Imported records keep their original timestamps and have no `createdBy`/`updatedBy` (author unknown).
+- Before writing, it checks that every reference in the SQLite data resolves and that the target deployment has no data (users excepted). The Convex schema validates every inserted document.
+- `convex/legacyImport.ts` holds three **internal** functions (`nonEmptyTables`, `insertBatch`, `dump`), callable only with the deployment's admin access. `insertBatch` also requires `EVENT_HORIZON_LEGACY_IMPORT=enabled`, which the CLI sets for the run and then removes. A compile-time check fails if a schema table is missing from the import. `convex/auth.test.ts` lists these as the only internal functions besides the seed.
+- After importing, verification reads every table back and compares counts, a one-to-one legacy-ID mapping, every field value, and every reference (link rows are compared as a set).
+- CLI: `npm run legacy-import -- --sqlite <path> --dry-run` (read-only) or `--target local|dev|prod`. The target must match the checkout's `.env.local`. `local` needs a local deployment; `dev` and `prod` must run from the main checkout (`prod` adds `--prod`). The SQLite file is opened read-only, inside one read transaction. The ID map is saved under `.event-horizon/legacy-import/` (git-ignored). The script exits non-zero on any mismatch. The npm script rebuilds better-sqlite3 for Node first.
+
+Tests:
+- `convex/legacyImport.test.ts` (14): column coverage against the Convex schema, parent-first order, SQL aliasing, conversions, broken references, batching, a full import with verification, imported data through the app's own queries, refusals (non-empty target, broken references, import disabled, schema-invalid rows), and verification catching changed fields, missing rows and changed links.
+- `scripts/legacy-import.test.ts` (5): reads a database built by the real SQLite migrations (every table, the generated `email_normalized`, the seeded vendor categories), plus option parsing, target selection and the report.
+
+Rehearsal: run against the installed app's `~/Library/Application Support/Event Horizon/app.sqlite`.
+- A read-only dry run gave 3 events, 6 contacts, 8 vendor categories, 1 tournament, 1 cart, 4 payments, 11 touchpoints, 6 charges, 14 timeblocks, 4 food items, 12 beverage items, 12 beverage links, 6 contact roles and 6 event contacts. All references resolve.
+- A copy was then imported into a throwaway anonymous local deployment in a temp directory. Verification passed for every table, row, field and reference. A second run was refused, and the import flag was removed afterwards.
+- The app's timeline, contacts-panel and beverage queries returned every imported event.
+- The temp directory (including the copy and the ID map) was deleted, and no backend was left running.
+- The real SQLite file, the cloud dev deployment and production were not written to.
+
+Verification: `npm test` 170 files, 1,319 tests passed. Convex and script typechecks, `npm run build` and `npm run lint` passed (the same seven existing warnings).
+
+Not yet done:
+- A rehearsal with a larger production copy.
+- A visual spot-check of migrated events and their PDFs (estimate/BEO/timeline) in the app.
+- The real import into production.
+
 ### Notes for the Step 2 detailed plan (found during Step 1)
 - Live updates: use the custom connector in `src/lib/data/liveQueries.ts`, preserving the existing key hierarchy. The unused `@convex-dev/react-query` adapter has been removed.
 - Cart details and tournament details are created on first read (`getOrCreate…`). Convex queries can't write, so these become "create with the event" or an explicit mutation.

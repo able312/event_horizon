@@ -27,7 +27,8 @@
     "release:publish": "node --experimental-strip-types scripts/release-publish.ts",
     "typecheck:release": "tsc --project scripts/tsconfig.json",
     "dist:win": "npm run rebuild:electron && npm run transpile:electron && npm run build && electron-builder --win --x64 --publish never",
-    "convex:worktree": "node --experimental-strip-types scripts/convex-worktree.ts"
+    "convex:worktree": "node --experimental-strip-types scripts/convex-worktree.ts",
+    "legacy-import": "npm run rebuild:node && node --experimental-strip-types scripts/legacy-import.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
