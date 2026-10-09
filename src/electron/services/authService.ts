@@ -7,11 +7,19 @@ import {
 
 export const SIGN_IN_TIMEOUT_MS = 5 * 60 * 1000
 
+/**
+ * Go straight to Google and always show its account chooser. Through the AuthKit page, the browser's
+ * AuthKit session silently reused the last account, so a refused account could never be switched.
+ */
+export const GOOGLE_QUERY_PARAMS = { prompt: "select_account", hd: COMPANY_EMAIL_DOMAIN } as const
+
 type TokenResponse = Parameters<typeof toSession>[0]
 
 /** The public-client subset of the WorkOS user management API (no API key). */
 export interface AuthClient {
-  getAuthorizationUrlWithPKCE(options: { provider: "authkit"; clientId: string; redirectUri: string }):
+  getAuthorizationUrlWithPKCE(options: {
+    provider: "GoogleOAuth"; clientId: string; redirectUri: string; providerQueryParams: Record<string, string>
+  }):
     Promise<{ url: string; state: string; codeVerifier: string }>
   authenticateWithCode(options: { clientId: string; code: string; codeVerifier: string }): Promise<TokenResponse>
   authenticateWithRefreshToken(options: { clientId: string; refreshToken: string }): Promise<TokenResponse>
@@ -142,7 +150,9 @@ export function createAuthService(
     error = null
     publish()
     try {
-      const authorization = await client.getAuthorizationUrlWithPKCE({ provider: "authkit", clientId, redirectUri: AUTH_REDIRECT_URI })
+      const authorization = await client.getAuthorizationUrlWithPKCE({
+        provider: "GoogleOAuth", clientId, redirectUri: AUTH_REDIRECT_URI, providerQueryParams: { ...GOOGLE_QUERY_PARAMS },
+      })
       attempt.state = authorization.state
       attempt.codeVerifier = authorization.codeVerifier
       const server = await platform.listen(url => handleRequest(attempt, url))

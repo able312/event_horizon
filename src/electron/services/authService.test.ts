@@ -67,7 +67,10 @@ describe("sign-in", () => {
   it("opens the PKCE URL, exchanges the code with the verifier, and stores the session", async () => {
     const state = setup()
     await state.service.signIn()
-    expect(state.client.getAuthorizationUrlWithPKCE).toHaveBeenCalledWith({ provider: "authkit", clientId: "client_test", redirectUri: AUTH_REDIRECT_URI })
+    expect(state.client.getAuthorizationUrlWithPKCE).toHaveBeenCalledWith({
+      provider: "GoogleOAuth", clientId: "client_test", redirectUri: AUTH_REDIRECT_URI,
+      providerQueryParams: { prompt: "select_account", hd: "westlinks.ca" },
+    })
     expect(state.platform.openExternal).toHaveBeenCalledWith("https://auth.example/authorize")
     expect(state.service.getSnapshot()).toMatchObject({ isAuthenticated: false, isLoading: true, error: null })
 
