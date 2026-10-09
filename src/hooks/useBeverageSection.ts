@@ -4,7 +4,7 @@ import { toast } from "sonner"
 import type { BeverageItemType, Timeblock } from "~/definitions/database"
 import type { BeverageItemWithAssignments, BeverageSectionPayload } from "~/definitions/beverage/beverage-types"
 import * as beverageItemsIpc from "~/lib/data/beverageItems"
-import { timeblockKeys, timeblockQueries } from "~/lib/data/queries"
+import { timeblockQueries } from "~/lib/data/queries"
 import { useTimeblockMutations } from "./useTimeblockMutations"
 import {
   appendBeverageItem,
@@ -30,21 +30,6 @@ export function useBeverageSection() {
 
   const sectionQuery = timeblockQueries.beverageSection(eventId ?? "")
   const queryKey = sectionQuery.queryKey
-
-  const invalidateKeys = (focusedTimeblockId?: string) => {
-    queryClient.invalidateQueries({ queryKey })
-    queryClient.invalidateQueries({ queryKey: timeblockKeys.timeline(eventId ?? "") })
-    if (focusedTimeblockId) {
-      queryClient.invalidateQueries({ queryKey: timeblockKeys.byId(focusedTimeblockId) })
-    }
-  }
-
-  const invalidateAllFocusedBeverageTimeblocks = () => {
-    const section = queryClient.getQueryData<BeverageSectionPayload>(queryKey)
-    for (const timeblock of section?.timeblocks ?? []) {
-      queryClient.invalidateQueries({ queryKey: timeblockKeys.byId(timeblock.id) })
-    }
-  }
 
   const query = useQuery({
     ...sectionQuery,
@@ -108,9 +93,6 @@ export function useBeverageSection() {
       toast.error("Failed to create beverage item")
       console.error("Failed to create beverage item: ", _err.message)
     },
-    onSettled: () => {
-      invalidateKeys()
-    },
   })
 
   const addItemAssignedMutation = useMutation({
@@ -169,9 +151,6 @@ export function useBeverageSection() {
       toast.error("Failed to create beverage item")
       console.error("Failed to create assigned beverage item: ", _err.message)
     },
-    onSettled: (_data, _error, variables) => {
-      invalidateKeys(variables.timeblockId)
-    },
   })
 
   const updateItemMutation = useMutation({
@@ -201,10 +180,6 @@ export function useBeverageSection() {
       toast.error("Failed to update beverage item")
       console.error("Failed to update beverage item: ", _err.message)
     },
-    onSettled: () => {
-      invalidateKeys()
-      invalidateAllFocusedBeverageTimeblocks()
-    },
   })
 
   const deleteItemMutation = useMutation({
@@ -227,10 +202,6 @@ export function useBeverageSection() {
       toast.error("Failed to delete beverage item")
       console.error("Failed to delete beverage item: ", _err.message)
     },
-    onSettled: () => {
-      invalidateKeys()
-      invalidateAllFocusedBeverageTimeblocks()
-    },
   })
 
   const setItemTimeblocksMutation = useMutation({
@@ -239,13 +210,12 @@ export function useBeverageSection() {
     onMutate: async ({ itemId, timeblockIds }) => {
       await queryClient.cancelQueries({ queryKey })
       const previousData = queryClient.getQueryData<BeverageSectionPayload>(queryKey)
-      const previousIds = previousData?.items.find((item) => item.id === itemId)?.assignedTimeblockIds ?? []
 
       queryClient.setQueryData<BeverageSectionPayload>(queryKey, (old) =>
         setBeverageItemAssignments(old, itemId, timeblockIds),
       )
 
-      return { previousData, affectedTimeblockIds: [...new Set([...previousIds, ...timeblockIds])] }
+      return { previousData }
     },
     onError: (_err, _variables, context) => {
       if (context?.previousData) {
@@ -253,12 +223,6 @@ export function useBeverageSection() {
       }
       toast.error("Failed to update timeblock assignments")
       console.error("Failed to update timeblock assignments: ", _err.message)
-    },
-    onSettled: (_data, _error, _variables, context) => {
-      invalidateKeys()
-      for (const timeblockId of context?.affectedTimeblockIds ?? []) {
-        queryClient.invalidateQueries({ queryKey: timeblockKeys.byId(timeblockId) })
-      }
     },
   })
 

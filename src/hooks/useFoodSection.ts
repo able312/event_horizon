@@ -56,14 +56,6 @@ export function useFoodSection() {
   const sectionQuery = timeblockQueries.foodSection(eventId ?? "")
   const queryKey = sectionQuery.queryKey
 
-  const invalidateKeys = (focusedTimeblockId?: string) => {
-    queryClient.invalidateQueries({ queryKey })
-    queryClient.invalidateQueries({ queryKey: timeblockKeys.timeline(eventId ?? "") })
-    if (focusedTimeblockId) {
-      queryClient.invalidateQueries({ queryKey: timeblockKeys.byId(focusedTimeblockId) })
-    }
-  }
-
   const query = useQuery({
     ...sectionQuery,
     enabled: !!eventId,
@@ -139,9 +131,6 @@ export function useFoodSection() {
       }
       toast.error("Failed to create food item")
     },
-    onSettled: (_data, _error, variables) => {
-      invalidateKeys(variables.timeblockId)
-    },
   })
 
   const updateItemMutation = useMutation({
@@ -202,9 +191,6 @@ export function useFoodSection() {
       }
       toast.error("Failed to update food item")
     },
-    onSettled: (_data, _error, variables) => {
-      invalidateKeys(variables.timeblockId)
-    },
   })
 
   const deleteItemMutation = useMutation({
@@ -238,9 +224,6 @@ export function useFoodSection() {
         )
       }
       toast.error("Failed to delete food item")
-    },
-    onSettled: (_data, _error, variables) => {
-      invalidateKeys(variables.timeblockId)
     },
   })
 

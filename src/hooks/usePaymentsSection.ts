@@ -55,9 +55,6 @@ export function usePaymentsSection() {
       }
       toast.error("Failed to create payment")
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey })
-    },
   })
 
   const updateMutation = useMutation({
@@ -79,9 +76,6 @@ export function usePaymentsSection() {
       }
       toast.error("Failed to update payment")
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey })
-    },
   })
 
   const deleteMutation = useMutation({
@@ -101,9 +95,6 @@ export function usePaymentsSection() {
         queryClient.setQueryData(queryKey, context.previousPayments)
       }
       toast.error("Failed to delete payment")
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey })
     },
   })
 

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { CartDetails, UpdateCartDetails } from "~/definitions/database"
 import * as cartDetailsApi from "~/lib/data/cartDetails"
-import { cartDetailsQueries, timeblockKeys } from "~/lib/data/queries"
+import { cartDetailsQueries } from "~/lib/data/queries"
 
 export function useCartDetailsSection(enabled = true) {
   const { id: eventId } = useParams<{ id: string }>()
@@ -12,10 +12,6 @@ export function useCartDetailsSection(enabled = true) {
   const detailsQuery = cartDetailsQueries.byEvent(eventId ?? "")
   const queryKey = detailsQuery.queryKey
 
-  const invalidateKeys = () => {
-    queryClient.invalidateQueries({ queryKey })
-    queryClient.invalidateQueries({ queryKey: timeblockKeys.timeline(eventId ?? "") })
-  }
 
   const query = useQuery({
     ...detailsQuery,
@@ -41,9 +37,6 @@ export function useCartDetailsSection(enabled = true) {
       }
       toast.error("Failed to update cart details")
       console.error("Error updating cart details:", _err)
-    },
-    onSettled: () => {
-      invalidateKeys()
     },
   })
 

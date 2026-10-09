@@ -72,7 +72,7 @@ High-level plan to take the app from a single-user, local-only Electron app to a
 - Changes made in one client appear in another without a refresh.
 - better-sqlite3 is removed from dependencies, or any remaining use is justified.
 
-**Status: backend operation ports implemented and auth-guarded; renderer integration in progress (see "Step 2 renderer integration progress" below).** Data migration remains pending.
+**Status: backend operation ports implemented and auth-guarded; renderer integration done, and post-save refreshes removed (see "Redundant refresh removal" below).** Audit/simultaneous-edit decisions and data migration remain pending.
 
 Completed:
 - Installed `convex` and `@convex-dev/react-query` (`b51f523`). The adapter is the selected approach for live queries; renderer integration is still pending.
@@ -326,6 +326,54 @@ Human smoke testing found `eventContacts:getPrimaryClients` rejecting `temp_1791
 - Added regression tests for mixed saved/temporary events, live-source arguments, the saved-ID transition, all-temporary lists and optimistic rollback. Event/contact hook tests passed (25 tests).
 
 **Human handoff:** repeat event creation in the calendar/table and confirm no `getPrimaryClients` validation error occurs; if creating with a client, confirm its name appears after saving. Continue the section and two-client checklist above. Redundant refresh removal, audit/concurrency decisions, migration and production/Windows work remain pending that verification.
+
+### Redundant refresh removal (2026-10-09)
+
+**Status: implemented and unit-tested; desktop check pending.** Saves no longer trigger refetches. Convex subscriptions are the only way the cache learns about saved changes, whether they're yours or someone else's.
+
+What changed:
+- `src/lib/data/liveQueries.ts` now reconciles optimistic edits itself:
+  - While any mutation is in flight, new live results for single-query reads are held back, so they can't overwrite optimistic edits. This happened before when another user's change, or your own earlier save, arrived mid-edit.
+  - When the last in-flight mutation settles, every live read is set to Convex's local copy, and only reads that differ are written. Convex applies a mutation's effects to its local query results before the mutation's promise resolves (checked in the client source), so that copy already includes the save. No network round trip is needed.
+  - This also fixes two cases a plain subscription misses. If the server normalizes an optimistic value back to what it already had (e.g. trimming), Convex reports no change. If a failed save's rollback snapshot is stale, the rollback could leave old data behind. In both cases the cache now ends up matching the server.
+- Removed every post-save `invalidateQueries` from the hooks: events, event detail, payments, charges, touchpoints, cart, tournament, timeblocks, food, beverages, conversion, event contacts and the contact directory. Also removed the ICS import's post-commit refetch (and the hook's now-unused `eventsHook` parameter), plus the unused scope-invalidation helpers in `eventsCache.ts`.
+- Kept: every manual **Retry** button (`refetch`), the contact directory's refetch-all-pages-on-change (pagination consistency), and the bridge's refetch when a live query fails (so errors reach the UI translated).
+- Tests: two new bridge tests check that a mid-save live result is held and the merged server copy is applied afterwards, without refetching. They also check that a normalized or rejected optimistic value is corrected when no new result arrives. The hook tests that asserted invalidations now assert that the optimistic result stays and nothing is refetched.
+
+Verification: `npm test` 163 files, 1,265 tests passed; typecheck and `npm run lint` passed (the same seven existing warnings).
+
+**Human check:** with `npm run dev` and two signed-in windows, edit fields quickly in a few sections (event title/status, a payment amount, a beverage name right after adding it, a timeblock time). Values should not flicker back while typing, and the other window should update. Change an event's date and confirm it moves between calendar months in both windows.
+
+### Audit fields and simultaneous edits: findings and recommendation (2026-10-09)
+
+**Status: waiting on two decisions from you.** Nothing has been changed yet.
+
+Already decided (from the request):
+- Store who created each record, who last edited it, and when.
+- Edits to different fields coexist; for the same field, the last saved edit wins.
+
+What the code does today:
+- Convex patches only the fields they're sent, so the server already supports "different fields coexist".
+- **Several forms send every field on save, not just the changed ones.** Two people editing different fields in these forms would still overwrite each other with stale values. The forms are the calendar sidebar's edit-event form (`EditEventSidebarForm.tsx`: title, type, status, dates and guests), the contact directory's edit form (`ContactEditForm.tsx`), and the event-contact edit form (`EditEventContactForm.tsx`: contact plus assignment). These forms need to send only the fields that changed since the form was opened.
+- `EditEventSidebarForm` resets its draft whenever the event object changes. With live updates, another person's save would wipe whatever you're typing. The draft should only reset when a different event is opened.
+- Inline autosave fields (event detail title bar, section editors) already send single fields.
+- Records with `createdAt`/`updatedAt` today: events, cart/tournament details, timeblocks, contacts and event contacts. Payments, touchpoints, charges and contact roles have only `createdAt`. Food items, beverage items, beverage links and vendor categories have neither.
+
+Planned implementation (once the questions below are answered):
+- Add `createdBy`, `updatedBy` (references to `users`) and `updatedAt` to every editable business record. `requireCompanyUser` already gives each mutation the caller's identity, and `users.store` gives the ID. Set them server-side only, never from client input. The SQLite import fills `createdBy`/`updatedBy` with null (unknown) and keeps the original timestamps. Show "Last edited by X, time" where it's useful (event header, contact detail).
+- Make the three forms above send changed fields only, and stop resetting drafts on live updates.
+- Tests: audit fields set on create and update, not client-settable, and preserved by the import. Plus form diff logic.
+
+**Decision 1: conflict warnings for financial and status fields.**
+- *Option A, no warnings (last save wins everywhere).* Simplest. The risk is narrow: two people changing the **same** payment amount or event status within the same few seconds. With 5–6 users and records that usually have one owner, that's rare. Live updates also mean you normally see the other person's value before you edit.
+- *Option B, warn on stale saves for selected fields.* The client sends the `updatedAt` it last saw. If the server's copy changed since then, the mutation is rejected and the UI shows "X changed this to Y. Overwrite?". This touches payments, charges, event status and dates (the fields that drive money and the calendar). It costs a version check in each of those mutations and a conflict dialog in their editors.
+- **Recommendation: A for now, with the audit fields visible.** The "last edited by" display makes an overwrite noticeable and traceable. B can be added later per field without schema changes, because `updatedAt` is already stored. Revisit if an overwrite actually happens.
+
+**Decision 2: full edit history.**
+- *Option A, last editor only (the audit fields above).*
+- *Option B, an append-only `changes` table:* record, field, old value, new value, user, time. One entry is written by each mutation, and each record gets a viewable history. It's a moderate amount of work: a shared helper called by about 30 mutations, a history panel, and storage that grows forever (small at this scale).
+- *Option C, rely on Convex backups / snapshot exports* for "what did this look like last week". These are coarse and must be restored manually.
+- **Recommendation: A now, plus scheduled Convex backups (C) for disaster recovery.** Add B later if you find you need to answer "who changed this payment and from what?". If financial disputes are a real possibility, B for payments and charges only is a cheap middle ground.
 
 ### Notes for the Step 2 detailed plan (found during Step 1)
 - Live updates: use the custom connector in `src/lib/data/liveQueries.ts`, preserving the existing key hierarchy. The unused `@convex-dev/react-query` adapter has been removed.

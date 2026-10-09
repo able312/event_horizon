@@ -40,19 +40,11 @@ export function useTouchpointsSection(eventIdOverride?: string) {
     select: sortTouchpoints,
   })
 
-  const invalidateRelated = () => {
-    void queryClient.invalidateQueries({ queryKey })
-    void queryClient.invalidateQueries({ queryKey: incompleteQueryKey })
-  }
-
   const createMutation = useMutation({
     mutationFn: (values?: Partial<Pick<NewTouchpoint, "title" | "dueDate" | "completedAt">>) =>
       touchpointApi.createTouchpoint(eventId!, values),
     onError: () => {
       toast.error("Failed to create touchpoint")
-    },
-    onSettled: () => {
-      invalidateRelated()
     },
   })
 
@@ -75,9 +67,6 @@ export function useTouchpointsSection(eventIdOverride?: string) {
       }
       toast.error("Failed to update touchpoint")
     },
-    onSettled: () => {
-      invalidateRelated()
-    },
   })
 
   const deleteMutation = useMutation({
@@ -98,9 +87,6 @@ export function useTouchpointsSection(eventIdOverride?: string) {
       }
       toast.error("Failed to delete touchpoint")
     },
-    onSettled: () => {
-      invalidateRelated()
-    },
   })
 
   const seedMutation = useMutation({
@@ -110,9 +96,6 @@ export function useTouchpointsSection(eventIdOverride?: string) {
     },
     onSuccess: () => {
       toast.success("Added common touchpoints")
-    },
-    onSettled: () => {
-      invalidateRelated()
     },
   })
 
@@ -152,10 +135,6 @@ export function useIncompleteTouchpoints() {
         queryClient.setQueryData(incompleteQueryKey, context.previous)
       }
       toast.error("Failed to complete touchpoint")
-    },
-    onSettled: (_data, _err, vars) => {
-      void queryClient.invalidateQueries({ queryKey: incompleteQueryKey })
-      void queryClient.invalidateQueries({ queryKey: touchpointKeys.byEvent(vars.eventId) })
     },
   })
 

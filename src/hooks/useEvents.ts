@@ -3,15 +3,12 @@ import { toast } from "sonner"
 import type { NewContact } from "~/definitions/contacts"
 import type { Event, NewEvent, UpdateEvent } from "~/definitions/database"
 import * as eventsApi from "~/lib/data/events"
-import { eventContactKeys, eventKeys, eventQueries, touchpointKeys } from "~/lib/data/queries"
+import { eventKeys, eventQueries } from "~/lib/data/queries"
 import {
   findCachedEventById,
   getEventScopeFromEvent,
   getEventScopeFromStartDateTime,
   getEventScopeQueryKey,
-  invalidateAllEventScopes,
-  invalidateEventScopes,
-  invalidateEventsSearchQueries,
 } from "./eventsCache"
 import { useEventsMonthQuery } from "./useEventsMonthQuery"
 
@@ -103,25 +100,13 @@ export function useEvents(month: string) {
         }
       }
 
-      return { snapshots, nextScope }
+      return { snapshots }
     },
     onError: (_err, _variables, context) => {
       for (const snapshot of context?.snapshots ?? []) {
         queryClient.setQueryData(snapshot.key, snapshot.data)
       }
       toast.error("Failed to create event")
-    },
-    onSettled: async (_createdEvent, _err, variables, context) => {
-      await invalidateEventsSearchQueries(queryClient)
-      if (variables.client) {
-        await queryClient.invalidateQueries({ queryKey: eventContactKeys.primaryClients() })
-      }
-
-      if (context?.nextScope) {
-        await invalidateEventScopes(queryClient, [context.nextScope])
-        return
-      }
-      await invalidateAllEventScopes(queryClient)
     },
   })
 
@@ -153,13 +138,7 @@ export function useEvents(month: string) {
           : getEventScopeFromStartDateTime(nextStartDateTime)
 
       if (!previousEvent) {
-        return {
-          snapshots,
-          previousScope,
-          nextScope,
-          eventQueryKey,
-          previousEventById,
-        }
+        return { snapshots, eventQueryKey, previousEventById }
       }
 
       const nextEvent: Event = { ...previousEvent, ...updates }
@@ -201,8 +180,6 @@ export function useEvents(month: string) {
 
       return {
         snapshots: snapshots.reduce(mergeSnapshot, [] as SnapshotEntry[]),
-        previousScope,
-        nextScope,
         eventQueryKey,
         previousEventById,
       }
@@ -216,20 +193,6 @@ export function useEvents(month: string) {
         queryClient.setQueryData(context.eventQueryKey, context.previousEventById)
       }
       toast.error("Failed to update event")
-    },
-    onSettled: async (_updatedEvent, _err, variables, context) => {
-      await queryClient.invalidateQueries({ queryKey: eventKeys.byId(variables.id) })
-      await queryClient.invalidateQueries({ queryKey: touchpointKeys.incomplete() })
-      await invalidateEventsSearchQueries(queryClient)
-
-      if (context?.previousScope || context?.nextScope) {
-        await invalidateEventScopes(queryClient, [
-          context.previousScope,
-          context.nextScope,
-        ])
-        return
-      }
-      await invalidateAllEventScopes(queryClient)
     },
   })
 
@@ -264,12 +227,7 @@ export function useEvents(month: string) {
 
       queryClient.removeQueries({ queryKey: eventQueryKey, exact: true })
 
-      return {
-        snapshots,
-        previousScope,
-        eventQueryKey,
-        previousEventById,
-      }
+      return { snapshots, eventQueryKey, previousEventById }
     },
     onError: (_err, _id, context) => {
       for (const snapshot of context?.snapshots ?? []) {
@@ -280,17 +238,6 @@ export function useEvents(month: string) {
         queryClient.setQueryData(context.eventQueryKey, context.previousEventById)
       }
       toast.error("Failed to delete event")
-    },
-    onSettled: async (_deleted, _err, id, context) => {
-      await queryClient.invalidateQueries({ queryKey: eventKeys.byId(id) })
-      await queryClient.invalidateQueries({ queryKey: touchpointKeys.incomplete() })
-      await invalidateEventsSearchQueries(queryClient)
-
-      if (context?.previousScope) {
-        await invalidateEventScopes(queryClient, [context.previousScope])
-        return
-      }
-      await invalidateAllEventScopes(queryClient)
     },
   })
 

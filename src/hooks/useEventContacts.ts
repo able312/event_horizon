@@ -19,7 +19,6 @@ import * as contactRolesApi from "~/lib/data/contactRoles"
 import * as contactsApi from "~/lib/data/contacts"
 import * as eventContactsApi from "~/lib/data/eventContacts"
 import {
-  contactKeys,
   contactQueries,
   eventContactKeys,
   eventContactQueries,
@@ -27,16 +26,6 @@ import {
 } from "~/lib/data/queries"
 
 const CONTACT_SEARCH_LIMIT = 20
-
-/** Invalidates the whole event-contacts cache: every event's panel plus the primary-clients batch. */
-function invalidateAllEventContacts(queryClient: ReturnType<typeof useQueryClient>) {
-  void queryClient.invalidateQueries({ queryKey: eventContactKeys.all() })
-}
-
-/** Invalidates the directory: search results, by-id lookups, standing roles, and event history. */
-function invalidateContactsDirectory(queryClient: ReturnType<typeof useQueryClient>) {
-  void queryClient.invalidateQueries({ queryKey: contactKeys.all() })
-}
 
 export type AssignEventContactVariables = {
   target: AssignContactTarget
@@ -70,34 +59,16 @@ export function useEventContacts(eventId: string) {
     enabled: Boolean(eventId),
   })
 
-  const invalidatePanel = () => {
-    void queryClient.invalidateQueries({ queryKey })
-    void queryClient.invalidateQueries({ queryKey: eventContactKeys.primaryClients() })
-  }
-
-  // Assigning/saving can create or change a contact, which changes directory search and by-id results
-  const invalidateDirectory = () => {
-    void queryClient.invalidateQueries({ queryKey: contactKeys.all() })
-  }
-
   /** Errors are left to the caller so the add dialog can react to EmailTaken inline. */
   const assignMutation = useMutation({
     mutationFn: ({ target, role, opts }: AssignEventContactVariables) =>
       eventContactsApi.assignEventContact(eventId, target, role, opts),
-    onSettled: () => {
-      invalidatePanel()
-      invalidateDirectory()
-    },
   })
 
   /** Saves the contact's own details and the event-specific assignment fields together: both or neither. */
   const saveMutation = useMutation({
     mutationFn: ({ eventContactId, contact, assignment }: SaveEventContactVariables) =>
       eventContactsApi.updateEventContactWithContact(eventContactId, contact, assignment),
-    onSettled: () => {
-      invalidatePanel()
-      invalidateDirectory()
-    },
   })
 
   const setPrimaryMutation = useMutation({
@@ -105,7 +76,6 @@ export function useEventContacts(eventId: string) {
     onError: (err) => {
       toast.error(getContactsErrorMessage(err, "Failed to set primary contact"))
     },
-    onSettled: invalidatePanel,
   })
 
   const removeMutation = useMutation({
@@ -124,7 +94,6 @@ export function useEventContacts(eventId: string) {
       }
       toast.error(getContactsErrorMessage(err, "Failed to remove contact"))
     },
-    onSettled: invalidatePanel,
   })
 
   return {
@@ -227,10 +196,8 @@ export function useVendorCategories() {
 
 /** Errors are left to the caller so the create/edit form can react to EmailTaken inline. */
 export function useCreateContact() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: NewContact) => contactsApi.createContact(input),
-    onSettled: () => invalidateContactsDirectory(queryClient),
   })
 }
 
@@ -238,49 +205,29 @@ export type UpdateContactVariables = { id: string; patch: UpdateContact }
 
 /** Errors are left to the caller so the edit form can react to EmailTaken inline. */
 export function useUpdateContact() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ id, patch }: UpdateContactVariables) => contactsApi.updateContact(id, patch),
-    onSettled: () => {
-      invalidateContactsDirectory(queryClient)
-      invalidateAllEventContacts(queryClient)
-    },
   })
 }
 
 export function useArchiveContact() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => contactsApi.archiveContact(id),
     onError: (err) => toast.error(getContactsErrorMessage(err, "Failed to archive contact")),
-    onSettled: () => {
-      invalidateContactsDirectory(queryClient)
-      invalidateAllEventContacts(queryClient)
-    },
   })
 }
 
 export function useRestoreContact() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => contactsApi.restoreContact(id),
     onError: (err) => toast.error(getContactsErrorMessage(err, "Failed to restore contact")),
-    onSettled: () => {
-      invalidateContactsDirectory(queryClient)
-      invalidateAllEventContacts(queryClient)
-    },
   })
 }
 
 /** Errors are left to the caller so the page can distinguish ContactInUse from other failures. */
 export function useDeleteContact() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => contactsApi.deleteContact(id),
-    onSettled: () => {
-      invalidateContactsDirectory(queryClient)
-      invalidateAllEventContacts(queryClient)
-    },
   })
 }
 
@@ -294,24 +241,20 @@ export function useContactRoles(contactId: string | null) {
 export type EnsureContactRoleVariables = { contactId: string; role: ContactRoleType; vendorCategoryId?: string | null }
 
 export function useEnsureContactRole() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ contactId, role, vendorCategoryId }: EnsureContactRoleVariables) =>
       contactRolesApi.ensureContactRole(contactId, role, vendorCategoryId),
     onError: (err) => toast.error(getContactsErrorMessage(err, "Failed to add role")),
-    onSettled: () => invalidateContactsDirectory(queryClient),
   })
 }
 
 export type RemoveContactRoleVariables = { contactId: string; role: ContactRoleType; vendorCategoryId?: string | null }
 
 export function useRemoveContactRole() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ contactId, role, vendorCategoryId }: RemoveContactRoleVariables) =>
       contactRolesApi.removeContactRole(contactId, role, vendorCategoryId),
     onError: (err) => toast.error(getContactsErrorMessage(err, "Failed to remove role")),
-    onSettled: () => invalidateContactsDirectory(queryClient),
   })
 }
 

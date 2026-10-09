@@ -32,13 +32,6 @@ function makeReviewPayload(): IcsImportReviewPayload {
   }
 }
 
-function makeEventsHook() {
-  return {
-    monthQuery: { refetch: vi.fn(async () => undefined) },
-    unscheduledQuery: { refetch: vi.fn(async () => undefined) },
-  } as unknown as Parameters<typeof useIcsImportController>[0]
-}
-
 beforeEach(() => {
   vi.mocked(reviewIcsImport).mockImplementation(async (parsed: IcsImportParsedPayload) => ({
     ...parsed,
@@ -51,8 +44,7 @@ describe("useIcsImportController", () => {
     const unsubscribe = vi.fn()
     vi.mocked(onIcsImportReview).mockReturnValue(unsubscribe)
 
-    const eventsHook = makeEventsHook()
-    const { unmount } = renderHook(() => useIcsImportController(eventsHook))
+    const { unmount } = renderHook(() => useIcsImportController())
 
     expect(onIcsImportReview).toHaveBeenCalledTimes(1)
     unmount()
@@ -66,8 +58,7 @@ describe("useIcsImportController", () => {
       return () => undefined
     })
 
-    const eventsHook = makeEventsHook()
-    const { result } = renderHook(() => useIcsImportController(eventsHook))
+    const { result } = renderHook(() => useIcsImportController())
     const payload = makeReviewPayload()
 
     act(() => {
@@ -79,7 +70,7 @@ describe("useIcsImportController", () => {
     expect(result.current.commitResult).toBeNull()
   })
 
-  it("commits rows successfully and refetches event queries", async () => {
+  it("commits rows successfully and reports the result", async () => {
     let listener: ((payload: IcsImportParsedPayload) => void) | null = null
     vi.mocked(onIcsImportReview).mockImplementation((nextListener) => {
       listener = nextListener
@@ -94,8 +85,7 @@ describe("useIcsImportController", () => {
       skippedInvalidRows: [],
     })
 
-    const eventsHook = makeEventsHook()
-    const { result } = renderHook(() => useIcsImportController(eventsHook))
+    const { result } = renderHook(() => useIcsImportController())
 
     act(() => {
       listener?.(makeReviewPayload())
@@ -107,8 +97,6 @@ describe("useIcsImportController", () => {
     })
 
     expect(commitIcsImport).toHaveBeenCalledWith(makeReviewPayload(), ["row-1"])
-    expect(eventsHook.monthQuery.refetch).toHaveBeenCalledTimes(1)
-    expect(eventsHook.unscheduledQuery.refetch).toHaveBeenCalledTimes(1)
     expect(result.current.phase).toBe("report")
     expect(toast.success).toHaveBeenCalledWith("Imported 2 event(s)")
   })
@@ -121,8 +109,7 @@ describe("useIcsImportController", () => {
     })
     vi.mocked(commitIcsImport).mockRejectedValue(new Error("commit failed"))
 
-    const eventsHook = makeEventsHook()
-    const { result } = renderHook(() => useIcsImportController(eventsHook))
+    const { result } = renderHook(() => useIcsImportController())
 
     act(() => {
       listener?.(makeReviewPayload())
@@ -160,8 +147,7 @@ describe("useIcsImportController", () => {
         }),
     )
 
-    const eventsHook = makeEventsHook()
-    const { result } = renderHook(() => useIcsImportController(eventsHook))
+    const { result } = renderHook(() => useIcsImportController())
 
     act(() => {
       listener?.(makeReviewPayload())
@@ -204,7 +190,7 @@ describe("useIcsImportController", () => {
     vi.mocked(reviewIcsImport).mockRejectedValueOnce(new Error("lookup failed"))
     vi.spyOn(console, "error").mockImplementation(() => undefined)
 
-    const { result } = renderHook(() => useIcsImportController(makeEventsHook()))
+    const { result } = renderHook(() => useIcsImportController())
 
     act(() => {
       listener?.(makeReviewPayload())

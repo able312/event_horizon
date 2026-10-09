@@ -163,7 +163,7 @@ describe("useEventContacts", () => {
     await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
   })
 
-  it("assigns through IPC and refetches the panel", async () => {
+  it("assigns through IPC and leaves the panel to its live subscription", async () => {
     vi.mocked(eventContactsIpc.getEventContactsPanel).mockResolvedValue(makePanel())
     vi.mocked(eventContactsIpc.assignEventContact).mockResolvedValue({} as never)
 
@@ -181,7 +181,7 @@ describe("useEventContacts", () => {
     expect(eventContactsIpc.assignEventContact).toHaveBeenCalledWith("event-1", { contactId: "c-2" }, "vendor", {
       vendorCategoryId: "cat-1",
     })
-    await waitFor(() => expect(eventContactsIpc.getEventContactsPanel).toHaveBeenCalledTimes(2))
+    expect(eventContactsIpc.getEventContactsPanel).toHaveBeenCalledTimes(1)
   })
 
   it("saves contact details and the event assignment in a single call", async () => {
@@ -306,7 +306,7 @@ describe("useCreateContact", () => {
 })
 
 describe("useUpdateContact / useArchiveContact", () => {
-  it("invalidates both the contacts directory and every event-contacts panel on update", async () => {
+  it("updates a contact without refreshing the directory or event panels", async () => {
     vi.mocked(contactsIpc.updateContact).mockResolvedValue(makeContact({ displayName: "Sarah K." }))
     vi.mocked(eventContactsIpc.getEventContactsPanel).mockResolvedValue(makePanel())
 
@@ -322,9 +322,8 @@ describe("useUpdateContact / useArchiveContact", () => {
       await result.current.update.mutateAsync({ id: "c-1", patch: { firstName: "Sarah" } })
     })
 
-    const invalidatedKeys = invalidateSpy.mock.calls.map((call) => call[0]?.queryKey)
-    expect(invalidatedKeys).toContainEqual(["contacts"])
-    expect(invalidatedKeys).toContainEqual(["event-contacts"])
+    expect(contactsIpc.updateContact).toHaveBeenCalledWith("c-1", { firstName: "Sarah" })
+    expect(invalidateSpy).not.toHaveBeenCalled()
   })
 
   it("surfaces archive failures as a toast", async () => {

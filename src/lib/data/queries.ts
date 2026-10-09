@@ -21,9 +21,9 @@ import { sources } from "./sources"
 
 // Every cached read in the app: its cache key, how it is fetched, and the Convex
 // query that keeps it live (`liveMeta`, see liveQueries.ts). Hooks build on these
-// and use the key factories for optimistic updates and invalidation, so a backend
-// swap only changes this folder. Live reads never go stale; other people's changes
-// arrive through the subscription.
+// and use the key factories for optimistic updates, so a backend swap only changes
+// this folder. Live reads never go stale and need no refresh after a save: every
+// change, ours or anyone else's, arrives through the subscription.
 
 // ============================================================================
 // Events

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import type { Event, NewEvent } from "~/definitions/database"
 import * as eventsApi from "~/lib/data/events"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
-import { eventContactKeys, eventKeys } from "~/lib/data/queries"
+import { eventKeys } from "~/lib/data/queries"
 import { useEvents } from "./useEvents"
 import { useEventsMonthQuery } from "./useEventsMonthQuery"
 
@@ -112,7 +112,7 @@ describe("useEvents month-scoped queries and mutations", () => {
     expect(result.current.main.monthEvents).toEqual(result.current.mini.events)
   })
 
-  it("createEvent returns a promise and invalidates only the affected month scope", async () => {
+  it("createEvent returns a promise, shows the event optimistically and leaves refreshing to live queries", async () => {
     const getEventsByMonthMock = vi.mocked(eventsApi.getEventsByMonth)
     const getUnscheduledEventsMock = vi.mocked(eventsApi.getUnscheduledEvents)
     const createEventMock = vi.mocked(eventsApi.createEvent)
@@ -123,7 +123,7 @@ describe("useEvents month-scoped queries and mutations", () => {
     const deferredCreate = createDeferred<Event>()
     createEventMock.mockReturnValue(deferredCreate.promise)
 
-    const { result } = renderHookWithProviders(() => useEvents("2026-04"))
+    const { result, queryClient } = renderHookWithProviders(() => useEvents("2026-04"))
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     const newEvent = {
@@ -136,19 +136,21 @@ describe("useEvents month-scoped queries and mutations", () => {
 
     const createPromise = result.current.createEvent(newEvent)
     expect(typeof createPromise.then).toBe("function")
+    await waitFor(() =>
+      expect(queryClient.getQueryData<Event[]>(eventKeys.month("2026-04"))?.map((event) => event.title))
+        .toEqual(["Event 1", "Created Event"]),
+    )
 
     await act(async () => {
       deferredCreate.resolve(makeEvent({ id: "event-created", title: "Created Event" }))
       await expect(createPromise).resolves.toMatchObject({ id: "event-created" })
     })
 
-    await waitFor(() => {
-      expect(getEventsByMonthMock).toHaveBeenCalledTimes(2)
-    })
+    expect(getEventsByMonthMock).toHaveBeenCalledTimes(1)
     expect(getUnscheduledEventsMock).toHaveBeenCalledTimes(1)
   })
 
-  it("createEvent forwards the new client and refreshes batched primary clients", async () => {
+  it("createEvent forwards the new client without refreshing primary clients", async () => {
     vi.mocked(eventsApi.getEventsByMonth).mockResolvedValue([makeEvent()])
     vi.mocked(eventsApi.getUnscheduledEvents).mockResolvedValue([])
     const createEventMock = vi.mocked(eventsApi.createEvent)
@@ -166,7 +168,7 @@ describe("useEvents month-scoped queries and mutations", () => {
     })
 
     expect(createEventMock).toHaveBeenCalledWith(newEvent, client)
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: eventContactKeys.primaryClients() })
+    expect(invalidateSpy).not.toHaveBeenCalled()
   })
 
   it("updateEvent returns a promise and rejects on mutation failure", async () => {
@@ -189,31 +191,7 @@ describe("useEvents month-scoped queries and mutations", () => {
     await expect(updatePromise).rejects.toThrow("update failed")
   })
 
-  it("invalidates event search queries after update", async () => {
-    const getEventsByMonthMock = vi.mocked(eventsApi.getEventsByMonth)
-    const getUnscheduledEventsMock = vi.mocked(eventsApi.getUnscheduledEvents)
-    const updateEventMock = vi.mocked(eventsApi.updateEvent)
-
-    getEventsByMonthMock.mockResolvedValue([makeEvent()])
-    getUnscheduledEventsMock.mockResolvedValue([])
-    updateEventMock.mockResolvedValue(makeEvent({ title: "Updated" }))
-
-    const { result, queryClient } = renderHookWithProviders(() => useEvents("2026-04"))
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
-
-    await act(async () => {
-      await result.current.updateEvent({
-        id: "event-1",
-        updates: { title: "Updated" },
-      })
-    })
-
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: eventKeys.searches() })
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["touchpoints", "incomplete"] })
-  })
-
-  it("optimistically updates and invalidates single-event cache after update", async () => {
+  it("optimistically updates the single-event cache and requests no refresh", async () => {
     const getEventsByMonthMock = vi.mocked(eventsApi.getEventsByMonth)
     const getUnscheduledEventsMock = vi.mocked(eventsApi.getUnscheduledEvents)
     const updateEventMock = vi.mocked(eventsApi.updateEvent)
@@ -251,7 +229,8 @@ describe("useEvents month-scoped queries and mutations", () => {
       await expect(updatePromise).resolves.toBeTruthy()
     })
 
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["event", "event-1"] })
+    expect(queryClient.getQueryData<Event>(["event", "event-1"])?.title).toBe("New Title")
+    expect(invalidateSpy).not.toHaveBeenCalled()
   })
 
   it("restores single-event cache when update fails", async () => {
@@ -300,7 +279,7 @@ describe("useEvents month-scoped queries and mutations", () => {
     })
   })
 
-  it("removes and invalidates single-event cache after delete", async () => {
+  it("removes the single-event cache on delete and requests no refresh", async () => {
     const getEventsByMonthMock = vi.mocked(eventsApi.getEventsByMonth)
     const getUnscheduledEventsMock = vi.mocked(eventsApi.getUnscheduledEvents)
     const deleteEventMock = vi.mocked(eventsApi.deleteEvent)
@@ -325,7 +304,7 @@ describe("useEvents month-scoped queries and mutations", () => {
       await expect(deletePromise).resolves.toBe(true)
     })
 
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["event", "event-1"] })
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["touchpoints", "incomplete"] })
+    expect(invalidateSpy).not.toHaveBeenCalled()
+    expect(getEventsByMonthMock).toHaveBeenCalledTimes(1)
   })
 })

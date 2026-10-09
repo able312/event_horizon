@@ -64,4 +64,41 @@ describe("live connector", () => {
     expect(watches[0].unsubscribe).toHaveBeenCalledOnce()
     cache.clear()
   })
+  it("holds results while a save is in flight, then applies Convex's copy without refetching", async () => {
+    const { cache, watches, stop } = setup()
+    const queryFn = vi.fn(async () => ({ title: "Before", notes: "" }))
+    const options = { queryKey: ["event", "one"], queryFn, ...liveMeta(liveSource(query, { id: "one" })) }
+    await cache.fetchQuery(options)
+    let finishSave!: () => void
+    const save = cache.getMutationCache().build(cache, {
+      mutationFn: () => new Promise<void>((resolve) => { finishSave = resolve }),
+      onMutate: () => { cache.setQueryData(options.queryKey, { title: "Mine", notes: "" }) },
+    }).execute(undefined)
+    await vi.waitFor(() => expect(finishSave).toBeDefined())
+    // Another user's change arrives before ours is applied: the optimistic edit stays visible.
+    watches[0].set({ title: "Before", notes: "Theirs" }); watches[0].emit()
+    expect(cache.getQueryData(options.queryKey)).toEqual({ title: "Mine", notes: "" })
+    // Convex has both changes by the time the save resolves.
+    watches[0].set({ title: "Mine", notes: "Theirs" })
+    finishSave(); await save
+    expect(cache.getQueryData(options.queryKey)).toEqual({ title: "Mine", notes: "Theirs" })
+    expect(queryFn).toHaveBeenCalledOnce()
+    stop(); cache.clear()
+  })
+  it("replaces an optimistic value the server normalized or rejected, even with no new result", async () => {
+    const { cache, watches, stop } = setup()
+    const options = { queryKey: ["event", "one"], queryFn: async () => ({ title: "Before" }), ...liveMeta(liveSource(query, { id: "one" })) }
+    await cache.fetchQuery(options)
+    watches[0].set({ title: "Before" }); watches[0].emit()
+    const optimistic = (title: string) => ({ onMutate: () => { cache.setQueryData(options.queryKey, { title }) } })
+    // Trimmed back to the existing value on the server, so Convex reports no change.
+    await cache.getMutationCache().build(cache, { mutationFn: async () => undefined, ...optimistic("Before ") }).execute(undefined)
+    expect(cache.getQueryData(options.queryKey)).toEqual({ title: "Before" })
+    await expect(cache.getMutationCache().build(cache, {
+      mutationFn: async () => { throw new Error("Rejected") },
+      ...optimistic("Rejected"),
+    }).execute(undefined)).rejects.toThrow("Rejected")
+    expect(cache.getQueryData(options.queryKey)).toEqual({ title: "Before" })
+    stop(); cache.clear()
+  })
 })

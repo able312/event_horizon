@@ -188,159 +188,32 @@ describe("useTimeblockMutations", () => {
     await waitFor(() => expect(timeblocksIpc.createTimeblock).toHaveBeenCalledTimes(1))
   })
 
-  it("invalidates the timeline query key after create settles", async () => {
-    vi.mocked(timeblocksIpc.createTimeblock).mockResolvedValue(makeCreatedTimeblock())
-
-    const { result, queryClient } = renderHookWithProviders(() =>
-      useTimeblockMutations({
-        queryKey: ["beverageSection", "event-1"],
-        eventId: "event-1",
-        sectionType: "beverage",
-        cacheShape: "beverageSection",
-      })
-    )
-
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
-
-    act(() => {
-      result.current.addTimeblock()
-    })
-
-    await waitFor(() => expect(timeblocksIpc.createTimeblock).toHaveBeenCalledTimes(1))
-
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["beverageSection", "event-1"] })
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
-  })
-
-  it("invalidates the timeline query key after delete settles", async () => {
+  it("leaves refreshing to live queries after create, update and delete", async () => {
+    vi.mocked(timeblocksIpc.createTimeblock).mockResolvedValue(makeCreatedTimeblock({ id: "tb-2", sectionType: "food" }))
+    vi.mocked(timeblocksIpc.updateTimeblock).mockResolvedValue(makeCreatedTimeblock({ id: "tb-1", title: "Dinner", sectionType: "food" }))
     vi.mocked(timeblocksIpc.deleteTimeblock).mockResolvedValue(true)
 
     const { result, queryClient } = renderHookWithProviders(() =>
       useTimeblockMutations({
-        queryKey: ["beverageSection", "event-1"],
-        eventId: "event-1",
-        sectionType: "beverage",
-        cacheShape: "beverageSection",
-      })
-    )
-
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
-
-    act(() => {
-      result.current.removeTimeblock("tb-1")
-    })
-
-    await waitFor(() => expect(timeblocksIpc.deleteTimeblock).toHaveBeenCalledWith("tb-1"))
-
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["beverageSection", "event-1"] })
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
-  })
-
-  it("invalidates the timeline after a title or time update", async () => {
-    vi.mocked(timeblocksIpc.updateTimeblock).mockResolvedValue(
-      makeCreatedTimeblock({ title: "Dinner", sectionType: "food" })
-    )
-
-    const { result, queryClient } = renderHookWithProviders(() =>
-      useTimeblockMutations({
         queryKey: ["foodSection", "event-1"],
         eventId: "event-1",
         sectionType: "food",
       })
     )
-
+    queryClient.setQueryData(["foodSection", "event-1"], [makeCreatedTimeblock({ id: "tb-1", sectionType: "food" })])
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
+    const refetchSpy = vi.spyOn(queryClient, "refetchQueries")
 
-    act(() => {
-      result.current.updateTimeblock({ id: "tb-1", updates: { title: "Dinner" } })
+    await act(async () => {
+      await result.current.addTimeblockAsync()
+      await result.current.updateTimeblockAsync({ id: "tb-1", updates: { title: "Dinner" } })
+      await result.current.removeTimeblockAsync("tb-2")
     })
 
-    await waitFor(() => expect(timeblocksIpc.updateTimeblock).toHaveBeenCalledTimes(1))
-
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["foodSection", "event-1"] })
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
-  })
-
-  it("invalidates the timeline after an assignedTo update so sidebar metadata stays fresh", async () => {
-    vi.mocked(timeblocksIpc.updateTimeblock).mockResolvedValue(
-      makeCreatedTimeblock({ assignedTo: "Alex", sectionType: "food" })
-    )
-
-    const { result, queryClient } = renderHookWithProviders(() =>
-      useTimeblockMutations({
-        queryKey: ["foodSection", "event-1"],
-        eventId: "event-1",
-        sectionType: "food",
-      })
-    )
-
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
-
-    act(() => {
-      result.current.updateTimeblock({ id: "tb-1", updates: { assignedTo: "Alex" } })
-    })
-
-    await waitFor(() => expect(timeblocksIpc.updateTimeblock).toHaveBeenCalledTimes(1))
-
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["foodSection", "event-1"] })
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
-  })
-
-  it("invalidates the timeline after a details (overview note) update", async () => {
-    vi.mocked(timeblocksIpc.updateTimeblock).mockResolvedValue(
-      makeCreatedTimeblock({ details: "Served buffet style", sectionType: "food" })
-    )
-
-    const { result, queryClient } = renderHookWithProviders(() =>
-      useTimeblockMutations({
-        queryKey: ["foodSection", "event-1"],
-        eventId: "event-1",
-        sectionType: "food",
-      })
-    )
-
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
-
-    act(() => {
-      result.current.updateTimeblock({
-        id: "tb-1",
-        updates: { details: "Served buffet style" },
-      })
-    })
-
-    await waitFor(() => expect(timeblocksIpc.updateTimeblock).toHaveBeenCalledTimes(1))
-
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["foodSection", "event-1"] })
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
-  })
-
-  it("invalidates the edited block's own section list when it is edited from the timeline", async () => {
-    vi.mocked(timeblocksIpc.updateTimeblock).mockResolvedValue(
-      makeCreatedTimeblock({ title: "Lunch", sectionType: "food" })
-    )
-
-    const { result, queryClient } = renderHookWithProviders(() =>
-      useTimeblockMutations({
-        queryKey: ["timeblocks", "event-1"],
-        eventId: "event-1",
-        sectionType: "note",
-      })
-    )
-
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
-
-    act(() => {
-      result.current.updateTimeblock({
-        id: "tb-1",
-        updates: { title: "Lunch" },
-      })
-    })
-
-    await waitFor(() => expect(timeblocksIpc.updateTimeblock).toHaveBeenCalledTimes(1))
-
-    await waitFor(() =>
-      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["foodSection", "event-1"] })
-    )
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["timeblocks", "event-1"] })
+    expect(queryClient.getQueryData(["foodSection", "event-1"])).toEqual([
+      expect.objectContaining({ id: "tb-1", title: "Dinner" }),
+    ])
+    expect(invalidateSpy).not.toHaveBeenCalled()
+    expect(refetchSpy).not.toHaveBeenCalled()
   })
 })

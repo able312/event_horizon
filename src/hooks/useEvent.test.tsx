@@ -106,12 +106,11 @@ describe("useEvent async mutation contract", () => {
     expect(navigateMock).not.toHaveBeenCalled()
   })
 
-  it("invalidates event search queries after successful update", async () => {
+  it("keeps the optimistic edit and requests no refresh after update or delete", async () => {
     const getEventByIdMock = vi.mocked(eventsApi.getEventById)
-    const updateEventMock = vi.mocked(eventsApi.updateEvent)
-
+    vi.mocked(eventsApi.updateEvent).mockResolvedValue(makeEvent({ title: "Updated title" }))
+    vi.mocked(eventsApi.deleteEvent).mockResolvedValue(true)
     getEventByIdMock.mockResolvedValue(makeEvent())
-    updateEventMock.mockResolvedValue(makeEvent({ title: "Updated title" }))
 
     const { result, queryClient } = renderHookWithProviders(() => useEvent())
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -120,26 +119,13 @@ describe("useEvent async mutation contract", () => {
     await act(async () => {
       await result.current.updateEvent({ title: "Updated title" })
     })
-
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: eventKeys.searches() })
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["touchpoints", "incomplete"] })
-  })
-
-  it("invalidates incomplete touchpoints after successful delete", async () => {
-    const getEventByIdMock = vi.mocked(eventsApi.getEventById)
-    const deleteEventMock = vi.mocked(eventsApi.deleteEvent)
-
-    getEventByIdMock.mockResolvedValue(makeEvent())
-    deleteEventMock.mockResolvedValue(true)
-
-    const { result, queryClient } = renderHookWithProviders(() => useEvent())
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
+    expect(queryClient.getQueryData<Event>(eventKeys.byId("event-1"))?.title).toBe("Updated title")
 
     await act(async () => {
       await result.current.deleteEvent()
     })
 
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["touchpoints", "incomplete"] })
+    expect(invalidateSpy).not.toHaveBeenCalled()
+    expect(getEventByIdMock).toHaveBeenCalledTimes(1)
   })
 })

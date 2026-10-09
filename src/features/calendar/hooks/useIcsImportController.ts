@@ -6,12 +6,11 @@ import type {
   IcsImportReviewPayload,
 } from "~/definitions/events/icsImport"
 import { onIcsImportReview } from "~/lib/ipc/icsImport"
-import type { UseEventsReturn } from "~/hooks/useEvents"
 import { commitIcsImport, reviewIcsImport } from "../lib/icsImport"
 
 export type IcsImportPhase = "idle" | "review" | "committing" | "report"
 
-export function useIcsImportController(eventsHook: UseEventsReturn) {
+export function useIcsImportController() {
   const [phase, setPhase] = useState<IcsImportPhase>("idle")
   const [reviewPayload, setReviewPayload] = useState<IcsImportReviewPayload | null>(null)
   const [commitResult, setCommitResult] = useState<IcsImportCommitResult | null>(null)
@@ -57,17 +56,13 @@ export function useIcsImportController(eventsHook: UseEventsReturn) {
 
         setCommitResult(result)
         setPhase("report")
-        await Promise.all([
-          eventsHook.monthQuery.refetch(),
-          eventsHook.unscheduledQuery.refetch(),
-        ])
         toast.success(`Imported ${result.importedCount} event(s)`)
       } catch {
         toast.error("Failed to import ICS events")
         setPhase("review")
       }
     },
-    [eventsHook.monthQuery, eventsHook.unscheduledQuery, reviewPayload],
+    [reviewPayload],
   )
 
   return {

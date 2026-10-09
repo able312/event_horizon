@@ -3,15 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { Event, UpdateEvent } from "~/definitions/database"
 import { updateEvent, deleteEvent } from "~/lib/data/events"
-import { eventKeys, eventQueries, touchpointKeys } from "~/lib/data/queries"
-import {
-  findCachedEventById,
-  getEventScopeFromEvent,
-  getEventScopeFromStartDateTime,
-  invalidateAllEventScopes,
-  invalidateEventScopes,
-  invalidateEventsSearchQueries,
-} from "./eventsCache"
+import { eventKeys, eventQueries } from "~/lib/data/queries"
+import { findCachedEventById } from "./eventsCache"
 
 export function useEvent() {
   const { id } = useParams()
@@ -37,17 +30,7 @@ export function useEvent() {
         ...updates,
       }))
 
-      const previousScope = getEventScopeFromEvent(previousEvent)
-      const nextStartDateTime =
-        updates.startDateTime !== undefined
-          ? updates.startDateTime
-          : previousEvent?.startDateTime
-      const nextScope =
-        updates.startDateTime === undefined && !previousEvent
-          ? null
-          : getEventScopeFromStartDateTime(nextStartDateTime)
-
-      return { previousEvent, previousScope, nextScope }
+      return { previousEvent }
     },
     onError: (_err, _updates, context) => {
       if (context?.previousEvent) {
@@ -56,33 +39,13 @@ export function useEvent() {
       toast.error("Failed to update event")
       console.error("Failed to update event: ", _err.message)
     },
-    onSettled: async (_updatedEvent, _err, _updates, context) => {
-      await queryClient.invalidateQueries({ queryKey: eventQueryKey })
-      await queryClient.invalidateQueries({ queryKey: touchpointKeys.incomplete() })
-      await invalidateEventsSearchQueries(queryClient)
-
-      if (context?.previousScope || context?.nextScope) {
-        await invalidateEventScopes(queryClient, [
-          context.previousScope,
-          context.nextScope,
-        ])
-        return
-      }
-
-      await invalidateAllEventScopes(queryClient)
-    },
   })
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteEvent(id!),
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: eventKeys.searches() })
-      const previousEvent = queryClient.getQueryData<Event>(eventQueryKey) ??
-        findCachedEventById(queryClient, id!)
-      const previousScope = getEventScopeFromEvent(previousEvent)
-
       toast.loading("Deleting event...", { id: "delete-event" })
-      return { previousScope }
     },
     onSuccess: () => {
       toast.success("Event deleted", { id: "delete-event" })
@@ -91,18 +54,6 @@ export function useEvent() {
     onError: (_err) => {
       toast.error("Failed to delete event", { id: "delete-event" })
       console.error("Failed to delete event: ", _err.message)
-    },
-    onSettled: async (_deleted, _err, _variables, context) => {
-      await queryClient.invalidateQueries({ queryKey: eventQueryKey })
-      await queryClient.invalidateQueries({ queryKey: touchpointKeys.incomplete() })
-      await invalidateEventsSearchQueries(queryClient)
-
-      if (context?.previousScope) {
-        await invalidateEventScopes(queryClient, [context.previousScope])
-        return
-      }
-
-      await invalidateAllEventScopes(queryClient)
     },
   })
 

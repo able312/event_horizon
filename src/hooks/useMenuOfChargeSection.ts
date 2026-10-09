@@ -51,9 +51,6 @@ export function useMenuOfChargeItemsSection() {
       }
       toast.error("Failed to create menuOfChargeItem")
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey })
-    },
   })
 
   const updateMutation = useMutation({
@@ -75,9 +72,6 @@ export function useMenuOfChargeItemsSection() {
       }
       toast.error("Failed to update menuOfChargeItem")
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey })
-    },
   })
 
   const deleteMutation = useMutation({
@@ -97,9 +91,6 @@ export function useMenuOfChargeItemsSection() {
         queryClient.setQueryData(queryKey, context.previousMenuOfChargeItems)
       }
       toast.error("Failed to delete menuOfChargeItem")
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey })
     },
   })
 

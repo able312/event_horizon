@@ -45,55 +45,6 @@ export function getEventScopeQueryKey(scope: EventScope) {
     : eventKeys.unscheduled()
 }
 
-async function invalidateEventScope(
-  queryClient: QueryClient,
-  scope: EventScope,
-): Promise<void> {
-  await queryClient.invalidateQueries({
-    queryKey: getEventScopeQueryKey(scope),
-  })
-}
-
-export async function invalidateEventScopes(
-  queryClient: QueryClient,
-  scopes: Array<EventScope | null | undefined>,
-): Promise<void> {
-  const uniqueScopes = new Map<string, EventScope>()
-
-  for (const scope of scopes) {
-    if (!scope) continue
-
-    const key =
-      scope.kind === "month"
-        ? `month:${scope.month}`
-        : scope.kind
-    uniqueScopes.set(key, scope)
-  }
-
-  for (const scope of uniqueScopes.values()) {
-    await invalidateEventScope(queryClient, scope)
-  }
-}
-
-export async function invalidateAllEventScopes(
-  queryClient: QueryClient,
-): Promise<void> {
-  await queryClient.invalidateQueries({
-    queryKey: eventKeys.months(),
-  })
-  await queryClient.invalidateQueries({
-    queryKey: eventKeys.unscheduled(),
-  })
-}
-
-export async function invalidateEventsSearchQueries(
-  queryClient: QueryClient,
-): Promise<void> {
-  await queryClient.invalidateQueries({
-    queryKey: eventKeys.searches(),
-  })
-}
-
 export function findCachedEventById(
   queryClient: QueryClient,
   eventId: string,

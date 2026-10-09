@@ -6,7 +6,6 @@ import type { TimeblockType } from "~/definitions/timeblocks/timeblocks-types"
 import type { BeverageSectionPayload } from "~/definitions/beverage/beverage-types"
 import type { CreateTimeblockInput, TimeblockPrefillRequest } from "~/definitions/timeblocks/timeblock-create"
 import { getSectionDefaultPrefill } from "~/definitions/timeblocks/setupInstructionPrefill"
-import { timeblockKeys } from "~/lib/data/queries"
 import * as timeblocksIpc from "~/lib/data/timeblocks"
 import {
   appendBeverageTimeblock,
@@ -52,18 +51,6 @@ function resolveOptimisticValues(sectionType: TimeblockType, input?: AddTimebloc
 
 export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheShape = "timeblockList" }: UseTimeblockMutationsOptions) {
   const queryClient = useQueryClient()
-
-  /** Invalidates this hook's list, the section list for blocks of `type`, and the timeline. */
-  const invalidateKeys = (type: TimeblockType) => {
-    queryClient.invalidateQueries({ queryKey })
-    invalidateSectionList(type)
-    queryClient.invalidateQueries({ queryKey: timeblockKeys.timeline(eventId) })
-  }
-
-  const invalidateSectionList = (type: TimeblockType) => {
-    const sectionKey = timeblockKeys.section(type, eventId)
-    if (sectionKey) queryClient.invalidateQueries({ queryKey: sectionKey })
-  }
 
   const addTimeblockMutation = useMutation({
     mutationFn: (input?: AddTimeblockInput) => {
@@ -137,9 +124,6 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheSha
         old.map((tb) => (tb.id === context.tempId ? { ...tb, ...created } : tb)),
       )
     },
-    onSettled: () => {
-      invalidateKeys(sectionType)
-    },
   })
 
   const updateTimeblockMutation = useMutation({
@@ -169,23 +153,6 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheSha
       }
       toast.error("Failed to update timeblock")
     },
-    onSettled: (data, _error, variables) => {
-      const type = data?.sectionType ?? sectionType
-      const updates = variables.updates
-      const shouldRefreshTimeline =
-        updates.time !== undefined ||
-        updates.title !== undefined ||
-        updates.assignedTo !== undefined ||
-        updates.details !== undefined
-
-      queryClient.invalidateQueries({ queryKey })
-      invalidateSectionList(type)
-      queryClient.invalidateQueries({ queryKey: timeblockKeys.byId(variables.id) })
-
-      if (shouldRefreshTimeline) {
-        queryClient.invalidateQueries({ queryKey: timeblockKeys.timeline(eventId) })
-      }
-    },
   })
 
   const deleteTimeblockMutation = useMutation({
@@ -211,9 +178,6 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheSha
         queryClient.setQueryData(queryKey, context.previousData)
       }
       toast.error("Failed to delete timeblock")
-    },
-    onSettled: () => {
-      invalidateKeys(sectionType)
     },
   })
 

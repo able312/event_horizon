@@ -6,15 +6,6 @@ import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-typ
 import { timeblockKeys } from "~/lib/data/queries"
 import * as timeblocksIpc from "~/lib/data/timeblocks"
 
-function invalidateConversionCaches(queryClient: ReturnType<typeof useQueryClient>, eventId: string, timeblockId: string) {
-  queryClient.invalidateQueries({ queryKey: timeblockKeys.notes(eventId) })
-  queryClient.invalidateQueries({ queryKey: timeblockKeys.setupInstructions(eventId) })
-  queryClient.invalidateQueries({ queryKey: timeblockKeys.foodSection(eventId) })
-  queryClient.invalidateQueries({ queryKey: timeblockKeys.beverageSection(eventId) })
-  queryClient.invalidateQueries({ queryKey: timeblockKeys.timeline(eventId) })
-  queryClient.invalidateQueries({ queryKey: timeblockKeys.byId(timeblockId) })
-}
-
 export function useTimeblockConversion(eventId: string | undefined) {
   const queryClient = useQueryClient()
 
@@ -31,7 +22,7 @@ export function useTimeblockConversion(eventId: string | undefined) {
       if (!eventId) return
 
       // Keep the focused query immediately consistent so the orchestrator
-      // can switch editors without waiting on a refetch race.
+      // can switch editors before the live update arrives.
       queryClient.setQueryData<TimeblockWithItems>(
         timeblockKeys.byId(result.timeblock.id),
         (old) => ({
@@ -42,7 +33,6 @@ export function useTimeblockConversion(eventId: string | undefined) {
         }),
       )
 
-      invalidateConversionCaches(queryClient, eventId, result.timeblock.id)
     },
     onError: () => {
       toast.error("Failed to convert timeblock")
