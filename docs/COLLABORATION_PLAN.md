@@ -156,6 +156,11 @@ Known limitations and decisions to revisit:
 - Sign-in uses the AuthKit hosted page (`provider: "authkit"`). Restrict that page to Google in WorkOS. Alternatively, switch to `provider: "GoogleOAuth"` to skip the AuthKit page.
 - `.env.local` still holds `WORKOS_API_KEY`, `WORKOS_COOKIE_PASSWORD`, and `WORKOS_REDIRECT_URI` from the installer. The app no longer reads them. Keep the API key out of the app and out of git.
 
+**WorkOS setup progress (2026-10-09).** The sandbox is claimed as **Event Horizon Dev** (`environment_01M4EEGG041B62ACHXZRAZ6NWB`) in the user's WorkOS team. The CLI's active environment is **Staging**, so pass `--environment-id` explicitly.
+- Done (step 1): the redirect URI list is now only `http://localhost:42070/callback`, set as default. The unused `42069` URI was removed.
+- Done (step 2): the JWT template is `{"email": {{ user.email }}}`, set through the API with the sandbox key and confirmed through the WorkOS MCP server.
+- Pending (step 3): password, Apple, GitHub, Microsoft and SSO sign-in are still on. Neither the CLI nor the public API can change these, and the MCP server's write tools failed in this session. Turn them off in the dashboard.
+
 **Human handoff — stop here.** In the WorkOS dashboard for the development environment (claim it first if necessary):
 1. Add the Redirect URI `http://localhost:42070/callback`. Remove `http://localhost:42069/callback` unless something else needs it.
 2. Add a JWT template that puts the email in the access token under the standard claim name, e.g. `{ "email": {{ user.email }} }` (see [JWT templates](https://workos.com/docs/authkit/jwt-templates)). Without it, Convex rejects every call as `Forbidden`.
