@@ -1,5 +1,5 @@
 import { v } from "convex/values"
-import { internalMutation, internalQuery } from "./_generated/server"
+import { companyMutation, companyQuery } from "./lib/auth"
 import type { MutationCtx } from "./_generated/server"
 import { contactFields } from "./lib/contactValidators"
 import { assignContact, contactOperation } from "./lib/contactOperations"
@@ -30,19 +30,19 @@ async function insertEvent(ctx: MutationCtx, data: EventInput, createdAt = Date.
 function range(startFrom: string, startTo: string) {
   if (!startFrom || !startTo || Number.isNaN(Date.parse(startFrom)) || Number.isNaN(Date.parse(startTo)) || startFrom >= startTo) throw new Error("Invalid event start range")
 }
-export const getById = internalQuery({ args: { id: v.id("events") }, handler: async (ctx, { id }) => toRecord(await requireDocument(ctx, "events", id)) })
+export const getById = companyQuery({ args: { id: v.id("events") }, handler: async (ctx, { id }) => toRecord(await requireDocument(ctx, "events", id)) })
 // The renderer computes local month boundaries, preserving desktop timezone behavior.
-export const getStartingBetween = internalQuery({ args: { startFrom: v.string(), startTo: v.string() }, handler: async (ctx, { startFrom, startTo }) => {
+export const getStartingBetween = companyQuery({ args: { startFrom: v.string(), startTo: v.string() }, handler: async (ctx, { startFrom, startTo }) => {
   range(startFrom, startTo)
   return (await ctx.db.query("events").withIndex("by_start", q => q.gte("startDateTime", startFrom).lt("startDateTime", startTo)).collect()).map(toRecord)
 } })
-export const getUnscheduled = internalQuery({ args: {}, handler: async ctx => (await ctx.db.query("events").withIndex("by_start", q => q.eq("startDateTime", null)).collect()).map(toRecord) })
-export const getByCalendarIds = internalQuery({ args: { calendarIds: v.array(v.string()) }, handler: async (ctx, { calendarIds }) => {
+export const getUnscheduled = companyQuery({ args: {}, handler: async ctx => (await ctx.db.query("events").withIndex("by_start", q => q.eq("startDateTime", null)).collect()).map(toRecord) })
+export const getByCalendarIds = companyQuery({ args: { calendarIds: v.array(v.string()) }, handler: async (ctx, { calendarIds }) => {
   const result = []
   for (const id of new Set(calendarIds.map(id => id.trim()).filter(Boolean))) result.push(...(await ctx.db.query("events").withIndex("by_calendarId", q => q.eq("calendarId", id)).collect()).map(toRecord))
   return result
 } })
-export const create = internalMutation({ args: { input: v.object(fields), client: v.optional(nullable(v.object(contactFields))) }, handler: (ctx, { input, client }) => contactOperation(async () => {
+export const create = companyMutation({ args: { input: v.object(fields), client: v.optional(nullable(v.object(contactFields))) }, handler: (ctx, { input, client }) => contactOperation(async () => {
   const event = await insertEvent(ctx, input)
   if (client) {
     const email = normalizeEmail(client.email)
@@ -51,14 +51,14 @@ export const create = internalMutation({ args: { input: v.object(fields), client
   }
   return event
 }) })
-export const update = internalMutation({ args: { id: v.id("events"), updates: v.object(fields) }, handler: async (ctx, { id, updates }) => {
+export const update = companyMutation({ args: { id: v.id("events"), updates: v.object(fields) }, handler: async (ctx, { id, updates }) => {
   assertUpdates(updates)
   const current = await requireDocument(ctx, "events", id)
   assertValidEventDateRange(updates.startDateTime === undefined ? current.startDateTime : updates.startDateTime, updates.endDateTime === undefined ? current.endDateTime : updates.endDateTime)
   await ctx.db.patch("events", id, { ...updates, updatedAt: Date.now().toString() })
   return toRecord(await requireDocument(ctx, "events", id))
 } })
-export const importFromCalendar = internalMutation({ args: { rows: v.array(v.object({ calendarId: v.string(), title: v.string(), startDateTime: v.string(), endDateTime: v.string(), internalNotes: nullable(v.string()) })) }, handler: async (ctx, { rows }) => {
+export const importFromCalendar = companyMutation({ args: { rows: v.array(v.object({ calendarId: v.string(), title: v.string(), startDateTime: v.string(), endDateTime: v.string(), internalNotes: nullable(v.string()) })) }, handler: async (ctx, { rows }) => {
   const inserted = [], duplicateCalendarIds: string[] = [], createdAt = Date.now().toString()
   for (const row of rows) {
     const calendarId = row.calendarId.trim()
@@ -68,7 +68,7 @@ export const importFromCalendar = internalMutation({ args: { rows: v.array(v.obj
   }
   return { inserted, duplicateCalendarIds }
 } })
-export const remove = internalMutation({ args: { id: v.id("events") }, handler: async (ctx, { id }) => {
+export const remove = companyMutation({ args: { id: v.id("events") }, handler: async (ctx, { id }) => {
   await requireDocument(ctx, "events", id)
   const blocks = await ctx.db.query("timeblocks").withIndex("by_event_section", q => q.eq("eventId", id)).collect()
   for (const block of blocks) {
@@ -90,7 +90,7 @@ export const remove = internalMutation({ args: { id: v.id("events") }, handler: 
 // Preserve literal substring matching, client joins, exact totals and relevance.
 // This scans the small venue dataset; revisit with denormalized search documents
 // before the dataset approaches Convex's transaction read limits.
-export const search = internalQuery({ args: { query: v.string(), page: v.number(), pageSize: v.number(), type: v.optional(nullable(eventType)), status: v.optional(nullable(eventStatus)), startFrom: v.optional(nullable(v.string())), startTo: v.optional(nullable(v.string())) }, handler: async (ctx, params) => {
+export const search = companyQuery({ args: { query: v.string(), page: v.number(), pageSize: v.number(), type: v.optional(nullable(eventType)), status: v.optional(nullable(eventStatus)), startFrom: v.optional(nullable(v.string())), startTo: v.optional(nullable(v.string())) }, handler: async (ctx, params) => {
   const query = params.query.trim().toLowerCase()
   if (query.length < 2) throw new Error("searchEvents: query must be at least 2 characters")
   if (!Number.isFinite(params.page) || !Number.isFinite(params.pageSize)) throw new Error("Invalid search pagination")

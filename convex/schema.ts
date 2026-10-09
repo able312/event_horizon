@@ -184,4 +184,15 @@ export default defineSchema({
     .index("by_event", ["eventId"])
     .index("by_contact", ["contactId"])
     .index("by_vendorCategory", ["vendorCategoryId"]),
+
+  // Company accounts, upserted by users.store after each sign-in. Keyed by the
+  // WorkOS user ID (the JWT subject) so email changes don't create duplicates.
+  users: defineTable({
+    workosUserId: v.string(),
+    email: v.string(),
+    name: nullable(v.string()),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_workosUserId", ["workosUserId"]),
 })

@@ -18,7 +18,7 @@ export function synchronizeAuth(
   void api.getStatus().then(receive).catch((err) => {
     console.error('Failed to get initial auth status:', err)
     if (active) {
-      onSnapshot({ isAuthenticated: false, user: null, isLoading: false })
+      onSnapshot({ isAuthenticated: false, user: null, isLoading: false, error: null })
     }
   })
 

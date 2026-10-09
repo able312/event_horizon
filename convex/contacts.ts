@@ -1,5 +1,5 @@
 import { v } from "convex/values"
-import { internalMutation, internalQuery } from "./_generated/server"
+import { companyMutation, companyQuery } from "./lib/auth"
 import { contactFields } from "./lib/contactValidators"
 import { assertEmailAvailable, categorySummary, contactOperation, createContact, requireContact, updateContact } from "./lib/contactOperations"
 import { toRecord } from "./lib/records"
@@ -7,24 +7,24 @@ import { contactRoleType, nullable } from "./lib/validators"
 import { ContactsError } from "../src/lib/contacts/contactsError"
 import { normalizeEmail } from "../src/lib/contacts/contactRules"
 
-// Internal staging API until company authentication is configured.
-export const getById = internalQuery({ args: { id: v.id("contacts") }, handler: async (ctx, { id }) => {
+// Public functions; every handler requires a company identity (lib/auth.ts).
+export const getById = companyQuery({ args: { id: v.id("contacts") }, handler: async (ctx, { id }) => {
   const doc = await ctx.db.get("contacts", id)
   return doc ? toRecord(doc) : null
 } })
-export const create = internalMutation({ args: { input: v.object(contactFields) }, handler: (ctx, { input }) => contactOperation(async () => toRecord(await createContact(ctx, input))) })
-export const update = internalMutation({ args: { id: v.id("contacts"), patch: v.object(contactFields) }, handler: (ctx, { id, patch }) => contactOperation(async () => toRecord(await updateContact(ctx, id, patch))) })
-export const archive = internalMutation({ args: { id: v.id("contacts") }, handler: (ctx, { id }) => contactOperation(async () => {
+export const create = companyMutation({ args: { input: v.object(contactFields) }, handler: (ctx, { input }) => contactOperation(async () => toRecord(await createContact(ctx, input))) })
+export const update = companyMutation({ args: { id: v.id("contacts"), patch: v.object(contactFields) }, handler: (ctx, { id, patch }) => contactOperation(async () => toRecord(await updateContact(ctx, id, patch))) })
+export const archive = companyMutation({ args: { id: v.id("contacts") }, handler: (ctx, { id }) => contactOperation(async () => {
   const contact = await requireContact(ctx, id)
   if (!contact.archivedAt) { const now = new Date().toISOString(); await ctx.db.patch("contacts", id, { archivedAt: now, updatedAt: now }) }
 }) })
-export const restore = internalMutation({ args: { id: v.id("contacts") }, handler: (ctx, { id }) => contactOperation(async () => {
+export const restore = companyMutation({ args: { id: v.id("contacts") }, handler: (ctx, { id }) => contactOperation(async () => {
   const contact = await requireContact(ctx, id)
   if (!contact.archivedAt) return
   await assertEmailAvailable(ctx, contact.email, id)
   await ctx.db.patch("contacts", id, { archivedAt: null, updatedAt: new Date().toISOString() })
 }) })
-export const remove = internalMutation({ args: { id: v.id("contacts") }, handler: (ctx, { id }) => contactOperation(async () => {
+export const remove = companyMutation({ args: { id: v.id("contacts") }, handler: (ctx, { id }) => contactOperation(async () => {
   await requireContact(ctx, id)
   if (await ctx.db.query("eventContacts").withIndex("by_contact", q => q.eq("contactId", id)).first()) {
     throw new ContactsError("ContactInUse", "This contact has event history; archive it instead")
@@ -33,7 +33,7 @@ export const remove = internalMutation({ args: { id: v.id("contacts") }, handler
   await ctx.db.delete("contacts", id)
 }) })
 
-export const search = internalQuery({ args: {
+export const search = companyQuery({ args: {
   query: v.optional(v.string()), role: v.optional(contactRoleType), vendorCategoryId: v.optional(v.id("vendorCategories")),
   includeArchived: v.optional(v.boolean()), limit: v.number(), cursor: v.optional(nullable(v.string())),
 }, handler: (ctx, params) => contactOperation(async () => {
@@ -72,7 +72,7 @@ export const search = internalQuery({ args: {
   return { items, nextCursor: candidates.length > limit && last ? JSON.stringify([filterKey, last.displayName.toLowerCase(), last.id]) : null }
 }) })
 
-export const merge = internalMutation({ args: { sourceId: v.id("contacts"), targetId: v.id("contacts") }, handler: (ctx, { sourceId, targetId }) => contactOperation(async () => {
+export const merge = companyMutation({ args: { sourceId: v.id("contacts"), targetId: v.id("contacts") }, handler: (ctx, { sourceId, targetId }) => contactOperation(async () => {
   if (sourceId === targetId) throw new ContactsError("InvalidInput", "Can't merge a contact into itself")
   const source = await requireContact(ctx, sourceId), target = await requireContact(ctx, targetId)
   if (target.archivedAt) throw new ContactsError("ContactArchived", "Restore the target before merging")

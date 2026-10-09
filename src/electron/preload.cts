@@ -16,7 +16,7 @@ const authApi: AuthApi = {
   getStatus: () => ipcRenderer.invoke("auth:get-status"),
   signIn: () => ipcRenderer.invoke("auth:sign-in"),
   signOut: () => ipcRenderer.invoke("auth:sign-out"),
-  getAccessToken: () => ipcRenderer.invoke("auth:get-access-token"),
+  getAccessToken: options => ipcRenderer.invoke("auth:get-access-token", options),
   onStatusChanged: listener => {
     const wrapped = (_event: Electron.IpcRendererEvent, snapshot: AuthSnapshot) => listener(snapshot)
     ipcRenderer.on("auth:status-changed", wrapped)

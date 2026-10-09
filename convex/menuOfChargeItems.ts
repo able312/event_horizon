@@ -1,11 +1,11 @@
 import { v } from "convex/values"
 
-import { internalMutation, internalQuery } from "./_generated/server"
+import { companyMutation, companyQuery } from "./lib/auth"
 import { assertUpdates, requireDocument, toRecord } from "./lib/records"
 import { chargeCategory, nullable } from "./lib/validators"
 
-// Internal until authenticated public functions are introduced in Step 3.
-export const getByEventId = internalQuery({
+// Public functions; every handler requires a company identity (lib/auth.ts).
+export const getByEventId = companyQuery({
   args: { eventId: v.id("events") },
   handler: async (ctx, { eventId }) => {
     const docs = await ctx.db.query("menuOfChargeItems").withIndex("by_event", (q) => q.eq("eventId", eventId)).collect()
@@ -13,7 +13,7 @@ export const getByEventId = internalQuery({
   },
 })
 
-export const create = internalMutation({
+export const create = companyMutation({
   args: { eventId: v.id("events"), category: v.optional(nullable(chargeCategory)) },
   handler: async (ctx, { eventId, category }) => {
     await requireDocument(ctx, "events", eventId)
@@ -31,7 +31,7 @@ export const create = internalMutation({
   },
 })
 
-export const update = internalMutation({
+export const update = companyMutation({
   args: { id: v.id("menuOfChargeItems"), updates: v.object({
     name: v.optional(v.string()),
     quantity: v.optional(nullable(v.number())),
@@ -47,7 +47,7 @@ export const update = internalMutation({
   },
 })
 
-export const remove = internalMutation({
+export const remove = companyMutation({
   args: { id: v.id("menuOfChargeItems") },
   handler: async (ctx, { id }) => {
     await requireDocument(ctx, "menuOfChargeItems", id)

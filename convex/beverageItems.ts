@@ -1,7 +1,8 @@
 import { v } from "convex/values"
 
 import type { Id } from "./_generated/dataModel"
-import { internalMutation, internalQuery, type QueryCtx } from "./_generated/server"
+import type { QueryCtx } from "./_generated/server"
+import { companyMutation, companyQuery } from "./lib/auth"
 import { assertUpdates, requireDocument, toRecord } from "./lib/records"
 import { beverageServiceStyle, beverageType, nullable } from "./lib/validators"
 
@@ -29,7 +30,7 @@ async function requireBeverageTimeblock(ctx: QueryCtx, eventId: Id<"events">, ti
 
 // Convex owns IDs. Renderer integration must replace optimistic UUIDs with the
 // returned ID before sending edits or assignments; client IDs are not accepted.
-export const create = internalMutation({
+export const create = companyMutation({
   args: createFields,
   handler: async (ctx, values) => {
     await requireDocument(ctx, "events", values.eventId)
@@ -44,7 +45,7 @@ export const create = internalMutation({
   },
 })
 
-export const createAssignedToTimeblock = internalMutation({
+export const createAssignedToTimeblock = companyMutation({
   args: { ...createFields, timeblockId: v.id("timeblocks") },
   handler: async (ctx, { timeblockId, ...values }) => {
     await requireDocument(ctx, "events", values.eventId)
@@ -61,7 +62,7 @@ export const createAssignedToTimeblock = internalMutation({
   },
 })
 
-export const update = internalMutation({
+export const update = companyMutation({
   args: { id: v.id("beverageItems"), updates: v.object(editableFields) },
   handler: async (ctx, { id, updates }) => {
     assertUpdates(updates)
@@ -71,7 +72,7 @@ export const update = internalMutation({
   },
 })
 
-export const remove = internalMutation({
+export const remove = companyMutation({
   args: { id: v.id("beverageItems") },
   handler: async (ctx, { id }) => {
     await requireDocument(ctx, "beverageItems", id)
@@ -82,7 +83,7 @@ export const remove = internalMutation({
   },
 })
 
-export const setItemTimeblocks = internalMutation({
+export const setItemTimeblocks = companyMutation({
   args: { itemId: v.id("beverageItems"), timeblockIds: v.array(v.id("timeblocks")) },
   handler: async (ctx, { itemId, timeblockIds }) => {
     const item = await requireDocument(ctx, "beverageItems", itemId)
@@ -97,7 +98,7 @@ export const setItemTimeblocks = internalMutation({
   },
 })
 
-export const getByEventId = internalQuery({
+export const getByEventId = companyQuery({
   args: { eventId: v.id("events") },
   handler: async (ctx, { eventId }) => {
     const timeblocks = await ctx.db.query("timeblocks")

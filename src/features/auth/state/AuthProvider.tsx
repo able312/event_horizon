@@ -27,11 +27,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       await window.api.auth.signIn()
     } catch (err) {
+      // The main process publishes sign-in failures; this only covers a broken IPC call.
       console.error('Sign in failed:', err)
-      // Reset loading state on error
-      dispatch({ type: ACTIONS.STATUS_CHANGED, snapshot: { ...auth, isLoading: false } })
+      dispatch({ type: ACTIONS.STATUS_CHANGED, snapshot: await window.api.auth.getStatus() })
     }
-  }, [auth])
+  }, [])
 
   const signOut = useCallback(async () => {
     if (!window.api?.auth) {

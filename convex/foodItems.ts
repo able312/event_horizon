@@ -1,6 +1,6 @@
 import { v } from "convex/values"
 
-import { internalMutation, internalQuery } from "./_generated/server"
+import { companyMutation, companyQuery } from "./lib/auth"
 import { assertUpdates, requireDocument, toRecord } from "./lib/records"
 import { foodServiceStyle, nullable } from "./lib/validators"
 
@@ -12,8 +12,8 @@ const editableFields = {
   unitPriceCents: v.optional(nullable(v.number())),
 }
 
-// Internal until authentication is enforced on the public API.
-export const create = internalMutation({
+// Public functions; every handler requires a company identity (lib/auth.ts).
+export const create = companyMutation({
   args: { ...editableFields, timeblockId: v.id("timeblocks"), name: v.string() },
   handler: async (ctx, { timeblockId, name, ...values }) => {
     const timeblock = await requireDocument(ctx, "timeblocks", timeblockId)
@@ -30,7 +30,7 @@ export const create = internalMutation({
   },
 })
 
-export const update = internalMutation({
+export const update = companyMutation({
   args: { id: v.id("foodItems"), updates: v.object(editableFields) },
   handler: async (ctx, { id, updates }) => {
     assertUpdates(updates)
@@ -40,7 +40,7 @@ export const update = internalMutation({
   },
 })
 
-export const remove = internalMutation({
+export const remove = companyMutation({
   args: { id: v.id("foodItems") },
   handler: async (ctx, { id }) => {
     await requireDocument(ctx, "foodItems", id)
@@ -49,7 +49,7 @@ export const remove = internalMutation({
   },
 })
 
-export const getByEventId = internalQuery({
+export const getByEventId = companyQuery({
   args: { eventId: v.id("events") },
   handler: async (ctx, { eventId }) => {
     const timeblocks = await ctx.db.query("timeblocks")

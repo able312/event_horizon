@@ -10,6 +10,8 @@ import { createUpdaterService, isUpdaterEnabled } from './services/updaterServic
 import { createUpdaterLogger } from './services/updaterLogger.js';
 import { registerUpdaterIpcHandlers } from './ipcRoutes/updaterHandler.js';
 import { createAuthService } from './services/authService.js';
+import { resolveWorkOSClientId } from './services/authConfig.js';
+import { createWorkOSAuthClient, electronAuthPlatform } from './services/authPlatform.js';
 import { registerAuthIpcHandlers } from './ipcRoutes/authHandler.js';
 
 const __filename = fileURLToPath(import.meta.url)
@@ -22,7 +24,7 @@ const resolveWindowIconPath = () => {
     return path.join(app.getAppPath(), 'dist-react/icon-512.png')
 }
 
-// Single source for the page the window loads and the origin updater IPC accepts.
+// Single source for the page the window loads and the origin updater and auth IPC accept.
 const resolveRendererUrl = () => isDev()
     ? "http://localhost:42069/"
     : pathToFileURL(path.join(app.getAppPath(), "dist-react/index.html")).href
@@ -69,8 +71,9 @@ const setupUpdater = () => {
 }
 
 const setupAuth = () => {
-    const authService = createAuthService()
-    const unregisterAuth = registerAuthIpcHandlers(authService)
+    const clientId = resolveWorkOSClientId(app.isPackaged, process.env)
+    const authService = createAuthService(clientId, createWorkOSAuthClient(clientId), electronAuthPlatform)
+    const unregisterAuth = registerAuthIpcHandlers(authService, resolveRendererUrl())
     app.once("will-quit", () => {
         unregisterAuth()
         authService.stop()

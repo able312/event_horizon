@@ -1,12 +1,12 @@
 import { v } from "convex/values"
 
-import { internalMutation, internalQuery } from "./_generated/server"
+import { companyMutation, companyQuery } from "./lib/auth"
 import { assertUpdates, requireDocument, toRecord } from "./lib/records"
 import { nullable, playFormat, startFormat } from "./lib/validators"
 
 // Reads never write. The renderer must call ensureByEventId before subscribing.
-// Internal until authenticated public functions are introduced in Step 3.
-export const getByEventId = internalQuery({
+// Public functions; every handler requires a company identity (lib/auth.ts).
+export const getByEventId = companyQuery({
   args: { eventId: v.id("events") },
   handler: async (ctx, { eventId }) => {
     const doc = await ctx.db.query("tournamentDetails").withIndex("by_event", (q) => q.eq("eventId", eventId)).unique()
@@ -17,7 +17,7 @@ export const getByEventId = internalQuery({
 
 // The indexed read and insert share one transaction. Convex retries competing
 // writes, so repeated initialization cannot create a second row for an event.
-export const ensureByEventId = internalMutation({
+export const ensureByEventId = companyMutation({
   args: { eventId: v.id("events") },
   handler: async (ctx, { eventId }) => {
     await requireDocument(ctx, "events", eventId)
@@ -39,7 +39,7 @@ export const ensureByEventId = internalMutation({
   },
 })
 
-export const update = internalMutation({
+export const update = companyMutation({
   args: { id: v.id("tournamentDetails"), updates: v.object({
     time: v.optional(nullable(v.string())),
     startFormat: v.optional(nullable(startFormat)),

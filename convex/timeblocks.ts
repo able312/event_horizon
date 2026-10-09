@@ -4,7 +4,8 @@ import { buildConversionImpact } from "../src/definitions/timeblocks/timeblock-c
 import { getSectionDefaultPrefill } from "../src/definitions/timeblocks/setupInstructionPrefill"
 import { buildTimelineRows } from "../src/lib/timeblocks/buildTimelineRows"
 import type { Doc, Id } from "./_generated/dataModel"
-import { internalMutation, internalQuery, type QueryCtx } from "./_generated/server"
+import type { QueryCtx } from "./_generated/server"
+import { companyMutation, companyQuery } from "./lib/auth"
 import { assertUpdates, requireDocument, toRecord } from "./lib/records"
 import { nullable, timeblockSectionType, timeZone } from "./lib/validators"
 
@@ -28,8 +29,8 @@ function blankDetails(sectionType: Doc<"timeblocks">["sectionType"]) {
   return sectionType === "note" || sectionType === "setup_instruction" ? "" : null
 }
 
-// All operations stay internal until authenticated public functions are added.
-export const create = internalMutation({
+// Public functions; every handler requires a company identity (lib/auth.ts).
+export const create = companyMutation({
   args: {
     eventId: v.id("events"),
     sectionType: timeblockSectionType,
@@ -64,7 +65,7 @@ export const create = internalMutation({
   },
 })
 
-export const update = internalMutation({
+export const update = companyMutation({
   args: { id: v.id("timeblocks"), updates: v.object({
     title: v.optional(v.string()),
     time: v.optional(nullable(v.string())),
@@ -79,12 +80,12 @@ export const update = internalMutation({
   },
 })
 
-export const getById = internalQuery({
+export const getById = companyQuery({
   args: { id: v.id("timeblocks") },
   handler: async (ctx, { id }) => withItems(ctx, await requireDocument(ctx, "timeblocks", id)),
 })
 
-export const getByEventIdAndSectionType = internalQuery({
+export const getByEventIdAndSectionType = companyQuery({
   args: { eventId: v.id("events"), sectionType: timeblockSectionType },
   handler: async (ctx, { eventId, sectionType }) => {
     const docs = await ctx.db.query("timeblocks")
@@ -93,7 +94,7 @@ export const getByEventIdAndSectionType = internalQuery({
   },
 })
 
-export const inspectConversion = internalQuery({
+export const inspectConversion = companyQuery({
   args: conversionArgs,
   handler: async (ctx, { timeblockId, toType }) => {
     const current = await requireDocument(ctx, "timeblocks", timeblockId)
@@ -105,7 +106,7 @@ export const inspectConversion = internalQuery({
   },
 })
 
-export const convertSectionType = internalMutation({
+export const convertSectionType = companyMutation({
   args: { ...conversionArgs, confirmDestructive: v.optional(v.boolean()) },
   handler: async (ctx, { timeblockId, toType, confirmDestructive }) => {
     const current = await requireDocument(ctx, "timeblocks", timeblockId)
@@ -133,7 +134,7 @@ export const convertSectionType = internalMutation({
   },
 })
 
-export const remove = internalMutation({
+export const remove = companyMutation({
   args: { id: v.id("timeblocks") },
   handler: async (ctx, { id }) => {
     await requireDocument(ctx, "timeblocks", id)
@@ -145,7 +146,7 @@ export const remove = internalMutation({
   },
 })
 
-export const getAllTimelineBlocks = internalQuery({
+export const getAllTimelineBlocks = companyQuery({
   args: { eventId: v.id("events"), timeZone },
   handler: async (ctx, { eventId, timeZone }) => {
     // Validate even when the event has no start/end dates.

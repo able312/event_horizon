@@ -1,7 +1,7 @@
 import { v } from "convex/values"
 
 import { buildCommonTouchpoints, toIsoDateOnly } from "../src/lib/touchpoints/buildCommonTouchpoints"
-import { internalMutation, internalQuery } from "./_generated/server"
+import { companyMutation, companyQuery } from "./lib/auth"
 import { assertUpdates, requireDocument, toRecord } from "./lib/records"
 import { nullable, timeZone } from "./lib/validators"
 
@@ -11,8 +11,8 @@ const editableFields = {
   completedAt: v.optional(nullable(v.string())),
 }
 
-// Internal until authenticated public functions are introduced in Step 3.
-export const getByEventId = internalQuery({
+// Public functions; every handler requires a company identity (lib/auth.ts).
+export const getByEventId = companyQuery({
   args: { eventId: v.id("events") },
   handler: async (ctx, { eventId }) => {
     const docs = await ctx.db.query("touchpoints").withIndex("by_event", (q) => q.eq("eventId", eventId)).collect()
@@ -20,7 +20,7 @@ export const getByEventId = internalQuery({
   },
 })
 
-export const getIncompleteByEventId = internalQuery({
+export const getIncompleteByEventId = companyQuery({
   args: { eventId: v.id("events") },
   handler: async (ctx, { eventId }) => {
     const docs = await ctx.db.query("touchpoints").withIndex("by_event", (q) => q.eq("eventId", eventId)).collect()
@@ -28,7 +28,7 @@ export const getIncompleteByEventId = internalQuery({
   },
 })
 
-export const getIncompleteWithEvent = internalQuery({
+export const getIncompleteWithEvent = companyQuery({
   args: {},
   handler: async (ctx) => {
     const docs = await ctx.db.query("touchpoints").withIndex("by_completedAt", (q) => q.eq("completedAt", null)).collect()
@@ -40,7 +40,7 @@ export const getIncompleteWithEvent = internalQuery({
   },
 })
 
-export const create = internalMutation({
+export const create = companyMutation({
   args: { eventId: v.id("events"), values: v.optional(v.object(editableFields)) },
   handler: async (ctx, { eventId, values }) => {
     await requireDocument(ctx, "events", eventId)
@@ -55,7 +55,7 @@ export const create = internalMutation({
   },
 })
 
-export const update = internalMutation({
+export const update = companyMutation({
   args: { id: v.id("touchpoints"), updates: v.object(editableFields) },
   handler: async (ctx, { id, updates }) => {
     assertUpdates(updates)
@@ -65,7 +65,7 @@ export const update = internalMutation({
   },
 })
 
-export const remove = internalMutation({
+export const remove = companyMutation({
   args: { id: v.id("touchpoints") },
   handler: async (ctx, { id }) => {
     await requireDocument(ctx, "touchpoints", id)
@@ -74,7 +74,7 @@ export const remove = internalMutation({
   },
 })
 
-export const seedCommon = internalMutation({
+export const seedCommon = companyMutation({
   args: { eventId: v.id("events"), timeZone },
   handler: async (ctx, { eventId, timeZone }) => {
     const event = await requireDocument(ctx, "events", eventId)

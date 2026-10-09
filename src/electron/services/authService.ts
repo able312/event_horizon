@@ -1,352 +1,220 @@
-import { WorkOS } from '@workos-inc/node'
-import { shell, safeStorage, app, BrowserWindow } from 'electron'
-import { createServer, type Server, type IncomingMessage, type ServerResponse } from 'http'
-import { URL } from 'url'
-import path from 'path'
-import fs from 'fs'
+import type { AuthSnapshot } from "../../definitions/auth.js"
+import { AUTH_REDIRECT_URI, COMPANY_EMAIL_DOMAIN } from "./authConfig.js"
+import {
+  isCompanyEmail, isRejectedRefresh, needsRefresh, parseCallback, parseStoredSession, toSession,
+  type AuthSession,
+} from "./authSession.js"
 
-// WorkOS User type from SDK
-interface WorkOSUser {
-  id: string
-  email: string
-  emailVerified: boolean
-  profilePictureUrl: string | null
-  firstName: string | null
-  lastName: string | null
-  createdAt: string
-  updatedAt: string
+export const SIGN_IN_TIMEOUT_MS = 5 * 60 * 1000
+
+type TokenResponse = Parameters<typeof toSession>[0]
+
+/** The public-client subset of the WorkOS user management API (no API key). */
+export interface AuthClient {
+  getAuthorizationUrlWithPKCE(options: { provider: "authkit"; clientId: string; redirectUri: string }):
+    Promise<{ url: string; state: string; codeVerifier: string }>
+  authenticateWithCode(options: { clientId: string; code: string; codeVerifier: string }): Promise<TokenResponse>
+  authenticateWithRefreshToken(options: { clientId: string; refreshToken: string }): Promise<TokenResponse>
 }
 
-export interface AuthSession {
-  user: WorkOSUser
-  accessToken: string
-  refreshToken: string
-  expiresAt: number
+export interface CallbackPage { title: string; message: string; success: boolean }
+
+export interface AuthPlatform {
+  /** Encrypted session storage; `save` returns false when encryption is unavailable. */
+  storage: { load(): string | null; save(json: string): boolean; clear(): void }
+  openExternal(url: string): Promise<void>
+  /** Starts the loopback callback server; a null page means 404. */
+  listen(handler: (url: URL) => Promise<CallbackPage | null>): Promise<{ close(): void }>
+  focusApp(): void
+  logError(error: unknown): void
 }
 
-export interface AuthServiceSnapshot {
-  isAuthenticated: boolean
-  user: WorkOSUser | null
-  isLoading: boolean
+export const SIGN_IN_ERRORS = {
+  notConfigured: "Sign-in isn't configured for this build of Event Horizon.",
+  timedOut: "Sign-in timed out. Try again.",
+  wrongDomain: `Sign in with your @${COMPANY_EMAIL_DOMAIN} Google account.`,
+  failed: "Sign-in failed. Try again.",
+  expired: "Your session has expired. Sign in again.",
+} as const
+
+interface SignInAttempt {
+  state: string
+  codeVerifier: string
+  server: { close(): void } | null
+  timer: ReturnType<typeof setTimeout> | undefined
 }
 
-export interface AuthService {
-  getSnapshot(): AuthServiceSnapshot
-  signIn(): Promise<void>
-  signOut(): Promise<void>
-  handleCallback(code: string): Promise<void>
-  getAccessToken(): Promise<string | null>
-  subscribe(listener: (snapshot: AuthServiceSnapshot) => void): () => void
-  stop(): void
-}
+export function createAuthService(
+  clientId: string | null,
+  client: AuthClient,
+  platform: AuthPlatform,
+  now: () => number = Date.now,
+) {
+  let session = loadSession()
+  let pending: SignInAttempt | null = null
+  let error: string | null = null
+  let refreshing: Promise<AuthSession | null> | null = null
+  const subscribers = new Set<(snapshot: AuthSnapshot) => void>()
 
-const WORKOS_API_KEY = process.env.WORKOS_API_KEY ?? ''
-const WORKOS_CLIENT_ID = process.env.WORKOS_CLIENT_ID ?? ''
-const WORKOS_REDIRECT_URI = process.env.WORKOS_REDIRECT_URI ?? 'http://localhost:42069/callback'
-
-// Auth callback server port - separate from the dev server
-const AUTH_CALLBACK_PORT = 42070
-
-function getStoragePath(): string {
-  return path.join(app.getPath('userData'), 'auth-session.encrypted')
-}
-
-function saveSession(session: AuthSession): void {
-  const sessionJson = JSON.stringify(session)
-  if (safeStorage.isEncryptionAvailable()) {
-    const encrypted = safeStorage.encryptString(sessionJson)
-    fs.writeFileSync(getStoragePath(), encrypted)
-  } else {
-    // Fallback for systems without keychain (rare)
-    fs.writeFileSync(getStoragePath(), sessionJson)
-  }
-}
-
-function loadSession(): AuthSession | null {
-  const storagePath = getStoragePath()
-  if (!fs.existsSync(storagePath)) {
-    return null
-  }
-  try {
-    const data = fs.readFileSync(storagePath)
-    if (safeStorage.isEncryptionAvailable()) {
-      const decrypted = safeStorage.decryptString(data)
-      return JSON.parse(decrypted) as AuthSession
-    } else {
-      return JSON.parse(data.toString()) as AuthSession
-    }
-  } catch {
-    // Corrupted or invalid session file
-    fs.unlinkSync(storagePath)
-    return null
-  }
-}
-
-function clearSession(): void {
-  const storagePath = getStoragePath()
-  if (fs.existsSync(storagePath)) {
-    fs.unlinkSync(storagePath)
-  }
-}
-
-export function createAuthService(): AuthService {
-  const workos = new WorkOS(WORKOS_API_KEY, { clientId: WORKOS_CLIENT_ID })
-
-  let currentSession: AuthSession | null = loadSession()
-  let isLoading = false
-  let callbackServer: Server | null = null
-  const listeners = new Set<(snapshot: AuthServiceSnapshot) => void>()
-
-  function getSnapshot(): AuthServiceSnapshot {
-    return {
-      isAuthenticated: currentSession !== null && currentSession.expiresAt > Date.now(),
-      user: currentSession?.user ?? null,
-      isLoading,
-    }
+  function loadSession(): AuthSession | null {
+    const json = platform.storage.load()
+    const stored = json ? parseStoredSession(json) : null
+    if (json && (!stored || !isCompanyEmail(stored.user.email, COMPANY_EMAIL_DOMAIN))) platform.storage.clear()
+    return stored && isCompanyEmail(stored.user.email, COMPANY_EMAIL_DOMAIN) ? stored : null
   }
 
-  function notifyListeners(): void {
+  function getSnapshot(): AuthSnapshot {
+    return { isAuthenticated: session !== null, user: session?.user ?? null, isLoading: pending !== null, error }
+  }
+
+  function publish() {
     const snapshot = getSnapshot()
-    for (const listener of listeners) {
-      listener(snapshot)
+    for (const subscriber of subscribers) {
+      try { subscriber(snapshot) } catch (err) { platform.logError(err) }
     }
   }
 
-  function setLoading(loading: boolean): void {
-    isLoading = loading
-    notifyListeners()
+  function setSession(next: AuthSession | null) {
+    session = next
+    if (!next) {
+      platform.storage.clear()
+    } else if (!platform.storage.save(JSON.stringify(next))) {
+      // Never write tokens unencrypted; the session lasts until the app quits.
+      platform.storage.clear()
+    }
   }
 
-  function focusMainWindow(): void {
-    const windows = BrowserWindow.getAllWindows()
-    if (windows.length > 0) {
-      const mainWindow = windows[0]
-      if (mainWindow.isMinimized()) mainWindow.restore()
-      mainWindow.focus()
+  function finish(attempt: SignInAttempt, failure: string | null) {
+    if (pending !== attempt) return
+    clearTimeout(attempt.timer)
+    attempt.server?.close()
+    pending = null
+    error = failure
+    publish()
+  }
+
+  async function handleRequest(attempt: SignInAttempt, url: URL): Promise<CallbackPage | null> {
+    const result = parseCallback(url, attempt.state)
+    if (result.kind === "ignore") return null
+    if (pending !== attempt) {
+      return { title: "Sign-in link expired", message: "Start signing in again from Event Horizon.", success: false }
     }
+    if (result.kind === "error") {
+      finish(attempt, result.message)
+      return { title: "Sign-in failed", message: result.message, success: false }
+    }
+    try {
+      const next = toSession(await client.authenticateWithCode({ clientId: clientId ?? "", code: result.code, codeVerifier: attempt.codeVerifier }))
+      if (pending !== attempt) {
+        return { title: "Sign-in link expired", message: "Start signing in again from Event Horizon.", success: false }
+      }
+      if (!isCompanyEmail(next.user.email, COMPANY_EMAIL_DOMAIN)) {
+        finish(attempt, SIGN_IN_ERRORS.wrongDomain)
+        return { title: "Wrong account", message: SIGN_IN_ERRORS.wrongDomain, success: false }
+      }
+      setSession(next)
+      finish(attempt, null)
+      platform.focusApp()
+      return { title: "Signed in", message: `Welcome, ${next.user.firstName || next.user.email}. You can return to Event Horizon.`, success: true }
+    } catch (err) {
+      platform.logError(err)
+      finish(attempt, SIGN_IN_ERRORS.failed)
+      return { title: "Sign-in failed", message: SIGN_IN_ERRORS.failed, success: false }
+    }
+  }
+
+  function cancelPending() {
+    if (!pending) return
+    clearTimeout(pending.timer)
+    pending.server?.close()
+    pending = null
   }
 
   async function signIn(): Promise<void> {
-    if (isLoading) return
-
-    setLoading(true)
-
+    cancelPending()
+    if (!clientId) {
+      error = SIGN_IN_ERRORS.notConfigured
+      publish()
+      return
+    }
+    const attempt: SignInAttempt = { state: "", codeVerifier: "", server: null, timer: undefined }
+    pending = attempt
+    error = null
+    publish()
     try {
-      // Start callback server if not running
-      if (!callbackServer) {
-        await startCallbackServer()
-      }
-
-      // Generate authorization URL - use our callback server port
-      const callbackUri = `http://localhost:${AUTH_CALLBACK_PORT}/callback`
-      const authorizationUrl = workos.userManagement.getAuthorizationUrl({
-        provider: 'authkit',
-        clientId: WORKOS_CLIENT_ID,
-        redirectUri: callbackUri,
-      })
-
-      // Open browser to sign in
-      await shell.openExternal(authorizationUrl)
-    } catch (error) {
-      setLoading(false)
-      throw error
+      const authorization = await client.getAuthorizationUrlWithPKCE({ provider: "authkit", clientId, redirectUri: AUTH_REDIRECT_URI })
+      attempt.state = authorization.state
+      attempt.codeVerifier = authorization.codeVerifier
+      const server = await platform.listen(url => handleRequest(attempt, url))
+      if (pending !== attempt) { server.close(); return }
+      attempt.server = server
+      attempt.timer = setTimeout(() => finish(attempt, SIGN_IN_ERRORS.timedOut), SIGN_IN_TIMEOUT_MS)
+      await platform.openExternal(authorization.url)
+    } catch (err) {
+      platform.logError(err)
+      finish(attempt, SIGN_IN_ERRORS.failed)
     }
-  }
-
-  async function startCallbackServer(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
-        const url = new URL(req.url ?? '/', `http://localhost:${AUTH_CALLBACK_PORT}`)
-
-        // Handle callback
-        if (url.pathname === '/callback') {
-          const code = url.searchParams.get('code')
-          const error = url.searchParams.get('error')
-          const errorDescription = url.searchParams.get('error_description')
-
-          if (error) {
-            res.writeHead(200, { 'Content-Type': 'text/html' })
-            res.end(createHtmlResponse('Authentication Failed', errorDescription || error, false))
-            setLoading(false)
-            return
-          }
-
-          if (code) {
-            try {
-              await handleCallback(code)
-              res.writeHead(200, { 'Content-Type': 'text/html' })
-              const userName = currentSession?.user.firstName || currentSession?.user.email || 'there'
-              res.end(createHtmlResponse('Authentication Successful!', `Welcome, ${userName}!`, true))
-              focusMainWindow()
-            } catch (err) {
-              console.error('Auth code exchange failed:', err)
-              res.writeHead(200, { 'Content-Type': 'text/html' })
-              res.end(createHtmlResponse('Authentication Failed', 'Failed to complete authentication. Please try again.', false))
-              setLoading(false)
-            }
-            return
-          }
-        }
-
-        // Handle login route (Initiate login URI)
-        if (url.pathname === '/login') {
-          const callbackUri = `http://localhost:${AUTH_CALLBACK_PORT}/callback`
-          const authorizationUrl = workos.userManagement.getAuthorizationUrl({
-            provider: 'authkit',
-            clientId: WORKOS_CLIENT_ID,
-            redirectUri: callbackUri,
-          })
-          res.writeHead(302, { Location: authorizationUrl })
-          res.end()
-          return
-        }
-
-        // For any other path, return 404
-        res.writeHead(404)
-        res.end('Not Found')
-      })
-
-      server.on('error', (err: NodeJS.ErrnoException) => {
-        if (err.code === 'EADDRINUSE') {
-          // Port already in use, likely from a previous session
-          console.log('Auth callback server port already in use, assuming it is running')
-          resolve()
-        } else {
-          reject(err)
-        }
-      })
-
-      server.listen(AUTH_CALLBACK_PORT, '127.0.0.1', () => {
-        console.log(`Auth callback server listening on port ${AUTH_CALLBACK_PORT}`)
-        callbackServer = server
-        resolve()
-      })
-    })
-  }
-
-  function createHtmlResponse(title: string, message: string, success: boolean): string {
-    const color = success ? '#10b981' : '#ef4444'
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>${title}</title>
-          <style>
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              min-height: 100vh;
-              margin: 0;
-              background: #f3f4f6;
-            }
-            .card {
-              background: white;
-              padding: 48px;
-              border-radius: 12px;
-              text-align: center;
-              box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-              max-width: 400px;
-            }
-            h1 { color: ${color}; margin: 0 0 16px; font-size: 24px; }
-            p { color: #4b5563; margin: 0 0 24px; }
-            .hint { color: #9ca3af; font-size: 14px; margin: 0; }
-          </style>
-        </head>
-        <body>
-          <div class="card">
-            <h1>${title}</h1>
-            <p>${message}</p>
-            <p class="hint">You can close this window and return to Event Horizon.</p>
-          </div>
-          ${success ? '<script>setTimeout(() => window.close(), 2000);</script>' : ''}
-        </body>
-      </html>
-    `
-  }
-
-  async function handleCallback(code: string): Promise<void> {
-    const callbackUri = `http://localhost:${AUTH_CALLBACK_PORT}/callback`
-    const authResponse = await workos.userManagement.authenticateWithCode({
-      clientId: WORKOS_CLIENT_ID,
-      code,
-    })
-
-    // Calculate expiration (default 1 hour from now)
-    const expiresAt = Date.now() + 60 * 60 * 1000
-
-    currentSession = {
-      user: authResponse.user as WorkOSUser,
-      accessToken: authResponse.accessToken,
-      refreshToken: authResponse.refreshToken,
-      expiresAt,
-    }
-
-    saveSession(currentSession)
-    setLoading(false)
   }
 
   async function signOut(): Promise<void> {
-    currentSession = null
-    clearSession()
-    notifyListeners()
+    cancelPending()
+    refreshing = null
+    setSession(null)
+    error = null
+    publish()
   }
 
-  async function getAccessToken(): Promise<string | null> {
-    if (!currentSession) return null
-
-    // Check if token is expired or expiring soon (within 5 minutes)
-    if (currentSession.expiresAt < Date.now() + 5 * 60 * 1000) {
-      // Try to refresh the token
-      try {
-        const refreshResponse = await workos.userManagement.authenticateWithRefreshToken({
-          clientId: WORKOS_CLIENT_ID,
-          refreshToken: currentSession.refreshToken,
-        })
-
-        currentSession = {
-          ...currentSession,
-          accessToken: refreshResponse.accessToken,
-          refreshToken: refreshResponse.refreshToken,
-          expiresAt: Date.now() + 60 * 60 * 1000,
+  function refresh(current: AuthSession): Promise<AuthSession | null> {
+    // Refresh tokens are single-use, so concurrent callers share one request.
+    if (refreshing) return refreshing
+    const request: Promise<AuthSession | null> = client.authenticateWithRefreshToken({ clientId: clientId ?? "", refreshToken: current.refreshToken })
+      .then(response => {
+        if (session !== current) return session
+        const next = toSession(response)
+        if (!isCompanyEmail(next.user.email, COMPANY_EMAIL_DOMAIN)) {
+          setSession(null)
+          error = SIGN_IN_ERRORS.wrongDomain
+          publish()
+          return null
         }
-
-        saveSession(currentSession)
-        notifyListeners()
-      } catch {
-        // Refresh failed, clear session
-        await signOut()
-        return null
-      }
-    }
-
-    return currentSession.accessToken
+        setSession(next)
+        publish()
+        return next
+      }, err => {
+        if (session !== current) return session
+        platform.logError(err)
+        if (isRejectedRefresh(err)) {
+          setSession(null)
+          error = SIGN_IN_ERRORS.expired
+          publish()
+          return null
+        }
+        // Network or server trouble: keep the session and retry on the next request.
+        return current.expiresAt > now() ? current : null
+      })
+      .finally(() => { if (refreshing === request) refreshing = null })
+    refreshing = request
+    return request
   }
 
-  function subscribe(listener: (snapshot: AuthServiceSnapshot) => void): () => void {
-    listeners.add(listener)
-    // Immediately notify with current state
-    listener(getSnapshot())
-    return () => {
-      listeners.delete(listener)
-    }
+  async function getAccessToken(options: { forceRefresh?: boolean } = {}): Promise<string | null> {
+    const current = session
+    if (!current) return null
+    if (!options.forceRefresh && !needsRefresh(current, now())) return current.accessToken
+    return (await refresh(current))?.accessToken ?? null
   }
 
-  function stop(): void {
-    if (callbackServer) {
-      callbackServer.close()
-      callbackServer = null
-    }
+  function subscribe(subscriber: (snapshot: AuthSnapshot) => void): () => void {
+    subscribers.add(subscriber)
+    return () => { subscribers.delete(subscriber) }
   }
 
-  return {
-    getSnapshot,
-    signIn,
-    signOut,
-    handleCallback,
-    getAccessToken,
-    subscribe,
-    stop,
+  function stop() {
+    cancelPending()
+    subscribers.clear()
   }
+
+  return { getSnapshot, signIn, signOut, getAccessToken, subscribe, stop }
 }
+
+export type AuthService = ReturnType<typeof createAuthService>

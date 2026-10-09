@@ -4,6 +4,7 @@ export interface AuthState {
   isAuthenticated: boolean
   user: AuthUser | null
   isLoading: boolean
+  error: string | null
 }
 
 export const ACTIONS = {
@@ -21,6 +22,7 @@ export const initialAuthState: AuthState = {
   isAuthenticated: false,
   user: null,
   isLoading: false,
+  error: null,
 }
 
 export function authReducer(state: AuthState, action: AuthAction): AuthState {
@@ -30,17 +32,20 @@ export function authReducer(state: AuthState, action: AuthAction): AuthState {
         isAuthenticated: action.snapshot.isAuthenticated,
         user: action.snapshot.user,
         isLoading: action.snapshot.isLoading,
+        error: action.snapshot.error,
       }
     case ACTIONS.SIGN_IN_START:
       return {
         ...state,
         isLoading: true,
+        error: null,
       }
     case ACTIONS.SIGN_OUT:
       return {
         isAuthenticated: false,
         user: null,
         isLoading: false,
+        error: null,
       }
     default:
       return state

@@ -72,7 +72,7 @@ High-level plan to take the app from a single-user, local-only Electron app to a
 - Changes made in one client appear in another without a refresh.
 - better-sqlite3 is removed from dependencies, or any remaining use is justified.
 
-**Status: backend operation ports implemented; stopped at human authentication setup (2026-10-08).** The app still uses SQLite through the existing IPC-backed data layer. All used backend operation families now have internal Convex implementations; authentication, renderer integration, and data migration remain pending.
+**Status: backend operation ports implemented; operations are now public and auth-guarded (see Step 3 progress below).** The app still uses SQLite through the existing IPC-backed data layer. Renderer integration and data migration remain pending.
 
 Completed:
 - Installed `convex` and `@convex-dev/react-query` (`b51f523`). The adapter is the selected approach for live queries; renderer integration is still pending.
@@ -84,7 +84,7 @@ Completed:
 - Payments now have a proper indexed by-event query returning all matching payments (or `[]`), while retaining the used all-payments query until renderer integration. Charge items use the existing by-event index. Touchpoint queries use the by-event/completion indexes and explicitly join event titles.
 - Cart/tournament reads are read-only; `ensureByEventId` is an explicit, idempotent mutation using the by-event index. Renderer integration must initialize before subscribing to the read query. The indexed read and insert share a Convex transaction, which protects against duplicate initialization under competing writes. Unused list/create/delete operations were not ported.
 - Common touchpoint seeding reuses the existing templates and now accepts the client's IANA time zone, so server execution preserves the desktop's calendar dates. Seeding stays an explicit batch mutation; repeated calls intentionally add another set, matching the existing operation.
-- The new functions are **internal** (`internalQuery`/`internalMutation`) while auth is pending, so there is no unauthenticated client API. Before renderer integration, introduce authenticated public functions with the shared company-domain guard from Step 3. Internal visibility is temporary staging, not a substitute for that guard.
+- The new functions are **internal** (`internalQuery`/`internalMutation`) while auth is pending, so there is no unauthenticated client API. Before renderer integration, introduce authenticated public functions with the shared company-domain guard from Step 3. Internal visibility is temporary staging, not a substitute for that guard. (Done 2026-10-09: all are now public and guarded; see Step 3 progress below.)
 - Added operation coverage in `convex/operations.test.ts` for CRUD/defaults, event isolation, rejected inputs, missing parents/records, read-only queries, repeated detail initialization, and time-zone-aware seeding. This is mock-backend coverage; actual concurrent-write retries and live-client updates still need deployment verification. Regenerated the typed API with `npx convex codegen --typecheck enable`.
 - Ported `convex/foodItems.ts`, `beverageItems.ts`, and `timeblocks.ts`, all as internal functions. Reads use the existing event/section, food-parent, beverage-event, and assignment indexes; no schema changes or dependencies were needed. Food creates require an existing food timeblock. Beverage create-and-assign and assignment replacement are atomic; links require a beverage timeblock in the same event, and duplicate IDs are rejected. Ordinary patches cannot change parents, section types, IDs, or creation timestamps.
 - Timeblock conversion reuses `buildConversionImpact` and recomputes the impact inside the mutation before requiring destructive confirmation. Leaving food deletes its food items; leaving beverage removes only its links, preserving shared beverage items and other timeblocks' assignments. Timeblock deletion explicitly removes food items and beverage links; beverage item deletion explicitly removes its links. Event-level cascades remain part of the upcoming events port.
@@ -108,17 +108,72 @@ Implementation decisions for this batch:
 
 Verification for this batch: `npm test` passed (154 files, 1,155 tests, including 210 Convex tests); `npm run build`, Convex codegen/typecheck, and `npm run lint` passed. Lint retains the same seven existing warnings.
 
-**Human handoff — stop here before authentication/renderer integration.**
-- Confirm the exact company Google Workspace email domain to enforce server-side. No approved domain is recorded in the repo.
-- Create/configure the development WorkOS AuthKit application and Google Workspace identity provider, and provide its public client ID and JWT issuer/configuration information. The repo currently contains no WorkOS configuration. Do not put provider secrets into the Electron bundle or commit them. Desktop redirect registration and JWT email-claim verification must be completed with the implemented PKCE flow in the next batch.
-- Production Convex/WorkOS setup remains a later rollout prerequisite. Current automated checks do not replace desktop smoke testing or two-client collaboration verification.
+**WorkOS configuration check (2026-10-09).** The WorkOS CLI isn't installed and the WorkOS MCP server isn't authenticated in this session, so the dashboard couldn't be read directly. These results come from public WorkOS endpoints:
+- The development client ID in `.env.local` belongs to an AuthKit **sandbox** environment. Its JWKS endpoint resolves. `.env.local` also has a `WORKOS_CLAIM_TOKEN`, which suggests the environment was created by the WorkOS installer and may not be claimed by a WorkOS account yet.
+- The only registered Redirect URI that was found is `http://localhost:42069/callback`. That is the Vite dev server port, so it can't serve as the desktop callback. `http://localhost:42070/callback` and `127.0.0.1` URIs are rejected as unregistered.
+- Google OAuth responds for this client (it redirects to Google). This may be WorkOS's shared demo Google credentials; whether AuthKit offers only Google, and whether access tokens include `email`, can't be verified without dashboard access and a real sign-in.
+- Company domain confirmed by the user: **`westlinks.ca`** (2026-10-09).
+
+### Step 3 (authentication) progress
+
+**Status: auth code implemented; stopped for human WorkOS setup and sign-in testing (2026-10-09).** The app still reads and writes SQLite. No renderer data calls go to Convex yet, and no sign-in gate is active.
+
+Completed:
+- `convex/auth.config.ts` validates WorkOS access tokens: both WorkOS issuers, RS256, and the client JWKS, following the [Convex AuthKit guide](https://docs.convex.dev/auth/authkit/). `WORKOS_CLIENT_ID` is set on the Convex dev deployment. It is a public value; no WorkOS secret is stored in Convex.
+- `convex/lib/auth.ts`:
+  - `requireCompanyUser` rejects missing identities (`Unauthenticated`), and rejects missing emails or emails not exactly on `westlinks.ca` (`Forbidden`, including subdomains). Errors are `ConvexError`s.
+  - `companyQuery` and `companyMutation` run that check before every handler.
+  - All 76 previously internal operations are now public functions built with these wrappers. There are no internal, action, or unguarded functions.
+- Added a `users` table and `convex/users.ts`. `store` upserts the signed-in account, keyed by WorkOS user ID and holding a lowercased email and name. `current` reads it back. This is a Convex schema addition only; no SQLite migration is involved.
+- `convex/auth.test.ts` loads every deployable module and checks that every registered function:
+  - is public;
+  - rejects unauthenticated, wrong-domain, subdomain, and email-less callers before touching the database.
+
+  It also covers client-API rejection, the domain matcher, and the users upsert. Other Convex tests now call `api.*` with a company identity (`convex/lib/testIdentity.ts`). Adding an unguarded test function makes the suite fail.
+- Replaced the installer-generated Electron auth service:
+  - It no longer uses `WORKOS_API_KEY`. The app is a public PKCE client (`@workos-inc/node` public-client mode).
+  - The redirect is a loopback URI, `http://localhost:42070/callback`. The server binds IPv4 and IPv6 loopback only, runs only during sign-in, and stops after 5 minutes. The callback must return the expected `state`, and HTML responses are escaped.
+  - Accounts outside `westlinks.ca` are refused on the client as well, but the server check is the one that counts.
+  - Token expiry is read from the JWT. Concurrent refreshes share one request, because refresh tokens are single-use. A 4xx refresh rejection signs the user out. Network failures keep the session while the token is still valid. `getAccessToken({ forceRefresh })` is ready for Convex's `setAuth` callback.
+  - The session is stored only through Electron `safeStorage`. If encryption is unavailable, the session stays in memory.
+  - Auth IPC checks the sender like the updater IPC (top-level app page only) and validates arguments. This also fixes a `require` in ESM that would have crashed when broadcasting status.
+- `src/electron/services/authConfig.ts` holds the callback port, redirect URI, company domain, and public client IDs. The main process never loaded `.env.local`, so the previous code always ran with an empty client ID. The development client ID is now committed (public). Packaged builds use `PRODUCTION_CLIENT_ID`, which is `null` and fails closed until production is configured. `EVENT_HORIZON_WORKOS_CLIENT_ID` overrides it for testing.
+- The renderer auth state now carries a sign-in `error` for the upcoming signed-out screen.
+- Tests:
+  - `authSession.test.ts`: token expiry, session parsing, callback/state, refresh errors, client-ID selection.
+  - `authService.test.ts`: PKCE flow, state forgery, wrong domain, superseded attempts, timeout, missing config, port failure, storage fallback, refresh deduplication, revocation, network failure, sign-out.
+  - `authHandler.test.ts`: routing, broadcast, sender and argument rejection.
+
+Verification for this batch:
+- `npm test` passed: 158 files, 1,190 tests.
+- `npm run build` and the Convex typecheck passed. Convex codegen uploaded the guarded functions to the dev deployment.
+- `npm run lint` passed with the same seven existing warnings.
+- Not verified: a real sign-in, the loopback server inside Electron, the token's `email` claim, and Convex accepting a live WorkOS token. Each of these needs the WorkOS setup below.
+
+Known limitations and decisions to revisit:
+- Signing out clears the app session but not the browser's AuthKit session. Switching accounts may need a browser sign-out. Fixing this needs a registered Sign-out URI and a `getLogoutUrl` flow.
+- The in-app `/login` route from the installer commit can't serve as an Initiate login URI for a desktop app. It isn't needed while sign-in is Google-only and started from the app. It was left in place.
+- Sign-in uses the AuthKit hosted page (`provider: "authkit"`). Restrict that page to Google in WorkOS. Alternatively, switch to `provider: "GoogleOAuth"` to skip the AuthKit page.
+- `.env.local` still holds `WORKOS_API_KEY`, `WORKOS_COOKIE_PASSWORD`, and `WORKOS_REDIRECT_URI` from the installer. The app no longer reads them. Keep the API key out of the app and out of git.
+
+**Human handoff — stop here.** In the WorkOS dashboard for the development environment (claim it first if necessary):
+1. Add the Redirect URI `http://localhost:42070/callback`. Remove `http://localhost:42069/callback` unless something else needs it.
+2. Add a JWT template that puts the email in the access token under the standard claim name, e.g. `{ "email": {{ user.email }} }` (see [JWT templates](https://workos.com/docs/authkit/jwt-templates)). Without it, Convex rejects every call as `Forbidden`.
+3. Enable Google sign-in. Disable email/password and other methods, so that only verified Google Workspace accounts can sign in. For production, use your own Google OAuth credentials instead of WorkOS demo credentials.
+4. Then run `npm run dev`, click **Sign in** in the sidebar footer, and sign in with a `westlinks.ca` account. Check that the sidebar shows **Sign out**, and that a non-company Google account is refused. Report any error shown.
 
 Resume after that handoff:
-1. Add the shared auth/domain guard and authenticated public functions, WorkOS JWT configuration, Electron system-browser PKCE sign-in with secure token storage/refresh/sign-out, and signed-out renderer state. Add unauthenticated/wrong-domain coverage before exposing any functions.
-2. Wire the Convex client and React Query adapter through `src/lib/data`, replace IPC-backed data operations, adapt centralized query factories and contact keyset pagination, and verify live updates across two clients. Replace all-payments filtering with the by-event query and get-or-create detail reads with explicit initialization mutations followed by subscriptions. Pass the client's IANA time zone to timeline reads and touchpoint seeding; reconcile optimistic beverage UUIDs with returned IDs. Translate structured Convex contact errors for existing UI consumers.
-3. Complete production setup and audit/concurrency decisions, implement and test SQLite export/import with ID and foreign-key mapping, run migration verification and desktop/two-client collaboration checks, then remove replaced SQLite code and dependencies. Keep the local app and data intact until migration and collaboration are verified.
+1. Optionally confirm with a real token that Convex accepts it, i.e. `users.store` succeeds.
+2. Step 2 renderer integration:
+   - Create the Convex client in `src/lib/data` with `setAuth` backed by `window.api.auth.getAccessToken`, and the React Query adapter.
+   - Add a signed-out/sign-in screen that gates the app, and call `users.store` after sign-in.
+   - Replace IPC-backed data operations, and adapt query keys and contact keyset pagination.
+   - Replace all-payments filtering with the by-event query, and get-or-create detail reads with explicit initialization followed by subscriptions.
+   - Pass the IANA time zone to timeline reads and seeding, reconcile optimistic beverage IDs, and translate `ConvexError` contact and auth errors.
+3. Production setup and audit/concurrency decisions. Then SQLite export/import with ID and foreign-key mapping, and its tests.
+4. Human verification of desktop sign-in, migrated data integrity, and two-client live updates. Then remove SQLite and finish Windows packaging. Keep the local app and data intact until then.
 
-**Notes for the Step 2 detailed plan (found during Step 1)**
+### Notes for the Step 2 detailed plan (found during Step 1)
 - Live updates: use the installed `@convex-dev/react-query` adapter. Its cache keys differ from ours; adapt the centralized key factories and fetchers in `src/lib/data/queries.ts` during integration.
 - Cart details and tournament details are created on first read (`getOrCreate…`). Convex queries can't write, so these become "create with the event" or an explicit mutation.
 - The contacts directory uses cursor pagination (`useInfiniteQuery`); map it to Convex's paginated queries.
