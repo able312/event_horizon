@@ -11,14 +11,30 @@ import type {
   UpdateContact,
   UpdateEventContact,
 } from "~/definitions/contacts"
-import { invokeContactsChannel } from "./contactsResult"
+import { api } from "../../../convex/_generated/api"
+import { fetchSource, pickFields, runMutation, runQuery } from "./backend"
+import { CONTACT_FIELDS } from "./contacts"
+import { toId, toIds } from "./ids"
+import { sources } from "./sources"
+
+// Expected failures reject with a ContactsError; see translateBackendError.
+
+function toAssignmentFields(patch: UpdateEventContact) {
+  const { vendorCategoryId, ...rest } = pickFields(patch, ["vendorCategoryId", "roleLabel", "isPrimary", "notes"])
+  return {
+    ...rest,
+    ...(vendorCategoryId !== undefined
+      ? { vendorCategoryId: vendorCategoryId ? toId<"vendorCategories">(vendorCategoryId) : null }
+      : {}),
+  }
+}
 
 export function getEventContactsPanel(eventId: string): Promise<EventContactsPanel> {
-  return invokeContactsChannel("event-contacts:get-panel", eventId)
+  return fetchSource(sources.eventContacts.panel(eventId))
 }
 
 export function getPrimaryClients(eventIds: string[]): Promise<Record<string, PrimaryClient>> {
-  return invokeContactsChannel("event-contacts:get-primary-clients", eventIds)
+  return fetchSource(sources.eventContacts.primaryClients(eventIds))
 }
 
 export function assignEventContact(
@@ -27,11 +43,21 @@ export function assignEventContact(
   role: ContactRoleType,
   opts?: AssignEventContactOptions,
 ): Promise<EventContact> {
-  return invokeContactsChannel("event-contacts:assign", eventId, target, role, opts)
+  return runMutation(api.eventContacts.assign, {
+    eventId: toId<"events">(eventId),
+    target: "contactId" in target
+      ? { contactId: toId<"contacts">(target.contactId) }
+      : { newContact: pickFields(target.newContact, CONTACT_FIELDS) },
+    role,
+    ...(opts ? { opts: toAssignmentFields(opts) } : {}),
+  })
 }
 
 export function updateEventContact(eventContactId: string, patch: UpdateEventContact): Promise<EventContact> {
-  return invokeContactsChannel("event-contacts:patch", eventContactId, patch)
+  return runMutation(api.eventContacts.update, {
+    id: toId<"eventContacts">(eventContactId),
+    patch: toAssignmentFields(patch),
+  })
 }
 
 /** Updates the contact's shared details and the assignment in one transaction. */
@@ -40,25 +66,41 @@ export function updateEventContactWithContact(
   contactPatch: UpdateContact,
   assignmentPatch: UpdateEventContact,
 ): Promise<EventContact> {
-  return invokeContactsChannel("event-contacts:patch-with-contact", eventContactId, contactPatch, assignmentPatch)
+  return runMutation(api.eventContacts.updateWithContact, {
+    id: toId<"eventContacts">(eventContactId),
+    contactPatch: pickFields(contactPatch, CONTACT_FIELDS),
+    assignmentPatch: toAssignmentFields(assignmentPatch),
+  })
 }
 
-export function setPrimaryEventContact(eventContactId: string): Promise<void> {
-  return invokeContactsChannel("event-contacts:set-primary", eventContactId)
+export async function setPrimaryEventContact(eventContactId: string): Promise<void> {
+  await runMutation(api.eventContacts.setPrimary, { id: toId<"eventContacts">(eventContactId) })
 }
 
-export function reorderEventContacts(eventId: string, role: ContactRoleType, orderedIds: string[]): Promise<void> {
-  return invokeContactsChannel("event-contacts:reorder", eventId, role, orderedIds)
+export async function reorderEventContacts(eventId: string, role: ContactRoleType, orderedIds: string[]): Promise<void> {
+  await runMutation(api.eventContacts.reorder, {
+    eventId: toId<"events">(eventId),
+    role,
+    orderedIds: toIds<"eventContacts">(orderedIds),
+  })
 }
 
-export function removeEventContact(eventContactId: string): Promise<void> {
-  return invokeContactsChannel("event-contacts:delete", eventContactId)
+export async function removeEventContact(eventContactId: string): Promise<void> {
+  await runMutation(api.eventContacts.remove, { id: toId<"eventContacts">(eventContactId) })
 }
 
 export function getContactEventHistory(contactId: string): Promise<ContactEventHistory[]> {
-  return invokeContactsChannel("event-contacts:get-by-contact-id", contactId)
+  return fetchSource(sources.eventContacts.history(contactId))
 }
 
 export function resolveEventRecipients(eventId: string, selection: RecipientSelection): Promise<RecipientResolution> {
-  return invokeContactsChannel("event-contacts:resolve-recipients", eventId, selection)
+  return runQuery(api.eventContacts.resolveRecipients, {
+    eventId: toId<"events">(eventId),
+    selection: "eventContactIds" in selection
+      ? { eventContactIds: toIds<"eventContacts">(selection.eventContactIds) }
+      : {
+          roles: selection.roles,
+          ...(selection.vendorCategoryIds ? { vendorCategoryIds: toIds<"vendorCategories">(selection.vendorCategoryIds) } : {}),
+        },
+  })
 }

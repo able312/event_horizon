@@ -10,6 +10,7 @@ import {
   ITER_BEVERAGE_TYPE,
 } from "~/definitions/sections/section-constants"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
+import { getRecordRenderKey } from "~/lib/data/optimisticIds"
 import RouteBlockingError from "~/components/atoms/route-blocking-error"
 import { Button } from "~/components/atoms/button"
 import {
@@ -360,8 +361,8 @@ const BeverageEditorWorkspace: React.FC<BeverageEditorWorkspaceProps> = ({
                           const hasNotes = Boolean(item.includes?.trim())
 
                           return (
-                            <React.Fragment key={item.id}>
-                              <tr data-beverage-item-id={item.id}>
+                            <React.Fragment key={getRecordRenderKey(item.id)}>
+                              <tr data-beverage-item-id={getRecordRenderKey(item.id)}>
                                 <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-top`}>
                                   <input
                                     type="checkbox"

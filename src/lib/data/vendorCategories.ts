@@ -1,22 +1,27 @@
 import type { NewVendorCategory, UpdateVendorCategory, VendorCategory } from "~/definitions/contacts"
-import { invokeContactsChannel } from "./contactsResult"
+import { api } from "../../../convex/_generated/api"
+import { fetchSource, pickFields, runMutation } from "./backend"
+import { toId } from "./ids"
+import { sources } from "./sources"
+
+const FIELDS = ["key", "label", "colorToken", "sortOrder"] as const
 
 export function getVendorCategories(options?: { includeArchived?: boolean }): Promise<VendorCategory[]> {
-  return invokeContactsChannel("vendor-categories:get-many", options)
+  return fetchSource(sources.vendorCategories.all(options))
 }
 
 export function createVendorCategory(input: NewVendorCategory): Promise<VendorCategory> {
-  return invokeContactsChannel("vendor-categories:post", input)
+  return runMutation(api.vendorCategories.create, { input: pickFields(input, FIELDS) })
 }
 
 export function updateVendorCategory(id: string, patch: UpdateVendorCategory): Promise<VendorCategory> {
-  return invokeContactsChannel("vendor-categories:patch", id, patch)
+  return runMutation(api.vendorCategories.update, { id: toId<"vendorCategories">(id), patch: pickFields(patch, FIELDS) })
 }
 
-export function archiveVendorCategory(id: string): Promise<void> {
-  return invokeContactsChannel("vendor-categories:archive", id)
+export async function archiveVendorCategory(id: string): Promise<void> {
+  await runMutation(api.vendorCategories.archive, { id: toId<"vendorCategories">(id) })
 }
 
-export function restoreVendorCategory(id: string): Promise<void> {
-  return invokeContactsChannel("vendor-categories:restore", id)
+export async function restoreVendorCategory(id: string): Promise<void> {
+  await runMutation(api.vendorCategories.restore, { id: toId<"vendorCategories">(id) })
 }

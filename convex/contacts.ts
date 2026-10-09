@@ -68,7 +68,7 @@ export const search = companyQuery({ args: {
     const left = a.displayName.toLowerCase(), right = b.displayName.toLowerCase()
     return left < right ? -1 : left > right ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0
   })
-  const items = candidates.slice(0, limit), last = items.at(-1)
+  const items = candidates.slice(0, limit), last = items[items.length - 1]
   return { items, nextCursor: candidates.length > limit && last ? JSON.stringify([filterKey, last.displayName.toLowerCase(), last.id]) : null }
 }) })
 

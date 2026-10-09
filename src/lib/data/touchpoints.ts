@@ -4,53 +4,47 @@ import type {
   Touchpoint,
   UpdateTouchpoint,
 } from "~/definitions/database"
+import { api } from "../../../convex/_generated/api"
+import { fetchSource, pickFields, runMutation, runQuery } from "./backend"
+import { toId } from "./ids"
+import { desktopTimeZone, sources } from "./sources"
+
+const EDITABLE_FIELDS = ["title", "dueDate", "completedAt"] as const
 
 export function getTouchpointsByEventId(eventId: string): Promise<Touchpoint[]> {
-  return window.electron.ipcRenderer.invoke(
-    "touchpoints:get-many-by-event-id",
-    eventId,
-  ) as Promise<Touchpoint[]>
+  return fetchSource(sources.touchpoints.byEvent(eventId))
 }
 
 export function getIncompleteTouchpoints(): Promise<IncompleteTouchpointWithEvent[]> {
-  return window.electron.ipcRenderer.invoke(
-    "touchpoints:get-many-incomplete",
-  ) as Promise<IncompleteTouchpointWithEvent[]>
+  return fetchSource(sources.touchpoints.incomplete())
 }
 
 export function getIncompleteTouchpointsByEventId(eventId: string): Promise<Touchpoint[]> {
-  return window.electron.ipcRenderer.invoke(
-    "touchpoints:get-incomplete-by-event-id",
-    eventId,
-  ) as Promise<Touchpoint[]>
+  return runQuery(api.touchpoints.getIncompleteByEventId, { eventId: toId<"events">(eventId) })
 }
 
 export function createTouchpoint(
   eventId: string,
   values?: Partial<Pick<NewTouchpoint, "title" | "dueDate" | "completedAt">>,
 ): Promise<Touchpoint> {
-  return window.electron.ipcRenderer.invoke(
-    "touchpoints:post",
-    eventId,
-    values,
-  ) as Promise<Touchpoint>
+  return runMutation(api.touchpoints.create, {
+    eventId: toId<"events">(eventId),
+    ...(values ? { values: pickFields(values, EDITABLE_FIELDS) } : {}),
+  })
 }
 
 export function updateTouchpoint(id: string, updates: UpdateTouchpoint): Promise<Touchpoint> {
-  return window.electron.ipcRenderer.invoke(
-    "touchpoints:patch",
-    id,
-    updates,
-  ) as Promise<Touchpoint>
+  return runMutation(api.touchpoints.update, {
+    id: toId<"touchpoints">(id),
+    updates: pickFields(updates, EDITABLE_FIELDS),
+  })
 }
 
 export function deleteTouchpoint(id: string): Promise<boolean> {
-  return window.electron.ipcRenderer.invoke("touchpoints:delete", id) as Promise<boolean>
+  return runMutation(api.touchpoints.remove, { id: toId<"touchpoints">(id) })
 }
 
+/** Due dates are calendar dates in the desktop's time zone. */
 export function seedCommonTouchpoints(eventId: string): Promise<Touchpoint[]> {
-  return window.electron.ipcRenderer.invoke(
-    "touchpoints:seed-common",
-    eventId,
-  ) as Promise<Touchpoint[]>
+  return runMutation(api.touchpoints.seedCommon, { eventId: toId<"events">(eventId), timeZone: desktopTimeZone() })
 }

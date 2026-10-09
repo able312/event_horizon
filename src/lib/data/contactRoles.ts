@@ -1,8 +1,11 @@
 import type { ContactRole, ContactRoleType } from "~/definitions/contacts"
-import { invokeContactsChannel } from "./contactsResult"
+import { api } from "../../../convex/_generated/api"
+import { fetchSource, runMutation } from "./backend"
+import { toId } from "./ids"
+import { sources } from "./sources"
 
 export function getContactRoles(contactId: string): Promise<ContactRole[]> {
-  return invokeContactsChannel("contact-roles:get-by-contact-id", contactId)
+  return fetchSource(sources.contacts.roles(contactId))
 }
 
 export function ensureContactRole(
@@ -10,13 +13,21 @@ export function ensureContactRole(
   role: ContactRoleType,
   vendorCategoryId?: string | null,
 ): Promise<ContactRole> {
-  return invokeContactsChannel("contact-roles:ensure", contactId, role, vendorCategoryId)
+  return runMutation(api.contactRoles.ensure, {
+    contactId: toId<"contacts">(contactId),
+    role,
+    vendorCategoryId: vendorCategoryId ? toId<"vendorCategories">(vendorCategoryId) : null,
+  })
 }
 
-export function removeContactRole(
+export async function removeContactRole(
   contactId: string,
   role: ContactRoleType,
   vendorCategoryId?: string | null,
 ): Promise<void> {
-  return invokeContactsChannel("contact-roles:delete", contactId, role, vendorCategoryId)
+  await runMutation(api.contactRoles.remove, {
+    contactId: toId<"contacts">(contactId),
+    role,
+    vendorCategoryId: vendorCategoryId ? toId<"vendorCategories">(vendorCategoryId) : null,
+  })
 }

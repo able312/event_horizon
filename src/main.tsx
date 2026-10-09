@@ -1,13 +1,14 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 
 import './index.css'
 import App from './App.tsx'
 import { AppRouter } from './app/AppRouter.tsx'
-import { AuthProvider } from './features/auth'
+import { AuthProvider, SessionGate } from './features/auth'
+import { createAppQueryClient } from './lib/data/backend'
 
-const queryClient = new QueryClient({
+const queryClient = createAppQueryClient({
     defaultOptions: {
         queries: {
             retry: 1,
@@ -21,9 +22,11 @@ createRoot(document.getElementById('root')!).render(
     <StrictMode>
         <QueryClientProvider client={queryClient}>
             <AuthProvider>
-                <AppRouter>
-                    <App />
-                </AppRouter>
+                <SessionGate>
+                    <AppRouter>
+                        <App />
+                    </AppRouter>
+                </SessionGate>
             </AuthProvider>
         </QueryClientProvider>
     </StrictMode>,

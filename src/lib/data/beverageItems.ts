@@ -1,55 +1,74 @@
 import type { BeverageItem, BeverageItemType } from "~/definitions/database"
 import type { BeverageItemWithAssignments, BeverageSectionPayload } from "~/definitions/beverage/beverage-types"
+import { api } from "../../../convex/_generated/api"
+import { fetchSource, pickFields, runMutation } from "./backend"
+import { toId, toIds } from "./ids"
+import { createWithClientId, resolveRecordId } from "./optimisticIds"
+import { sources } from "./sources"
+
+const EDITABLE_FIELDS = ["name", "quantity", "type", "serviceStyle", "includes", "unitPriceCents"] as const
+
+type NewBeverageItemInput = {
+  /** Client ID of the row already shown; the created item gets a server ID (see optimisticIds.ts). */
+  id?: string
+  eventId: string
+  name: string
+  type: BeverageItemType
+  quantity?: number
+  serviceStyle?: BeverageItem["serviceStyle"]
+  includes?: string
+  unitPriceCents?: number
+}
 
 export function getBeverageSectionWithItems(eventId: string): Promise<BeverageSectionPayload> {
-  return window.electron.ipcRenderer.invoke("beverage-items:get-by-event", eventId) as Promise<BeverageSectionPayload>
+  return fetchSource(sources.timeblocks.beverageSection(eventId))
 }
 
-export function createBeverageItem(data: {
-  id?: string
-  eventId: string
-  name: string
-  type: BeverageItemType
-  quantity?: number
-  serviceStyle?: string
-  includes?: string
-  unitPriceCents?: number
-}): Promise<BeverageItem> {
-  return window.electron.ipcRenderer.invoke("beverage-items:post", data) as Promise<BeverageItem>
+export function createBeverageItem(data: NewBeverageItemInput): Promise<BeverageItem> {
+  return createWithClientId(data.id, () => runMutation(api.beverageItems.create, {
+    ...pickFields(data, EDITABLE_FIELDS),
+    eventId: toId<"events">(data.eventId),
+    name: data.name,
+    type: data.type,
+  }))
 }
 
-export function createBeverageItemAssignedToTimeblock(data: {
-  id?: string
-  eventId: string
-  name: string
-  type: BeverageItemType
-  timeblockId: string
-  quantity?: number
-  serviceStyle?: string
-  includes?: string
-  unitPriceCents?: number
-}): Promise<BeverageItemWithAssignments> {
-  return window.electron.ipcRenderer.invoke(
-    "beverage-items:post-assigned",
-    data,
-  ) as Promise<BeverageItemWithAssignments>
+export function createBeverageItemAssignedToTimeblock(
+  data: NewBeverageItemInput & { timeblockId: string },
+): Promise<BeverageItemWithAssignments> {
+  return createWithClientId(data.id, () => runMutation(api.beverageItems.createAssignedToTimeblock, {
+    ...pickFields(data, EDITABLE_FIELDS),
+    eventId: toId<"events">(data.eventId),
+    name: data.name,
+    type: data.type,
+    timeblockId: toId<"timeblocks">(data.timeblockId),
+  }))
 }
 
-export function updateBeverageItem(id: string, updates: {
+export async function updateBeverageItem(id: string, updates: {
   name?: string
   quantity?: number | null
   type?: BeverageItemType
-  serviceStyle?: string | null
+  serviceStyle?: BeverageItem["serviceStyle"]
   includes?: string | null
   unitPriceCents?: number | null
 }): Promise<BeverageItem> {
-  return window.electron.ipcRenderer.invoke("beverage-items:patch", id, updates) as Promise<BeverageItem>
+  return runMutation(api.beverageItems.update, {
+    id: toId<"beverageItems">(await resolveRecordId(id)),
+    updates: pickFields(updates, EDITABLE_FIELDS),
+  })
 }
 
-export function deleteBeverageItem(id: string): Promise<boolean> {
-  return window.electron.ipcRenderer.invoke("beverage-items:delete", id) as Promise<boolean>
+export async function deleteBeverageItem(id: string): Promise<boolean> {
+  return runMutation(api.beverageItems.remove, { id: toId<"beverageItems">(await resolveRecordId(id)) })
 }
 
-export function setBeverageItemTimeblocks(itemId: string, timeblockIds: string[]): Promise<{ itemId: string; timeblockIds: string[] }> {
-  return window.electron.ipcRenderer.invoke("beverage-items:set-timeblocks", itemId, timeblockIds) as Promise<{ itemId: string; timeblockIds: string[] }>
+export async function setBeverageItemTimeblocks(
+  itemId: string,
+  timeblockIds: string[],
+): Promise<{ itemId: string; timeblockIds: string[] }> {
+  return runMutation(api.beverageItems.setItemTimeblocks, {
+    itemId: toId<"beverageItems">(await resolveRecordId(itemId)),
+    timeblockIds: toIds<"timeblocks">(timeblockIds),
+  })
 }

@@ -5,6 +5,7 @@ import type { BeverageItemType, Timeblock, UpdateTimeblock } from "~/definitions
 import type { BeverageItemWithAssignments } from "~/definitions/beverage/beverage-types"
 import { ITER_BEVERAGE_TYPE } from "~/definitions/sections/section-constants"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
+import { getRecordRenderKey } from "~/lib/data/optimisticIds"
 import { Button } from "~/components/atoms/button"
 import {
   DropdownMenu,
@@ -220,8 +221,8 @@ const BeverageWorkspaceSection: React.FC = () => {
                           const hasNotes = Boolean(item.includes?.trim())
 
                           return (
-                            <React.Fragment key={item.id}>
-                              <tr className={SECTION_TABLE_BODY_ROW_CLASS} data-beverage-item-id={item.id}>
+                            <React.Fragment key={getRecordRenderKey(item.id)}>
+                              <tr className={SECTION_TABLE_BODY_ROW_CLASS} data-beverage-item-id={getRecordRenderKey(item.id)}>
                                 <td className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-0 align-top`}>
                                   <input
                                     data-cell="item"
