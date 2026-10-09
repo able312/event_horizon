@@ -1,320 +1,133 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import * as beverageItemsIpc from "./beverageItems"
-import * as cartDetailsIpc from "./cartDetails"
-import * as eventsIpc from "./events"
-import * as timeblocksIpc from "./timeblocks"
-import * as tournamentDetailsIpc from "./tournamentDetails"
+import { getFunctionName } from "convex/server"
+import * as backend from "./backend"
+import * as events from "./events"
+import * as timeblocks from "./timeblocks"
+import * as beverage from "./beverageItems"
+import * as food from "./foodItems"
+import * as cart from "./cartDetails"
+import * as tournament from "./tournamentDetails"
+import * as contacts from "./contacts"
+import * as touchpoints from "./touchpoints"
+import * as payments from "./payments"
+import * as charges from "./menuOfChargeItems"
+import * as assignments from "./eventContacts"
+import * as roles from "./contactRoles"
+import * as categories from "./vendorCategories"
+import { desktopTimeZone } from "./sources"
+import { getMonthRangeUtcFromLocal } from "~/lib/months"
 
-type WrapperCase = {
-  name: string
-  channel: string
-  args: unknown[]
-  invokeWrapper: (...args: unknown[]) => Promise<unknown>
-}
+vi.mock("./backend", async (original) => ({
+  ...await original<typeof backend>(),
+  runMutation: vi.fn(), runQuery: vi.fn(), fetchSource: vi.fn(),
+}))
 
-const eventId = "event-1"
-const recordId = "record-1"
-const timeblockId = "timeblock-1"
-const monthParam = "2026-04"
-
-const createEventArg: Parameters<typeof eventsIpc.createEvent>[0] = {
-  id: "event-1",
-  title: "Tournament Event",
-  type: "tournament",
-  createdAt: "2026-07-16T00:00:00.000Z",
-}
-const createEventClientArg: Parameters<typeof eventsIpc.createEvent>[1] = {
-  firstName: "Alex",
-  lastName: "Doe",
-  email: "alex@example.com",
-}
-const updateEventArg = { title: "Updated Event" } as Parameters<typeof eventsIpc.updateEvent>[1]
-const icsImportRowsArg: Parameters<typeof eventsIpc.importCalendarEvents>[0] = [
-  {
-    calendarId: "uid-1",
-    title: "Imported Event",
-    startDateTime: "2026-06-14T17:00:00.000Z",
-    endDateTime: "2026-06-14T18:00:00.000Z",
-    internalNotes: null,
-  },
-]
-const searchEventsArg = {
-  query: "alpha",
-  type: null,
-  status: null,
-  startFrom: null,
-  startTo: null,
-  page: 0,
-  pageSize: 50,
-} as Parameters<typeof eventsIpc.searchEvents>[0]
-const createTimeblockArg = {
-  eventId,
-  title: "",
-  time: "",
-  details: "",
-  sectionType: "note",
-} as Parameters<typeof timeblocksIpc.createTimeblock>[0]
-const updateTimeblockArg = { details: "Updated details" } as Parameters<typeof timeblocksIpc.updateTimeblock>[1]
-const updateCartDetailsArg = { notes: "Updated cart notes" } as Parameters<typeof cartDetailsIpc.updateCartDetails>[1]
-const updateTournamentDetailsArg = { notes: "Updated tournament notes" } as Parameters<
-  typeof tournamentDetailsIpc.updateTournamentDetails
->[1]
-
-const wrapperCases: WrapperCase[] = [
-  {
-    name: "events.getAllEvents",
-    channel: "events:get-many",
-    args: [],
-    invokeWrapper: eventsIpc.getAllEvents as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "events.getEventsByMonth",
-    channel: "events:get-by-month",
-    args: [monthParam],
-    invokeWrapper: eventsIpc.getEventsByMonth as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "events.getUnscheduledEvents",
-    channel: "events:get-unscheduled",
-    args: [],
-    invokeWrapper: eventsIpc.getUnscheduledEvents as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "events.getEventById",
-    channel: "events:get-by-id",
-    args: [recordId],
-    invokeWrapper: eventsIpc.getEventById as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "events.createEvent",
-    channel: "events:post",
-    args: [createEventArg, createEventClientArg],
-    invokeWrapper: eventsIpc.createEvent as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "events.updateEvent",
-    channel: "events:patch",
-    args: [recordId, updateEventArg],
-    invokeWrapper: eventsIpc.updateEvent as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "events.deleteEvent",
-    channel: "events:delete",
-    args: [recordId],
-    invokeWrapper: eventsIpc.deleteEvent as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "events.searchEvents",
-    channel: "events:search",
-    args: [searchEventsArg],
-    invokeWrapper: eventsIpc.searchEvents as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "events.getEventsByCalendarIds",
-    channel: "events:get-by-calendar-ids",
-    args: [["uid-1", "uid-2"]],
-    invokeWrapper: eventsIpc.getEventsByCalendarIds as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "events.getEventsStartingBetween",
-    channel: "events:get-by-start-range",
-    args: ["2026-06-13T00:00:00.000Z", "2026-06-16T00:00:00.000Z"],
-    invokeWrapper: eventsIpc.getEventsStartingBetween as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "events.importCalendarEvents",
-    channel: "events:import-ics:insert",
-    args: [icsImportRowsArg],
-    invokeWrapper: eventsIpc.importCalendarEvents as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "timeblocks.getTimeblocksByEventAndSection",
-    channel: "timeblocks:get-by-event-and-section",
-    args: [eventId, "note"],
-    invokeWrapper: timeblocksIpc.getTimeblocksByEventAndSection as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "timeblocks.getAllTimelineBlocks",
-    channel: "timeblocks:get-all-timeline-blocks",
-    args: [eventId],
-    invokeWrapper: timeblocksIpc.getAllTimelineBlocks as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "timeblocks.createTimeblock",
-    channel: "timeblocks:post",
-    args: [createTimeblockArg],
-    invokeWrapper: timeblocksIpc.createTimeblock as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "timeblocks.updateTimeblock",
-    channel: "timeblocks:patch",
-    args: [recordId, updateTimeblockArg],
-    invokeWrapper: timeblocksIpc.updateTimeblock as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "timeblocks.getTimeblockById",
-    channel: "timeblocks:get-by-id",
-    args: [recordId],
-    invokeWrapper: timeblocksIpc.getTimeblockById as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "timeblocks.inspectTimeblockConversion",
-    channel: "timeblocks:inspect-conversion",
-    args: [{ timeblockId: recordId, toType: "food" }],
-    invokeWrapper: timeblocksIpc.inspectTimeblockConversion as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "timeblocks.convertTimeblockSectionType",
-    channel: "timeblocks:convert-section-type",
-    args: [{ timeblockId: recordId, toType: "note", confirmDestructive: true }],
-    invokeWrapper: timeblocksIpc.convertTimeblockSectionType as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "timeblocks.deleteTimeblock",
-    channel: "timeblocks:delete",
-    args: [recordId],
-    invokeWrapper: timeblocksIpc.deleteTimeblock as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "cartDetails.getCartDetails",
-    channel: "cart-details:get-many",
-    args: [],
-    invokeWrapper: cartDetailsIpc.getCartDetails as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "cartDetails.getCartDetailsByEventId",
-    channel: "cart-details:get-by-event-id",
-    args: [eventId],
-    invokeWrapper: cartDetailsIpc.getCartDetailsByEventId as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "cartDetails.getOrCreateCartDetailsByEventId",
-    channel: "cart-details:get-or-create-by-event-id",
-    args: [eventId],
-    invokeWrapper: cartDetailsIpc.getOrCreateCartDetailsByEventId as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "cartDetails.createCartDetails",
-    channel: "cart-details:post",
-    args: [eventId],
-    invokeWrapper: cartDetailsIpc.createCartDetails as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "cartDetails.updateCartDetails",
-    channel: "cart-details:patch",
-    args: [recordId, updateCartDetailsArg],
-    invokeWrapper: cartDetailsIpc.updateCartDetails as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "cartDetails.deleteCartDetails",
-    channel: "cart-details:delete",
-    args: [recordId],
-    invokeWrapper: cartDetailsIpc.deleteCartDetails as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "tournamentDetails.getTournamentDetails",
-    channel: "tournament-details:get-many",
-    args: [],
-    invokeWrapper: tournamentDetailsIpc.getTournamentDetails as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "tournamentDetails.getTournamentDetailsByEventId",
-    channel: "tournament-details:get-by-event-id",
-    args: [eventId],
-    invokeWrapper: tournamentDetailsIpc.getTournamentDetailsByEventId as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "tournamentDetails.getOrCreateTournamentDetailsByEventId",
-    channel: "tournament-details:get-or-create-by-event-id",
-    args: [eventId],
-    invokeWrapper: tournamentDetailsIpc.getOrCreateTournamentDetailsByEventId as unknown as (
-      ...args: unknown[]
-    ) => Promise<unknown>,
-  },
-  {
-    name: "tournamentDetails.createTournamentDetails",
-    channel: "tournament-details:post",
-    args: [eventId],
-    invokeWrapper: tournamentDetailsIpc.createTournamentDetails as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "tournamentDetails.updateTournamentDetails",
-    channel: "tournament-details:patch",
-    args: [recordId, updateTournamentDetailsArg],
-    invokeWrapper: tournamentDetailsIpc.updateTournamentDetails as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "tournamentDetails.deleteTournamentDetails",
-    channel: "tournament-details:delete",
-    args: [recordId],
-    invokeWrapper: tournamentDetailsIpc.deleteTournamentDetails as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "beverageItems.getBeverageSectionWithItems",
-    channel: "beverage-items:get-by-event",
-    args: [eventId],
-    invokeWrapper: beverageItemsIpc.getBeverageSectionWithItems as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "beverageItems.createBeverageItem",
-    channel: "beverage-items:post",
-    args: [{ eventId, name: "Lager", type: "Beer" }],
-    invokeWrapper: beverageItemsIpc.createBeverageItem as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "beverageItems.createBeverageItemAssignedToTimeblock",
-    channel: "beverage-items:post-assigned",
-    args: [{ eventId, name: "Lager", type: "Beer", timeblockId }],
-    invokeWrapper: beverageItemsIpc.createBeverageItemAssignedToTimeblock as unknown as (
-      ...args: unknown[]
-    ) => Promise<unknown>,
-  },
-  {
-    name: "beverageItems.updateBeverageItem",
-    channel: "beverage-items:patch",
-    args: [recordId, { name: "Updated Lager", includes: "Chilled" }],
-    invokeWrapper: beverageItemsIpc.updateBeverageItem as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "beverageItems.deleteBeverageItem",
-    channel: "beverage-items:delete",
-    args: [recordId],
-    invokeWrapper: beverageItemsIpc.deleteBeverageItem as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
-  {
-    name: "beverageItems.setBeverageItemTimeblocks",
-    channel: "beverage-items:set-timeblocks",
-    args: [recordId, [timeblockId]],
-    invokeWrapper: beverageItemsIpc.setBeverageItemTimeblocks as unknown as (...args: unknown[]) => Promise<unknown>,
-  },
+type Contract = { name: string; kind: "mutation" | "query" | "source"; call: () => Promise<unknown>; args: object; voidResult?: boolean }
+const eventId = "event-1", id = "record-1", timeblockId = "block-1"
+const month = getMonthRangeUtcFromLocal("2026-04")!
+const input = { title: "Dinner", type: "function" as const }
+const person = { firstName: "Sam", email: "sam@example.test" }
+const search = { query: "dinner", page: 0, pageSize: 20, type: null, status: null, startFrom: null, startTo: null }
+const contracts: Contract[] = [
+  { name: "events.getStartingBetween", kind: "source", call: () => events.getEventsByMonth("2026-04"), args: { startFrom: month.startInclusiveIso, startTo: month.endExclusiveIso } },
+  { name: "events.getUnscheduled", kind: "source", call: () => events.getUnscheduledEvents(), args: {} },
+  { name: "events.getById", kind: "source", call: () => events.getEventById(id), args: { id } },
+  { name: "events.search", kind: "source", call: () => events.searchEvents(search), args: search },
+  { name: "events.create", kind: "mutation", call: () => events.createEvent({ ...input, id, createdAt: "old" }, person), args: { input, client: person } },
+  { name: "events.create", kind: "mutation", call: () => events.createEvent({ ...input, id, createdAt: "old" }), args: { input, client: null } },
+  { name: "events.update", kind: "mutation", call: () => events.updateEvent(id, { title: "New", updatedAt: "old" }), args: { id, updates: { title: "New" } } },
+  { name: "events.remove", kind: "mutation", call: () => events.deleteEvent(id), args: { id } },
+  { name: "events.getByCalendarIds", kind: "query", call: () => events.getEventsByCalendarIds(["uid"]), args: { calendarIds: ["uid"] } },
+  { name: "events.getStartingBetween", kind: "query", call: () => events.getEventsStartingBetween("start", "end"), args: { startFrom: "start", startTo: "end" } },
+  { name: "events.importFromCalendar", kind: "mutation", call: () => events.importCalendarEvents([]), args: { rows: [] } },
+  { name: "timeblocks.getByEventIdAndSectionType", kind: "source", call: () => timeblocks.getTimeblocksByEventAndSection(eventId, "note"), args: { eventId, sectionType: "note" } },
+  { name: "timeblocks.getById", kind: "source", call: () => timeblocks.getTimeblockById(id), args: { id } },
+  { name: "timeblocks.getAllTimelineBlocks", kind: "source", call: () => timeblocks.getAllTimelineBlocks(eventId), args: { eventId, timeZone: desktopTimeZone() } },
+  { name: "timeblocks.create", kind: "mutation", call: () => timeblocks.createTimeblock({ eventId, sectionType: "note", title: "Note" }), args: { eventId, sectionType: "note", title: "Note" } },
+  { name: "timeblocks.update", kind: "mutation", call: () => timeblocks.updateTimeblock(id, { details: "New", assignedTo: undefined }), args: { id, updates: { details: "New" } } },
+  { name: "timeblocks.inspectConversion", kind: "query", call: () => timeblocks.inspectTimeblockConversion({ timeblockId, toType: "food" }), args: { timeblockId, toType: "food" } },
+  { name: "timeblocks.convertSectionType", kind: "mutation", call: () => timeblocks.convertTimeblockSectionType({ timeblockId, toType: "note", confirmDestructive: true }), args: { timeblockId, toType: "note", confirmDestructive: true } },
+  { name: "timeblocks.remove", kind: "mutation", call: () => timeblocks.deleteTimeblock(id), args: { id } },
+  { name: "cartDetails.ensureByEventId", kind: "mutation", call: () => cart.getOrCreateCartDetailsByEventId(eventId), args: { eventId } },
+  { name: "cartDetails.update", kind: "mutation", call: () => cart.updateCartDetails(id, { time: "12:00", eventId }), args: { id, updates: { time: "12:00" } } },
+  { name: "tournamentDetails.ensureByEventId", kind: "mutation", call: () => tournament.getOrCreateTournamentDetailsByEventId(eventId), args: { eventId } },
+  { name: "tournamentDetails.update", kind: "mutation", call: () => tournament.updateTournamentDetails(id, { notes: "New", eventId }), args: { id, updates: { notes: "New" } } },
+  { name: "beverageItems.getByEventId", kind: "source", call: () => beverage.getBeverageSectionWithItems(eventId), args: { eventId } },
+  { name: "beverageItems.create", kind: "mutation", call: () => beverage.createBeverageItem({ eventId, name: "Lager", type: "Beer" }), args: { eventId, name: "Lager", type: "Beer" } },
+  { name: "beverageItems.createAssignedToTimeblock", kind: "mutation", call: () => beverage.createBeverageItemAssignedToTimeblock({ eventId, timeblockId, name: "Lager", type: "Beer" }), args: { eventId, timeblockId, name: "Lager", type: "Beer" } },
+  { name: "beverageItems.update", kind: "mutation", call: () => beverage.updateBeverageItem(id, { name: "New", quantity: null }), args: { id, updates: { name: "New", quantity: null } } },
+  { name: "beverageItems.remove", kind: "mutation", call: () => beverage.deleteBeverageItem(id), args: { id } },
+  { name: "beverageItems.setItemTimeblocks", kind: "mutation", call: () => beverage.setBeverageItemTimeblocks(id, [timeblockId]), args: { itemId: id, timeblockIds: [timeblockId] } },
+  { name: "foodItems.getByEventId", kind: "source", call: () => food.getFoodSectionWithItems(eventId), args: { eventId } },
+  { name: "foodItems.create", kind: "mutation", call: () => food.createFoodItem({ timeblockId, name: "Salad" }), args: { timeblockId, name: "Salad" } },
+  { name: "foodItems.update", kind: "mutation", call: () => food.updateFoodItem(id, { name: "New" }), args: { id, updates: { name: "New" } } },
+  { name: "foodItems.remove", kind: "mutation", call: () => food.deleteFoodItem(id), args: { id } },
+  { name: "contacts.getById", kind: "source", call: () => contacts.getContactById(id), args: { id } },
+  { name: "contacts.search", kind: "source", call: () => contacts.searchContacts({ limit: 20, cursor: "cursor" }), args: { limit: 20, cursor: "cursor" } },
+  { name: "contacts.create", kind: "mutation", call: () => contacts.createContact(person), args: { input: person } },
+  { name: "contacts.update", kind: "mutation", call: () => contacts.updateContact(id, person), args: { id, patch: person } },
+  { name: "contacts.merge", kind: "mutation", call: () => contacts.mergeContacts(id, "target"), args: { sourceId: id, targetId: "target" } },
+  { name: "eventContacts.getPanel", kind: "source", call: () => assignments.getEventContactsPanel(eventId), args: { eventId } },
+  { name: "eventContacts.getPrimaryClients", kind: "source", call: () => assignments.getPrimaryClients([eventId]), args: { eventIds: [eventId] } },
+  { name: "eventContacts.listEventsForContact", kind: "source", call: () => assignments.getContactEventHistory(id), args: { contactId: id } },
+  { name: "eventContacts.assign", kind: "mutation", call: () => assignments.assignEventContact(eventId, { contactId: id }, "client", { isPrimary: true }), args: { eventId, target: { contactId: id }, role: "client", opts: { isPrimary: true } } },
+  { name: "eventContacts.update", kind: "mutation", call: () => assignments.updateEventContact(id, { vendorCategoryId: null }), args: { id, patch: { vendorCategoryId: null } } },
+  { name: "eventContacts.updateWithContact", kind: "mutation", call: () => assignments.updateEventContactWithContact(id, person, { notes: "New" }), args: { id, contactPatch: person, assignmentPatch: { notes: "New" } } },
+  { name: "eventContacts.resolveRecipients", kind: "query", call: () => assignments.resolveEventRecipients(eventId, { eventContactIds: [id] }), args: { eventId, selection: { eventContactIds: [id] } } },
+  { name: "contactRoles.listForContact", kind: "source", call: () => roles.getContactRoles(id), args: { contactId: id } },
+  { name: "contactRoles.ensure", kind: "mutation", call: () => roles.ensureContactRole(id, "client"), args: { contactId: id, role: "client", vendorCategoryId: null } },
+  { name: "vendorCategories.getAll", kind: "source", call: () => categories.getVendorCategories({ includeArchived: true }), args: { includeArchived: true } },
+  { name: "vendorCategories.create", kind: "mutation", call: () => categories.createVendorCategory({ key: "food", label: "Food", colorToken: "blue", sortOrder: 1 }), args: { input: { key: "food", label: "Food", colorToken: "blue", sortOrder: 1 } } },
+  { name: "vendorCategories.update", kind: "mutation", call: () => categories.updateVendorCategory(id, { label: "New" }), args: { id, patch: { label: "New" } } },
+  { name: "touchpoints.getByEventId", kind: "source", call: () => touchpoints.getTouchpointsByEventId(eventId), args: { eventId } },
+  { name: "touchpoints.getIncompleteWithEvent", kind: "source", call: () => touchpoints.getIncompleteTouchpoints(), args: {} },
+  { name: "touchpoints.getIncompleteByEventId", kind: "query", call: () => touchpoints.getIncompleteTouchpointsByEventId(eventId), args: { eventId } },
+  { name: "touchpoints.create", kind: "mutation", call: () => touchpoints.createTouchpoint(eventId, { title: "Call" }), args: { eventId, values: { title: "Call" } } },
+  { name: "touchpoints.update", kind: "mutation", call: () => touchpoints.updateTouchpoint(id, { title: "New", eventId }), args: { id, updates: { title: "New" } } },
+  { name: "touchpoints.seedCommon", kind: "mutation", call: () => touchpoints.seedCommonTouchpoints(eventId), args: { eventId, timeZone: desktopTimeZone() } },
+  { name: "touchpoints.remove", kind: "mutation", call: () => touchpoints.deleteTouchpoint(id), args: { id } },
+  { name: "payments.getByEventId", kind: "source", call: () => payments.getPaymentsByEventId(eventId), args: { eventId } },
+  { name: "payments.create", kind: "mutation", call: () => payments.createPayment(eventId), args: { eventId } },
+  { name: "payments.update", kind: "mutation", call: () => payments.updatePayment(id, { amountCents: 100, eventId }), args: { id, updates: { amountCents: 100 } } },
+  { name: "payments.remove", kind: "mutation", call: () => payments.deletePayment(id), args: { id } },
+  { name: "menuOfChargeItems.getByEventId", kind: "source", call: () => charges.getMenuOfChargeItemsByEventId(eventId), args: { eventId } },
+  { name: "menuOfChargeItems.create", kind: "mutation", call: () => charges.createMenuOfChargeItem(eventId), args: { eventId, category: null } },
+  { name: "menuOfChargeItems.update", kind: "mutation", call: () => charges.updateMenuOfChargeItem(id, { name: "New", eventId }), args: { id, updates: { name: "New" } } },
+  { name: "menuOfChargeItems.remove", kind: "mutation", call: () => charges.deleteMenuOfChargeItem(id), args: { id } },
+  ...([
+    ["contacts.archive", () => contacts.archiveContact(id), { id }],
+    ["contacts.restore", () => contacts.restoreContact(id), { id }],
+    ["contacts.remove", () => contacts.deleteContact(id), { id }],
+    ["vendorCategories.archive", () => categories.archiveVendorCategory(id), { id }],
+    ["vendorCategories.restore", () => categories.restoreVendorCategory(id), { id }],
+    ["contactRoles.remove", () => roles.removeContactRole(id, "client"), { contactId: id, role: "client", vendorCategoryId: null }],
+    ["eventContacts.setPrimary", () => assignments.setPrimaryEventContact(id), { id }],
+    ["eventContacts.remove", () => assignments.removeEventContact(id), { id }],
+    ["eventContacts.reorder", () => assignments.reorderEventContacts(eventId, "client", [id]), { eventId, role: "client", orderedIds: [id] }],
+  ] satisfies [string, () => Promise<void>, object][]).map(([name, call, args]) => ({ name, call, args, kind: "mutation" as const, voidResult: true })),
 ]
 
-describe("renderer IPC wrappers", () => {
-  beforeEach(() => {
-    vi.mocked(window.electron.ipcRenderer.invoke).mockReset()
+describe("Convex data contracts", () => {
+  beforeEach(() => vi.resetAllMocks())
+  it.each(contracts)("$name calls the correct backend with allowlisted arguments", async ({ name, kind, call, args, voidResult }) => {
+    const result = { id: "server-id" }
+    const mock = vi.mocked(kind === "source" ? backend.fetchSource : kind === "query" ? backend.runQuery : backend.runMutation)
+    mock.mockResolvedValue(result)
+    expect(await call()).toEqual(voidResult ? undefined : result)
+    expect(mock).toHaveBeenCalledTimes(1)
+    const [reference, actualArgs] = mock.mock.calls[0]
+    if (kind === "source") {
+      const source = reference as unknown as { query: Parameters<typeof getFunctionName>[0]; args: object }
+      expect(getFunctionName(source.query)).toBe(name.replace(".", ":"))
+      expect(source.args).toEqual(args)
+    } else {
+      expect(getFunctionName(reference as Parameters<typeof getFunctionName>[0])).toBe(name.replace(".", ":"))
+      expect(actualArgs).toEqual(args)
+    }
   })
-
-  it.each(wrapperCases)("$name returns the underlying invoke promise unchanged", ({ invokeWrapper, channel, args }) => {
-    const invokeMock = vi.mocked(window.electron.ipcRenderer.invoke)
-    const sentinelPromise = Promise.resolve({ status: "ok" })
-
-    invokeMock.mockReturnValueOnce(sentinelPromise)
-    const wrapperResult = invokeWrapper(...args)
-
-    expect(wrapperResult).toBe(sentinelPromise)
-    expect(invokeMock).toHaveBeenCalledTimes(1)
-    expect(invokeMock).toHaveBeenCalledWith(channel, ...args)
-  })
-
-  it.each(wrapperCases)("$name preserves invoke rejection behavior", async ({ invokeWrapper, channel, args }) => {
-    const invokeMock = vi.mocked(window.electron.ipcRenderer.invoke)
-    const invokeError = new Error("ipc failed")
-
-    invokeMock.mockRejectedValueOnce(invokeError)
-    const wrapperResult = invokeWrapper(...args)
-
-    await expect(wrapperResult).rejects.toThrow("ipc failed")
-    await expect(wrapperResult).rejects.toBe(invokeError)
-    expect(invokeMock).toHaveBeenCalledWith(channel, ...args)
+  it.each(contracts)("$name propagates backend failures", async ({ kind, call }) => {
+    const error = new Error("Backend failed")
+    vi.mocked(kind === "source" ? backend.fetchSource : kind === "query" ? backend.runQuery : backend.runMutation).mockRejectedValue(error)
+    await expect(call()).rejects.toBe(error)
   })
 })

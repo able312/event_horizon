@@ -181,7 +181,7 @@ Resume after that handoff:
 
 ### Step 2 renderer integration progress (2026-10-09)
 
-**Status: in progress, not committed, never run against a live deployment.** The renderer's data layer now calls Convex instead of IPC, and a sign-in gate wraps the app. Typecheck passes for both the app and Convex. Lint passes with the same 7 warnings. All 217 Convex tests pass. 77 app tests fail, and all of them are tests that still mock IPC (listed below).
+**Status: implemented and tested against an isolated local deployment; authenticated desktop smoke tests pending.** The renderer data layer calls Convex and a sign-in gate wraps the app. The follow-up below records verification and the human handoff. Changes remain uncommitted.
 
 What changed (all of it in `src/lib/data`, except the gate and two components):
 - `backendConfig.ts`: picks the deployment URL. Dev builds read `VITE_CONVEX_URL`. Packaged builds read **only** `VITE_CONVEX_PRODUCTION_URL` and fail closed without it, so a release never targets a dev or worktree deployment.
@@ -211,7 +211,7 @@ What changed (all of it in `src/lib/data`, except the gate and two components):
   - The gate (in `main.tsx`) shows these states: signed out, connecting, forbidden (wrong domain, from the server), rejected (the deployment trusts a different WorkOS environment), error (with retry), and not configured.
 - Convex: one-line change in `convex/contacts.ts` (`items.at(-1)` → index access), because the app's ES2020 typecheck now includes Convex sources through `_generated/api`. Not deployed yet.
 
-**Still broken / to fix next:**
+**Previous follow-up list (completed items recorded below):**
 1. `src/lib/data/dataContracts.test.ts` (74 tests) asserts IPC channel names. Rewrite it to mock `./backend` and assert each data function calls the right `api.*` function with the allowlisted arguments. Also add tests for:
    - `translateBackendError`, `pickFields` and `resolveConvexUrl`;
    - the `liveQueries` bridge (with a fake `WatchClient`);
@@ -236,15 +236,41 @@ Planned Convex mapping:
 | Main checkout (`npm run dev`) | `userData/app.sqlite` | The cloud **dev** deployment (`dev:glor…`), via `VITE_CONVEX_URL` in main's `.env.local`. |
 | Other worktrees | `<worktree>/.event-horizon/app.sqlite`, seeded | A Convex **local** deployment per worktree (`npx convex dev --configure existing --dev-deployment local`). Convex 1.46 keeps its state in `<worktree>/.convex/local/default`, so each worktree is isolated. It needs `npx convex env set WORKOS_CLIENT_ID <dev client>` and a seed like `developmentSeed.ts`. |
 
-Not done yet:
-- **This worktree currently points at the cloud dev deployment**, i.e. main's future database. Earlier steps also pushed functions there with `convex codegen`. Switch this worktree to a local deployment before testing writes.
+Original isolation gaps (resolved in the follow-up below):
+- **This worktree previously pointed at the cloud dev deployment**, i.e. main's future database. Earlier steps also pushed functions there with `convex codegen`. Switch this worktree to a local deployment before testing writes.
 - Add a script (e.g. `npm run convex:worktree`) that configures the local deployment, sets `WORKOS_CLIENT_ID`, and seeds it.
 - Add `convex dev` to `npm run dev` so each checkout pushes functions to its own deployment.
 - Add an internal seed mutation. `convex/auth.test.ts` currently requires every function to be public, so it needs an explicit exception for that one.
 - Confirm that `.convex/` is git-ignored (Convex writes its own `.gitignore` there).
 
+### Renderer verification and worktree isolation follow-up (2026-10-09)
+
+Completed:
+- Replaced obsolete IPC contracts with 148 Convex contract checks covering all current data modules, exact function/argument mapping, immutable-field filtering, return values and failures. The header-bar tests now mock the data modules while retaining the Electron external-link mock.
+- Added tests for the live connector (delayed subscription, updates, deduplication, disabled/unloaded reads, failure recovery, infinite-page changes and cleanup), structured error translation, field filtering, production URL selection, optimistic ID resolution/render keys and backend session states/retry/sign-out/late callbacks.
+- Fixed an unhandled derived promise rejection when an optimistic beverage create fails without a waiting edit. Waiting edits still receive the original failure.
+- Removed `@convex-dev/react-query` and the obsolete `/login` route. Kept sidebar Sign out; the footer can wrap and its action group does not shrink. No auto-updater code was changed. Visual verification alongside updater states remains part of desktop testing.
+- Added `npm run convex:worktree`: configures this linked worktree's local deployment, bootstraps the required WorkOS client ID before auth-config evaluation, enables its internal seed and inserts two synthetic events and 65 contacts for paging. It refuses the main checkout and verifies local deployment/loopback selection before writes. Seed checks and inserts are atomic; repeat setup preserves existing records.
+- `npm run dev` now verifies the checkout's deployment and starts Convex before Vite/Electron using `convex dev --start`. Main requires its cloud dev deployment; linked worktrees require local. `.convex/` is explicitly ignored. The sole auth-test exception is the internal `developmentSeed:seed` mutation; all public functions remain checked.
+- This worktree now targets `http://127.0.0.1:3210`, with state under `.convex/local/default`. Local setup and seeding succeeded, and `npm run dev` successfully started Convex, Vite and Electron. The contacts index-access fix is present on this local deployment.
+- Setup testing found that commands launched by Convex `--start` inherited the old cloud deployment selection. Fixed by passing an explicit `--env-file` on setup commands. The first attempt wrote the existing WorkOS client ID and a temporary seed-enable flag to cloud dev; the seed call failed before any sample data was inserted. Removed the cloud seed flag and reran setup successfully against local. CLI codegen was also run before selection changed; do not assume codegen is offline even when its help text says it does not modify deployed code.
+
+Verification:
+- `npm test`: 163 files, 1,258 tests passed.
+- `npm run build`, app/Convex/script typechecks, and `npm run lint` passed (the same seven existing warnings). `git diff --check` passed.
+- Browser preview renders the signed-out gate. Its `window.api.auth` and Electron bridge are absent, so it cannot exercise the desktop sign-in flow. No authenticated UI smoke checks are claimed.
+
+**Human handoff — stopped as requested.** A real company sign-in in Electron, or an automation-capable desktop session with that sign-in, is required to continue. The current collaborative browser cannot access Electron's auth bridge, and no company session was available to the agent. The pending WorkOS Google-only dashboard configuration from the earlier handoff also remains unverified.
+
+Next, after that blocker is resolved:
+1. Confirm company sign-in reaches ready (`users.store` succeeds), wrong-company accounts are rejected, and sign-out clears data.
+2. Smoke test create/edit/delete in every section; beverage add-then-type and focus preservation; first cart/tournament open; contact paging; and two authenticated windows updating each other. Check sidebar Sign out alongside updater states without modifying updater code.
+3. Remove redundant refresh/invalidation calls once live behavior is verified.
+4. Decide audit fields and the final concurrent-edit policy, then implement/test SQLite export/import with ID and foreign-key mapping and verify migrated data integrity.
+5. Configure production Convex and WorkOS/build settings; remove remaining SQLite use only after migration verification, then finish Windows packaging and distribution.
+
 ### Notes for the Step 2 detailed plan (found during Step 1)
-- Live updates: use the installed `@convex-dev/react-query` adapter. Its cache keys differ from ours; adapt the centralized key factories and fetchers in `src/lib/data/queries.ts` during integration.
+- Live updates: use the custom connector in `src/lib/data/liveQueries.ts`, preserving the existing key hierarchy. The unused `@convex-dev/react-query` adapter has been removed.
 - Cart details and tournament details are created on first read (`getOrCreate…`). Convex queries can't write, so these become "create with the event" or an explicit mutation.
 - The contacts directory uses cursor pagination (`useInfiniteQuery`); map it to Convex's paginated queries.
 - Some creates accept a client-generated `id` for optimistic updates (beverage items). The Convex port drops client IDs; renderer integration must reconcile optimistic records with returned IDs before further mutations.

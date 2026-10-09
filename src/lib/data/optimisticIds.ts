@@ -19,6 +19,9 @@ export async function createWithClientId<Created extends { id: string }>(
 
   const created = create()
   const serverId = created.then((record) => record.id)
+  // The derived promise can reject even when no edit is waiting for it.
+  // Mark it handled without changing the rejection seen by waiting edits.
+  void serverId.catch(() => undefined)
   pendingCreates.set(clientId, serverId)
   try {
     const record = await created

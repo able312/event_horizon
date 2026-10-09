@@ -5,7 +5,7 @@ import { AuthButton } from "~/features/auth"
 export const SidebarFooter: React.FC = () => {
   return (
     <div
-      className="flex h-8 shrink-0 items-center justify-between border-t border-white/10 pl-3 pr-2"
+      className="flex min-h-8 shrink-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 py-1 border-t border-white/10 pl-3 pr-2"
       data-testid="sidebar-footer"
     >
       <div className="flex items-center gap-1.5 text-[11px] text-stone-500">
@@ -15,7 +15,7 @@ export const SidebarFooter: React.FC = () => {
         </span>
         {import.meta.env.DEV && <UpdaterDevControls />}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         <AuthButton variant="ghost" size="sm" showUserName={false} />
         <UpdaterIndicator />
       </div>

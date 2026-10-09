@@ -42,3 +42,6 @@ electron-builder.env
 *.sln
 *.sw?
 .env.local.bak
+
+# Per-worktree Convex backend state
+.convex/

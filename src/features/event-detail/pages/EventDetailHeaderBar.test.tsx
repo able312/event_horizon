@@ -8,6 +8,9 @@ import type { EventResource } from "../types"
 import type { EventContactsPanel } from "~/definitions/contacts"
 import type { Event } from "~/definitions/database"
 
+vi.mock("~/lib/data/touchpoints", () => ({ getIncompleteTouchpointsByEventId: vi.fn(async () => []) }))
+vi.mock("~/lib/data/eventContacts", () => ({ getEventContactsPanel: vi.fn(async () => contactsPanel) }))
+
 function makeEvent(overrides: Partial<Event> = {}): Event {
   return {
     id: "event-1",
@@ -69,8 +72,6 @@ const contactsPanel: EventContactsPanel = {
 describe("EventDetailHeaderBar", () => {
   beforeEach(() => {
     vi.mocked(window.electron.ipcRenderer.invoke).mockImplementation(async (channel: string) => {
-      if (channel === "touchpoints:get-incomplete-by-event-id") return []
-      if (channel === "event-contacts:get-panel") return { ok: true, data: contactsPanel }
       if (channel === "system:open-external") return undefined
       return undefined
     })

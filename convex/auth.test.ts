@@ -71,14 +71,21 @@ describe("auth enforcement on every function", () => {
     expect((await registeredFunctions()).length).toBeGreaterThan(70)
   })
 
-  it("exposes only public queries and mutations", async () => {
+  it("exposes only public queries and mutations, except the CLI-only seed", async () => {
     for (const [name, fn] of await registeredFunctions()) {
+      if (name === "./developmentSeed.ts:seed") {
+        expect(fn.isInternal).toBe(true)
+        expect(fn.isPublic).not.toBe(true)
+        expect(fn.isMutation).toBe(true)
+        continue
+      }
       expect({ name, isPublic: fn.isPublic === true, isAction: fn.isAction === true }).toEqual({ name, isPublic: true, isAction: false })
     }
   })
 
   it("rejects unauthenticated, wrong-domain, and email-less callers before reading data", async () => {
     for (const [name, fn] of await registeredFunctions()) {
+      if (name === "./developmentSeed.ts:seed") continue
       expect({ name, code: await rejection(fn, null) }).toEqual({ name, code: "Unauthenticated" })
       expect({ name, code: await rejection(fn, { subject: "user_x", email: "someone@gmail.com" }) }).toEqual({ name, code: "Forbidden" })
       expect({ name, code: await rejection(fn, { subject: "user_x", email: "someone@mail.westlinks.ca" }) }).toEqual({ name, code: "Forbidden" })

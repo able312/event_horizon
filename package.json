@@ -6,7 +6,7 @@
   "type": "module",
   "main": "dist-electron/electron/main.js",
   "scripts": {
-    "dev": "npm run rebuild:electron && npm-run-all --parallel dev:react dev:electron",
+    "dev": "npm run rebuild:electron && node --experimental-strip-types scripts/convex-worktree.ts --dev",
     "dev:react": "vite",
     "dev:electron": "npm run transpile:electron; NODE_ENV=development ELECTRON_RUN_AS_NODE= electron .",
     "typecheck:electron": "tsc --project src/electron/tsconfig.json --noEmit",
@@ -25,10 +25,10 @@
     "release": "node --experimental-strip-types scripts/release.ts",
     "release:publish": "node --experimental-strip-types scripts/release-publish.ts",
     "typecheck:release": "tsc --project scripts/tsconfig.json",
-    "dist:win": "npm run rebuild:electron && npm run transpile:electron && npm run build && electron-builder --win --x64 --publish never"
+    "dist:win": "npm run rebuild:electron && npm run transpile:electron && npm run build && electron-builder --win --x64 --publish never",
+    "convex:worktree": "node --experimental-strip-types scripts/convex-worktree.ts"
   },
   "dependencies": {
-    "@convex-dev/react-query": "^0.1.0",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-dropdown-menu": "^2.1.15",
     "@radix-ui/react-label": "^2.1.7",

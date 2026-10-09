@@ -12,6 +12,7 @@ import type * as beverageItems from "../beverageItems.js";
 import type * as cartDetails from "../cartDetails.js";
 import type * as contactRoles from "../contactRoles.js";
 import type * as contacts from "../contacts.js";
+import type * as developmentSeed from "../developmentSeed.js";
 import type * as eventContacts from "../eventContacts.js";
 import type * as events from "../events.js";
 import type * as foodItems from "../foodItems.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   cartDetails: typeof cartDetails;
   contactRoles: typeof contactRoles;
   contacts: typeof contacts;
+  developmentSeed: typeof developmentSeed;
   eventContacts: typeof eventContacts;
   events: typeof events;
   foodItems: typeof foodItems;
