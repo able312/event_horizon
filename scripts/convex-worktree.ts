@@ -22,6 +22,37 @@ function run(args: string[]): void {
   if (result.status !== 0) throw new Error(`Convex ${args[0]} failed`)
 }
 
+/** Keep Convex and the desktop servers in one group so stopping dev stops all of them. */
+export async function runDevelopmentProcess(command: string, args: string[]): Promise<number> {
+  const dev = spawn(command, args, { stdio: "inherit", detached: process.platform !== "win32" })
+  let stoppedBy: "SIGINT" | "SIGTERM" | null = null
+  const stop = (signal: "SIGINT" | "SIGTERM") => {
+    if (!dev.pid) return
+    if (process.platform === "win32") {
+      spawnSync("taskkill", ["/pid", String(dev.pid), "/T", "/F"], { stdio: "ignore" })
+      return
+    }
+    try { process.kill(-dev.pid, signal) } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error
+    }
+  }
+  const interrupt = () => { stoppedBy = "SIGINT"; stop("SIGINT") }
+  const terminate = () => { stoppedBy = "SIGTERM"; stop("SIGTERM") }
+  process.on("SIGINT", interrupt)
+  process.on("SIGTERM", terminate)
+  try {
+    const code = await new Promise<number | null>((resolveDone, reject) => {
+      dev.on("error", reject)
+      dev.on("exit", resolveDone)
+    })
+    return stoppedBy === "SIGINT" ? 130 : stoppedBy === "SIGTERM" ? 143 : code ?? 1
+  } finally {
+    process.off("SIGINT", interrupt)
+    process.off("SIGTERM", terminate)
+    stop("SIGTERM")
+  }
+}
+
 async function main(): Promise<void> {
   if (process.env.CONVEX_DEPLOY_KEY || process.env.CONVEX_SELF_HOSTED_URL) throw new Error("Unset Convex deployment overrides before local development")
   if (process.argv.includes("--finish")) {
@@ -44,9 +75,9 @@ async function main(): Promise<void> {
       const env = readFileSync(".env.local", "utf8")
       if (!/^CONVEX_DEPLOYMENT\s*=\s*dev:/m.test(env)) throw new Error("Main checkout development requires its cloud dev deployment")
     }
-    const dev = spawn(process.execPath, [cli, "dev", "--start", "npm-run-all --parallel dev:react dev:electron"], { stdio: "inherit" })
-    for (const signal of ["SIGINT", "SIGTERM"] as const) process.on(signal, () => dev.kill(signal))
-    await new Promise<void>((resolveDone, reject) => { dev.on("error", reject); dev.on("exit", (code) => { process.exitCode = code ?? 0; resolveDone() }) })
+    // Convex --start detaches its command into a separate process group, leaving
+    // Vite/Electron alive when Convex stops. Supervise all three as sibling tasks.
+    process.exitCode = await runDevelopmentProcess(process.execPath, [resolve("node_modules/npm-run-all/bin/npm-run-all/index.js"), "--parallel", "dev:convex", "dev:react", "dev:electron"])
     return
   }
   if (!isWorktree) {

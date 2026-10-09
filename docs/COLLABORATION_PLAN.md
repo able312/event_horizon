@@ -269,6 +269,64 @@ Next, after that blocker is resolved:
 4. Decide audit fields and the final concurrent-edit policy, then implement/test SQLite export/import with ID and foreign-key mapping and verify migrated data integrity.
 5. Configure production Convex and WorkOS/build settings; remove remaining SQLite use only after migration verification, then finish Windows packaging and distribution.
 
+### Desktop connection follow-up (2026-10-09)
+
+The latest human smoke test reached the sign-in wall, opened the system browser, and signed in with a `westlinks.ca` account, but Electron remained at **Connecting**.
+
+Findings and fixes:
+- At inspection, Vite and Electron were orphaned processes and no local Convex backend was listening on port 3210. This explains a connection that cannot complete; it does not yet prove that the live WorkOS token is accepted when the backend is available.
+- The real shutdown check reproduced the cause: Convex's `dev --start` launches the frontend command in a detached process group. Stopping Convex left Vite and Electron running.
+- `scripts/convex-worktree.ts` now supervises `npm-run-all` in one process group, with Convex, Vite and Electron as sibling tasks. `package.json` adds `dev:convex` with an explicit `.env.local` selection. Existing deployment-isolation checks remain in place. Services start together; the session gate waits for backend authorization before showing app data.
+- `src/lib/data/session.ts` now limits initial connection/user registration to 15 seconds, shows an actionable error with the existing retry/sign-out actions, handles token-fetch failures, and clears auth/timers when an attempt ends. A late successful response can recover the same attempt; callbacks from an abandoned attempt cannot unlock the app.
+- Extended `session.test.tsx` for an unreachable backend, stalled registration, retry, token failure and unmount cleanup. Extended `scripts/convex-worktree.test.ts` with real subprocess checks for signal shutdown and backend exit, including descendant cleanup.
+
+Verification:
+- The actual `npm run dev` started the isolated local Convex backend, uploaded functions, served Vite and launched Electron. The local `/version` endpoint responded successfully.
+- Sending SIGTERM to the dev supervisor stopped all three services; no worktree dev processes or listeners on ports 3210/42069 remained. The original orphaned server was also stopped. **No dev server is left running.**
+- Targeted regression tests passed (13 tests). `npm test` passed (163 files, 1,264 tests); build, script typecheck and lint passed (seven existing warnings). `git diff --check` passed.
+
+**Human handoff — stopped as requested.** The shared browser is available but cannot access Electron's authentication bridge. A real desktop sign-in and authenticated UI verification are still required. Run `npm run dev` from this worktree in your own terminal, wait for **Convex functions ready**, and sign in with the company account. Confirm the app opens. If it fails, report the exact message now shown after at most 15 seconds and any Convex terminal error. The Google-only WorkOS dashboard settings remain unverified; no WorkOS settings were changed in this follow-up.
+
+Next:
+1. Confirm company sign-in reaches the app, wrong-company sign-in is refused, and sign-out removes access and cached data.
+2. Test all sections and two authenticated desktop windows using the smoke-test checklist above.
+3. Once live updates are verified, remove redundant refresh/invalidation calls.
+4. Obtain the audit-field/concurrent-edit decisions, then implement and verify SQLite migration with legacy-ID/foreign-key mapping.
+5. Configure production, retire SQLite after migration verification, and finish Windows packaging/distribution.
+
+### Successful sign-in and sign-out cleanup follow-up (2026-10-09)
+
+Human result: company sign-in reaches the app successfully. Signing out produced Convex unauthenticated errors in the development console. Wrong-company rejection and authenticated section/two-client smoke testing have not yet been verified.
+
+Findings and changes:
+- Session teardown previously cleared Convex auth before clearing the React Query cache. Active live watches could therefore rerun without authentication; their error callbacks could also request refetches. This is consistent with the reported console errors, but the exact desktop errors were not captured here.
+- `src/lib/data/session.ts` now clears the cache first, synchronously removing live subscriptions through the existing connector, then clears auth. The same ordering applies on retry and unmount. The hook also returns signed-out immediately when the WorkOS state becomes signed-out, so the gate hides protected content before effect cleanup.
+- Added regression checks in `session.test.tsx` that connect the real live-query bridge to a fake watch client and verify private watches have unsubscribed and cached data is gone when auth is cleared on sign-out, retry, and unmount. No new abstractions, dependencies, schema changes, or auth-provider settings were needed.
+
+Verification: session/live-query tests passed (16 tests); `npm run build` and `npm run lint` passed (seven existing warnings). The shared preview renders the signed-out screen and confirms `window.api.auth` is absent. Desktop elimination of the reported console errors still needs human verification.
+
+**Human handoff — stopped as requested.** Keep `npm run dev` running in this worktree and wait for **Convex functions ready**. Use synthetic development data for these checks:
+1. Sign in, open several sections to establish subscriptions, then sign out. Confirm the sign-in screen appears, event/contact data disappears, and no new unauthenticated query errors appear. Sign in again and confirm data loads. If errors persist, report the exact Convex function name and console message; an operation already in flight may still be rejected at sign-out.
+2. Create/edit/delete a sample event and check overview/client details/internal notes, event contacts, touchpoints, setup notes/timeblocks, food items, beverages/assignments, charges, payments, carts and tournament details. Check previews/PDF output. Add a beverage and immediately type into its name; focus and typed text should survive saving. Open cart/tournament sections on a new event. Load multiple contact pages, edit a contact, and filter the directory.
+3. With the dev stack already running, launch a second desktop client from this same worktree using `npm run dev:electron` in another terminal. Sign in to both clients and open the same sample event/contact list. Make changes in each direction; confirm the other client updates without navigation or refresh, including contact edits across loaded pages. Both clients must use this worktree's local deployment; another worktree intentionally has a different database.
+4. Check sidebar Sign out alongside updater states and verify wrong-company sign-in is refused. Google-only WorkOS dashboard configuration remains unverified.
+
+Next after this handoff:
+- Remove redundant mutation refreshes/invalidations after live updates pass the desktop checks; retain contact-page refetches needed for pagination consistency.
+- Obtain the audit/concurrency decision before schema or mutation changes. Proposed starting point for review: record creator, last editor and edit timestamp on editable business records; merge edits to different fields and let the last accepted write win for the same field. Confirm whether critical financial/status fields need conflict rejection and whether a full change history is required.
+- Implement/test SQLite export/import with legacy-ID and foreign-key mapping, then verify migrated record counts, relationships and representative previews before retiring SQLite.
+- Configure production Convex/WorkOS/build settings and complete Windows packaging, installation and update testing.
+
+### Event-create smoke-test fix (2026-10-09)
+
+Human smoke testing found `eventContacts:getPrimaryClients` rejecting `temp_1791575767936` in its `eventIds` argument during event creation. The event saved and opened successfully. The calendar's optimistic event row was included in the batch contact lookup before Convex returned its real ID.
+
+- `usePrimaryClients` now excludes the existing `temp_` event IDs before building the query key, fetch arguments and live subscription source. Existing events remain queried; an all-temporary list stays disabled. Once the saved event ID appears, its clients are fetched normally.
+- Reused the existing query factory and optimistic event-ID convention. No new abstractions, dependencies or backend/schema changes.
+- Added regression tests for mixed saved/temporary events, live-source arguments, the saved-ID transition, all-temporary lists and optimistic rollback. Event/contact hook tests passed (25 tests).
+
+**Human handoff:** repeat event creation in the calendar/table and confirm no `getPrimaryClients` validation error occurs; if creating with a client, confirm its name appears after saving. Continue the section and two-client checklist above. Redundant refresh removal, audit/concurrency decisions, migration and production/Windows work remain pending that verification.
+
 ### Notes for the Step 2 detailed plan (found during Step 1)
 - Live updates: use the custom connector in `src/lib/data/liveQueries.ts`, preserving the existing key hierarchy. The unused `@convex-dev/react-query` adapter has been removed.
 - Cart details and tournament details are created on first read (`getOrCreate…`). Convex queries can't write, so these become "create with the event" or an explicit mutation.

@@ -38,6 +38,8 @@ type SessionOptions = {
 
 type SessionState = { status: BackendSessionStatus; message: string | null }
 
+export const BACKEND_CONNECTION_TIMEOUT_MS = 15_000
+
 /**
  * Connects Convex to the WorkOS session: authenticates the client while signed in,
  * records the user, and drops every cached read and subscription on sign-out.
@@ -55,25 +57,33 @@ export function useBackendSession({ isSignedIn, getAccessToken }: SessionOptions
     const convex = getConvexClient()
 
     if (!isSignedIn) {
-      convex.clearAuth()
       queryClient.clear()
+      convex.clearAuth()
       setState({ status: "signed-out", message: null })
       return
     }
 
     let active = true
+    let tokenError = false
     setState({ status: "connecting", message: null })
+    const timeout = setTimeout(() => {
+      if (active) setState({ status: "error", message: "The data server is not responding. Check your connection and make sure the development server is running, then try again." })
+    }, BACKEND_CONNECTION_TIMEOUT_MS)
 
     const onAuthChange = async (isAuthenticated: boolean) => {
       if (!active) return
       if (!isAuthenticated) {
+        clearTimeout(timeout)
+        if (tokenError) return
         setState({ status: "rejected", message: "The data server didn't accept this sign-in." })
         return
       }
       try {
         await runMutation(api.users.store, {})
+        clearTimeout(timeout)
         if (active) setState({ status: "ready", message: null })
       } catch (err) {
+        clearTimeout(timeout)
         if (!active) return
         if (isBackendAuthError(err) && err.code === "Forbidden") {
           setState({ status: "forbidden", message: err.message })
@@ -84,12 +94,28 @@ export function useBackendSession({ isSignedIn, getAccessToken }: SessionOptions
     }
 
     convex.setAuth(
-      async ({ forceRefreshToken }) => tokenFetcher.current({ forceRefresh: forceRefreshToken }),
+      async ({ forceRefreshToken }) => {
+        try {
+          const token = await tokenFetcher.current({ forceRefresh: forceRefreshToken })
+          tokenError = false
+          return token
+        } catch (err) {
+          tokenError = true
+          clearTimeout(timeout)
+          if (active) setState({ status: "error", message: err instanceof Error ? err.message : String(err) })
+          return null
+        }
+      },
       (isAuthenticated) => { void onAuthChange(isAuthenticated) },
     )
 
     return () => {
       active = false
+      clearTimeout(timeout)
+      // Cache removal stops live watches before clearing auth can rerun them
+      // as unauthenticated queries. Also cancel pending cached reads on retry.
+      queryClient.clear()
+      convex.clearAuth()
     }
   }, [configured, isSignedIn, attempt, queryClient])
 
@@ -101,5 +127,6 @@ export function useBackendSession({ isSignedIn, getAccessToken }: SessionOptions
     }
   }
 
-  return { ...state, retry: () => setAttempt((count) => count + 1) }
+  // Hide the app on the sign-out render, before the effect clears its data.
+  return { ...(isSignedIn ? state : { status: "signed-out" as const, message: null }), retry: () => setAttempt((count) => count + 1) }
 }

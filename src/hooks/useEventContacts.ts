@@ -158,7 +158,9 @@ export function usePrintableContactGroups(eventId: string | undefined) {
 
 /** Primary client per event id, fetched in one call so list views avoid a request per event. */
 export function usePrimaryClients(eventIds: string[]) {
-  const ids = [...new Set(eventIds)].sort()
+  // Event creation adds a temp_ row to the calendar cache before the server
+  // returns its ID. It has no saved contacts yet and cannot be queried in Convex.
+  const ids = [...new Set(eventIds.filter((id) => !id.startsWith("temp_")))].sort()
   return useQuery({
     ...eventContactQueries.primaryClients(ids),
     enabled: ids.length > 0,

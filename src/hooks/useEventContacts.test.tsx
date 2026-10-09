@@ -16,6 +16,7 @@ import {
   useCreateContact,
   useDeleteContact,
   useEventContacts,
+  usePrimaryClients,
   useUpdateContact,
 } from "./useEventContacts"
 
@@ -204,6 +205,45 @@ describe("useEventContacts", () => {
     )
     expect(contactsIpc.updateContact).not.toHaveBeenCalled()
     expect(eventContactsIpc.updateEventContact).not.toHaveBeenCalled()
+  })
+})
+
+describe("usePrimaryClients", () => {
+  it("keeps fetching saved clients while a new event is optimistic, then queries its saved ID", async () => {
+    vi.mocked(eventContactsIpc.getPrimaryClients).mockResolvedValue({})
+    const { result, rerender, queryClient } = renderHookWithProviders(
+      ({ ids }) => usePrimaryClients(ids),
+      { initialProps: { ids: ["event-2", "temp_1791575767936", "event-1", "event-2"] } },
+    )
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(eventContactsIpc.getPrimaryClients).toHaveBeenCalledExactlyOnceWith(["event-1", "event-2"])
+    const query = queryClient.getQueryCache().find({ queryKey: eventContactKeys.primaryClientsFor(["event-1", "event-2"]) })
+    // The live subscription must use the same saved IDs as the initial fetch.
+    expect(query?.meta?.liveSource).toMatchObject({ args: { eventIds: ["event-1", "event-2"] } })
+
+    rerender({ ids: ["event-2", "event-created", "event-1"] })
+    await waitFor(() => expect(eventContactsIpc.getPrimaryClients).toHaveBeenLastCalledWith(["event-1", "event-2", "event-created"]))
+    expect(vi.mocked(eventContactsIpc.getPrimaryClients).mock.calls.flat(2)).not.toContain("temp_1791575767936")
+  })
+
+  it("does not fetch or subscribe when every event is optimistic", () => {
+    const { result, queryClient } = renderHookWithProviders(() => usePrimaryClients(["temp_1", "temp_2"]))
+    expect(result.current.fetchStatus).toBe("idle")
+    expect(eventContactsIpc.getPrimaryClients).not.toHaveBeenCalled()
+    expect(queryClient.getQueryData(eventContactKeys.primaryClientsFor([]))).toBeUndefined()
+  })
+
+  it("preserves the saved-client cache when an optimistic event is added and rolled back", async () => {
+    vi.mocked(eventContactsIpc.getPrimaryClients).mockResolvedValue({})
+    const { result, rerender } = renderHookWithProviders(
+      ({ ids }) => usePrimaryClients(ids),
+      { initialProps: { ids: ["event-1"] } },
+    )
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    rerender({ ids: ["event-1", "temp_1"] })
+    rerender({ ids: ["event-1"] })
+    expect(result.current.isSuccess).toBe(true)
+    expect(eventContactsIpc.getPrimaryClients).toHaveBeenCalledExactlyOnceWith(["event-1"])
   })
 })
 

@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "npm run rebuild:electron && node --experimental-strip-types scripts/convex-worktree.ts --dev",
     "dev:react": "vite",
+    "dev:convex": "convex dev --env-file .env.local",
     "dev:electron": "npm run transpile:electron; NODE_ENV=development ELECTRON_RUN_AS_NODE= electron .",
     "typecheck:electron": "tsc --project src/electron/tsconfig.json --noEmit",
     "build": "npm run typecheck:electron && tsc -b && vite build",
