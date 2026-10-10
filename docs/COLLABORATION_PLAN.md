@@ -430,7 +430,7 @@ Verification: `npm test` 170 files, 1,319 tests passed. Convex and script typech
 
 Not yet done:
 - A visual spot-check of migrated events and their PDFs (estimate/BEO/timeline) in the app.
-- The real import into production.
+- The real import into production. Production isn't set up yet (Convex prod, WorkOS production, Google OAuth). Follow the checklist in `docs/PRODUCTION_SETUP.md`. Note that WorkOS production rejects `localhost` redirects, so the app must switch to `http://127.0.0.1:42070/callback` first.
 
 ### Production-copy rehearsal (2026-10-10)
 
