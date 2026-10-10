@@ -328,6 +328,24 @@ describe("importing into Convex", () => {
 })
 
 describe("recovering from a failed import", () => {
+  /** App writes are refused while the import flag is on, so this switches it off around one. */
+  async function asApp<T>(write: () => Promise<T>): Promise<T> {
+    vi.stubEnv("EVENT_HORIZON_LEGACY_IMPORT", undefined)
+    try {
+      return await write()
+    } finally {
+      vi.stubEnv("EVENT_HORIZON_LEGACY_IMPORT", "enabled")
+    }
+  }
+
+  it("refuses app writes while an import or reset is running, except storing the signed-in user", async () => {
+    const t = convexTest(schema, modules)
+    const asStaff = t.withIdentity(companyIdentity)
+    await expect(asStaff.mutation(api.events.create, { input: { title: "Gala" } })).rejects.toThrow(/import is in progress/)
+    await expect(asStaff.mutation(api.users.store, {})).resolves.toBeDefined()
+    expect(await t.query(internal.legacyImport.nonEmptyTables, {})).toEqual([])
+  })
+
   /** Fails the first insert into `table`; with `afterCommit`, only after the mutation has committed. */
   function failingAt(t: ReturnType<typeof convexTest>, table: LegacyTable, afterCommit = false): ImportBackend {
     const backend = backendFor(t)
@@ -370,7 +388,7 @@ describe("recovering from a failed import", () => {
     const t = convexTest(schema, modules)
     const backend = backendFor(t)
     await importLegacyData(legacyData(), backend)
-    await t.withIdentity(companyIdentity).mutation(api.events.create, { input: { title: "Gala" } })
+    await asApp(() => t.withIdentity(companyIdentity).mutation(api.events.create, { input: { title: "Gala" } }))
 
     await expect(clearLegacyImport(backend)).rejects.toThrow(/created or edited in the app exist in events/)
     expect(await t.run((ctx) => ctx.db.query("events").collect())).toHaveLength(3)
@@ -384,7 +402,7 @@ describe("recovering from a failed import", () => {
     const backend = backendFor(t)
     const idMap = await importLegacyData(legacyData(), backend)
     const eventId = idMap.get("events:ev-2") as Id<"events">
-    await t.withIdentity(companyIdentity).mutation(api.events.update, { id: eventId, updates: { status: "confirmed" } })
+    await asApp(() => t.withIdentity(companyIdentity).mutation(api.events.update, { id: eventId, updates: { status: "confirmed" } }))
     const edited = await t.run((ctx) => ctx.db.get("events", eventId))
     expect(edited).not.toHaveProperty("createdBy")
     expect(edited?.updatedBy).toBeDefined()

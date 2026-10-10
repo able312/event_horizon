@@ -264,7 +264,8 @@ export async function importLegacyData(
  * Deletes everything an import wrote, so a failed or partial import can be retried.
  * Refuses, before deleting anything, if any document was created or edited in the app
  * (imported documents have no audit fields), so it can't wipe a deployment that's in use.
- * `deletePage` repeats the check atomically, in case the app writes after this one.
+ * App writes are refused while the import flag is on (lib/auth.ts), and `deletePage`
+ * repeats the check atomically as a backstop.
  * Link rows have no audit fields; app-written ones always point at audited documents.
  */
 export async function clearLegacyImport(backend: Pick<ImportBackend, "dump" | "deletePage">, log: (message: string) => void = () => undefined): Promise<void> {

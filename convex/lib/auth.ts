@@ -53,19 +53,29 @@ export function companyQuery<Args extends PropertyValidators, Returns>(definitio
 /** A mutation context whose database stamps the caller as creator/last editor (lib/audit.ts). */
 export type CompanyMutationCtx = MutationCtx & { userId: Id<"users"> }
 
+declare const process: { env: Record<string, string | undefined> }
+
 /**
  * A public mutation that requires a company identity before its handler runs. The
  * caller's user record is created if `users.store` hasn't run yet, so every write
  * can be attributed.
+ *
+ * While the CLI is importing (or clearing) legacy data, EVENT_HORIZON_LEGACY_IMPORT
+ * is set and business writes are refused, so the import can't delete or interleave
+ * with an edit. `allowDuringImport` is for writes that only touch users.
  */
 export function companyMutation<Args extends PropertyValidators, Returns>(definition: {
   args: Args
+  allowDuringImport?: boolean
   handler: (ctx: CompanyMutationCtx, args: ObjectType<Args>) => Returns | Promise<Returns>
 }) {
   return mutation({
     args: definition.args,
     handler: async (ctx, args: ObjectType<Args>): Promise<Returns> => {
       const identity = await requireCompanyUser(ctx)
+      if (!definition.allowDuringImport && process.env.EVENT_HORIZON_LEGACY_IMPORT === "enabled") {
+        throw new ConvexError({ code: "ImportInProgress", message: "A data import is in progress. Try again in a few minutes." })
+      }
       const userId = await upsertUser(ctx, identity)
       return definition.handler({ ...ctx, db: auditedWriter(ctx.db, userId), userId }, args)
     },

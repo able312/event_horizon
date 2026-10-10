@@ -10,7 +10,7 @@ export const current = companyQuery({ args: {}, handler: async (ctx) => {
 } })
 
 /** Called by the client after sign-in; creates or refreshes the user's record (companyMutation does the work). */
-export const store = companyMutation({ args: {}, handler: (ctx) => ctx.userId })
+export const store = companyMutation({ args: {}, allowDuringImport: true, handler: (ctx) => ctx.userId })
 
 /** Every company account's name and email, for showing who created or last edited a record. */
 export const list = companyQuery({ args: {}, handler: async (ctx) => {
