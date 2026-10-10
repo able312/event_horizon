@@ -2,23 +2,20 @@ import { useParams } from "react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { TournamentDetails, UpdateTournamentDetails } from "~/definitions/database"
-import * as tournamentDetailsApi from "~/lib/ipc/tournamentDetails"
+import * as tournamentDetailsApi from "~/lib/data/tournamentDetails"
+import { tournamentDetailsQueries } from "~/lib/data/queries"
 
 export function useTournamentDetailsSection(enabled = true) {
   const { id: eventId } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
 
-  const queryKey = ["tournament_details", eventId] as const
+  const detailsQuery = tournamentDetailsQueries.byEvent(eventId ?? "")
+  const queryKey = detailsQuery.queryKey
 
-  const invalidateKeys = () => {
-    queryClient.invalidateQueries({ queryKey })
-    queryClient.invalidateQueries({ queryKey: ["timeblocks", eventId] })
-  }
 
   const query = useQuery({
-    queryKey,
+    ...detailsQuery,
     enabled: Boolean(eventId) && enabled,
-    queryFn: () => tournamentDetailsApi.getOrCreateTournamentDetailsByEventId(eventId!),
   })
 
   const updateMutation = useMutation({
@@ -40,9 +37,6 @@ export function useTournamentDetailsSection(enabled = true) {
       }
       toast.error("Failed to update tournament details")
       console.error("Error updating tournament details:", _err)
-    },
-    onSettled: () => {
-      invalidateKeys()
     },
   })
 

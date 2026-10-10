@@ -19,7 +19,7 @@ const CalendarWorkspace: React.FC = () => {
     const QueryState = useEventsQueryState()
     const packagedEventHook = useEvents(QueryState.state.date)
     const searchController = useCalendarSearchController(QueryState)
-    const icsImportController = useIcsImportController(packagedEventHook)
+    const icsImportController = useIcsImportController()
     const deleteController = useEventDeleteConfirmation(packagedEventHook.deleteEvent)
     const { error, isFetching, monthQuery, unscheduledQuery } = packagedEventHook
 

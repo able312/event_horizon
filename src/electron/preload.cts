@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron"
 import type { UpdaterApi, UpdaterSnapshot } from "../definitions/updater.js"
+import type { AuthApi, AuthSnapshot } from "../definitions/auth.js"
 
 const updaterApi: UpdaterApi = {
   getStatus: () => ipcRenderer.invoke("updater:get-status"),
@@ -10,7 +11,20 @@ const updaterApi: UpdaterApi = {
     return () => { ipcRenderer.removeListener("updater:status-changed", wrapped) }
   },
 }
-contextBridge.exposeInMainWorld("api", { updater: updaterApi })
+
+const authApi: AuthApi = {
+  getStatus: () => ipcRenderer.invoke("auth:get-status"),
+  signIn: () => ipcRenderer.invoke("auth:sign-in"),
+  signOut: () => ipcRenderer.invoke("auth:sign-out"),
+  getAccessToken: options => ipcRenderer.invoke("auth:get-access-token", options),
+  onStatusChanged: listener => {
+    const wrapped = (_event: Electron.IpcRendererEvent, snapshot: AuthSnapshot) => listener(snapshot)
+    ipcRenderer.on("auth:status-changed", wrapped)
+    return () => { ipcRenderer.removeListener("auth:status-changed", wrapped) }
+  },
+}
+
+contextBridge.exposeInMainWorld("api", { updater: updaterApi, auth: authApi })
 
 const ALLOWED_INVOKE_CHANNELS = new Set([
   "beverage-items:delete",
@@ -49,12 +63,14 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   "event-contacts:resolve-recipients",
   "event-contacts:set-primary",
   "events:delete",
+  "events:get-by-calendar-ids",
   "events:get-by-id",
   "events:get-by-month",
+  "events:get-by-start-range",
   "events:get-many",
   "events:search",
   "events:get-unscheduled",
-  "events:import-ics:commit",
+  "events:import-ics:insert",
   "events:patch",
   "events:post",
   "food-items:delete",

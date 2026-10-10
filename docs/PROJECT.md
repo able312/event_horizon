@@ -90,7 +90,9 @@ Security priorities:
 ## Architecture Overview (high level)
 
 - Renderer (UI):
-  - Calls only `window.api.*` methods exposed by preload.
+  - Reads and writes data only through `src/lib/data` (the backend boundary; see `docs/COLLABORATION_PLAN.md`). Query keys and fetchers live in `src/lib/data/queries.ts`.
+  - Uses Electron features only through `src/lib/ipc`.
+  - ESLint enforces both boundaries.
   - No direct Node.js access.
 - Preload:
   - Exposes explicit API surface (no generic `invoke(channel)` passthrough).

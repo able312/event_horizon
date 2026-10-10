@@ -1,11 +1,17 @@
-import { foodItems, beverageItems, tournamentDetails, menuOfChargeItems } from "~/electron/db/schema";
+import {
+  BEVERAGE_SERVICE_STYLES,
+  BEVERAGE_TYPES,
+  CHARGE_CATEGORIES,
+  FOOD_SERVICE_STYLES,
+  PLAY_FORMATS,
+} from "../enums"
 
-export const ITER_FOOD_SERVICE_STYLE = foodItems.serviceStyle.enumValues
+export const ITER_FOOD_SERVICE_STYLE = FOOD_SERVICE_STYLES
 
-export const ITER_BEVERAGE_SERVICE_STYLE = beverageItems.serviceStyle.enumValues
+export const ITER_BEVERAGE_SERVICE_STYLE = BEVERAGE_SERVICE_STYLES
 
-export const ITER_BEVERAGE_TYPE = beverageItems.type.enumValues
+export const ITER_BEVERAGE_TYPE = BEVERAGE_TYPES
 
-export const ITER_GOLF_PLAY_FORMAT = tournamentDetails.playFormat.enumValues
+export const ITER_GOLF_PLAY_FORMAT = PLAY_FORMATS
 
-export const ITER_MENU_OF_CHARGE_CATEGORY = menuOfChargeItems.category.enumValues
+export const ITER_MENU_OF_CHARGE_CATEGORY = CHARGE_CATEGORIES

@@ -16,13 +16,30 @@ export default defineConfig({
     },
   },
   test: {
-    environment: "jsdom",
-    setupFiles: ["./src/test/setup.ts"],
     exclude: [
       ...configDefaults.exclude,
       "dist/**",
       "dist-electron/**",
       "dist-react/**",
+    ],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "app",
+          exclude: ["convex/**"],
+          environment: "jsdom",
+          setupFiles: ["./src/test/setup.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "convex",
+          include: ["convex/**/*.test.ts"],
+          environment: "edge-runtime",
+        },
+      },
     ],
   },
 })

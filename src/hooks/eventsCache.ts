@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query"
 import type { Event } from "~/definitions/database"
+import { eventKeys } from "~/lib/data/queries"
 import { getMonthParamForDateTime, normalizeMonthParam } from "~/lib/months"
 
 export type EventScope =
@@ -11,17 +12,13 @@ export type EventScope =
       kind: "unscheduled"
     }
 
-export const EVENTS_MONTH_QUERY_KEY_PREFIX = ["events", "month"] as const
-export const EVENTS_UNSCHEDULED_QUERY_KEY = ["events", "unscheduled"] as const
-export const EVENTS_SEARCH_QUERY_KEY_PREFIX = ["events", "search"] as const
-
 export function getEventsMonthQueryKey(month: string) {
   const normalizedMonth = normalizeMonthParam(month)
   if (!normalizedMonth) {
     throw new Error(`Invalid month query key: ${month}`)
   }
 
-  return [...EVENTS_MONTH_QUERY_KEY_PREFIX, normalizedMonth] as const
+  return eventKeys.month(normalizedMonth)
 }
 
 export function getEventScopeFromStartDateTime(
@@ -45,56 +42,7 @@ export function getEventScopeFromEvent(
 export function getEventScopeQueryKey(scope: EventScope) {
   return scope.kind === "month"
     ? getEventsMonthQueryKey(scope.month)
-    : EVENTS_UNSCHEDULED_QUERY_KEY
-}
-
-async function invalidateEventScope(
-  queryClient: QueryClient,
-  scope: EventScope,
-): Promise<void> {
-  await queryClient.invalidateQueries({
-    queryKey: getEventScopeQueryKey(scope),
-  })
-}
-
-export async function invalidateEventScopes(
-  queryClient: QueryClient,
-  scopes: Array<EventScope | null | undefined>,
-): Promise<void> {
-  const uniqueScopes = new Map<string, EventScope>()
-
-  for (const scope of scopes) {
-    if (!scope) continue
-
-    const key =
-      scope.kind === "month"
-        ? `month:${scope.month}`
-        : scope.kind
-    uniqueScopes.set(key, scope)
-  }
-
-  for (const scope of uniqueScopes.values()) {
-    await invalidateEventScope(queryClient, scope)
-  }
-}
-
-export async function invalidateAllEventScopes(
-  queryClient: QueryClient,
-): Promise<void> {
-  await queryClient.invalidateQueries({
-    queryKey: EVENTS_MONTH_QUERY_KEY_PREFIX,
-  })
-  await queryClient.invalidateQueries({
-    queryKey: EVENTS_UNSCHEDULED_QUERY_KEY,
-  })
-}
-
-export async function invalidateEventsSearchQueries(
-  queryClient: QueryClient,
-): Promise<void> {
-  await queryClient.invalidateQueries({
-    queryKey: EVENTS_SEARCH_QUERY_KEY_PREFIX,
-  })
+    : eventKeys.unscheduled()
 }
 
 export function findCachedEventById(
@@ -102,14 +50,14 @@ export function findCachedEventById(
   eventId: string,
 ): Event | null {
   for (const [, maybeEvents] of queryClient.getQueriesData<Event[]>({
-    queryKey: EVENTS_MONTH_QUERY_KEY_PREFIX,
+    queryKey: eventKeys.months(),
   })) {
     const found = maybeEvents?.find((event) => event.id === eventId)
     if (found) return found
   }
 
   const unscheduledEvents = queryClient.getQueryData<Event[]>(
-    EVENTS_UNSCHEDULED_QUERY_KEY,
+    eventKeys.unscheduled(),
   )
   return unscheduledEvents?.find((event) => event.id === eventId) ?? null
 }

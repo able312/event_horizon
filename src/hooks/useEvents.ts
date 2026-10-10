@@ -2,21 +2,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { NewContact } from "~/definitions/contacts"
 import type { Event, NewEvent, UpdateEvent } from "~/definitions/database"
-import * as eventsApi from "~/lib/ipc/ipcEventsQueries"
+import * as eventsApi from "~/lib/data/events"
+import { eventKeys, eventQueries } from "~/lib/data/queries"
 import {
-  EVENTS_MONTH_QUERY_KEY_PREFIX,
-  EVENTS_SEARCH_QUERY_KEY_PREFIX,
-  EVENTS_UNSCHEDULED_QUERY_KEY,
   findCachedEventById,
   getEventScopeFromEvent,
   getEventScopeFromStartDateTime,
   getEventScopeQueryKey,
-  invalidateAllEventScopes,
-  invalidateEventScopes,
-  invalidateEventsSearchQueries,
 } from "./eventsCache"
 import { useEventsMonthQuery } from "./useEventsMonthQuery"
-import { PRIMARY_CLIENTS_QUERY_KEY_PREFIX } from "./useEventContacts"
 
 type CreateEventVariables = {
   newEvent: NewEvent
@@ -69,17 +63,14 @@ export function useEvents(month: string) {
   const queryClient = useQueryClient()
   const { monthQuery, events: monthEvents } = useEventsMonthQuery(month)
 
-  const unscheduledQuery = useQuery({
-    queryKey: EVENTS_UNSCHEDULED_QUERY_KEY,
-    queryFn: () => eventsApi.getUnscheduledEvents(),
-  })
+  const unscheduledQuery = useQuery(eventQueries.unscheduled())
 
   const createMutation = useMutation({
     mutationFn: ({ newEvent, client }: CreateEventVariables) => eventsApi.createEvent(newEvent, client),
     onMutate: async ({ newEvent }) => {
-      await queryClient.cancelQueries({ queryKey: EVENTS_MONTH_QUERY_KEY_PREFIX })
-      await queryClient.cancelQueries({ queryKey: EVENTS_UNSCHEDULED_QUERY_KEY })
-      await queryClient.cancelQueries({ queryKey: EVENTS_SEARCH_QUERY_KEY_PREFIX })
+      await queryClient.cancelQueries({ queryKey: eventKeys.months() })
+      await queryClient.cancelQueries({ queryKey: eventKeys.unscheduled() })
+      await queryClient.cancelQueries({ queryKey: eventKeys.searches() })
 
       const nextScope = getEventScopeFromStartDateTime(newEvent.startDateTime)
       const snapshots: SnapshotEntry[] = []
@@ -109,7 +100,7 @@ export function useEvents(month: string) {
         }
       }
 
-      return { snapshots, nextScope }
+      return { snapshots }
     },
     onError: (_err, _variables, context) => {
       for (const snapshot of context?.snapshots ?? []) {
@@ -117,28 +108,16 @@ export function useEvents(month: string) {
       }
       toast.error("Failed to create event")
     },
-    onSettled: async (_createdEvent, _err, variables, context) => {
-      await invalidateEventsSearchQueries(queryClient)
-      if (variables.client) {
-        await queryClient.invalidateQueries({ queryKey: PRIMARY_CLIENTS_QUERY_KEY_PREFIX })
-      }
-
-      if (context?.nextScope) {
-        await invalidateEventScopes(queryClient, [context.nextScope])
-        return
-      }
-      await invalidateAllEventScopes(queryClient)
-    },
   })
 
   const updateMutation = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: UpdateEvent }) =>
       eventsApi.updateEvent(id, updates),
     onMutate: async ({ id, updates }) => {
-      const eventQueryKey = ["event", id] as const
-      await queryClient.cancelQueries({ queryKey: EVENTS_MONTH_QUERY_KEY_PREFIX })
-      await queryClient.cancelQueries({ queryKey: EVENTS_UNSCHEDULED_QUERY_KEY })
-      await queryClient.cancelQueries({ queryKey: EVENTS_SEARCH_QUERY_KEY_PREFIX })
+      const eventQueryKey = eventKeys.byId(id)
+      await queryClient.cancelQueries({ queryKey: eventKeys.months() })
+      await queryClient.cancelQueries({ queryKey: eventKeys.unscheduled() })
+      await queryClient.cancelQueries({ queryKey: eventKeys.searches() })
       await queryClient.cancelQueries({ queryKey: eventQueryKey })
 
       const snapshots: SnapshotEntry[] = []
@@ -159,13 +138,7 @@ export function useEvents(month: string) {
           : getEventScopeFromStartDateTime(nextStartDateTime)
 
       if (!previousEvent) {
-        return {
-          snapshots,
-          previousScope,
-          nextScope,
-          eventQueryKey,
-          previousEventById,
-        }
+        return { snapshots, eventQueryKey, previousEventById }
       }
 
       const nextEvent: Event = { ...previousEvent, ...updates }
@@ -207,8 +180,6 @@ export function useEvents(month: string) {
 
       return {
         snapshots: snapshots.reduce(mergeSnapshot, [] as SnapshotEntry[]),
-        previousScope,
-        nextScope,
         eventQueryKey,
         previousEventById,
       }
@@ -223,29 +194,15 @@ export function useEvents(month: string) {
       }
       toast.error("Failed to update event")
     },
-    onSettled: async (_updatedEvent, _err, variables, context) => {
-      await queryClient.invalidateQueries({ queryKey: ["event", variables.id] })
-      await queryClient.invalidateQueries({ queryKey: ["touchpoints", "incomplete"] })
-      await invalidateEventsSearchQueries(queryClient)
-
-      if (context?.previousScope || context?.nextScope) {
-        await invalidateEventScopes(queryClient, [
-          context.previousScope,
-          context.nextScope,
-        ])
-        return
-      }
-      await invalidateAllEventScopes(queryClient)
-    },
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => eventsApi.deleteEvent(id),
     onMutate: async (id) => {
-      const eventQueryKey = ["event", id] as const
-      await queryClient.cancelQueries({ queryKey: EVENTS_MONTH_QUERY_KEY_PREFIX })
-      await queryClient.cancelQueries({ queryKey: EVENTS_UNSCHEDULED_QUERY_KEY })
-      await queryClient.cancelQueries({ queryKey: EVENTS_SEARCH_QUERY_KEY_PREFIX })
+      const eventQueryKey = eventKeys.byId(id)
+      await queryClient.cancelQueries({ queryKey: eventKeys.months() })
+      await queryClient.cancelQueries({ queryKey: eventKeys.unscheduled() })
+      await queryClient.cancelQueries({ queryKey: eventKeys.searches() })
       await queryClient.cancelQueries({ queryKey: eventQueryKey })
 
       const previousEvent =
@@ -270,12 +227,7 @@ export function useEvents(month: string) {
 
       queryClient.removeQueries({ queryKey: eventQueryKey, exact: true })
 
-      return {
-        snapshots,
-        previousScope,
-        eventQueryKey,
-        previousEventById,
-      }
+      return { snapshots, eventQueryKey, previousEventById }
     },
     onError: (_err, _id, context) => {
       for (const snapshot of context?.snapshots ?? []) {
@@ -286,17 +238,6 @@ export function useEvents(month: string) {
         queryClient.setQueryData(context.eventQueryKey, context.previousEventById)
       }
       toast.error("Failed to delete event")
-    },
-    onSettled: async (_deleted, _err, id, context) => {
-      await queryClient.invalidateQueries({ queryKey: ["event", id] })
-      await queryClient.invalidateQueries({ queryKey: ["touchpoints", "incomplete"] })
-      await invalidateEventsSearchQueries(queryClient)
-
-      if (context?.previousScope) {
-        await invalidateEventScopes(queryClient, [context.previousScope])
-        return
-      }
-      await invalidateAllEventScopes(queryClient)
     },
   })
 

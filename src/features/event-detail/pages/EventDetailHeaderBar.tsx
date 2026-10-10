@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/atoms/dropdown-menu"
 import { Input } from "~/components/atoms/input"
+import { LastEditedBy } from "~/components/molecules/LastEditedBy"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/atoms/tooltip"
 import type { UpdateEvent } from "~/definitions/database"
 import { selectPrimaryClient } from "~/features/contacts/lib/eventContactsPanel"
@@ -19,8 +20,8 @@ import {
   buildGoogleCalendarUpdateUrl,
   type GoogleCalendarEventInput,
 } from "~/lib/googleCalendar"
-import { getEventContactsPanel } from "~/lib/ipc/eventContacts"
-import { getIncompleteTouchpointsByEventId } from "~/lib/ipc/touchpoints"
+import { getEventContactsPanel } from "~/lib/data/eventContacts"
+import { getIncompleteTouchpointsByEventId } from "~/lib/data/touchpoints"
 import { openExternalUrl } from "~/lib/ipc/system"
 import {
   DEFAULT_EVENT_DETAIL_RETURN_TO,
@@ -61,11 +62,14 @@ const EventDetailHeaderBar: React.FC<EventDetailHeaderBarProps> = ({ eventResour
       </Link>
 
       {!eventResource.isLoading && eventResource.event ? (
-        <GoogleCalendarHeaderAction
-          eventId={eventResource.event.id}
-          event={eventResource.event}
-          onSaveCalendarId={eventResource.updateEvent}
-        />
+        <div className="flex min-w-0 items-center gap-3">
+          <LastEditedBy record={eventResource.event} />
+          <GoogleCalendarHeaderAction
+            eventId={eventResource.event.id}
+            event={eventResource.event}
+            onSaveCalendarId={eventResource.updateEvent}
+          />
+        </div>
       ) : null}
     </div>
   )

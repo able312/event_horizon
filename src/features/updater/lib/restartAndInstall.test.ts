@@ -7,7 +7,10 @@ afterEach(() => { vi.unstubAllEnvs(); delete window.api })
 describe("restart orchestration", () => {
   function bridge() {
     const install = vi.fn(async () => undefined)
-    window.api = { updater: { getStatus: vi.fn(), onStatusChanged: vi.fn(), restartAndInstall: install } }
+    window.api = {
+      updater: { getStatus: vi.fn(), onStatusChanged: vi.fn(), restartAndInstall: install },
+      auth: { getStatus: vi.fn(), signIn: vi.fn(), signOut: vi.fn(), getAccessToken: vi.fn(), onStatusChanged: vi.fn() },
+    }
     return install
   }
 

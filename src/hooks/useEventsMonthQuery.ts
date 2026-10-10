@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query"
 
 import type { Event } from "~/definitions/database"
-import * as eventsApi from "~/lib/ipc/ipcEventsQueries"
+import { eventQueries } from "~/lib/data/queries"
 import { getCurrentMonthParam, normalizeMonthParam } from "~/lib/months"
 
 import { getEventsMonthQueryKey } from "./eventsCache"
@@ -33,9 +33,8 @@ export function useEventsMonthQuery(
   const hasCachedData = cachedEvents !== undefined
   const fetchPolicy = options.fetchPolicy ?? "always"
 
-  const monthQuery = useQuery<Event[]>({
-    queryKey,
-    queryFn: () => eventsApi.getEventsByMonth(selectedMonth),
+  const monthQuery = useQuery({
+    ...eventQueries.month(selectedMonth),
     enabled: fetchPolicy === "always" || !hasCachedData,
     staleTime: options.staleTime,
     refetchOnMount: options.refetchOnMount,

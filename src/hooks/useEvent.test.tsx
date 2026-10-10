@@ -1,9 +1,9 @@
 import { act, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { Event } from "~/definitions/database"
-import * as eventsApi from "~/lib/ipc/ipcEventsQueries"
+import * as eventsApi from "~/lib/data/events"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
-import { EVENTS_SEARCH_QUERY_KEY_PREFIX } from "./eventsCache"
+import { eventKeys } from "~/lib/data/queries"
 import { useEvent } from "./useEvent"
 
 const navigateMock = vi.fn()
@@ -17,7 +17,7 @@ vi.mock("react-router", async () => {
   }
 })
 
-vi.mock("~/lib/ipc/ipcEventsQueries", () => ({
+vi.mock("~/lib/data/events", () => ({
   getEventById: vi.fn(),
   createEvent: vi.fn(),
   updateEvent: vi.fn(),
@@ -105,12 +105,11 @@ describe("useEvent async mutation contract", () => {
     expect(navigateMock).not.toHaveBeenCalled()
   })
 
-  it("invalidates event search queries after successful update", async () => {
+  it("keeps the optimistic edit and requests no refresh after update or delete", async () => {
     const getEventByIdMock = vi.mocked(eventsApi.getEventById)
-    const updateEventMock = vi.mocked(eventsApi.updateEvent)
-
+    vi.mocked(eventsApi.updateEvent).mockResolvedValue(makeEvent({ title: "Updated title" }))
+    vi.mocked(eventsApi.deleteEvent).mockResolvedValue(true)
     getEventByIdMock.mockResolvedValue(makeEvent())
-    updateEventMock.mockResolvedValue(makeEvent({ title: "Updated title" }))
 
     const { result, queryClient } = renderHookWithProviders(() => useEvent())
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -119,26 +118,13 @@ describe("useEvent async mutation contract", () => {
     await act(async () => {
       await result.current.updateEvent({ title: "Updated title" })
     })
-
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: EVENTS_SEARCH_QUERY_KEY_PREFIX })
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["touchpoints", "incomplete"] })
-  })
-
-  it("invalidates incomplete touchpoints after successful delete", async () => {
-    const getEventByIdMock = vi.mocked(eventsApi.getEventById)
-    const deleteEventMock = vi.mocked(eventsApi.deleteEvent)
-
-    getEventByIdMock.mockResolvedValue(makeEvent())
-    deleteEventMock.mockResolvedValue(true)
-
-    const { result, queryClient } = renderHookWithProviders(() => useEvent())
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
+    expect(queryClient.getQueryData<Event>(eventKeys.byId("event-1"))?.title).toBe("Updated title")
 
     await act(async () => {
       await result.current.deleteEvent()
     })
 
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["touchpoints", "incomplete"] })
+    expect(invalidateSpy).not.toHaveBeenCalled()
+    expect(getEventByIdMock).toHaveBeenCalledTimes(1)
   })
 })

@@ -2,13 +2,13 @@ import { act } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { toast } from "sonner"
 
-import * as eventContactsIpc from "~/lib/ipc/eventContacts"
+import * as eventContactsIpc from "~/lib/data/eventContacts"
 import * as systemIpc from "~/lib/ipc/system"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
 
 import { useEmailEventContacts } from "./useEmailEventContacts"
 
-vi.mock("~/lib/ipc/eventContacts", () => ({ resolveEventRecipients: vi.fn() }))
+vi.mock("~/lib/data/eventContacts", () => ({ resolveEventRecipients: vi.fn() }))
 vi.mock("~/lib/ipc/system", () => ({ openExternalUrl: vi.fn() }))
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), warning: vi.fn() } }))
 

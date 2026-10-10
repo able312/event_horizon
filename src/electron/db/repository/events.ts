@@ -3,6 +3,7 @@ import type { DbExecutor } from "../factory.js"
 import { contacts, eventContacts, events } from "../schema.js"
 import type { Event, EventStatus, NewEvent, UpdateEvent } from "../../../definitions/database.js"
 import type { EventSearchRequest, EventSearchResponse } from "../../../definitions/ipc.js"
+import type { IcsImportEventInput, IcsImportInsertResult } from "../../../definitions/events/icsImport.js"
 import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, or, sql, type SQL } from "drizzle-orm"
 import { v4 as uuidv4 } from "uuid"
 import { assertValidEventDateRange } from "../../../lib/events/eventDateRange.js"
@@ -72,12 +73,6 @@ export function createEventsRepository(database: DbExecutor) {
       return database.select().from(events).where(
         isNull(events.startDateTime),
       ).orderBy(asc(events.createdAt)).all()
-    },
-
-    getScheduled: (): Event[] => {
-      return database.select().from(events).where(
-        isNotNull(events.startDateTime),
-      ).all()
     },
 
     getByCalendarIds: (calendarIds: string[]): Event[] => {
@@ -208,19 +203,44 @@ export function createEventsRepository(database: DbExecutor) {
       return database.insert(events).values(eventEntry).returning().get()!
     },
 
-    insertMany: (data: NewEvent[]): Event[] => {
-      if (data.length === 0) return []
+    /**
+     * Inserts imported calendar events in one transaction, skipping any whose calendar id
+     * already belongs to an event (including an earlier row in the same batch).
+     */
+    importFromCalendar: (rows: IcsImportEventInput[]): IcsImportInsertResult => {
+      if (rows.length === 0) return { inserted: [], duplicateCalendarIds: [] }
 
       const createdAt = Date.now().toString()
-      const rows = data.map((event) => toInsertEntry(event, createdAt))
 
       return database.transaction((tx) => {
-        const insertedRows: Event[] = []
+        const takenCalendarIds = new Set(
+          createEventsRepository(tx)
+            .getByCalendarIds(rows.map((row) => row.calendarId))
+            .map((event) => event.calendarId),
+        )
+
+        const inserted: Event[] = []
+        const duplicateCalendarIds: string[] = []
         for (const row of rows) {
-          const inserted = tx.insert(events).values(row).returning().get()
-          if (inserted) insertedRows.push(inserted)
+          if (takenCalendarIds.has(row.calendarId)) {
+            duplicateCalendarIds.push(row.calendarId)
+            continue
+          }
+          takenCalendarIds.add(row.calendarId)
+
+          const entry = toInsertEntry({
+            title: row.title,
+            type: "function",
+            status: "new_lead",
+            startDateTime: row.startDateTime,
+            endDateTime: row.endDateTime,
+            calendarId: row.calendarId,
+            internalNotes: row.internalNotes,
+          } as NewEvent, createdAt)
+          inserted.push(tx.insert(events).values(entry).returning().get()!)
         }
-        return insertedRows
+
+        return { inserted, duplicateCalendarIds }
       })
     },
 

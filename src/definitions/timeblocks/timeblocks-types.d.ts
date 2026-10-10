@@ -1,7 +1,6 @@
 // Query return type
 
-import { timeblocks } from '~/electron/db/schema'
-import type { Timeblock, FoodItem, BeverageItem, CartDetails } from '../database';
+import type { Timeblock, TimeblockSectionType, FoodItem, BeverageItem, CartDetails } from '../database';
 
 export type TimeblockWithItems = Timeblock & {
     foodItems?: FoodItem[],
@@ -9,7 +8,7 @@ export type TimeblockWithItems = Timeblock & {
     cartDetails?: Pick<CartDetails, "whatGoesOnCarts" | "customGrid">
 }
 
-export type TimeblockType = (typeof timeblocks.sectionType.enumValues)[number]
+export type TimeblockType = TimeblockSectionType
 
 export type TimelineRowSource =
   | "timeblock"

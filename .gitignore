@@ -41,3 +41,7 @@ electron-builder.env
 *.njsproj
 *.sln
 *.sw?
+.env.local.bak
+
+# Per-worktree Convex backend state
+.convex/

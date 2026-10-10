@@ -1,9 +1,10 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "~/components/atoms/button"
 import type { Contact, ContactRoleType, EventContactsPanelItem } from "~/definitions/contacts"
 import { useContact, type SaveEventContactVariables } from "~/hooks/useEventContacts"
+import { changedFields, hasChanges, useLiveDraft } from "~/hooks/useLiveDraft"
 
 import {
   assignmentFromPanelItem,
@@ -77,11 +78,14 @@ const EditEventContactFields: React.FC<EditEventContactFieldsProps> = ({
   onSave,
   onClose,
 }) => {
-  const [form, setForm] = useState<ContactFormValues>(() => contactToFormValues(contact))
-  const [formErrors, setFormErrors] = useState<ContactFormErrors>({})
-  const [assignment, setAssignment] = useState<AssignmentValues>(() =>
-    assignmentFromPanelItem(target.role, target.item),
+  const contactSource = useMemo<ContactFormValues>(() => contactToFormValues(contact), [contact])
+  const assignmentSource = useMemo<AssignmentValues>(
+    () => assignmentFromPanelItem(target.role, target.item),
+    [target.role, target.item],
   )
+  const { values: form, update: updateForm } = useLiveDraft(contactSource)
+  const { values: assignment, update: updateAssignment } = useLiveDraft(assignmentSource)
+  const [formErrors, setFormErrors] = useState<ContactFormErrors>({})
   const assignmentError = getAssignmentError(assignment)
 
   const handleSave = async () => {
@@ -89,11 +93,19 @@ const EditEventContactFields: React.FC<EditEventContactFieldsProps> = ({
     setFormErrors(errors)
     if (hasFormErrors(errors) || assignmentError) return
 
+    // Only fields changed here, so other people's edits to the rest survive.
+    const contactPatch = changedFields(toContactPayload(contactSource), toContactPayload(form))
+    const assignmentPatch = changedFields(toAssignmentPatch(assignmentSource), toAssignmentPatch(assignment))
+    if (!hasChanges(contactPatch) && !hasChanges(assignmentPatch)) {
+      onClose()
+      return
+    }
+
     try {
       await onSave({
         eventContactId: target.item.eventContactId,
-        contact: toContactPayload(form),
-        assignment: toAssignmentPatch(assignment),
+        contact: contactPatch,
+        assignment: assignmentPatch,
       })
       toast.success("Contact saved")
       onClose()
@@ -121,7 +133,7 @@ const EditEventContactFields: React.FC<EditEventContactFieldsProps> = ({
       <ContactFormFields
         values={form}
         errors={formErrors}
-        onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
+        onChange={updateForm}
       />
       <div className="space-y-2 border-t border-border pt-4">
         <p className="text-xs font-medium text-muted-foreground">On this event · {ROLE_LABELS[target.role].singular}</p>
@@ -129,7 +141,7 @@ const EditEventContactFields: React.FC<EditEventContactFieldsProps> = ({
           values={assignment}
           showRolePicker={false}
           categoryError={assignmentError}
-          onChange={(patch) => setAssignment((current) => ({ ...current, ...patch }))}
+          onChange={updateAssignment}
         />
       </div>
     </InlineFormPanel>

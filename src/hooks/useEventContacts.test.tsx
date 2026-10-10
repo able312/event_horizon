@@ -4,23 +4,23 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Contact, EventContactsPanel } from "~/definitions/contacts"
 import { ContactsError } from "~/lib/contacts/contactsError"
-import * as contactsIpc from "~/lib/ipc/contacts"
-import * as eventContactsIpc from "~/lib/ipc/eventContacts"
+import * as contactsIpc from "~/lib/data/contacts"
+import * as eventContactsIpc from "~/lib/data/eventContacts"
+import { eventContactKeys } from "~/lib/data/queries"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
 
 import {
-  eventContactsQueryKey,
-  PRIMARY_CLIENTS_QUERY_KEY_PREFIX,
   useArchiveContact,
   useContactDirectory,
   useContactSearch,
   useCreateContact,
   useDeleteContact,
   useEventContacts,
+  usePrimaryClients,
   useUpdateContact,
 } from "./useEventContacts"
 
-vi.mock("~/lib/ipc/eventContacts", () => ({
+vi.mock("~/lib/data/eventContacts", () => ({
   getEventContactsPanel: vi.fn(),
   assignEventContact: vi.fn(),
   updateEventContact: vi.fn(),
@@ -31,7 +31,7 @@ vi.mock("~/lib/ipc/eventContacts", () => ({
   getPrimaryClients: vi.fn(),
 }))
 
-vi.mock("~/lib/ipc/contacts", () => ({
+vi.mock("~/lib/data/contacts", () => ({
   createContact: vi.fn(),
   updateContact: vi.fn(),
   archiveContact: vi.fn(),
@@ -41,13 +41,13 @@ vi.mock("~/lib/ipc/contacts", () => ({
   getContactById: vi.fn(),
 }))
 
-vi.mock("~/lib/ipc/contactRoles", () => ({
+vi.mock("~/lib/data/contactRoles", () => ({
   getContactRoles: vi.fn(),
   ensureContactRole: vi.fn(),
   removeContactRole: vi.fn(),
 }))
 
-vi.mock("~/lib/ipc/vendorCategories", () => ({
+vi.mock("~/lib/data/vendorCategories", () => ({
   getVendorCategories: vi.fn(),
 }))
 
@@ -131,7 +131,7 @@ describe("useEventContacts", () => {
     act(() => result.current.removeContact("ec-1"))
 
     await waitFor(() => {
-      const cached = queryClient.getQueryData<EventContactsPanel>(eventContactsQueryKey("event-1"))
+      const cached = queryClient.getQueryData<EventContactsPanel>(eventContactKeys.panel("event-1"))
       expect(cached?.groups[0]!.items).toHaveLength(0)
     })
 
@@ -140,7 +140,7 @@ describe("useEventContacts", () => {
     })
 
     await waitFor(() => {
-      const cached = queryClient.getQueryData<EventContactsPanel>(eventContactsQueryKey("event-1"))
+      const cached = queryClient.getQueryData<EventContactsPanel>(eventContactKeys.panel("event-1"))
       expect(cached?.groups[0]!.items).toHaveLength(1)
     })
   })
@@ -163,7 +163,7 @@ describe("useEventContacts", () => {
     await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
   })
 
-  it("assigns through IPC and refetches the panel", async () => {
+  it("assigns through IPC and leaves the panel to its live subscription", async () => {
     vi.mocked(eventContactsIpc.getEventContactsPanel).mockResolvedValue(makePanel())
     vi.mocked(eventContactsIpc.assignEventContact).mockResolvedValue({} as never)
 
@@ -181,7 +181,7 @@ describe("useEventContacts", () => {
     expect(eventContactsIpc.assignEventContact).toHaveBeenCalledWith("event-1", { contactId: "c-2" }, "vendor", {
       vendorCategoryId: "cat-1",
     })
-    await waitFor(() => expect(eventContactsIpc.getEventContactsPanel).toHaveBeenCalledTimes(2))
+    expect(eventContactsIpc.getEventContactsPanel).toHaveBeenCalledTimes(1)
   })
 
   it("saves contact details and the event assignment in a single call", async () => {
@@ -205,6 +205,45 @@ describe("useEventContacts", () => {
     )
     expect(contactsIpc.updateContact).not.toHaveBeenCalled()
     expect(eventContactsIpc.updateEventContact).not.toHaveBeenCalled()
+  })
+})
+
+describe("usePrimaryClients", () => {
+  it("keeps fetching saved clients while a new event is optimistic, then queries its saved ID", async () => {
+    vi.mocked(eventContactsIpc.getPrimaryClients).mockResolvedValue({})
+    const { result, rerender, queryClient } = renderHookWithProviders(
+      ({ ids }) => usePrimaryClients(ids),
+      { initialProps: { ids: ["event-2", "temp_1791575767936", "event-1", "event-2"] } },
+    )
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(eventContactsIpc.getPrimaryClients).toHaveBeenCalledExactlyOnceWith(["event-1", "event-2"])
+    const query = queryClient.getQueryCache().find({ queryKey: eventContactKeys.primaryClientsFor(["event-1", "event-2"]) })
+    // The live subscription must use the same saved IDs as the initial fetch.
+    expect(query?.meta?.liveSource).toMatchObject({ args: { eventIds: ["event-1", "event-2"] } })
+
+    rerender({ ids: ["event-2", "event-created", "event-1"] })
+    await waitFor(() => expect(eventContactsIpc.getPrimaryClients).toHaveBeenLastCalledWith(["event-1", "event-2", "event-created"]))
+    expect(vi.mocked(eventContactsIpc.getPrimaryClients).mock.calls.flat(2)).not.toContain("temp_1791575767936")
+  })
+
+  it("does not fetch or subscribe when every event is optimistic", () => {
+    const { result, queryClient } = renderHookWithProviders(() => usePrimaryClients(["temp_1", "temp_2"]))
+    expect(result.current.fetchStatus).toBe("idle")
+    expect(eventContactsIpc.getPrimaryClients).not.toHaveBeenCalled()
+    expect(queryClient.getQueryData(eventContactKeys.primaryClientsFor([]))).toBeUndefined()
+  })
+
+  it("preserves the saved-client cache when an optimistic event is added and rolled back", async () => {
+    vi.mocked(eventContactsIpc.getPrimaryClients).mockResolvedValue({})
+    const { result, rerender } = renderHookWithProviders(
+      ({ ids }) => usePrimaryClients(ids),
+      { initialProps: { ids: ["event-1"] } },
+    )
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    rerender({ ids: ["event-1", "temp_1"] })
+    rerender({ ids: ["event-1"] })
+    expect(result.current.isSuccess).toBe(true)
+    expect(eventContactsIpc.getPrimaryClients).toHaveBeenCalledExactlyOnceWith(["event-1"])
   })
 })
 
@@ -267,7 +306,7 @@ describe("useCreateContact", () => {
 })
 
 describe("useUpdateContact / useArchiveContact", () => {
-  it("invalidates both the contacts directory and every event-contacts panel on update", async () => {
+  it("updates a contact without refreshing the directory or event panels", async () => {
     vi.mocked(contactsIpc.updateContact).mockResolvedValue(makeContact({ displayName: "Sarah K." }))
     vi.mocked(eventContactsIpc.getEventContactsPanel).mockResolvedValue(makePanel())
 
@@ -283,9 +322,8 @@ describe("useUpdateContact / useArchiveContact", () => {
       await result.current.update.mutateAsync({ id: "c-1", patch: { firstName: "Sarah" } })
     })
 
-    const invalidatedKeys = invalidateSpy.mock.calls.map((call) => call[0]?.queryKey)
-    expect(invalidatedKeys).toContainEqual(["contacts"])
-    expect(invalidatedKeys).toContainEqual(["event-contacts"])
+    expect(contactsIpc.updateContact).toHaveBeenCalledWith("c-1", { firstName: "Sarah" })
+    expect(invalidateSpy).not.toHaveBeenCalled()
   })
 
   it("surfaces archive failures as a toast", async () => {
@@ -320,11 +358,5 @@ describe("useDeleteContact", () => {
 
     expect(error).toBeInstanceOf(ContactsError)
     expect((error as ContactsError).code).toBe("ContactInUse")
-  })
-})
-
-describe("PRIMARY_CLIENTS_QUERY_KEY_PREFIX", () => {
-  it("shares the event-contacts root, so a full-cache invalidation covers it too", () => {
-    expect(PRIMARY_CLIENTS_QUERY_KEY_PREFIX[0]).toBe("event-contacts")
   })
 })

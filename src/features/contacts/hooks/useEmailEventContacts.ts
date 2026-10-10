@@ -2,7 +2,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import { buildGmailComposeUrl } from "~/lib/gmailUrlConstructors"
-import { resolveEventRecipients } from "~/lib/ipc/eventContacts"
+import { resolveEventRecipients } from "~/lib/data/eventContacts"
 import { openExternalUrl } from "~/lib/ipc/system"
 
 import { getContactsErrorMessage } from "../lib/eventContactsPanel"

@@ -1,9 +1,5 @@
 import ICAL from "ical.js"
 
-function pad(value: number): string {
-  return String(value).padStart(2, "0")
-}
-
 export type IcsTimeParts = {
   year: number
   month: number
@@ -11,19 +7,6 @@ export type IcsTimeParts = {
   hour: number
   minute: number
   second: number
-}
-
-export function normalizeTitleForComparison(value: string): string {
-  return value.trim().replace(/\s+/g, " ").toLowerCase()
-}
-
-export function toLocalDateKeyFromIso(isoValue: string): string {
-  const date = new Date(isoValue)
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
-
-export function getTodayLocalDateKey(now: Date = new Date()): string {
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
 export function parseIcalTimeParts(value: InstanceType<typeof ICAL.Time>): IcsTimeParts {

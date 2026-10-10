@@ -1,22 +1,32 @@
-import type { InferSelectModel } from "drizzle-orm"
-
-import {
-  CONTACT_KINDS,
-  CONTACT_ROLE_TYPES,
-  contactRoles,
-  contacts,
-  eventContacts,
-  vendorCategories,
-} from "../electron/db/schema.js"
-import type { EventStatus } from "./database.js"
+import type { AuditFields, EventStatus } from "./database.js"
+import type { CONTACT_KINDS, CONTACT_ROLE_TYPES } from "./enums.js"
 
 // ============================================================================
 // Contacts (identity)
 // ============================================================================
 
-export type Contact = InferSelectModel<typeof contacts>
 export type ContactKind = (typeof CONTACT_KINDS)[number]
 export type ContactRoleType = (typeof CONTACT_ROLE_TYPES)[number]
+
+export type Contact = {
+  id: string
+  kind: ContactKind
+  firstName: string | null
+  lastName: string | null
+  organizationName: string | null
+  /** Stored so people and companies sort and search the same way. */
+  displayName: string
+  /** Original casing, for display. */
+  email: string | null
+  /** Lowercased, trimmed email used for matching and uniqueness. */
+  emailNormalized: string | null
+  phone: string | null
+  notes: string | null
+  /** ISO datetime; archived contacts can't be newly assigned. */
+  archivedAt: string | null
+  createdAt: string
+  updatedAt: string
+} & AuditFields
 
 /** Fields the renderer may set when creating a contact. displayName is derived when omitted. */
 export type NewContact = {
@@ -65,9 +75,25 @@ export type Page<T> = {
 // Standing roles & vendor categories
 // ============================================================================
 
-export type ContactRole = InferSelectModel<typeof contactRoles>
+export type ContactRole = {
+  id: string
+  contactId: string
+  role: ContactRoleType
+  /** Required for vendors, null for other roles. */
+  vendorCategoryId: string | null
+  createdAt: string
+}
 
-export type VendorCategory = InferSelectModel<typeof vendorCategories>
+export type VendorCategory = {
+  id: string
+  /** e.g. 'catering'; immutable once used. */
+  key: string
+  label: string
+  colorToken: string
+  sortOrder: number
+  /** Hidden from pickers; existing assignments keep it. */
+  archivedAt: string | null
+}
 export type NewVendorCategory = {
   key: string
   label: string
@@ -80,7 +106,23 @@ export type UpdateVendorCategory = Partial<NewVendorCategory>
 // Event assignments
 // ============================================================================
 
-export type EventContact = InferSelectModel<typeof eventContacts>
+export type EventContact = {
+  id: string
+  eventId: string
+  contactId: string
+  role: ContactRoleType
+  /** Required for vendors, null for other roles. */
+  vendorCategoryId: string | null
+  isPrimary: boolean
+  /** e.g. 'Lead coordinator', 'Bride's father' */
+  roleLabel: string | null
+  notes: string | null
+  sortOrder: number
+  /** Soft remove */
+  removedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
 
 /** Assign an existing contact by id, or create one inline. */
 export type AssignContactTarget = { contactId: string } | { newContact: NewContact }
