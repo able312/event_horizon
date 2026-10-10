@@ -1,6 +1,6 @@
 const MONTH_PARAM_PATTERN = /^(\d{4})-(\d{1,2})$/
 
-export type MonthParts = {
+type MonthParts = {
   year: number
   month: number
 }

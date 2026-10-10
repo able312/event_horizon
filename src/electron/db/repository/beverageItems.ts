@@ -1,19 +1,10 @@
-import type { BeverageItemType, NewBeverageItem, UpdateBeverageItem } from "~/definitions/database.js"
+import type { NewBeverageItem, UpdateBeverageItem } from "~/definitions/database.js"
 import type { BeverageItemWithAssignments, BeverageSectionPayload } from "~/definitions/beverage/beverage-types.js"
 import { db } from "../index.js"
 import type { AppDatabase } from "../factory.js"
 import { beverageItemTimeblocks, beverageItems, timeblocks } from "../schema.js"
 import { eq, and, inArray } from "drizzle-orm"
 import { v4 as uuidv4 } from "uuid"
-
-const VALID_BEVERAGE_TYPES = new Set<string>([
-  "Special Orders",
-  "Beer",
-  "Wine",
-  "Coolers",
-  "Rails",
-  "Non-Alcoholic",
-])
 
 function mapAssignmentsByItemId(
   rows: Array<{ beverageItemId: string; timeblockId: string }>,
@@ -197,14 +188,6 @@ export function createBeverageItemsRepository(database: AppDatabase) {
       }
     },
   }
-}
-
-export function normalizeBeverageItemType(type: string | null | undefined): BeverageItemType {
-  if (type && VALID_BEVERAGE_TYPES.has(type)) {
-    return type as BeverageItemType
-  }
-
-  return "Special Orders"
 }
 
 export default createBeverageItemsRepository(db)

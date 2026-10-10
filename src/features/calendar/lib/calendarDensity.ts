@@ -5,15 +5,15 @@ import type { Event, EventStatus } from "~/definitions/database"
  * Worst case in CalendarEventCard: 2px border each side, the status band wrapped onto two
  * lines (34px), a two-line title plus client name (~65px). Keep in sync with that layout.
  */
-export const FULL_CARD_MAX_HEIGHT = 104
+const FULL_CARD_MAX_HEIGHT = 104
 /** Gap between stacked cards in a day cell (`space-y-1`). */
-export const FULL_CARD_GAP = 4
+const FULL_CARD_GAP = 4
 /** Columns narrower than this switch the whole grid to compact lines... */
-export const NARROW_COLUMN_ENTER_WIDTH = 160
+const NARROW_COLUMN_ENTER_WIDTH = 160
 /** ...and only switch back once they reach this width, so resizing near the edge doesn't flicker. */
-export const NARROW_COLUMN_EXIT_WIDTH = 176
+const NARROW_COLUMN_EXIT_WIDTH = 176
 /** A compact row returns to full cards only when every day fits with this much to spare. */
-export const ROW_FIT_BUFFER = 16
+const ROW_FIT_BUFFER = 16
 /** Day cell chrome above the event list: vertical padding plus the day number. */
 export const DAY_CELL_CHROME_HEIGHT = 32
 /** Day cell horizontal padding plus its right border. */

@@ -3,8 +3,6 @@
 import type { UpdaterStatus } from "../../../definitions/updater"
 export type { UpdaterStatus } from "../../../definitions/updater"
 
-export type UpdaterPhase = UpdaterStatus["phase"]
-
 export interface UpdaterState {
   status: UpdaterStatus
   // True once the "update ready" bounce has played for the current ready version.

@@ -38,5 +38,3 @@ export function useEventDeleteConfirmation(deleteEvent: DeleteEventFn) {
     confirmDelete,
   }
 }
-
-export type UseEventDeleteConfirmationReturn = ReturnType<typeof useEventDeleteConfirmation>

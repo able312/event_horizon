@@ -8,7 +8,6 @@ import { useEvents } from "./useEvents"
 import { useEventsMonthQuery } from "./useEventsMonthQuery"
 
 vi.mock("~/lib/data/events", () => ({
-  getAllEvents: vi.fn(),
   getEventsByMonth: vi.fn(),
   getUnscheduledEvents: vi.fn(),
   getEventById: vi.fn(),

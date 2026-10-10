@@ -34,7 +34,7 @@ interface TimeblockTypeConvertControlProps {
   variant?: "header" | "menu-item"
 }
 
-export function TimeblockTypeConvertControl({
+function TimeblockTypeConvertControl({
   eventId,
   timeblockId,
   currentType,

@@ -4,17 +4,10 @@ import {
   GRATUITY_RATE,
   HST_RATE,
   centsToDollars,
-  computeAllChargesSubtotalCents,
-  computeBeverageSubtotalCents,
   computeBillableLineTotalCents,
-  computeCategorySubtotalCents,
   computeChargeLineTotalCents,
   computeFinancialSummaryAllSources,
   computeFinancialPreviewModel,
-  computeFoodSubtotalCents,
-  computeGratuityBaseCents,
-  computeGratuityCents,
-  computeFinancialSummary,
   dollarsToCents,
   fromDateInputValue,
   toDateInputValue,
@@ -28,13 +21,15 @@ describe("financial helpers", () => {
   })
 
   it("computes line totals and summary totals", () => {
-    const summary = computeFinancialSummary(
-      [
+    const summary = computeFinancialSummaryAllSources({
+      menuItems: [
         { id: "a", quantity: 2, unitPriceCents: 1500 } as never,
         { id: "b", quantity: 1, unitPriceCents: 5000 } as never,
       ],
-      [{ id: "p", amountCents: 1000 } as never],
-    )
+      payments: [{ id: "p", amountCents: 1000 } as never],
+      foodTimeblocks: [],
+      beverageItems: [],
+    })
 
     expect(computeChargeLineTotalCents({ quantity: 3, unitPriceCents: 250 } as never)).toBe(750)
     expect(summary.menuSubtotalCents).toBe(8000)
@@ -44,14 +39,12 @@ describe("financial helpers", () => {
     expect(summary.balanceDueCents).toBe(8040)
   })
 
-  it("computes category subtotal and preview model totals in cents", () => {
+  it("computes preview model totals in cents", () => {
     const items = [
       { id: "venue-1", category: "Venue", quantity: 3, unitPriceCents: 1234 } as never,
       { id: "venue-2", category: "Venue", quantity: 1, unitPriceCents: 500 } as never,
       { id: "golf-1", category: "Golf", quantity: 2, unitPriceCents: 2000 } as never,
     ]
-
-    expect(computeCategorySubtotalCents(items, "Venue")).toBe(4202)
 
     const preview = computeFinancialPreviewModel({
       menuItems: items,
@@ -80,11 +73,6 @@ describe("financial helpers", () => {
     const payments = [{ id: "p1", amountCents: 500 } as never]
 
     expect(computeBillableLineTotalCents({ quantity: 2, unitPriceCents: 250 })).toBe(500)
-    expect(computeFoodSubtotalCents(food)).toBe(500)
-    expect(computeBeverageSubtotalCents(beverage)).toBe(300)
-    expect(computeGratuityBaseCents(500, 300)).toBe(800)
-    expect(computeGratuityCents(800)).toBe(Math.round(800 * GRATUITY_RATE))
-    expect(computeAllChargesSubtotalCents({ menuItems, foodTimeblocks: food, beverageItems: beverage })).toBe(2800)
 
     const summary = computeFinancialSummaryAllSources({ menuItems, foodTimeblocks: food, beverageItems: beverage, payments })
     expect(summary.menuSubtotalCents).toBe(2000)
@@ -92,7 +80,7 @@ describe("financial helpers", () => {
     expect(summary.beverageSubtotalCents).toBe(300)
     expect(summary.chargesSubtotalCents).toBe(2800)
     expect(summary.gratuityBaseCents).toBe(800)
-    expect(summary.gratuityCents).toBe(144)
+    expect(summary.gratuityCents).toBe(Math.round(800 * GRATUITY_RATE))
     expect(summary.hstCents).toBe(Math.round(2800 * HST_RATE))
     expect(summary.chargesTotalCents).toBe(3164)
     expect(summary.grandTotalCents).toBe(3308)
@@ -118,8 +106,36 @@ describe("financial helpers", () => {
     const beverageItems = [
       { id: "b1", quantity: 2, unitPriceCents: 500 } as never,
     ]
+    const summary = computeFinancialSummaryAllSources({ menuItems: [], foodTimeblocks: [], beverageItems, payments: [] })
+    expect(summary.beverageSubtotalCents).toBe(1000)
+  })
 
-    expect(computeBeverageSubtotalCents(beverageItems)).toBe(1000)
+  it("returns zero totals when source data is unavailable", () => {
+    const summary = computeFinancialSummaryAllSources({
+      menuItems: undefined,
+      foodTimeblocks: undefined,
+      beverageItems: undefined,
+      payments: undefined,
+    })
+
+    expect(Object.values(summary)).toEqual(Array(11).fill(0))
+  })
+
+  it("handles missing quantities, prices, food items, and payment amounts", () => {
+    const summary = computeFinancialSummaryAllSources({
+      menuItems: [{ quantity: null, unitPriceCents: 100 } as never],
+      foodTimeblocks: [
+        { foodItems: undefined } as never,
+        { foodItems: [{ quantity: 2, unitPriceCents: null }] } as never,
+      ],
+      beverageItems: [{ quantity: null, unitPriceCents: null } as never],
+      payments: [{ amountCents: null } as never],
+    })
+
+    expect(summary.chargesSubtotalCents).toBe(0)
+    expect(summary.gratuityCents).toBe(0)
+    expect(summary.paidTotalCents).toBe(0)
+    expect(summary.balanceDueCents).toBe(0)
   })
 
   it("maps date input values to ISO and back", () => {

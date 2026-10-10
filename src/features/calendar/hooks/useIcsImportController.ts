@@ -8,7 +8,7 @@ import type {
 import { onIcsImportReview } from "~/lib/ipc/icsImport"
 import { commitIcsImport, reviewIcsImport } from "../lib/icsImport"
 
-export type IcsImportPhase = "idle" | "review" | "committing" | "report"
+type IcsImportPhase = "idle" | "review" | "committing" | "report"
 
 export function useIcsImportController() {
   const [phase, setPhase] = useState<IcsImportPhase>("idle")
@@ -73,5 +73,3 @@ export function useIcsImportController() {
     commitSelectedRows,
   }
 }
-
-export type UseIcsImportControllerReturn = ReturnType<typeof useIcsImportController>

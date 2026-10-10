@@ -39,7 +39,7 @@ function createDefaultFormValues(
   }
 }
 
-export const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
+const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
   initialStartDateTime,
   initialEndDateTime,
   onCreate,

@@ -1,5 +1,3 @@
-import type { PreviewTypeId } from "~/features/preview/lib/previewTypes"
-
 export type BeoSectionId =
   | "contact"
   | "internalNotes"
@@ -82,7 +80,7 @@ export type PreviewPreferencesAction =
   | { type: "financial/setShowPaymentStatus"; value: boolean }
   | { type: "financial/applyPaymentDefault"; hasPayments: boolean }
 
-export function createInitialBeoPreferences(): BeoPreferences {
+function createInitialBeoPreferences(): BeoPreferences {
   return {
     showContactInfo: true,
     showInternalNotes: true,
@@ -104,7 +102,7 @@ export function createInitialBeoPreferences(): BeoPreferences {
   }
 }
 
-export function createInitialFoodBeoPreferences(): FoodBeoPreferences {
+function createInitialFoodBeoPreferences(): FoodBeoPreferences {
   return {
     showContactInfo: false,
     showInternalNotes: true,
@@ -113,14 +111,14 @@ export function createInitialFoodBeoPreferences(): FoodBeoPreferences {
   }
 }
 
-export function createInitialTimelinePreferences(): TimelinePreferences {
+function createInitialTimelinePreferences(): TimelinePreferences {
   return {
     showInternalNotes: true,
     includeSystemRows: true,
   }
 }
 
-export function createInitialFinancialPreferences(): FinancialPreferences {
+function createInitialFinancialPreferences(): FinancialPreferences {
   return {
     showBeverageAppendix: false,
     showBeverageNotes: false,
@@ -143,5 +141,3 @@ export function createInitialPreviewPreferences(): PreviewPreferencesState {
     },
   }
 }
-
-export type PreferencesForType<T extends PreviewTypeId> = PreviewPreferencesState[T]

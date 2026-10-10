@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest"
 import { SECTION_TYPE } from "~/definitions/timeblocks/timeblock-constants"
 import type { WorkspaceNavModel } from "../types"
 import {
-  buildEventDetailNavigationPath,
   getCanonicalEventDetailPath,
   isNavNodeSelected,
   parseEventDetailRoute,
@@ -250,14 +249,6 @@ describe("eventDetailRouteState", () => {
         pathname: "/events/evt_1/note/tb-note",
       }),
     ).toBe("/events/evt_1/timeblock/tb-note")
-  })
-
-  it("builds navigation paths for calendar entry points", () => {
-    const navModel = buildNavModel()
-
-    expect(buildEventDetailNavigationPath("evt_1", navModel, "/events?date=2026-04")).toBe(
-      "/events/evt_1/overview?returnTo=%2Fevents%3Fdate%3D2026-04",
-    )
   })
 
   it("matches selection by stable timeblock id across scheduled and unscheduled ids", () => {

@@ -1,263 +1,84 @@
-# Dead Code Cleanup Inventory
+# Dead Code Cleanup Record
 
-Generated: 2026-07-04 · Completed items removed: 2026-10-08
+Verified and completed: 2026-10-08.
 
-This document lists dead code identified via static analysis ([fallow](https://docs.fallow.tools)) and manual verification against the current codebase. Items are grouped by cleanup action: whole-file deletion vs. partial cleanup (specific exports, functions, types, or dependencies).
+The original 2026-07-04 inventory was stale. Every candidate was checked against current production and test callers before removal. Keep live code even when an older inventory or static analysis marks it unused.
 
-**How to read severity**
+## Completed cleanup
 
-| Label | Meaning |
+### Deleted files
+
+| Area | Removed files |
 |---|---|
-| **Delete file** | No production import path; safe to remove the file (and its test file if listed). |
-| **Remove export** | Symbol is live internally or only used in tests; drop `export` or delete the symbol if test-only. |
-| **Remove dependency** | Package is not imported anywhere in app code. |
-| **Review** | Likely dead, but verify manually before deleting (e.g. IPC handlers may still exist on the main process side). |
+| Legacy food UI | `src/components/event-detail/detail-sections/sections/FoodSection.tsx` and its test; `src/components/atoms/DetailsTimeblock.tsx`; `src/components/atoms/GenericItemCard.tsx` and its test |
+| Orphaned search hook | `src/hooks/util/useSearchView.ts` and its test |
+| Unused validation stub | `src/electron/db/validation.ts` |
+| Legacy client UI | `src/features/event-detail/sections/event-overview/components/ClientDetailsCard.tsx`; its now-orphaned `lib/formatClientDetailsPlainText.ts` and test |
+| Unused compatibility modules | `src/features/event-detail/workspace/lib/getWorkspaceCategoryIdForSectionType.ts`; `src/features/touchpoints/lib/buildCommonTouchpoints.ts` |
+| Unused test helper | `src/test/renderWithProviders.tsx` |
 
----
+### Partial cleanup
 
-## Summary
+- Removed the unused `getAllEvents` renderer wrapper and four unused wrappers each from `cartDetails.ts` and `tournamentDetails.ts`. Updated IPC contract cases and stale test mocks. Existing main-process handlers and repository methods remain intact.
+- Removed `buildEventDetailNavigationPath`, `toNoteEditorPath`, `toCategoryPath`, and the unused navigation-policy lookup and compatibility alias. Removed only tests of the deleted helper; current routing and legacy URL canonicalization tests remain.
+- Removed the test-only `computeFinancialSummary`, `computeCategorySubtotalCents`, and `computeAllChargesSubtotalCents` helpers. Made food, beverage, and gratuity helpers internal. Financial tests exercise `computeFinancialSummaryAllSources`, including missing source data and nullable fields.
+- Made Google Calendar date and description helpers internal. Their tests verify the generated URL's dates and details through the production URL builders.
+- Removed unused dialog and dropdown components/exports while retaining the internal dialog portal and overlay.
+- Standardized calendar sidebar forms on their existing default exports and updated their tests.
+- Removed unused preview aggregate components (`BeverageDetails`, `FoodDetails`, `NoteDetails`, `SetupInstructionDetails`) and `SectionHeading`. Kept the individual detail components used by paginated previews.
+- Removed unused beverage normalization code and redundant types. Current repository operations and the canonical database `BeverageItemType` remain.
+- Removed unused types and re-exports in database, calendar, navigation, touchpoints, preview preferences, and updater modules. Kept locally used types, constants, helper functions, and default-exported components while removing their unused named exports.
+- Removed the obsolete `@tailwindcss/line-clamp` plugin reference. Current `line-clamp-2` usage is supported natively by Tailwind v4.
 
-| Category | Count |
+### Dependencies removed
+
+Removed `@radix-ui/react-label`, `@radix-ui/react-separator`, `@radix-ui/react-switch`, and `react-hook-form`: none has a current import or component consumer.
+
+Also removed `drizzle-zod` and `zod`: the deleted validation stub was the only importer of `drizzle-zod`, and no current source imports `zod`. Updated the lockfile without upgrading other packages.
+
+## Preserved live code and testing APIs
+
+| Candidate | Reason to keep |
 |---|---|
-| Whole files to delete | 6 files (+ 3 associated test files) |
-| Partial cleanups (exports / functions / types) | ~31 symbols across 13 files |
-| Unused npm dependencies | 4 |
-| Stale config references | 1 |
-
----
-
-## 1. Whole files to delete
-
-These files are unreachable from production entry points. Several were superseded during the calendar sidebar refactor or the event-detail workspace migration.
-
-### Database / validation
-
-| File | Status | Notes |
-|---|---|---|
-| `src/electron/db/validation.ts` | **Delete file** | Stub module with `selectEventSchema` and `insertEventSchema`. Nothing imports it. The header comment says it is intentionally empty pending future use. |
-
-### Event detail — legacy food section UI
-
-Food editing now lives in `src/features/event-detail/sections/food-beverage-workspaces/FoodWorkspaceSection.tsx`. The old detail-section component chain is orphaned.
-
-| File | Status | Notes |
-|---|---|---|
-| `src/components/event-detail/detail-sections/sections/FoodSection.tsx` | **Delete file** | Replaced by `FoodWorkspaceSection`. |
-| `src/components/event-detail/detail-sections/sections/FoodSection.test.tsx` | **Delete file** | Tests the removed component. |
-| `src/components/atoms/DetailsTimeblock.tsx` | **Delete file** | Only imported by `FoodSection.tsx`. `GolfDetailsTimeblock.tsx` is the live equivalent for golf/cart sections. |
-| `src/components/atoms/GenericItemCard.tsx` | **Delete file** | Only imported by `FoodSection.tsx`. |
-| `src/components/atoms/GenericItemCard.test.tsx` | **Delete file** | Tests the removed card component. |
-
-### Search utilities — orphaned hook chain
-
-| File | Status | Notes |
-|---|---|---|
-| `src/hooks/util/useSearchView.ts` | **Delete file** | Generic debounced name search hook. Only imported by its test file. |
-| `src/hooks/util/useSearchView.test.tsx` | **Delete file** | Tests the removed hook. |
-| `src/lib/debounce.ts` | **Delete file** | `useDebounceValue` is only consumed by `useSearchView.ts`. Event search debouncing is handled elsewhere (`useEventsQueryState`). |
-
----
-
-## 2. Partial cleanup within files
-
-### 2a. Remove unused exports (keep symbol if used internally)
-
-#### shadcn/ui atom components — unused re-exports
-
-These are standard shadcn barrel exports that nothing in the app imports. Low priority: trimming them makes future shadcn CLI updates slightly harder. Either remove from the export list or stop exporting the underlying components.
-
-**`src/components/atoms/dialog.tsx`** — remove unused exports:
-
-- `DialogClose` (line 132)
-- `DialogOverlay` (line 137)
-- `DialogPortal` (line 138)
-- `DialogTrigger` (line 140)
-
-Note: `DialogOverlay`, `DialogPortal`, etc. are still used *inside* the file by `DialogContent`; only the public exports are dead.
-
-**`src/components/atoms/dropdown-menu.tsx`** — remove unused exports:
-
-- `DropdownMenuPortal` (line 241)
-- `DropdownMenuGroup` (line 244)
-- `DropdownMenuLabel` (line 245)
-- `DropdownMenuCheckboxItem` (line 247)
-- `DropdownMenuRadioGroup` (line 248)
-- `DropdownMenuRadioItem` (line 249)
-- `DropdownMenuSeparator` (line 250)
-- `DropdownMenuShortcut` (line 251)
-- `DropdownMenuSub` (line 252)
-- `DropdownMenuSubTrigger` (line 253)
-- `DropdownMenuSubContent` (line 254)
-
-#### Sidebar forms — redundant default exports
-
-Production code default-imports these; the named exports are never imported elsewhere.
-
-| File | Symbol | Action |
-|---|---|---|
-| `src/features/calendar/forms/CreateEventSidebarForm.tsx` | `export const CreateEventSidebarForm` | **Remove export** or drop default export and standardise on one export style. |
-| `src/features/calendar/forms/EditEventSidebarForm.tsx` | `export const EditEventSidebarForm` | Same as above. |
-
-#### Setup instruction prefill
-
-| File | Symbol | Action |
-|---|---|---|
-| `src/definitions/timeblocks/setupInstructionPrefill.ts` | `export const SECTION_DEFAULT_PREFILLS` | **Remove export** — used only by `getSetupInstructionPrefill()` in the same file. |
-
-#### Google Calendar helpers — over-exported internals
-
-| File | Symbol | Action |
-|---|---|---|
-| `src/lib/googleCalendar.ts` | `export function formatGoogleCalendarDateUtc` | **Remove export** — used internally by `buildGoogleCalendarCreateUrl` / `buildGoogleCalendarUpdateUrl`. |
-| `src/lib/googleCalendar.ts` | `export function buildGoogleCalendarDescription` | **Remove export** — same as above. |
-
-#### Hotkey parser — over-exported internal
-
-| File | Symbol | Action |
-|---|---|---|
-| `src/lib/hotKeys.ts` | `export function parseHotkeyCombo` | **Remove export** — used internally by `useHotkey`. Keep exported if you want direct unit testing without going through the hook. |
-
-#### IPC error helper — over-exported internal
-
-| File | Symbol | Action |
-|---|---|---|
-| `src/electron/ipcRoutes/ipcErrors.ts` | `export function toError` | **Remove export** — used internally by `logAndThrow`. Tests import it directly today; either keep export for tests or test via `logAndThrow` only. |
-
-### 2b. Delete unused functions (test-only or fully orphaned)
-
-#### Event detail route state
-
-| File | Symbol | Action |
-|---|---|---|
-| `src/features/event-detail/workspace/lib/eventDetailRouteState.ts` | `export function buildEventDetailNavigationPath` (line 303) | **Delete function** — no production caller. Only referenced in `eventDetailRouteState.test.ts`. |
-
-#### Financial calculations — superseded helpers
-
-Production uses `computeFinancialSummaryAllSources` (via `FinancialWorkspaceSection.tsx` and previews). These older helpers are only exercised in `financial.test.ts`:
-
-| File | Symbol | Action |
-|---|---|---|
-| `src/features/event-detail/workspace/lib/financial.ts` | `computeFinancialSummary` | **Delete function** (or stop exporting and fold tests into `computeFinancialSummaryAllSources`). |
-| `src/features/event-detail/workspace/lib/financial.ts` | `computeCategorySubtotalCents` | **Delete function** — test-only. |
-| `src/features/event-detail/workspace/lib/financial.ts` | `computeAllChargesSubtotalCents` | **Delete function** — test-only. |
-
-These functions in the same file are used internally by `computeFinancialSummaryAllSources` but never imported elsewhere — **remove export only**:
-
-- `computeFoodSubtotalCents`
-- `computeBeverageSubtotalCents`
-- `computeGratuityBaseCents`
-- `computeGratuityCents`
-
-### 2c. Unused IPC renderer wrappers
-
-These invoke handlers that may still exist in the main process, but no production renderer code calls them. Removing the renderer wrapper is safe; consider removing matching IPC handlers in a follow-up pass.
-
-**`src/lib/ipc/ipcEventsQueries.ts`**
-
-| Function | Action |
-|---|---|
-| `getAllEvents` | **Delete function** — only referenced in `ipcContracts.test.ts` and test mocks. |
-
-**`src/lib/ipc/cartDetails.ts`**
-
-Live functions: `getOrCreateCartDetailsByEventId`, `updateCartDetails` (via `useCartDetailsSection.ts`).
-
-| Function | Action |
-|---|---|
-| `getCartDetails` | **Delete function** |
-| `getCartDetailsByEventId` | **Delete function** |
-| `createCartDetails` | **Delete function** |
-| `deleteCartDetails` | **Delete function** |
-
-**`src/lib/ipc/tournamentDetails.ts`**
-
-Live functions: `getOrCreateTournamentDetailsByEventId`, `updateTournamentDetails` (via `useTournamentDetailsSection.ts`).
-
-| Function | Action |
-|---|---|
-| `getTournamentDetails` | **Delete function** |
-| `getTournamentDetailsByEventId` | **Delete function** |
-| `createTournamentDetails` | **Delete function** |
-| `deleteTournamentDetails` | **Delete function** |
-
-### 2d. Unused exported types
-
-These types are exported but never imported elsewhere. Remove the `export` keyword (keep the type if it documents a hook return value locally).
-
-| File | Type | Action |
-|---|---|---|
-| `src/definitions/database.ts` | `NewMenuOfChargeItem` | **Remove export** |
-| `src/definitions/database.ts` | `NewTimeblock` | **Remove export** |
-| `src/features/calendar/hooks/useCalendarWorkspaceViewModel.ts` | `UseCalendarWorkspaceViewModelReturn` | **Remove export** |
-| `src/features/calendar/hooks/useEventDeleteConfirmation.ts` | `UseEventDeleteConfirmationReturn` | **Remove export** |
-| `src/features/calendar/hooks/useIcsImportController.ts` | `IcsImportPhase` | **Remove export** |
-| `src/features/calendar/hooks/useIcsImportController.ts` | `UseIcsImportControllerReturn` | **Remove export** |
-| `src/lib/months.ts` | `MonthParts` | **Remove export** |
-
----
-
-## 3. Unused npm dependencies
-
-Verified: no imports of these packages anywhere under `src/`. The corresponding shadcn atom components (`label`, `separator`, `switch`) were never added to the project.
-
-| Package | Location | Action |
-|---|---|---|
-| `@radix-ui/react-label` | `dependencies` | **Remove** — no `label.tsx` component. |
-| `@radix-ui/react-separator` | `dependencies` | **Remove** — no `separator.tsx` component. |
-| `@radix-ui/react-switch` | `dependencies` | **Remove** — no `switch.tsx` component. |
-| `react-hook-form` | `dependencies` | **Remove** — no imports anywhere. |
-
-### Related dependency / config notes
-
-| Item | Action |
-|---|---|
-| `@tailwindcss/line-clamp` | Referenced in `tailwind.config.js` but **not installed** and **no `line-clamp` classes** used in `src/`. Tailwind v4 includes line-clamp utilities natively. Remove the plugin line from `tailwind.config.js`. |
-| `@tailwindcss/vite` | Correctly in `dependencies` (used by `vite.config.ts`). Fallow's "test-only" flag here is a false positive. |
-
----
-
-## 4. Stale config (not runtime dead code, but cleanup-worthy)
-
-| File | Issue | Action |
-|---|---|---|
-| `tailwind.config.js` | Legacy Tailwind v3-style config. The app builds with Tailwind v4 via `@tailwindcss/vite` in `vite.config.ts` and `src/index.css`. Still referenced by `components.json` for shadcn CLI scaffolding. | Remove `@tailwindcss/line-clamp` plugin entry. Consider migrating shadcn config to v4 CSS-based setup and deleting this file when convenient. |
-
----
-
-## 5. Not dead code (common false positives)
-
-Do **not** delete these based on static analysis alone:
-
-| File / symbol | Why it is live |
-|---|---|
-| `src/electron/preload.cts` | Electron entry point referenced from `main.ts` (`preload.cjs` after compile). |
-| `createEventsRepository`, `createTimeblocksRepository`, etc. | Default-exported from repository modules and wired through IPC handlers / `db/index.ts`. |
-| `computeFinancialSummaryAllSources`, `toCurrency`, etc. | Used by `FinancialWorkspaceSection.tsx` and PDF preview routes. |
-| `IcsImportReviewDialog.tsx` | Imported by `CalendarWorkspace.tsx`. |
-| `FoodWorkspaceSection.tsx`, `useFoodSection.ts` | Active food editing path. |
-
----
-
-## 6. Suggested cleanup order
-
-1. **High confidence, user-visible legacy UI** — delete the `FoodSection` chain (Section 1).
-2. **Dead utilities** — delete `validation.ts`, `useSearchView` / `debounce` (Section 1).
-3. **IPC wrapper trim** — remove unused renderer IPC functions; optionally remove matching main-process handlers (Section 2c).
-4. **Dependency prune** — remove four unused Radix / react-hook-form packages (Section 3).
-5. **Export hygiene** — drop unnecessary exports and test-only financial helpers (Section 2).
-6. **Low priority** — trim shadcn barrel exports in `dialog.tsx` / `dropdown-menu.tsx` (Section 2a).
-
----
-
-## 7. Verification commands
-
-After cleanup:
+| `src/lib/debounce.ts` / `useDebounceValue` | Used by `ContactsDirectoryWorkspace` and `AddEventContactForm` |
+| `DropdownMenuCheckboxItem` | Used by `BeverageWorkspaceSection` |
+| `DropdownMenuSeparator` | Used by contact-directory and event-contact menus |
+| `parseHotkeyCombo` and `toError` exports | Direct focused unit tests cover parsing and error normalization; the original inventory permits retaining these testing APIs |
+| Electron main/preload, IPC handlers, repositories | Live desktop entry points and handler registration chains; Fallow's default entry-point inference misses Electron main |
+| `FoodWorkspaceSection`, `useFoodSection`, financial summary and preview detail components | Current editing and printing paths |
+
+## Verification
+
+- `npm run lint`: passes with three existing Fast Refresh warnings in `button.tsx` and `SplitLayout.tsx`.
+- `npm run test`: full repository suite passes; deleted tests covered removed code only.
+- `npm run build`: Electron type checking, renderer TypeScript compilation, and production Vite build pass.
+- `npm audit` and `npm audit --omit=dev`: no vulnerabilities.
+- Fallow 3.32.0, with explicit renderer, Electron main/preload, and release-script entry points: no unused files, exports, types, or runtime dependencies.
+
+For reproducible analysis without adding a dependency or repository config:
 
 ```bash
-npm run lint
-npm run test
-npm run build
-npx fallow dead-code --format json --quiet 2>/dev/null || true
+cat > /tmp/event-horizon-fallow-config.json <<'JSON'
+{
+  "entry": [
+    "src/main.tsx",
+    "src/electron/main.ts",
+    "src/electron/preload.cts",
+    "scripts/release.ts",
+    "scripts/release-publish.ts"
+  ]
+}
+JSON
+npx --yes fallow@3.32.0 dead-code \
+  --config /tmp/event-horizon-fallow-config.json --format json --quiet
 ```
 
-Re-run fallow to confirm issue counts drop. Expect some shadcn export warnings to remain unless you trim those barrels or add suppressions.
+Three findings remain for manual interpretation; the duplicate-export finding makes Fallow exit nonzero:
+
+| Finding | Disposition |
+|---|---|
+| `postcss` unused dev dependency | Retained as build tooling; Tailwind/Vite use PostCSS transitively, and the direct dependency specifies the patched version range |
+| `@tailwindcss/vite` test-only dependency | False positive: imported by the production Vite configuration |
+| Duplicate `updateBeverageItem` export names | Both live: one updates the optimistic cache, the other invokes IPC; they belong to separate modules |
+
+No new application abstractions were introduced. Existing workspace, contact, preview, routing, and financial APIs remain the active paths. Future cleanup can revisit the legacy Tailwind/shadcn configuration separately.

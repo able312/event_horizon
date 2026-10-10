@@ -201,7 +201,7 @@ export function useCreateContact() {
   })
 }
 
-export type UpdateContactVariables = { id: string; patch: UpdateContact }
+type UpdateContactVariables = { id: string; patch: UpdateContact }
 
 /** Errors are left to the caller so the edit form can react to EmailTaken inline. */
 export function useUpdateContact() {
@@ -238,7 +238,7 @@ export function useContactRoles(contactId: string | null) {
   })
 }
 
-export type EnsureContactRoleVariables = { contactId: string; role: ContactRoleType; vendorCategoryId?: string | null }
+type EnsureContactRoleVariables = { contactId: string; role: ContactRoleType; vendorCategoryId?: string | null }
 
 export function useEnsureContactRole() {
   return useMutation({
@@ -248,7 +248,7 @@ export function useEnsureContactRole() {
   })
 }
 
-export type RemoveContactRoleVariables = { contactId: string; role: ContactRoleType; vendorCategoryId?: string | null }
+type RemoveContactRoleVariables = { contactId: string; role: ContactRoleType; vendorCategoryId?: string | null }
 
 export function useRemoveContactRole() {
   return useMutation({
