@@ -1,11 +1,13 @@
 import { spawnSync } from "node:child_process"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { register } from "node:module"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import Database from "better-sqlite3"
 import {
   LEGACY_TABLES,
   findMissingReferences,
+  findSchemaProblems,
   importLegacyData,
   readLegacyData,
   verifyLegacyImport,
@@ -14,6 +16,7 @@ import {
   type LegacyData,
   type TableReport,
 } from "../convex/lib/legacyImport.ts"
+import { checkValue, type ValidatorShape } from "../convex/lib/schemaCheck.ts"
 
 // One-time copy of the SQLite database into an empty Convex deployment.
 //
@@ -86,6 +89,29 @@ function convexBackend(flags: string[]): ImportBackend {
   }
 }
 
+/**
+ * The Convex schema. Its files import each other without extensions (Convex's
+ * bundler allows that, Node doesn't), so a small hook retries those imports as .ts.
+ */
+export async function loadSchema(): Promise<ConvexSchema> {
+  const hook = "export async function resolve(s, c, next) { try { return await next(s, c) } catch (e) { " +
+    "if (e.code === 'ERR_MODULE_NOT_FOUND' && /^\\.\\.?\\//.test(s)) return next(s + '.ts', c); throw e } }"
+  register(`data:text/javascript,${encodeURIComponent(hook)}`)
+  // A variable specifier keeps the script typecheck (NodeNext) from following the import into convex/.
+  const path = "../convex/schema.ts"
+  return ((await import(path)) as { default: ConvexSchema }).default
+}
+
+type ConvexSchema = { tables: Record<string, { validator: ValidatorShape }> }
+
+/** Everything that would make the import fail or come out incomplete, found without writing anything. */
+export function findDataProblems(data: LegacyData, schema: ConvexSchema): string[] {
+  return [
+    ...findMissingReferences(data),
+    ...findSchemaProblems(data, (table, fields) => checkValue(schema.tables[table].validator, fields)),
+  ]
+}
+
 /** Reads every table in one read transaction, so the snapshot is consistent. */
 function readSqlite(path: string): LegacyData {
   const sqlite = new Database(path, { readonly: true, fileMustExist: true })
@@ -114,13 +140,13 @@ async function main(): Promise<void> {
 
   console.log("SQLite rows:")
   for (const { table } of LEGACY_TABLES) console.log(`  ${table}: ${data[table].length}`)
-  const missing = findMissingReferences(data)
-  if (missing.length > 0) {
-    console.error(`Broken references in the SQLite data:\n${missing.join("\n")}`)
+  const problems = findDataProblems(data, await loadSchema())
+  if (problems.length > 0) {
+    console.error(`The SQLite data can't be imported (${problems.length} problem(s)):\n${problems.join("\n")}`)
     process.exitCode = 1
     return
   }
-  console.log("All references resolve.")
+  console.log("All references resolve and every row matches the Convex schema.")
   if (options.dryRun) return
 
   const envFilePath = resolve(".env.local")

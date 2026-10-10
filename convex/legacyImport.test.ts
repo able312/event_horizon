@@ -7,6 +7,7 @@ import {
   LEGACY_TABLES,
   chunkBySize,
   findMissingReferences,
+  findSchemaProblems,
   importLegacyData,
   selectSql,
   toLegacyRows,
@@ -16,6 +17,7 @@ import {
   type LegacyData,
   type LegacyTable,
 } from "./lib/legacyImport"
+import { checkValue } from "./lib/schemaCheck"
 import { companyIdentity } from "./lib/testIdentity"
 import schema from "./schema"
 
@@ -163,6 +165,78 @@ describe("reading legacy rows", () => {
     expect(chunkBySize(["aaaa", "bbbb", "cccc"], 15)).toEqual([["aaaa", "bbbb"], ["cccc"]])
     expect(chunkBySize(["a-very-long-row"], 5)).toEqual([["a-very-long-row"]])
     expect(chunkBySize([], 5)).toEqual([])
+  })
+})
+
+const checkRow = (table: LegacyTable, fields: Fields) => checkValue(schema.tables[table].validator, fields)
+
+describe("empty strings", () => {
+  const blankStyles = {
+    foodItems: [{ ...raw.foodItems[0], serviceStyle: "" }, { ...raw.foodItems[0], legacyId: "f-2", serviceStyle: "Plated" }],
+    beverageItems: [{ ...raw.beverageItems[0], serviceStyle: "" }],
+  }
+
+  it("become null for optional enum fields listed in emptyAsNull, and nowhere else", () => {
+    const data = legacyData(blankStyles)
+    expect(data.foodItems.map((row) => row.fields.serviceStyle)).toEqual([null, "Plated"])
+    expect(data.beverageItems[0].fields.serviceStyle).toBeNull()
+    // Other text fields keep their '' (whatGoesOnCarts is free text).
+    expect(legacyData({ cartDetails: [{ ...raw.cartDetails[0], whatGoesOnCarts: "" }, raw.cartDetails[1]] }).cartDetails[0].fields.whatGoesOnCarts).toBe("")
+    expect(findSchemaProblems(data, checkRow)).toEqual([])
+  })
+
+  it("import and verify against the converted value", async () => {
+    const t = convexTest(schema, modules)
+    const backend = backendFor(t)
+    const data = legacyData(blankStyles)
+    const idMap = await importLegacyData(data, backend)
+    expect((await verifyLegacyImport(data, idMap, backend)).flatMap((report) => report.problems)).toEqual([])
+    const docs = await backend.dump("foodItems")
+    expect(docs.map((doc) => doc.serviceStyle ?? null).sort()).toEqual(["Plated", null])
+  })
+})
+
+describe("checking values against a validator", () => {
+  const events = (fields: Fields) => checkRow("events", { ...legacyData().events[0].fields, ...fields })
+
+  it("accepts a converted row", () => {
+    for (const spec of LEGACY_TABLES) for (const row of legacyData()[spec.table]) expect(checkRow(spec.table, row.fields)).toEqual([])
+    expect(findSchemaProblems(legacyData(), checkRow)).toEqual([])
+  })
+
+  it("names the field and the allowed literals", () => {
+    expect(events({ status: "archived" })).toEqual([
+      'status: "archived" is not one of "new_lead", "tentative", "confirmed", "closed", "lost"',
+    ])
+    expect(findSchemaProblems(legacyData({ foodItems: [{ ...raw.foodItems[0], serviceStyle: "Sit-down" }] }), checkRow))
+      .toEqual(['foodItems f-1: serviceStyle: "Sit-down" is not one of "Buffet", "Family-Style", "Plated", "Passed"'])
+  })
+
+  it("rejects wrong types, missing required fields and unknown fields", () => {
+    expect(events({ title: 5 })).toEqual(["title: 5 is not a string"])
+    expect(events({ isInternal: "yes" })).toEqual(["isInternal: \"yes\" is not a number"])
+    expect(events({ title: undefined })).toEqual(["title: required field is missing"])
+    expect(events({ colour: "red" })).toEqual(["colour: unknown field"])
+    expect(checkRow("cartDetails", { ...legacyData().cartDetails[0].fields, customGrid: [[1], ["a", {}]] }))
+      .toEqual(["customGrid[1][1]: {} is not one of number, string, null"])
+  })
+
+  it("allows absent optional (audit) fields, validates them when present, and treats references as IDs", () => {
+    expect(events({})).toEqual([])
+    expect(events({ createdBy: "someone" })).toEqual([])
+    expect(events({ createdBy: 3 })).toEqual(["createdBy: 3 is not an ID"])
+    expect(checkRow("payments", { ...legacyData().payments[0].fields, eventId: "ev-1" })).toEqual([])
+    expect(checkRow("payments", { ...legacyData().payments[0].fields, eventId: "" })).toEqual(['eventId: "" is not an ID'])
+  })
+
+  it("accepts null only where the field is nullable", () => {
+    expect(events({ minGuests: null })).toEqual([])
+    expect(events({ title: null })).toEqual(["title: null is not a string"])
+  })
+
+  it("fails loudly on a validator kind it doesn't support", () => {
+    expect(() => checkValue({ kind: "any" }, 1)).toThrow(/unsupported validator kind "any"/)
+    expect(() => checkValue({ kind: "object", fields: { blob: { kind: "bytes" } } }, { blob: 1 }, "doc")).toThrow(/"bytes" at doc\.blob/)
   })
 })
 

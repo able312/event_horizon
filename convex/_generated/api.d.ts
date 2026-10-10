@@ -23,6 +23,7 @@ import type * as lib_contactOperations from "../lib/contactOperations.js";
 import type * as lib_contactValidators from "../lib/contactValidators.js";
 import type * as lib_legacyImport from "../lib/legacyImport.js";
 import type * as lib_records from "../lib/records.js";
+import type * as lib_schemaCheck from "../lib/schemaCheck.js";
 import type * as lib_testIdentity from "../lib/testIdentity.js";
 import type * as lib_users from "../lib/users.js";
 import type * as lib_validators from "../lib/validators.js";
@@ -56,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   "lib/contactValidators": typeof lib_contactValidators;
   "lib/legacyImport": typeof lib_legacyImport;
   "lib/records": typeof lib_records;
+  "lib/schemaCheck": typeof lib_schemaCheck;
   "lib/testIdentity": typeof lib_testIdentity;
   "lib/users": typeof lib_users;
   "lib/validators": typeof lib_validators;

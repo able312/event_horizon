@@ -429,9 +429,23 @@ Rehearsal: run against the installed app's `~/Library/Application Support/Event 
 Verification: `npm test` 170 files, 1,319 tests passed. Convex and script typechecks, `npm run build` and `npm run lint` passed (the same seven existing warnings).
 
 Not yet done:
-- A rehearsal with a larger production copy.
 - A visual spot-check of migrated events and their PDFs (estimate/BEO/timeline) in the app.
 - The real import into production.
+
+### Production-copy rehearsal (2026-10-10)
+
+**Status: rehearsed against a copy of the production database. Every row, field and reference was verified. The copy is loaded into this worktree's local deployment for a human visual check.**
+
+- Source: a copy of `~/Documents/Coding/app.sqlite`, which is itself a copy of production. Its rows were 68 events, 96 contacts, 8 vendor categories, 19 tournaments, 19 carts, 25 payments, 60 touchpoints, 57 charges, 260 timeblocks, 115 food items, 63 beverage items, 41 beverage links, 108 contact roles and 108 event contacts. The original file was not modified, and its hash was unchanged afterwards.
+- The first attempt failed at `foodItems`. The dry run had passed, but 4 `food_items` rows had `service_style = ''`, which the schema rejects. In the old app, the "Select..." option of two service-style dropdowns stored an empty string, meaning "not set".
+- Fix: `emptyAsNull` in the table specs turns `''` into null for food and beverage `serviceStyle`. Null is kept rather than defaulting to Buffet, so the migrated data stays faithful. The dry run and every real run now also check each converted row against the Convex schema validators before writing. The check is `convex/lib/schemaCheck.ts`, loaded by the CLI through `loadSchema`. It lists all problems up front instead of failing mid-batch.
+- The same `''` bug existed in the Convex app itself: choosing "Select..." in `GenericItemCard` or `PlanningTimeblockItemRow` made the save fail. `pickItemFields` in `src/lib/data/backend.ts` now converts `''` to null for food and beverage creates and updates.
+- Re-run result: the import into a fresh local deployment verified clean for all 14 tables. A second run was refused (target not empty), and the import flag was removed afterwards.
+- Worktree state:
+  - `.env.local` now selects `local:local-jboddy07-event_horizon-1`, which holds the imported data.
+  - The previous seeded database is in `.convex/local/default.seeded-backup-2026-10-10`, and its deployment name was `local-jboddy07-event_horizon`.
+  - To restore it: stop dev, swap the directories back, and restore the `CONVEX_DEPLOYMENT` line.
+- Verification: `npm test` 170 files, 1,342 tests passed. Lint, the app, Convex and script typechecks passed.
 
 ### Notes for the Step 2 detailed plan (found during Step 1)
 - Live updates: use the custom connector in `src/lib/data/liveQueries.ts`, preserving the existing key hierarchy. The unused `@convex-dev/react-query` adapter has been removed.

@@ -22,6 +22,8 @@ type TableSpec = {
   booleans?: readonly string[]
   /** Fields stored as JSON text in SQLite. */
   json?: readonly string[]
+  /** Optional enum fields where the old app could store '' for "not set"; Convex uses null. */
+  emptyAsNull?: readonly string[]
   /** Reference field → the table it points to. */
   refs?: Record<string, LegacyTable>
 }
@@ -80,11 +82,13 @@ export const LEGACY_TABLES: readonly TableSpec[] = [
   {
     table: "foodItems", sqlTable: "food_items", idColumn: "id",
     columns: columnsFor(["timeblockId", "name", "quantity", "serviceStyle", "includes", "unitPriceCents"]),
+    emptyAsNull: ["serviceStyle"],
     refs: { timeblockId: "timeblocks" },
   },
   {
     table: "beverageItems", sqlTable: "beverage_items", idColumn: "id",
     columns: columnsFor(["eventId", "name", "quantity", "type", "serviceStyle", "includes", "unitPriceCents"]),
+    emptyAsNull: ["serviceStyle"],
     refs: { eventId: "events" },
   },
   {
@@ -126,6 +130,7 @@ function convertValue(spec: TableSpec, field: string, value: unknown): unknown {
     if (value !== 0 && value !== 1) throw new Error(`${spec.table}.${field}: expected 0 or 1, got ${JSON.stringify(value)}`)
     return value === 1
   }
+  if (value === "" && spec.emptyAsNull?.includes(field)) return null
   if (spec.json?.includes(field) && typeof value === "string") return JSON.parse(value) as unknown
   return value
 }
@@ -162,6 +167,16 @@ export function findMissingReferences(data: LegacyData): string[] {
     }
   }
   return problems
+}
+
+/**
+ * Rows the deployment's schema would reject, found before anything is written.
+ * `check` returns the problems of one document (see `checkValue`); references still
+ * hold legacy IDs here, which `id` validators accept as plain strings.
+ */
+export function findSchemaProblems(data: LegacyData, check: (table: LegacyTable, fields: Fields) => string[]): string[] {
+  return LEGACY_TABLES.flatMap((spec) => data[spec.table].flatMap((row) =>
+    check(spec.table, row.fields).map((problem) => `${spec.table} ${row.legacyId ?? JSON.stringify(row.fields)}: ${problem}`)))
 }
 
 /** The document to insert: references rewritten to Convex IDs. */

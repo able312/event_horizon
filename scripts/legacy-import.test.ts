@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import { findMissingReferences, readLegacyData, type LegacyData } from "../convex/lib/legacyImport.ts"
 import { createTestDb, type TestDb } from "../src/electron/db/test/testDb.ts"
-import { formatReport, parseOptions, targetFlags } from "./legacy-import.ts"
+import { findDataProblems, formatReport, loadSchema, parseOptions, targetFlags } from "./legacy-import.ts"
 
 let testDb: TestDb
 
@@ -63,6 +63,27 @@ describe("reading the migrated SQLite schema", () => {
     const keys = read().vendorCategories.map((row) => row.fields.key)
     expect(keys.length).toBeGreaterThan(0)
     expect(new Set(keys).size).toBe(keys.length)
+  })
+})
+
+describe("pre-write checks", () => {
+  it("pass for rows the app writes", async () => {
+    seed()
+    expect(findDataProblems(read(), await loadSchema())).toEqual([])
+  })
+
+  it("report schema problems and broken references together, and convert blank service styles", async () => {
+    seed()
+    testDb.sqlite.exec(`
+      INSERT INTO food_items (id, timeblock_id, name, service_style) VALUES ('f-blank', 'tb-food', 'Soup', ''), ('f-bad', 'tb-food', 'Pie', 'Sit-down');
+      INSERT INTO payments (id, event_id, amount_cents, date, created_at) VALUES ('p-gone', 'ev-1', 1, '2026-03-02', '2026-03-02');
+    `)
+    testDb.sqlite.pragma("foreign_keys = OFF")
+    testDb.sqlite.exec("UPDATE payments SET event_id = 'ev-gone' WHERE id = 'p-gone'")
+    expect(findDataProblems(read(), await loadSchema())).toEqual([
+      "payments p-gone: eventId points to missing events ev-gone",
+      'foodItems f-bad: serviceStyle: "Sit-down" is not one of "Buffet", "Family-Style", "Plated", "Passed"',
+    ])
   })
 })
 
