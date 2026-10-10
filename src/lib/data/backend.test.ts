@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { ConvexError } from "convex/values"
 import { ContactsError } from "~/lib/contacts/contactsError"
-import { BackendAuthError, pickFields, translateBackendError } from "./backend"
+import { BackendAuthError, pickFields, pickItemFields, translateBackendError } from "./backend"
 import { resolveConvexUrl } from "./backendConfig"
 
 describe("backend errors", () => {
@@ -25,6 +25,14 @@ describe("backend errors", () => {
 
 it("filters immutable and undefined fields while preserving explicit empty values", () => {
   expect(pickFields({ id: "immutable", absent: undefined, nullable: null, count: 0, enabled: false, title: "" }, ["absent", "nullable", "count", "enabled", "title"])).toEqual({ nullable: null, count: 0, enabled: false, title: "" })
+})
+
+it("turns a blank service style into null without adding the key when absent", () => {
+  const keys = ["name", "serviceStyle"] as const
+  expect(pickItemFields({ name: "A", serviceStyle: "" }, keys)).toStrictEqual({ name: "A", serviceStyle: null })
+  expect(pickItemFields({ name: "A", serviceStyle: "Plated" }, keys)).toStrictEqual({ name: "A", serviceStyle: "Plated" })
+  expect(pickItemFields({ name: "A", serviceStyle: null }, keys)).toStrictEqual({ name: "A", serviceStyle: null })
+  expect(pickItemFields({ name: "A" } as { name: string; serviceStyle?: string }, keys)).toStrictEqual({ name: "A" })
 })
 
 it("selects only the deployment belonging to the build environment", () => {

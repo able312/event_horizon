@@ -138,6 +138,16 @@ export function pickFields<Source extends object, Key extends keyof Source>(
   return picked as Pick<Source, Key>
 }
 
+/** pickFields for food/beverage items: the "Select..." dropdown's '' becomes null, which is what the schema accepts. */
+export function pickItemFields<Source extends object, Key extends keyof Source>(
+  source: Source,
+  keys: readonly Key[],
+): Pick<Source, Key> {
+  const picked: Record<string, unknown> = pickFields(source, keys)
+  if (picked.serviceStyle === "") picked.serviceStyle = null
+  return picked as Pick<Source, Key>
+}
+
 /** Runs a live source once; cached reads use this so the fetch and the subscription share one call. */
 export async function fetchSource<Result>(source: LiveSource<Result>): Promise<Result> {
   try {
