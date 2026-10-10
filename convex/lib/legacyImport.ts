@@ -262,8 +262,9 @@ export async function importLegacyData(
 
 /**
  * Deletes everything an import wrote, so a failed or partial import can be retried.
- * Refuses, before deleting anything, if any document was written by the app (imported
- * documents have no audit fields), so it can't wipe a deployment that's in use.
+ * Refuses, before deleting anything, if any document was created or edited in the app
+ * (imported documents have no audit fields), so it can't wipe a deployment that's in use.
+ * `deletePage` repeats the check atomically, in case the app writes after this one.
  * Link rows have no audit fields; app-written ones always point at audited documents.
  */
 export async function clearLegacyImport(backend: Pick<ImportBackend, "dump" | "deletePage">, log: (message: string) => void = () => undefined): Promise<void> {
@@ -271,7 +272,7 @@ export async function clearLegacyImport(backend: Pick<ImportBackend, "dump" | "d
   for (const { table } of LEGACY_TABLES) {
     if ((await backend.dump(table)).some((doc) => doc.createdBy != null || doc.updatedBy != null)) authored.push(table)
   }
-  if (authored.length > 0) throw new Error(`Refusing to clear: records created in the app exist in ${authored.join(", ")}`)
+  if (authored.length > 0) throw new Error(`Refusing to clear: records created or edited in the app exist in ${authored.join(", ")}`)
 
   // Children first, so no document is left pointing at a deleted parent.
   for (const { table } of [...LEGACY_TABLES].reverse()) {
