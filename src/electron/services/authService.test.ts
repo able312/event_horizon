@@ -49,7 +49,7 @@ function setup(options: { stored?: string | null; clientId?: string | null; encr
   return {
     service, client, platform, close, snapshots,
     stored: () => stored,
-    callback: (query: string) => handler!(new URL(`http://localhost:42070/callback?${query}`)),
+    callback: (query: string) => handler!(new URL(`http://127.0.0.1:42070/callback?${query}`)),
     advance: (ms: number) => { now += ms },
   }
 }
@@ -121,7 +121,7 @@ describe("sign-in", () => {
     state.client.getAuthorizationUrlWithPKCE.mockResolvedValueOnce({ url: "https://auth.example/2", state: "state-2", codeVerifier: "verifier-2" })
     await state.service.signIn()
     expect(state.close).toHaveBeenCalledTimes(1)
-    expect(await first(new URL("http://localhost:42070/callback?code=abc&state=state-1"))).toMatchObject({ success: false })
+    expect(await first(new URL("http://127.0.0.1:42070/callback?code=abc&state=state-1"))).toMatchObject({ success: false })
     expect(state.client.authenticateWithCode).not.toHaveBeenCalled()
     expect(state.service.getSnapshot()).toMatchObject({ isLoading: true })
   })

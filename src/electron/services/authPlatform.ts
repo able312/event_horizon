@@ -1,9 +1,9 @@
-import { createServer, type Server } from "node:http"
+import { createServer } from "node:http"
 import fs from "node:fs"
 import path from "node:path"
 import { app, BrowserWindow, safeStorage, shell } from "electron"
 import { WorkOS } from "@workos-inc/node"
-import { AUTH_CALLBACK_PORT } from "./authConfig.js"
+import { AUTH_CALLBACK_PORT, AUTH_REDIRECT_URI } from "./authConfig.js"
 import type { AuthClient, AuthPlatform, CallbackPage } from "./authService.js"
 
 /** A public (PKCE-only) WorkOS client; no API key ships with the app. */
@@ -47,39 +47,25 @@ h1{color:${color};margin:0 0 16px;font-size:24px}p{color:#4b5563;margin:0}</styl
 <body><div class="card"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p></div></body></html>`
 }
 
-function listenOn(server: Server, host: string) {
-  return new Promise<boolean>((resolve, reject) => {
-    server.once("error", (error: NodeJS.ErrnoException) => {
-      // Machines without IPv6 can't bind ::1; IPv4 alone still serves localhost.
-      if (host === "::1" && (error.code === "EADDRNOTAVAIL" || error.code === "EAFNOSUPPORT")) resolve(false)
-      else reject(error)
-    })
-    server.listen(AUTH_CALLBACK_PORT, host, () => resolve(true))
-  })
-}
-
 /**
- * Serves the registered `http://localhost:<port>/callback` redirect on loopback only,
- * on both IPv4 and IPv6 because browsers may resolve localhost to either.
+ * Serves the registered `http://127.0.0.1:<port>/callback` redirect on IPv4 loopback only.
+ * The redirect names the IP rather than localhost: WorkOS production rejects localhost
+ * redirects but allows 127.0.0.1 for native apps (RFC 8252), and browsers never resolve it to IPv6.
  */
 async function listen(handler: (url: URL) => Promise<CallbackPage | null>) {
-  const servers = ["127.0.0.1", "::1"].map(() => createServer(async (req, res) => {
-    const page = req.method === "GET" ? await handler(new URL(req.url ?? "/", `http://localhost:${AUTH_CALLBACK_PORT}`)) : null
+  const server = createServer(async (req, res) => {
+    const page = req.method === "GET" ? await handler(new URL(req.url ?? "/", AUTH_REDIRECT_URI)) : null
     if (!page) {
       res.writeHead(404).end("Not Found")
       return
     }
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" }).end(renderPage(page))
-  }))
-  const close = () => { for (const server of servers) server.close() }
-  try {
-    await listenOn(servers[0], "127.0.0.1")
-    await listenOn(servers[1], "::1")
-  } catch (error) {
-    close()
-    throw error
-  }
-  return { close }
+  })
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject)
+    server.listen(AUTH_CALLBACK_PORT, "127.0.0.1", () => resolve())
+  })
+  return { close: () => { server.close() } }
 }
 
 function focusApp() {

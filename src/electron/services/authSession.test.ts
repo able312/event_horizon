@@ -60,7 +60,7 @@ describe("stored sessions", () => {
 })
 
 describe("callbacks", () => {
-  const url = (query: string, path = "/callback") => new URL(`http://localhost:42070${path}?${query}`)
+  const url = (query: string, path = "/callback") => new URL(`http://127.0.0.1:42070${path}?${query}`)
 
   it("returns the code only for the expected state", () => {
     expect(parseCallback(url("code=abc&state=s1"), "s1")).toEqual({ kind: "code", code: "abc" })
@@ -87,9 +87,9 @@ describe("refresh failures", () => {
 })
 
 describe("client ID", () => {
-  it("uses development in dev, fails closed when packaged, and honours an override", () => {
-    expect(resolveWorkOSClientId(false, {})).toMatch(/^client_/)
-    expect(resolveWorkOSClientId(true, {})).toBeNull()
+  it("uses development in dev, production when packaged, and honours an override", () => {
+    expect(resolveWorkOSClientId(false, {})).toBe("client_01M4EEGGBMS165EF8347V9N9MG")
+    expect(resolveWorkOSClientId(true, {})).toBe("client_01M4GQCAWTANP82H2RZ0Y5MV37")
     expect(resolveWorkOSClientId(true, { EVENT_HORIZON_WORKOS_CLIENT_ID: " client_override " })).toBe("client_override")
   })
 })

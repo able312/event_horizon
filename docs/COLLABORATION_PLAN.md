@@ -132,7 +132,7 @@ Completed:
   It also covers client-API rejection, the domain matcher, and the users upsert. Other Convex tests now call `api.*` with a company identity (`convex/lib/testIdentity.ts`). Adding an unguarded test function makes the suite fail.
 - Replaced the installer-generated Electron auth service:
   - It no longer uses `WORKOS_API_KEY`. The app is a public PKCE client (`@workos-inc/node` public-client mode).
-  - The redirect is a loopback URI, `http://localhost:42070/callback`. The server binds IPv4 and IPv6 loopback only, runs only during sign-in, and stops after 5 minutes. The callback must return the expected `state`, and HTML responses are escaped.
+  - The redirect is a loopback URI, `http://127.0.0.1:42070/callback`. It was `localhost` until 2026-10-10, but WorkOS production rejects `localhost` and allows the loopback IP for native apps. The server binds IPv4 loopback only, runs only during sign-in, and stops after 5 minutes. The callback must return the expected `state`, and HTML responses are escaped.
   - Accounts outside `westlinks.ca` are refused on the client as well, but the server check is the one that counts.
   - Token expiry is read from the JWT. Concurrent refreshes share one request, because refresh tokens are single-use. A 4xx refresh rejection signs the user out. Network failures keep the session while the token is still valid. `getAccessToken({ forceRefresh })` is ready for Convex's `setAuth` callback.
   - The session is stored only through Electron `safeStorage`. If encryption is unavailable, the session stays in memory.
@@ -430,7 +430,7 @@ Verification: `npm test` 170 files, 1,319 tests passed. Convex and script typech
 
 Not yet done:
 - A visual spot-check of migrated events and their PDFs (estimate/BEO/timeline) in the app.
-- The real import into production. Production isn't set up yet (Convex prod, WorkOS production, Google OAuth). Follow the checklist in `docs/PRODUCTION_SETUP.md`. Note that WorkOS production rejects `localhost` redirects, so the app must switch to `http://127.0.0.1:42070/callback` first.
+- The real import into production. Production isn't set up yet (Convex prod, WorkOS production, Google OAuth). Follow the checklist in `docs/PRODUCTION_SETUP.md`. Phase 1 is done: the redirect is now `http://127.0.0.1:42070/callback`, and packaged builds use the production WorkOS client ID.
 
 ### Production-copy rehearsal (2026-10-10)
 

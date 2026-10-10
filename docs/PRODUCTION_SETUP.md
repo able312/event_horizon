@@ -20,12 +20,12 @@ Tick boxes off (`[ ]` → `[x]`) as you go.
 
 The production copy is loaded into this worktree's local database, so you can look at it in the app first.
 
-- [ ] 🧑 In this worktree, run `npm run dev` and sign in.
-- [ ] 🧑 Open 4–5 events you know well, including at least one with food, beverages, carts and a tournament.
-- [ ] 🧑 For each one, open the **Estimate**, **BEO** and **Timeline** PDFs, and compare them with the old app.
-- [ ] 🧑 Check the contacts directory: names, organisations, and the roles linked to events.
-- [ ] 🧑 Note anything wrong or missing, and tell Claude.
-- [ ] 🧑 Say "data looks good" to move on.
+- [x] 🧑 In this worktree, run `npm run dev` and sign in.
+- [x] 🧑 Open 4–5 events you know well, including at least one with food, beverages, carts and a tournament.
+- [x] 🧑 For each one, open the **Estimate**, **BEO** and **Timeline** PDFs, and compare them with the old app.
+- [x] 🧑 Check the contacts directory: names, organisations, and the roles linked to events.
+- [x] 🧑 Note anything wrong or missing, and tell Claude.
+- [x] 🧑 Say "data looks good" to move on.
 
 > Four food items had a blank service style in the old app. They still show as blank (not set). If you'd rather they became **Buffet**, tell Claude before Phase 6.
 
@@ -35,13 +35,16 @@ The production copy is loaded into this worktree's local database, so you can lo
 
 Production sign-in can't work without these.
 
-- [ ] 🤖 **Change the sign-in return address** from `http://localhost:42070/callback` to `http://127.0.0.1:42070/callback`.
+- [x] 🤖 **Change the sign-in return address** from `http://localhost:42070/callback` to `http://127.0.0.1:42070/callback`.
   - *Why:* WorkOS production refuses `localhost` addresses. Its one exception is `http://127.0.0.1` for desktop apps.
-  - *Also:* update the dev WorkOS environment's redirect list to match, so dev keeps working.
-- [ ] 🤖 **Add the production WorkOS client ID** (`client_01M4GQCAWTANP82H2RZ0Y5MV37`) to `src/electron/services/authConfig.ts`.
-  - *Why:* installed builds currently refuse to sign in, on purpose, because this is empty.
-  - *Note:* this ID is public, not a secret.
-- [ ] 🤖 Run the tests, then merge this branch into `main`.
+- [x] 🤖 **Update the dev WorkOS environment's redirect list** to match. `127.0.0.1` is now the default. The old `localhost` entry stays until this PR is merged, so `main` keeps signing in. Remove it after the merge.
+- [x] 🤖 **Add the production WorkOS client ID** (`client_01M4GQCAWTANP82H2RZ0Y5MV37`) to `src/electron/services/authConfig.ts`. It's public, not a secret.
+- [x] 🤖 Run the tests (1,342 passed), lint and build.
+- [ ] 🧑 Re-test sign-in in this worktree (`npm run dev` → **Sign in**). The browser should return to `127.0.0.1:42070` and the app should sign in.
+- [ ] 🧑 Review and merge the pull request. Claude doesn't merge into `main`.
+- [ ] 🤖 After the merge, remove `http://localhost:42070/callback` from the dev WorkOS redirect list.
+
+> The WorkOS connection Claude uses can change the sandbox (dev) environment, but **not** Production. Phase 3 has to be done in the dashboard.
 
 ---
 
