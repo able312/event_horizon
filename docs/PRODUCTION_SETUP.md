@@ -181,7 +181,7 @@ Choose a quiet time. After this, the old app's data is frozen and production bec
 - [ ] 🧑 Take a **manual backup** in the Convex dashboard (Production → Backups → Backup now).
 - [ ] 🧑 Open the production build and spot-check a few events and their PDFs again.
 
-> **If something goes wrong:** the old app and its `app.sqlite` are untouched, so you can keep using the old app. A failed import rolls itself back, so you can simply run it again. If the script is interrupted, 🤖 `npm run legacy-import -- --reset --target prod` empties production (it refuses if anything was created or edited in the app), and then the import can be re-run.
+> **If something goes wrong:** the old app and its `app.sqlite` are untouched, so you can keep using the old app. A failed import rolls itself back, so you can simply run it again. If the script is interrupted, 🤖 `npm run legacy-import -- --reset --target prod` empties production, and then the import can be re-run. It lists what it will delete and asks you to type `prod`. It deletes everything, including anything made in the app, so only use it before the team starts using production. The app refuses edits while an import or reset is running.
 
 ---
 

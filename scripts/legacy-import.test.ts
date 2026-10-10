@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import { findMissingReferences, readLegacyData, type LegacyData } from "../convex/lib/legacyImport.ts"
 import { createTestDb, type TestDb } from "../src/electron/db/test/testDb.ts"
-import { findDataProblems, formatReport, loadSchema, parseOptions, targetFlags } from "./legacy-import.ts"
+import { findDataProblems, formatReport, isResetConfirmed, loadSchema, parseOptions, targetFlags } from "./legacy-import.ts"
 
 let testDb: TestDb
 
@@ -101,6 +101,13 @@ describe("CLI options", () => {
     expect(() => parseOptions(["--reset"])).toThrow(/--target/)
     expect(() => parseOptions(["--reset", "--target", "dev", "--sqlite", "app.sqlite"])).toThrow(/on its own/)
     expect(() => parseOptions(["--reset", "--target", "dev", "--dry-run"])).toThrow(/on its own/)
+  })
+
+  it("confirms --reset only when the target is typed exactly", () => {
+    expect(isResetConfirmed("prod\n", "prod")).toBe(true)
+    expect(isResetConfirmed("y", "prod")).toBe(false)
+    expect(isResetConfirmed("dev", "prod")).toBe(false)
+    expect(isResetConfirmed("", "prod")).toBe(false)
   })
 
   it("only targets the deployment this checkout selects", () => {

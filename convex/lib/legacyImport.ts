@@ -261,20 +261,12 @@ export async function importLegacyData(
 }
 
 /**
- * Deletes everything an import wrote, so a failed or partial import can be retried.
- * Refuses, before deleting anything, if any document was created or edited in the app
- * (imported documents have no audit fields), so it can't wipe a deployment that's in use.
- * App writes are refused while the import flag is on (lib/auth.ts), and `deletePage`
- * repeats the check atomically as a backstop.
- * Link rows have no audit fields; app-written ones always point at audited documents.
+ * Deletes every document in the business tables (users are kept), so a failed or
+ * partial import can be retried. It can't tell imported records from ones made in the
+ * app, so it's only for a deployment nobody is using yet: the rollback runs while app
+ * writes are refused (lib/auth.ts), and --reset shows what it will delete and asks first.
  */
-export async function clearLegacyImport(backend: Pick<ImportBackend, "dump" | "deletePage">, log: (message: string) => void = () => undefined): Promise<void> {
-  const authored: string[] = []
-  for (const { table } of LEGACY_TABLES) {
-    if ((await backend.dump(table)).some((doc) => doc.createdBy != null || doc.updatedBy != null)) authored.push(table)
-  }
-  if (authored.length > 0) throw new Error(`Refusing to clear: records created or edited in the app exist in ${authored.join(", ")}`)
-
+export async function clearLegacyImport(backend: Pick<ImportBackend, "deletePage">, log: (message: string) => void = () => undefined): Promise<void> {
   // Children first, so no document is left pointing at a deleted parent.
   for (const { table } of [...LEGACY_TABLES].reverse()) {
     let deleted = 0

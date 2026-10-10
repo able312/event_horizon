@@ -45,9 +45,9 @@ export const insertBatch = internalMutation({
 const DELETE_PAGE_SIZE = 500
 
 /**
- * Deletes up to one page of a table's documents, for rolling back a failed import.
- * Throws without deleting if the page holds a record created or edited in the app.
- * The check and the deletes are one transaction, so a concurrent app write can't slip between them.
+ * Deletes up to one page of a table's documents, for rolling back a failed import or
+ * a manual --reset. It doesn't distinguish imported records from app ones: only use it
+ * on a deployment nobody is using yet.
  */
 export const deletePage = internalMutation({
   args: { table: legacyTable },
@@ -55,12 +55,6 @@ export const deletePage = internalMutation({
   handler: async (ctx, { table }) => {
     if (process.env.EVENT_HORIZON_LEGACY_IMPORT !== "enabled") throw new Error("Legacy import is disabled on this deployment")
     const docs = await ctx.db.query(table).take(DELETE_PAGE_SIZE)
-    // Either field marks app data: edits to imported records set only updatedBy.
-    const audited = docs.some((doc) => {
-      const { createdBy, updatedBy } = doc as { createdBy?: string; updatedBy?: string }
-      return createdBy !== undefined || updatedBy !== undefined
-    })
-    if (audited) throw new Error(`${table} has records created or edited in the app; refusing to delete`)
     for (const doc of docs) await ctx.db.delete(table, doc._id as never)
     return docs.length
   },

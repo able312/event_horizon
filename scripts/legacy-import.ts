@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { register } from "node:module"
 import { dirname, resolve } from "node:path"
+import { createInterface } from "node:readline/promises"
 import { fileURLToPath } from "node:url"
 import Database from "better-sqlite3"
 import {
@@ -26,7 +27,9 @@ import { checkValue, type ValidatorShape } from "../convex/lib/schemaCheck.ts"
 //   npm run legacy-import -- --reset --target local|dev|prod
 //
 // A failed import rolls itself back. --reset empties the deployment by hand (e.g.
-// if the script was killed mid-import); it refuses if the app has written anything.
+// if the script was killed mid-import): it lists what it will delete and asks you to
+// type the target to confirm. It can't tell imported records from app ones, so only
+// use it before anyone uses the deployment.
 //
 // The SQLite file is opened read-only. Quit the app first so the file isn't
 // changing. The ID map (legacy UUID → Convex ID) is written under .event-horizon/.
@@ -145,6 +148,11 @@ export function formatReport(reports: readonly TableReport[]): string {
   }).join("\n")
 }
 
+/** --reset goes ahead only if the answer is exactly the target's name. */
+export function isResetConfirmed(answer: string, target: Target): boolean {
+  return answer.trim() === target
+}
+
 /** Runs `work` with the deployment's import functions switched on, then switches them off. */
 async function withImportEnabled<T>(flags: string[], work: () => Promise<T>): Promise<T> {
   convex(["env", "set", IMPORT_FLAG, "enabled"], flags)
@@ -160,8 +168,18 @@ async function main(): Promise<void> {
   const options = parseOptions(process.argv.slice(2))
   if (options.reset) {
     const flags = targetFlags(options.target!, readFileSync(resolve(".env.local"), "utf8"), resolve(".env.local"))
-    console.log(`Emptying the ${options.target} deployment…`)
-    await withImportEnabled(flags, () => clearLegacyImport(convexBackend(flags), (message) => console.log(`  ${message}`)))
+    const backend = convexBackend(flags)
+    console.log(`The ${options.target} deployment holds (users are kept):`)
+    for (const { table } of LEGACY_TABLES) console.log(`  ${table}: ${(await backend.dump(table)).length}`)
+    const prompt = createInterface({ input: process.stdin, output: process.stdout })
+    const answer = await prompt.question(`This deletes ALL of it, including anything created in the app. Type "${options.target}" to confirm: `)
+    prompt.close()
+    if (!isResetConfirmed(answer, options.target!)) {
+      console.log("Not confirmed; nothing was deleted.")
+      process.exitCode = 1
+      return
+    }
+    await withImportEnabled(flags, () => clearLegacyImport(backend, (message) => console.log(`  ${message}`)))
     console.log("The deployment is empty and ready for an import.")
     return
   }

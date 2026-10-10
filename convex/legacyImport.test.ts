@@ -328,16 +328,6 @@ describe("importing into Convex", () => {
 })
 
 describe("recovering from a failed import", () => {
-  /** App writes are refused while the import flag is on, so this switches it off around one. */
-  async function asApp<T>(write: () => Promise<T>): Promise<T> {
-    vi.stubEnv("EVENT_HORIZON_LEGACY_IMPORT", undefined)
-    try {
-      return await write()
-    } finally {
-      vi.stubEnv("EVENT_HORIZON_LEGACY_IMPORT", "enabled")
-    }
-  }
-
   it("refuses app writes while an import or reset is running, except storing the signed-in user", async () => {
     const t = convexTest(schema, modules)
     const asStaff = t.withIdentity(companyIdentity)
@@ -382,35 +372,6 @@ describe("recovering from a failed import", () => {
     await clearLegacyImport(backend)
     expect(await t.query(internal.legacyImport.nonEmptyTables, {})).toEqual([])
     await importLegacyData(legacyData(), backend)
-  })
-
-  it("refuses to clear a deployment the app has written to, and deletes nothing", async () => {
-    const t = convexTest(schema, modules)
-    const backend = backendFor(t)
-    await importLegacyData(legacyData(), backend)
-    await asApp(() => t.withIdentity(companyIdentity).mutation(api.events.create, { input: { title: "Gala" } }))
-
-    await expect(clearLegacyImport(backend)).rejects.toThrow(/created or edited in the app exist in events/)
-    expect(await t.run((ctx) => ctx.db.query("events").collect())).toHaveLength(3)
-    expect(await t.run((ctx) => ctx.db.query("eventContacts").collect())).toHaveLength(2)
-    // The mutation guards itself too.
-    await expect(t.mutation(internal.legacyImport.deletePage, { table: "events" })).rejects.toThrow(/created or edited in the app/)
-  })
-
-  it("refuses to delete an imported record edited in the app, which has only updatedBy", async () => {
-    const t = convexTest(schema, modules)
-    const backend = backendFor(t)
-    const idMap = await importLegacyData(legacyData(), backend)
-    const eventId = idMap.get("events:ev-2") as Id<"events">
-    await asApp(() => t.withIdentity(companyIdentity).mutation(api.events.update, { id: eventId, updates: { status: "confirmed" } }))
-    const edited = await t.run((ctx) => ctx.db.get("events", eventId))
-    expect(edited).not.toHaveProperty("createdBy")
-    expect(edited?.updatedBy).toBeDefined()
-
-    // Both the preflight and the mutation itself (in case the edit lands after the preflight).
-    await expect(clearLegacyImport(backend)).rejects.toThrow(/exist in events/)
-    await expect(t.mutation(internal.legacyImport.deletePage, { table: "events" })).rejects.toThrow(/created or edited in the app/)
-    expect(await t.run((ctx) => ctx.db.query("events").collect())).toHaveLength(2)
   })
 
   it("refuses to delete unless the deployment has enabled the import", async () => {
