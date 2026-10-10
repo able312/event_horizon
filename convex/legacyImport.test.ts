@@ -6,6 +6,7 @@ import type { Id } from "./_generated/dataModel"
 import {
   LEGACY_TABLES,
   chunkBySize,
+  clearLegacyImport,
   findMissingReferences,
   findSchemaProblems,
   importLegacyData,
@@ -104,6 +105,7 @@ function backendFor(t: ReturnType<typeof convexTest>): ImportBackend {
         cursor = page.continueCursor
       }
     },
+    deletePage: (table) => t.mutation(internal.legacyImport.deletePage, { table }),
   }
 }
 
@@ -322,5 +324,64 @@ describe("importing into Convex", () => {
     expect(problems.touchpoints).toEqual(["expected 1 documents, found 0", "t-1: missing"])
     expect(problems.beverageItemTimeblocks).toEqual(["link rows differ"])
     expect(problems.events).toEqual([])
+  })
+})
+
+describe("recovering from a failed import", () => {
+  /** Fails the first insert into `table`; with `afterCommit`, only after the mutation has committed. */
+  function failingAt(t: ReturnType<typeof convexTest>, table: LegacyTable, afterCommit = false): ImportBackend {
+    const backend = backendFor(t)
+    return {
+      ...backend,
+      insertBatch: async (target, docs) => {
+        if (target !== table) return backend.insertBatch(target, docs)
+        if (afterCommit) await backend.insertBatch(target, docs)
+        throw new Error("network error")
+      },
+    }
+  }
+
+  it.each([false, true])("rolls back everything written so the import can be retried (committed before failing: %s)", async (afterCommit) => {
+    const t = convexTest(schema, modules)
+    await expect(importLegacyData(legacyData(), failingAt(t, "foodItems", afterCommit))).rejects.toThrow(/rolled back.*Cause: network error/)
+    expect(await t.query(internal.legacyImport.nonEmptyTables, {})).toEqual([])
+
+    const backend = backendFor(t)
+    const idMap = await importLegacyData(legacyData(), backend)
+    expect((await verifyLegacyImport(legacyData(), idMap, backend)).flatMap((report) => report.problems)).toEqual([])
+  })
+
+  it("points at --reset when the rollback fails too", async () => {
+    const t = convexTest(schema, modules)
+    const backend: ImportBackend = { ...failingAt(t, "foodItems"), deletePage: () => Promise.reject(new Error("offline")) }
+    await expect(importLegacyData(legacyData(), backend)).rejects.toThrow(/network error\) and so did the rollback \(offline\).*--reset/)
+  })
+
+  it("clears a partial import left behind by a killed run, then allows a fresh import", async () => {
+    const t = convexTest(schema, modules)
+    const backend = backendFor(t)
+    await importLegacyData(legacyData(), backend)
+    await clearLegacyImport(backend)
+    expect(await t.query(internal.legacyImport.nonEmptyTables, {})).toEqual([])
+    await importLegacyData(legacyData(), backend)
+  })
+
+  it("refuses to clear a deployment the app has written to, and deletes nothing", async () => {
+    const t = convexTest(schema, modules)
+    const backend = backendFor(t)
+    await importLegacyData(legacyData(), backend)
+    await t.withIdentity(companyIdentity).mutation(api.events.create, { input: { title: "Gala" } })
+
+    await expect(clearLegacyImport(backend)).rejects.toThrow(/created in the app exist in events/)
+    expect(await t.run((ctx) => ctx.db.query("events").collect())).toHaveLength(3)
+    expect(await t.run((ctx) => ctx.db.query("eventContacts").collect())).toHaveLength(2)
+    // The mutation guards itself too.
+    await expect(t.mutation(internal.legacyImport.deletePage, { table: "events" })).rejects.toThrow(/created in the app/)
+  })
+
+  it("refuses to delete unless the deployment has enabled the import", async () => {
+    vi.stubEnv("EVENT_HORIZON_LEGACY_IMPORT", undefined)
+    const t = convexTest(schema, modules)
+    await expect(t.mutation(internal.legacyImport.deletePage, { table: "events" })).rejects.toThrow(/disabled/)
   })
 })

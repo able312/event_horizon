@@ -218,6 +218,8 @@ export type ImportBackend = {
   insertBatch: (table: LegacyTable, docs: Fields[]) => Promise<string[]>
   /** Every document in a table, with `_id`. */
   dump: (table: LegacyTable) => Promise<Fields[]>
+  /** Deletes up to one page of imported documents from a table, returning how many it deleted. */
+  deletePage: (table: LegacyTable) => Promise<number>
 }
 
 const BATCH_BYTES = 200_000
@@ -230,19 +232,53 @@ export async function importLegacyData(
   const missing = findMissingReferences(data)
   if (missing.length > 0) throw new Error(`The SQLite data has broken references:\n${missing.join("\n")}`)
   const occupied = await backend.nonEmptyTables()
-  if (occupied.length > 0) throw new Error(`The target deployment already has data in: ${occupied.join(", ")}. Import only into an empty deployment.`)
+  if (occupied.length > 0) throw new Error(`The target deployment already has data in: ${occupied.join(", ")}. Import only into an empty deployment, or empty it after a failed import with --reset.`)
 
   const idMap: LegacyIdMap = new Map()
-  for (const spec of LEGACY_TABLES) {
-    const rows = data[spec.table]
-    for (const batch of chunkBySize(rows.map((row) => ({ row, doc: toConvexDocument(spec, row.fields, idMap) })), BATCH_BYTES)) {
-      const ids = await backend.insertBatch(spec.table, batch.map(({ doc }) => doc))
-      if (ids.length !== batch.length) throw new Error(`${spec.table}: inserted ${ids.length} of ${batch.length} rows`)
-      batch.forEach(({ row }, index) => { if (row.legacyId) idMap.set(mapKey(spec.table, row.legacyId), ids[index]) })
+  try {
+    for (const spec of LEGACY_TABLES) {
+      const rows = data[spec.table]
+      for (const batch of chunkBySize(rows.map((row) => ({ row, doc: toConvexDocument(spec, row.fields, idMap) })), BATCH_BYTES)) {
+        const ids = await backend.insertBatch(spec.table, batch.map(({ doc }) => doc))
+        if (ids.length !== batch.length) throw new Error(`${spec.table}: inserted ${ids.length} of ${batch.length} rows`)
+        batch.forEach(({ row }, index) => { if (row.legacyId) idMap.set(mapKey(spec.table, row.legacyId), ids[index]) })
+      }
+      log(`imported ${spec.table}: ${rows.length}`)
     }
-    log(`${spec.table}: ${rows.length}`)
+  } catch (error) {
+    // The deployment was empty, so removing everything restores it, including a batch
+    // whose commit was never confirmed (e.g. the CLI failed after the mutation ran).
+    const reason = error instanceof Error ? error.message : String(error)
+    try {
+      await clearLegacyImport(backend, log)
+    } catch (rollbackError) {
+      const rollbackReason = rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
+      throw new Error(`The import failed (${reason}) and so did the rollback (${rollbackReason}). Run the import again with --reset to empty the deployment, then retry.`)
+    }
+    throw new Error(`The import failed and was rolled back, so the deployment is empty again and the import can be retried. Cause: ${reason}`)
   }
   return idMap
+}
+
+/**
+ * Deletes everything an import wrote, so a failed or partial import can be retried.
+ * Refuses, before deleting anything, if any document was written by the app (imported
+ * documents have no audit fields), so it can't wipe a deployment that's in use.
+ * Link rows have no audit fields; app-written ones always point at audited documents.
+ */
+export async function clearLegacyImport(backend: Pick<ImportBackend, "dump" | "deletePage">, log: (message: string) => void = () => undefined): Promise<void> {
+  const authored: string[] = []
+  for (const { table } of LEGACY_TABLES) {
+    if ((await backend.dump(table)).some((doc) => doc.createdBy != null || doc.updatedBy != null)) authored.push(table)
+  }
+  if (authored.length > 0) throw new Error(`Refusing to clear: records created in the app exist in ${authored.join(", ")}`)
+
+  // Children first, so no document is left pointing at a deleted parent.
+  for (const { table } of [...LEGACY_TABLES].reverse()) {
+    let deleted = 0
+    for (let count = await backend.deletePage(table); count > 0; count = await backend.deletePage(table)) deleted += count
+    if (deleted > 0) log(`${table}: deleted ${deleted}`)
+  }
 }
 
 export type TableReport = { table: LegacyTable; source: number; target: number; problems: string[] }

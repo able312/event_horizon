@@ -40,6 +40,7 @@ const CLI_ONLY_FUNCTIONS = new Set([
   "./developmentSeed.ts:seed",
   "./legacyImport.ts:nonEmptyTables",
   "./legacyImport.ts:insertBatch",
+  "./legacyImport.ts:deletePage",
   "./legacyImport.ts:dump",
 ])
 

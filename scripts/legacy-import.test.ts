@@ -92,8 +92,15 @@ describe("CLI options", () => {
     expect(() => parseOptions([])).toThrow(/--sqlite/)
     expect(() => parseOptions(["--sqlite", "app.sqlite"])).toThrow(/--target/)
     expect(() => parseOptions(["--sqlite", "app.sqlite", "--target", "staging"])).toThrow(/local, dev or prod/)
-    expect(parseOptions(["--sqlite", "app.sqlite", "--dry-run"])).toEqual({ sqlite: "app.sqlite", dryRun: true, target: null })
-    expect(parseOptions(["--sqlite", "app.sqlite", "--target", "prod"])).toEqual({ sqlite: "app.sqlite", dryRun: false, target: "prod" })
+    expect(parseOptions(["--sqlite", "app.sqlite", "--dry-run"])).toEqual({ sqlite: "app.sqlite", dryRun: true, reset: false, target: null })
+    expect(parseOptions(["--sqlite", "app.sqlite", "--target", "prod"])).toEqual({ sqlite: "app.sqlite", dryRun: false, reset: false, target: "prod" })
+  })
+
+  it("runs --reset on its own against an explicit target", () => {
+    expect(parseOptions(["--reset", "--target", "prod"])).toEqual({ sqlite: null, dryRun: false, reset: true, target: "prod" })
+    expect(() => parseOptions(["--reset"])).toThrow(/--target/)
+    expect(() => parseOptions(["--reset", "--target", "dev", "--sqlite", "app.sqlite"])).toThrow(/on its own/)
+    expect(() => parseOptions(["--reset", "--target", "dev", "--dry-run"])).toThrow(/on its own/)
   })
 
   it("only targets the deployment this checkout selects", () => {

@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url"
 import Database from "better-sqlite3"
 import {
   LEGACY_TABLES,
+  clearLegacyImport,
   findMissingReferences,
   findSchemaProblems,
   importLegacyData,
@@ -22,6 +23,10 @@ import { checkValue, type ValidatorShape } from "../convex/lib/schemaCheck.ts"
 //
 //   npm run legacy-import -- --sqlite <path> --dry-run
 //   npm run legacy-import -- --sqlite <path> --target local|dev|prod
+//   npm run legacy-import -- --reset --target local|dev|prod
+//
+// A failed import rolls itself back. --reset empties the deployment by hand (e.g.
+// if the script was killed mid-import); it refuses if the app has written anything.
 //
 // The SQLite file is opened read-only. Quit the app first so the file isn't
 // changing. The ID map (legacy UUID → Convex ID) is written under .event-horizon/.
@@ -31,20 +36,26 @@ const IMPORT_FLAG = "EVENT_HORIZON_LEGACY_IMPORT"
 
 export type Target = "local" | "dev" | "prod"
 
-type Options = { sqlite: string; dryRun: boolean; target: Target | null }
+type Options = { sqlite: string | null; dryRun: boolean; reset: boolean; target: Target | null }
 
 export function parseOptions(argv: readonly string[]): Options {
   const value = (flag: string) => {
     const index = argv.indexOf(flag)
     return index >= 0 ? argv[index + 1] : undefined
   }
-  const sqlite = value("--sqlite")
-  if (!sqlite) throw new Error("Pass --sqlite <path to app.sqlite>")
+  const sqlite = value("--sqlite") ?? null
   const dryRun = argv.includes("--dry-run")
+  const reset = argv.includes("--reset")
   const target = value("--target") ?? null
   if (target !== null && target !== "local" && target !== "dev" && target !== "prod") throw new Error("--target must be local, dev or prod")
+  if (reset) {
+    if (sqlite || dryRun) throw new Error("--reset only empties the deployment; run it on its own with --target")
+    if (!target) throw new Error("Pass --target local|dev|prod with --reset")
+    return { sqlite: null, dryRun: false, reset: true, target }
+  }
+  if (!sqlite) throw new Error("Pass --sqlite <path to app.sqlite>")
   if (!dryRun && !target) throw new Error("Pass --target local|dev|prod (or --dry-run to only read the SQLite file)")
-  return { sqlite, dryRun, target }
+  return { sqlite, dryRun, reset: false, target }
 }
 
 /**
@@ -86,6 +97,7 @@ function convexBackend(flags: string[]): ImportBackend {
         cursor = page.continueCursor
       }
     },
+    deletePage: async (table) => run<number>("legacyImport:deletePage", { table }),
   }
 }
 
@@ -133,10 +145,27 @@ export function formatReport(reports: readonly TableReport[]): string {
   }).join("\n")
 }
 
+/** Runs `work` with the deployment's import functions switched on, then switches them off. */
+async function withImportEnabled<T>(flags: string[], work: () => Promise<T>): Promise<T> {
+  convex(["env", "set", IMPORT_FLAG, "enabled"], flags)
+  try {
+    return await work()
+  } finally {
+    convex(["env", "remove", IMPORT_FLAG], flags)
+  }
+}
+
 async function main(): Promise<void> {
   if (process.env.CONVEX_DEPLOY_KEY || process.env.CONVEX_SELF_HOSTED_URL) throw new Error("Unset Convex deployment overrides before importing")
   const options = parseOptions(process.argv.slice(2))
-  const data = readSqlite(resolve(options.sqlite))
+  if (options.reset) {
+    const flags = targetFlags(options.target!, readFileSync(resolve(".env.local"), "utf8"), resolve(".env.local"))
+    console.log(`Emptying the ${options.target} deployment…`)
+    await withImportEnabled(flags, () => clearLegacyImport(convexBackend(flags), (message) => console.log(`  ${message}`)))
+    console.log("The deployment is empty and ready for an import.")
+    return
+  }
+  const data = readSqlite(resolve(options.sqlite!))
 
   console.log("SQLite rows:")
   for (const { table } of LEGACY_TABLES) console.log(`  ${table}: ${data[table].length}`)
@@ -153,13 +182,7 @@ async function main(): Promise<void> {
   const flags = targetFlags(options.target!, readFileSync(envFilePath, "utf8"), envFilePath)
   const backend = convexBackend(flags)
   console.log(`Importing into the ${options.target} deployment…`)
-  convex(["env", "set", IMPORT_FLAG, "enabled"], flags)
-  let idMap
-  try {
-    idMap = await importLegacyData(data, backend, (message) => console.log(`  imported ${message}`))
-  } finally {
-    convex(["env", "remove", IMPORT_FLAG], flags)
-  }
+  const idMap = await withImportEnabled(flags, () => importLegacyData(data, backend, (message) => console.log(`  ${message}`)))
 
   const mapPath = resolve(".event-horizon/legacy-import", `id-map-${options.target}-${new Date().toISOString().replace(/[:.]/g, "-")}.json`)
   mkdirSync(dirname(mapPath), { recursive: true })

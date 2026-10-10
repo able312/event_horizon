@@ -42,6 +42,24 @@ export const insertBatch = internalMutation({
   },
 })
 
+const DELETE_PAGE_SIZE = 500
+
+/**
+ * Deletes up to one page of a table's documents, for rolling back a failed import.
+ * Throws without deleting if the page holds a record created in the app.
+ */
+export const deletePage = internalMutation({
+  args: { table: legacyTable },
+  returns: v.number(),
+  handler: async (ctx, { table }) => {
+    if (process.env.EVENT_HORIZON_LEGACY_IMPORT !== "enabled") throw new Error("Legacy import is disabled on this deployment")
+    const docs = await ctx.db.query(table).take(DELETE_PAGE_SIZE)
+    if (docs.some((doc) => "createdBy" in doc && (doc.createdBy || doc.updatedBy))) throw new Error(`${table} has records created in the app; refusing to delete`)
+    for (const doc of docs) await ctx.db.delete(table, doc._id as never)
+    return docs.length
+  },
+})
+
 /** One page of a table's raw documents, for verifying an import. */
 export const dump = internalQuery({
   args: { table: legacyTable, paginationOpts: paginationOptsValidator },
