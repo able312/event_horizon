@@ -15,11 +15,14 @@ function wrapper({ children }: PropsWithChildren) {
 it("recovers real state under Strict Mode without duplicate listeners or announcements", async () => {
   vi.stubEnv("DEV", false)
   const listeners = new Set<(snapshot: UpdaterSnapshot) => void>()
-  window.api = { updater: {
-    getStatus: vi.fn(async () => ({ revision: 2, status: { phase: "ready", version: "0.1.1" } } as const)),
-    onStatusChanged: listener => { listeners.add(listener); return () => { listeners.delete(listener) } },
-    restartAndInstall: vi.fn(),
-  } }
+  window.api = {
+    updater: {
+      getStatus: vi.fn(async () => ({ revision: 2, status: { phase: "ready", version: "0.1.1" } } as const)),
+      onStatusChanged: listener => { listeners.add(listener); return () => { listeners.delete(listener) } },
+      restartAndInstall: vi.fn(),
+    },
+    auth: { getStatus: vi.fn(), signIn: vi.fn(), signOut: vi.fn(), getAccessToken: vi.fn(), onStatusChanged: vi.fn() },
+  }
   const hook = renderHook(() => useUpdater(), { wrapper })
   await waitFor(() => expect(hook.result.current.updater.status.phase).toBe("ready"))
   expect(listeners.size).toBe(1)
@@ -35,7 +38,10 @@ it("recovers real state under Strict Mode without duplicate listeners or announc
 it("keeps development simulation independent of the main updater", () => {
   vi.stubEnv("DEV", true)
   const subscribe = vi.fn()
-  window.api = { updater: { getStatus: vi.fn(), onStatusChanged: subscribe, restartAndInstall: vi.fn() } }
+  window.api = {
+    updater: { getStatus: vi.fn(), onStatusChanged: subscribe, restartAndInstall: vi.fn() },
+    auth: { getStatus: vi.fn(), signIn: vi.fn(), signOut: vi.fn(), getAccessToken: vi.fn(), onStatusChanged: vi.fn() },
+  }
   const hook = renderHook(() => useUpdater(), { wrapper })
   act(() => { hook.result.current.dispatch({ type: ACTIONS.STATUS_CHANGED, status: { phase: "ready", version: "simulated" } }) })
   expect(subscribe).not.toHaveBeenCalled()

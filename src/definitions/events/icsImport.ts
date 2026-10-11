@@ -28,6 +28,8 @@ export interface IcsImportReviewRow {
   status: IcsImportRowStatus
   invalidReason: IcsInvalidReason | null
   isAllDay: boolean
+  /** Notes to store on the imported event; set only on importable rows. */
+  internalNotes: string | null
   warnings: IcsImportWarningFlags
 }
 
@@ -41,17 +43,33 @@ export interface IcsImportReviewSummary {
   possibleDuplicateWarningsCount: number
 }
 
-export interface IcsImportReviewPayload {
-  sessionId: string
+/**
+ * Rows parsed from an .ics file by the main process, before they are checked
+ * against existing events. No row is a duplicate or carries warnings yet.
+ */
+export interface IcsImportParsedPayload {
   sourceFileName: string
   generatedAtIso: string
   rows: IcsImportReviewRow[]
+}
+
+export interface IcsImportReviewPayload extends IcsImportParsedPayload {
   summary: IcsImportReviewSummary
 }
 
-export interface IcsImportCommitRequest {
-  sessionId: string
-  selectedRowIds: string[]
+/** An event to create from an imported calendar row. */
+export interface IcsImportEventInput {
+  calendarId: string
+  title: string
+  startDateTime: string
+  endDateTime: string
+  internalNotes: string | null
+}
+
+export interface IcsImportInsertResult {
+  inserted: Event[]
+  /** Calendar ids skipped because an event already has them. */
+  duplicateCalendarIds: string[]
 }
 
 export interface IcsImportCommitResult {

@@ -15,28 +15,17 @@ import {
   selectPrimaryClient,
   selectPrintableContactGroups,
 } from "~/features/contacts/lib/eventContactsPanel"
-import * as contactRolesApi from "~/lib/ipc/contactRoles"
-import * as contactsApi from "~/lib/ipc/contacts"
-import * as eventContactsApi from "~/lib/ipc/eventContacts"
-import * as vendorCategoriesApi from "~/lib/ipc/vendorCategories"
+import * as contactRolesApi from "~/lib/data/contactRoles"
+import * as contactsApi from "~/lib/data/contacts"
+import * as eventContactsApi from "~/lib/data/eventContacts"
+import {
+  contactQueries,
+  eventContactKeys,
+  eventContactQueries,
+  vendorCategoryQueries,
+} from "~/lib/data/queries"
 
 const CONTACT_SEARCH_LIMIT = 20
-
-const eventContactsRootKey = ["event-contacts"] as const
-export const eventContactsQueryKey = (eventId: string) => [...eventContactsRootKey, eventId] as const
-/** Batched primary clients for list views; any contact change on any event can affect them. */
-export const PRIMARY_CLIENTS_QUERY_KEY_PREFIX = [...eventContactsRootKey, "primary-clients"] as const
-const contactsRootKey = ["contacts"] as const
-
-/** Invalidates the whole event-contacts cache: every event's panel plus the primary-clients batch. */
-function invalidateAllEventContacts(queryClient: ReturnType<typeof useQueryClient>) {
-  void queryClient.invalidateQueries({ queryKey: eventContactsRootKey })
-}
-
-/** Invalidates the directory: search results, by-id lookups, standing roles, and event history. */
-function invalidateContactsDirectory(queryClient: ReturnType<typeof useQueryClient>) {
-  void queryClient.invalidateQueries({ queryKey: contactsRootKey })
-}
 
 export type AssignEventContactVariables = {
   target: AssignContactTarget
@@ -63,42 +52,23 @@ function withoutEventContact(panel: EventContactsPanel, eventContactId: string):
 
 export function useEventContacts(eventId: string) {
   const queryClient = useQueryClient()
-  const queryKey = eventContactsQueryKey(eventId)
+  const queryKey = eventContactKeys.panel(eventId)
 
   const query = useQuery({
-    queryKey,
+    ...eventContactQueries.panel(eventId),
     enabled: Boolean(eventId),
-    queryFn: () => eventContactsApi.getEventContactsPanel(eventId),
   })
-
-  const invalidatePanel = () => {
-    void queryClient.invalidateQueries({ queryKey })
-    void queryClient.invalidateQueries({ queryKey: PRIMARY_CLIENTS_QUERY_KEY_PREFIX })
-  }
-
-  // Assigning/saving can create or change a contact, which changes directory search and by-id results
-  const invalidateDirectory = () => {
-    void queryClient.invalidateQueries({ queryKey: contactsRootKey })
-  }
 
   /** Errors are left to the caller so the add dialog can react to EmailTaken inline. */
   const assignMutation = useMutation({
     mutationFn: ({ target, role, opts }: AssignEventContactVariables) =>
       eventContactsApi.assignEventContact(eventId, target, role, opts),
-    onSettled: () => {
-      invalidatePanel()
-      invalidateDirectory()
-    },
   })
 
   /** Saves the contact's own details and the event-specific assignment fields together: both or neither. */
   const saveMutation = useMutation({
     mutationFn: ({ eventContactId, contact, assignment }: SaveEventContactVariables) =>
       eventContactsApi.updateEventContactWithContact(eventContactId, contact, assignment),
-    onSettled: () => {
-      invalidatePanel()
-      invalidateDirectory()
-    },
   })
 
   const setPrimaryMutation = useMutation({
@@ -106,7 +76,6 @@ export function useEventContacts(eventId: string) {
     onError: (err) => {
       toast.error(getContactsErrorMessage(err, "Failed to set primary contact"))
     },
-    onSettled: invalidatePanel,
   })
 
   const removeMutation = useMutation({
@@ -125,7 +94,6 @@ export function useEventContacts(eventId: string) {
       }
       toast.error(getContactsErrorMessage(err, "Failed to remove contact"))
     },
-    onSettled: invalidatePanel,
   })
 
   return {
@@ -142,9 +110,8 @@ export function useEventContacts(eventId: string) {
 /** The event's primary client. Shares the panel's cache, so it updates as soon as contacts are edited. */
 export function usePrimaryClient(eventId: string | undefined) {
   return useQuery({
-    queryKey: eventContactsQueryKey(eventId ?? ""),
+    ...eventContactQueries.panel(eventId ?? ""),
     enabled: Boolean(eventId),
-    queryFn: () => eventContactsApi.getEventContactsPanel(eventId!),
     select: selectPrimaryClient,
   })
 }
@@ -152,21 +119,21 @@ export function usePrimaryClient(eventId: string | undefined) {
 /** Every client, coordinator and vendor with contact details, grouped by role, for printed documents. */
 export function usePrintableContactGroups(eventId: string | undefined) {
   return useQuery({
-    queryKey: eventContactsQueryKey(eventId ?? ""),
+    ...eventContactQueries.panel(eventId ?? ""),
     enabled: Boolean(eventId),
-    queryFn: () => eventContactsApi.getEventContactsPanel(eventId!),
     select: selectPrintableContactGroups,
   })
 }
 
 /** Primary client per event id, fetched in one call so list views avoid a request per event. */
 export function usePrimaryClients(eventIds: string[]) {
-  const ids = [...new Set(eventIds)].sort()
+  // Event creation adds a temp_ row to the calendar cache before the server
+  // returns its ID. It has no saved contacts yet and cannot be queried in Convex.
+  const ids = [...new Set(eventIds.filter((id) => !id.startsWith("temp_")))].sort()
   return useQuery({
-    queryKey: [...PRIMARY_CLIENTS_QUERY_KEY_PREFIX, ids],
+    ...eventContactQueries.primaryClients(ids),
     enabled: ids.length > 0,
     placeholderData: keepPreviousData,
-    queryFn: () => eventContactsApi.getPrimaryClients(ids),
   })
 }
 
@@ -178,25 +145,15 @@ export type ContactSearchFilters = {
 
 /** Directory search, used by both the add-contact dialog and the Contacts page. Keeps the last results visible while typing. */
 export function useContactSearch(query: string, enabled: boolean, filters?: ContactSearchFilters) {
-  const trimmed = query.trim()
   return useQuery({
-    queryKey: [
-      ...contactsRootKey,
-      "search",
-      trimmed,
-      filters?.role ?? null,
-      filters?.includeArchived ?? false,
-      filters?.limit ?? CONTACT_SEARCH_LIMIT,
-    ],
+    ...contactQueries.search({
+      query: query.trim(),
+      role: filters?.role ?? null,
+      includeArchived: filters?.includeArchived ?? false,
+      limit: filters?.limit ?? CONTACT_SEARCH_LIMIT,
+    }),
     enabled,
     placeholderData: keepPreviousData,
-    queryFn: () =>
-      contactsApi.searchContacts({
-        query: trimmed,
-        limit: filters?.limit ?? CONTACT_SEARCH_LIMIT,
-        role: filters?.role,
-        includeArchived: filters?.includeArchived,
-      }),
   })
 }
 
@@ -208,42 +165,27 @@ export type ContactDirectoryFilters = {
 
 /** Contacts page list: loads one page at a time and appends the next on request, so no contact is out of reach. */
 export function useContactDirectory(query: string, filters: ContactDirectoryFilters) {
-  const trimmed = query.trim()
   return useInfiniteQuery({
-    queryKey: [
-      ...contactsRootKey,
-      "directory",
-      trimmed,
-      filters.role ?? null,
-      filters.includeArchived ?? false,
-      filters.pageSize,
-    ],
+    ...contactQueries.directory({
+      query: query.trim(),
+      role: filters.role ?? null,
+      includeArchived: filters.includeArchived ?? false,
+      limit: filters.pageSize,
+    }),
     placeholderData: keepPreviousData,
-    initialPageParam: null as string | null,
-    queryFn: ({ pageParam }) =>
-      contactsApi.searchContacts({
-        query: trimmed,
-        limit: filters.pageSize,
-        cursor: pageParam,
-        role: filters.role,
-        includeArchived: filters.includeArchived,
-      }),
-    getNextPageParam: (lastPage) => lastPage.nextCursor,
   })
 }
 
 export function useContact(contactId: string | null) {
   return useQuery({
-    queryKey: [...contactsRootKey, "by-id", contactId],
+    ...contactQueries.byId(contactId ?? ""),
     enabled: Boolean(contactId),
-    queryFn: () => contactsApi.getContactById(contactId!),
   })
 }
 
 export function useVendorCategories() {
   return useQuery({
-    queryKey: ["vendor-categories"],
-    queryFn: () => vendorCategoriesApi.getVendorCategories(),
+    ...vendorCategoryQueries.all(),
     staleTime: Infinity,
   })
 }
@@ -254,10 +196,8 @@ export function useVendorCategories() {
 
 /** Errors are left to the caller so the create/edit form can react to EmailTaken inline. */
 export function useCreateContact() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: NewContact) => contactsApi.createContact(input),
-    onSettled: () => invalidateContactsDirectory(queryClient),
   })
 }
 
@@ -265,88 +205,62 @@ type UpdateContactVariables = { id: string; patch: UpdateContact }
 
 /** Errors are left to the caller so the edit form can react to EmailTaken inline. */
 export function useUpdateContact() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ id, patch }: UpdateContactVariables) => contactsApi.updateContact(id, patch),
-    onSettled: () => {
-      invalidateContactsDirectory(queryClient)
-      invalidateAllEventContacts(queryClient)
-    },
   })
 }
 
 export function useArchiveContact() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => contactsApi.archiveContact(id),
     onError: (err) => toast.error(getContactsErrorMessage(err, "Failed to archive contact")),
-    onSettled: () => {
-      invalidateContactsDirectory(queryClient)
-      invalidateAllEventContacts(queryClient)
-    },
   })
 }
 
 export function useRestoreContact() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => contactsApi.restoreContact(id),
     onError: (err) => toast.error(getContactsErrorMessage(err, "Failed to restore contact")),
-    onSettled: () => {
-      invalidateContactsDirectory(queryClient)
-      invalidateAllEventContacts(queryClient)
-    },
   })
 }
 
 /** Errors are left to the caller so the page can distinguish ContactInUse from other failures. */
 export function useDeleteContact() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => contactsApi.deleteContact(id),
-    onSettled: () => {
-      invalidateContactsDirectory(queryClient)
-      invalidateAllEventContacts(queryClient)
-    },
   })
 }
 
 export function useContactRoles(contactId: string | null) {
   return useQuery({
-    queryKey: [...contactsRootKey, "roles", contactId],
+    ...contactQueries.roles(contactId ?? ""),
     enabled: Boolean(contactId),
-    queryFn: () => contactRolesApi.getContactRoles(contactId!),
   })
 }
 
 type EnsureContactRoleVariables = { contactId: string; role: ContactRoleType; vendorCategoryId?: string | null }
 
 export function useEnsureContactRole() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ contactId, role, vendorCategoryId }: EnsureContactRoleVariables) =>
       contactRolesApi.ensureContactRole(contactId, role, vendorCategoryId),
     onError: (err) => toast.error(getContactsErrorMessage(err, "Failed to add role")),
-    onSettled: () => invalidateContactsDirectory(queryClient),
   })
 }
 
 type RemoveContactRoleVariables = { contactId: string; role: ContactRoleType; vendorCategoryId?: string | null }
 
 export function useRemoveContactRole() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ contactId, role, vendorCategoryId }: RemoveContactRoleVariables) =>
       contactRolesApi.removeContactRole(contactId, role, vendorCategoryId),
     onError: (err) => toast.error(getContactsErrorMessage(err, "Failed to remove role")),
-    onSettled: () => invalidateContactsDirectory(queryClient),
   })
 }
 
 export function useContactEventHistory(contactId: string | null) {
   return useQuery({
-    queryKey: [...contactsRootKey, "history", contactId],
+    ...contactQueries.history(contactId ?? ""),
     enabled: Boolean(contactId),
-    queryFn: () => eventContactsApi.getContactEventHistory(contactId!),
   })
 }

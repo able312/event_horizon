@@ -2,7 +2,8 @@ import { useParams } from "react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { ChargeCategory, MenuOfChargeItem, UpdateMenuOfChargeItem } from "~/definitions/database"
-import * as menuOfChargeItemApi from "~/lib/ipc/menuOfChargeItems"
+import * as menuOfChargeItemApi from "~/lib/data/menuOfChargeItems"
+import { menuOfChargeItemQueries } from "~/lib/data/queries"
 
 function sortMenuItems(items: MenuOfChargeItem[]): MenuOfChargeItem[] {
   return [...items].sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""))
@@ -12,14 +13,12 @@ export function useMenuOfChargeItemsSection() {
   const { id: eventId } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
 
-  const queryKey = ["menuOfChargeItems", eventId] as const
+  const menuItemsQuery = menuOfChargeItemQueries.byEvent(eventId ?? "")
+  const queryKey = menuItemsQuery.queryKey
 
   const query = useQuery({
-    queryKey,
-    queryFn: async () => {
-      const data = await menuOfChargeItemApi.getMenuOfChargeItemsByEventId(eventId!)
-      return sortMenuItems(data)
-    },
+    ...menuItemsQuery,
+    select: sortMenuItems,
   })
 
   const createMutation = useMutation({
@@ -52,9 +51,6 @@ export function useMenuOfChargeItemsSection() {
       }
       toast.error("Failed to create menuOfChargeItem")
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey })
-    },
   })
 
   const updateMutation = useMutation({
@@ -76,9 +72,6 @@ export function useMenuOfChargeItemsSection() {
       }
       toast.error("Failed to update menuOfChargeItem")
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey })
-    },
   })
 
   const deleteMutation = useMutation({
@@ -98,9 +91,6 @@ export function useMenuOfChargeItemsSection() {
         queryClient.setQueryData(queryKey, context.previousMenuOfChargeItems)
       }
       toast.error("Failed to delete menuOfChargeItem")
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey })
     },
   })
 

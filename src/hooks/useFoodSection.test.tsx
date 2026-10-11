@@ -2,7 +2,7 @@ import { act, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { toast } from "sonner"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
-import * as foodItemsIpc from "~/lib/ipc/foodItems"
+import * as foodItemsIpc from "~/lib/data/foodItems"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
 import { useFoodSection } from "./useFoodSection"
 
@@ -22,7 +22,7 @@ vi.mock("./useTimeblockMutations", () => ({
   }),
 }))
 
-vi.mock("~/lib/ipc/foodItems", () => ({
+vi.mock("~/lib/data/foodItems", () => ({
   getFoodSectionWithItems: vi.fn(),
   createFoodItem: vi.fn(),
   updateFoodItem: vi.fn(),

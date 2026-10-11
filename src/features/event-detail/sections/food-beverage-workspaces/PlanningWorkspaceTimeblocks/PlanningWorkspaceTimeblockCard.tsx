@@ -19,7 +19,7 @@ export interface PlanningWorkspaceTimeblockCardProps<TItem extends WorkspaceItem
   emptyItemsCopy: string
   addItemLabel: string
   titlePlaceholder: string
-  serviceStyleOptions: string[]
+  serviceStyleOptions: readonly string[]
   timeblock: TimeblockWithItems
   items: TItem[]
   overviewNotePlaceholder?: string

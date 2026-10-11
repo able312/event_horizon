@@ -4,9 +4,9 @@ import { describe, expect, it, vi } from "vitest"
 import type { ReactNode } from "react"
 
 import { useEventsSearchQuery } from "./useEventsSearchQuery"
-import * as eventsApi from "~/lib/ipc/ipcEventsQueries"
+import * as eventsApi from "~/lib/data/events"
 
-vi.mock("~/lib/ipc/ipcEventsQueries", () => ({
+vi.mock("~/lib/data/events", () => ({
   searchEvents: vi.fn(),
 }))
 

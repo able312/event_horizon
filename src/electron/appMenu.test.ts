@@ -56,7 +56,7 @@ async function loadAppMenu() {
   }))
 
   vi.doMock("./services/icsImportService.js", () => ({
-    prepareIcsImportReview: vi.fn(async () => ({})),
+    parseIcsImportFile: vi.fn(async () => ({})),
   }))
 
   const appMenu = (await import("./appMenu")) as AppMenuModule

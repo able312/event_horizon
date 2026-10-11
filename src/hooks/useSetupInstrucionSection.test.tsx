@@ -1,7 +1,7 @@
 import { act, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
-import * as timeblocksIpc from "~/lib/ipc/timeblocks"
+import * as timeblocksIpc from "~/lib/data/timeblocks"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
 import { useSetupInstructionSection } from "./useSetupInstrucionSection"
 
@@ -25,7 +25,7 @@ vi.mock("./useTimeblockMutations", () => ({
   }),
 }))
 
-vi.mock("~/lib/ipc/timeblocks", () => ({
+vi.mock("~/lib/data/timeblocks", () => ({
   getTimeblocksByEventAndSection: vi.fn(),
 }))
 

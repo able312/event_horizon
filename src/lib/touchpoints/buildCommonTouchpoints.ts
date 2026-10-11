@@ -26,8 +26,18 @@ export function buildCommonTouchpoints(eventStartDate: Date): CommonTouchpointTe
   ]
 }
 
-/** Local calendar date → ISO UTC midnight string for storage. */
-export function toIsoDateOnly(date: Date): string {
+/** Calendar date → ISO UTC midnight; an explicit zone supports hosted backends. */
+export function toIsoDateOnly(date: Date, timeZone?: string): string {
+  if (timeZone) {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(date)
+    const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((entry) => entry.type === type)?.value
+    return `${part("year")}-${part("month")}-${part("day")}T00:00:00.000Z`
+  }
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, "0")
   const day = String(date.getDate()).padStart(2, "0")

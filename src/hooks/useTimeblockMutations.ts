@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient, type QueryKey } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { UpdateTimeblock } from "~/definitions/database"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
@@ -6,16 +6,15 @@ import type { TimeblockType } from "~/definitions/timeblocks/timeblocks-types"
 import type { BeverageSectionPayload } from "~/definitions/beverage/beverage-types"
 import type { CreateTimeblockInput, TimeblockPrefillRequest } from "~/definitions/timeblocks/timeblock-create"
 import { getSectionDefaultPrefill } from "~/definitions/timeblocks/setupInstructionPrefill"
-import * as timeblocksIpc from "~/lib/ipc/timeblocks"
+import * as timeblocksIpc from "~/lib/data/timeblocks"
 import {
   appendBeverageTimeblock,
   removeTimeblockFromBeverageSection,
   updateBeverageTimeblock,
 } from "./util/optimisticBeverageSectionCache"
-import { focusedTimeblockQueryKey } from "./useFocusedTimeblock"
 
 interface UseTimeblockMutationsOptions {
-  queryKey: readonly [string, string | undefined]
+  queryKey: QueryKey
   eventId: string
   sectionType: TimeblockType
   cacheShape?: "timeblockList" | "beverageSection"
@@ -52,12 +51,6 @@ function resolveOptimisticValues(sectionType: TimeblockType, input?: AddTimebloc
 
 export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheShape = "timeblockList" }: UseTimeblockMutationsOptions) {
   const queryClient = useQueryClient()
-
-  const invalidateKeys = (type: string) => {
-    queryClient.invalidateQueries({ queryKey })
-    queryClient.invalidateQueries({ queryKey: [type, eventId] })
-    queryClient.invalidateQueries({ queryKey: ["timeblocks", eventId] })
-  }
 
   const addTimeblockMutation = useMutation({
     mutationFn: (input?: AddTimeblockInput) => {
@@ -131,9 +124,6 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheSha
         old.map((tb) => (tb.id === context.tempId ? { ...tb, ...created } : tb)),
       )
     },
-    onSettled: () => {
-      invalidateKeys(sectionType)
-    },
   })
 
   const updateTimeblockMutation = useMutation({
@@ -163,23 +153,6 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheSha
       }
       toast.error("Failed to update timeblock")
     },
-    onSettled: (data, _error, variables) => {
-      const type = data?.sectionType ?? sectionType
-      const updates = variables.updates
-      const shouldRefreshTimeline =
-        updates.time !== undefined ||
-        updates.title !== undefined ||
-        updates.assignedTo !== undefined ||
-        updates.details !== undefined
-
-      queryClient.invalidateQueries({ queryKey })
-      queryClient.invalidateQueries({ queryKey: [type, eventId] })
-      queryClient.invalidateQueries({ queryKey: focusedTimeblockQueryKey(variables.id) })
-
-      if (shouldRefreshTimeline) {
-        queryClient.invalidateQueries({ queryKey: ["timeblocks", eventId] })
-      }
-    },
   })
 
   const deleteTimeblockMutation = useMutation({
@@ -205,9 +178,6 @@ export function useTimeblockMutations({ queryKey, eventId, sectionType, cacheSha
         queryClient.setQueryData(queryKey, context.previousData)
       }
       toast.error("Failed to delete timeblock")
-    },
-    onSettled: () => {
-      invalidateKeys(sectionType)
     },
   })
 

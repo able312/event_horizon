@@ -1,15 +1,17 @@
 import type {
+  Contact,
+  NewContact,
   ContactKind,
   ContactRoleType,
   EventContactsPanelGroup,
   EventContactsPanelItem,
   RecipientResolution,
 } from "../../definitions/contacts.js"
-import { CONTACT_KINDS, CONTACT_ROLE_TYPES } from "../../electron/db/schema.js"
+import { CONTACT_KINDS, CONTACT_ROLE_TYPES } from "../../definitions/enums.js"
 import { ContactsError } from "./contactsError.js"
 
 /** Panel groups always come back in this order, even when empty. */
-const PANEL_ROLE_ORDER: readonly ContactRoleType[] = ["client", "coordinator", "vendor"]
+export const PANEL_ROLE_ORDER: readonly ContactRoleType[] = ["client", "coordinator", "vendor"]
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -117,4 +119,38 @@ export function buildRecipientResolution(candidates: RecipientCandidate[]): Reci
   }
 
   return resolution
+}
+
+type ContactFields = Pick<
+  Contact,
+  "kind" | "firstName" | "lastName" | "organizationName" | "displayName" | "email" | "phone" | "notes"
+>
+
+/** Trims every field, validates kind and email, and fills in the default display name. */
+export function buildContactFields(input: NewContact & { kind: ContactKind }): ContactFields {
+  if (!isContactKind(input.kind)) {
+    throw new ContactsError("InvalidInput", `Unknown contact kind: ${String(input.kind)}`)
+  }
+
+  const nameParts = {
+    kind: input.kind,
+    firstName: cleanText(input.firstName),
+    lastName: cleanText(input.lastName),
+    organizationName: cleanText(input.organizationName),
+  }
+  const displayName = cleanText(input.displayName) ?? deriveDisplayName(nameParts)
+  if (!displayName) throw new ContactsError("InvalidInput", "Display name is required")
+
+  const email = cleanText(input.email)
+  if (email && !isValidEmail(email)) {
+    throw new ContactsError("InvalidInput", `"${email}" is not a valid email address`)
+  }
+
+  return {
+    ...nameParts,
+    displayName,
+    email,
+    phone: cleanText(input.phone),
+    notes: cleanText(input.notes),
+  }
 }

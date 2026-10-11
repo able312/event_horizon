@@ -92,12 +92,19 @@ describe("preload allowlist", () => {
       pageSize: 50,
     })
 
+    await expect(api.ipcRenderer.invoke("events:import-ics:insert", [])).resolves.toBeUndefined()
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith("events:import-ics:insert", [])
+
+    await expect(api.ipcRenderer.invoke("events:get-by-calendar-ids", ["uid-1"])).resolves.toBeUndefined()
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith("events:get-by-calendar-ids", ["uid-1"])
+
     await expect(
-      api.ipcRenderer.invoke("events:import-ics:commit", { sessionId: "session-1", selectedRowIds: [] }),
+      api.ipcRenderer.invoke("events:get-by-start-range", "2026-06-13T00:00:00.000Z", "2026-06-16T00:00:00.000Z"),
     ).resolves.toBeUndefined()
     expect(ipcRenderer.invoke).toHaveBeenCalledWith(
-      "events:import-ics:commit",
-      { sessionId: "session-1", selectedRowIds: [] },
+      "events:get-by-start-range",
+      "2026-06-13T00:00:00.000Z",
+      "2026-06-16T00:00:00.000Z",
     )
 
     await expect(

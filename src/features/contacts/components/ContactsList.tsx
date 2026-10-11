@@ -12,6 +12,12 @@ import { AddEventContactForm } from "./AddEventContactForm"
 import { EditEventContactForm, type EditTarget } from "./EditEventContactForm"
 import { EventContactGroup } from "./EventContactGroup"
 
+/** The edit target with its row as currently cached, so the form sees live updates to it. */
+function withLiveItem(target: EditTarget, items: EventContactsPanelItem[]): EditTarget {
+  const item = items.find((candidate) => candidate.eventContactId === target.item.eventContactId)
+  return item ? { ...target, item } : target
+}
+
 /** Only one inline form is open at a time. An add form sits in the group it was opened from. */
 type OpenForm = { kind: "add"; role: ContactRoleType } | { kind: "edit"; target: EditTarget } | null
 
@@ -118,7 +124,7 @@ const ContactsList: React.FC<ContactsListProps> = ({ eventId, eventTitle }) => {
                 openForm?.kind === "edit" ? (
                   <EditEventContactForm
                     key={openForm.target.item.eventContactId}
-                    target={openForm.target}
+                    target={withLiveItem(openForm.target, group.items)}
                     isSaving={isSaving}
                     onSave={saveContactAsync}
                     onClose={closeForm}

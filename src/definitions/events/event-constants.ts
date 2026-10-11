@@ -1,3 +1,3 @@
-import { events } from "~/electron/db/schema"
+import { EVENT_STATUSES } from "../enums"
 
-export const ITER_EVENT_STATUSES = events.status.enumValues
+export const ITER_EVENT_STATUSES = EVENT_STATUSES

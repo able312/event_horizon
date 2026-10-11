@@ -20,4 +20,16 @@ describe("toIsoDateOnly", () => {
   it("formats local date as UTC midnight ISO", () => {
     expect(toIsoDateOnly(new Date(2026, 6, 20))).toBe("2026-07-20T00:00:00.000Z")
   })
+
+  it("uses the requested calendar zone independently of the server's zone", () => {
+    const date = new Date("2026-10-25T02:00:00.000Z")
+    expect(toIsoDateOnly(date, "America/Toronto")).toBe("2026-10-24T00:00:00.000Z")
+    expect(toIsoDateOnly(date, "UTC")).toBe("2026-10-25T00:00:00.000Z")
+    expect(toIsoDateOnly(date, "Asia/Tokyo")).toBe("2026-10-25T00:00:00.000Z")
+  })
+
+  it("rejects invalid dates and time zones", () => {
+    expect(() => toIsoDateOnly(new Date("invalid"), "UTC")).toThrow()
+    expect(() => toIsoDateOnly(new Date(), "invalid-zone")).toThrow()
+  })
 })

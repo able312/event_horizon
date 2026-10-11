@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Link } from "react-router"
 import { toast } from "sonner"
 
@@ -9,6 +9,7 @@ import { InlineFormPanel } from "~/features/contacts/components/InlineFormPanel"
 import { hasFormErrors, validateContactForm, type ContactFormErrors } from "~/features/contacts/lib/contactForm"
 import { getContactsErrorMessage } from "~/features/contacts/lib/eventContactsPanel"
 import { useUpdateContact } from "~/hooks/useEventContacts"
+import { changedFields, hasChanges, useLiveDraft } from "~/hooks/useLiveDraft"
 import { isContactsError } from "~/lib/contacts/contactsError"
 
 import {
@@ -25,9 +26,13 @@ type ContactEditFormProps = {
   onCancel: () => void
 }
 
-/** Keyed by contact.id in the parent, so switching contacts remounts this with fresh state. */
+/**
+ * Keyed by contact.id in the parent, so switching contacts remounts this with fresh state.
+ * Fields the user hasn't edited follow live updates to the contact.
+ */
 export const ContactEditForm: React.FC<ContactEditFormProps> = ({ contact, onSaved, onCancel }) => {
-  const [form, setForm] = useState<DirectoryContactFormValues>(() => directoryContactToFormValues(contact))
+  const source = useMemo<DirectoryContactFormValues>(() => directoryContactToFormValues(contact), [contact])
+  const { values: form, update } = useLiveDraft(source)
   const [errors, setErrors] = useState<ContactFormErrors>({})
   const [emailConflict, setEmailConflict] = useState<EmailConflict | null>(null)
   const updateContact = useUpdateContact()
@@ -37,9 +42,16 @@ export const ContactEditForm: React.FC<ContactEditFormProps> = ({ contact, onSav
     setErrors(validationErrors)
     if (hasFormErrors(validationErrors)) return
 
+    // Only fields changed here, so other people's edits to the rest survive.
+    const patch = changedFields(toDirectoryContactPayload(source), toDirectoryContactPayload(form))
+    if (!hasChanges(patch)) {
+      onSaved()
+      return
+    }
+
     setEmailConflict(null)
     try {
-      await updateContact.mutateAsync({ id: contact.id, patch: toDirectoryContactPayload(form) })
+      await updateContact.mutateAsync({ id: contact.id, patch })
       toast.success("Contact saved")
       onSaved()
     } catch (err) {
@@ -72,14 +84,14 @@ export const ContactEditForm: React.FC<ContactEditFormProps> = ({ contact, onSav
         errors={errors}
         onChange={(patch) => {
           setEmailConflict(null)
-          setForm((current) => ({ ...current, ...patch }))
+          update(patch)
         }}
       />
       <div>
         <label className="mb-1 block text-xs uppercase tracking-wide text-muted-foreground">Notes (optional)</label>
         <textarea
           value={form.notes}
-          onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+          onChange={(event) => update({ notes: event.target.value })}
           rows={3}
           className="w-full rounded-md border border-stone-300 bg-transparent px-3 py-1.5 text-sm shadow-xs outline-none focus-visible:ring-[2px] focus-visible:ring-orange-500"
         />

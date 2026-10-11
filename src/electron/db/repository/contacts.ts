@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from "uuid"
 
 import type {
   Contact,
-  ContactKind,
   ContactRoleSummary,
   ContactSearchRequest,
   ContactWithRoles,
@@ -12,11 +11,10 @@ import type {
   UpdateContact,
 } from "../../../definitions/contacts.js"
 import {
+  buildContactFields,
   cleanText,
   deriveDisplayName,
-  isContactKind,
   isContactRoleType,
-  isValidEmail,
   normalizeEmail,
 } from "../../../lib/contacts/contactRules.js"
 import { ContactsError } from "../../../lib/contacts/contactsError.js"
@@ -25,40 +23,6 @@ import { db } from "../index.js"
 import { contactRoles, contacts, eventContacts, vendorCategories } from "../schema.js"
 
 const MAX_SEARCH_LIMIT = 100
-
-type ContactFields = Pick<
-  Contact,
-  "kind" | "firstName" | "lastName" | "organizationName" | "displayName" | "email" | "phone" | "notes"
->
-
-/** Trims every field, validates kind and email, and fills in the default display name. */
-function buildContactFields(input: NewContact & { kind: ContactKind }): ContactFields {
-  if (!isContactKind(input.kind)) {
-    throw new ContactsError("InvalidInput", `Unknown contact kind: ${String(input.kind)}`)
-  }
-
-  const nameParts = {
-    kind: input.kind,
-    firstName: cleanText(input.firstName),
-    lastName: cleanText(input.lastName),
-    organizationName: cleanText(input.organizationName),
-  }
-  const displayName = cleanText(input.displayName) ?? deriveDisplayName(nameParts)
-  if (!displayName) throw new ContactsError("InvalidInput", "Display name is required")
-
-  const email = cleanText(input.email)
-  if (email && !isValidEmail(email)) {
-    throw new ContactsError("InvalidInput", `"${email}" is not a valid email address`)
-  }
-
-  return {
-    ...nameParts,
-    displayName,
-    email,
-    phone: cleanText(input.phone),
-    notes: cleanText(input.notes),
-  }
-}
 
 /** Offset cursor; kept opaque to callers so the paging strategy can change later. */
 function parseCursor(cursor: string | null | undefined): number {

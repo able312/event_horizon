@@ -1,6 +1,7 @@
 import { useEffect } from "react"
 import { matchPath, useLocation } from "react-router"
 import type { GenerateMenuContext } from "~/definitions/ipc"
+import { setGenerateMenuContext } from "~/lib/ipc/appMenu"
 
 function getGenerateMenuContext(pathname: string): GenerateMenuContext {
   const eventDetailMatch = matchPath({ path: "/events/:id/*", end: false }, pathname)
@@ -25,6 +26,6 @@ export function useGenerateMenuState() {
 
   useEffect(() => {
     const context = getGenerateMenuContext(location.pathname)
-    window.electron.ipcRenderer.send("generate:active", context)
+    setGenerateMenuContext(context)
   }, [location.pathname])
 }

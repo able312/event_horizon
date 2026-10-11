@@ -107,30 +107,57 @@ describe("events repository month and unscheduled queries", () => {
     expect(result.map((event) => event.title).sort()).toEqual(["Match 1", "Match 2"])
   })
 
-  it("insertMany inserts multiple records and applies defaults", () => {
+  it("importFromCalendar inserts imported rows with defaults and the calendar id", () => {
     if (!testDb) throw new Error("Expected test DB to be initialized")
 
     const repo = createEventsRepository(testDb.db)
 
-    const result = repo.insertMany([
+    const result = repo.importFromCalendar([
       {
         title: "Imported A",
         calendarId: "uid-A",
         startDateTime: "2026-06-14T17:00:00.000Z",
         endDateTime: "2026-06-14T18:00:00.000Z",
+        internalNotes: "Imported from Google Calendar:\n\nBring clubs",
       },
       {
         title: "Imported B",
         calendarId: "uid-B",
         startDateTime: "2026-06-15T17:00:00.000Z",
         endDateTime: "2026-06-15T18:00:00.000Z",
+        internalNotes: null,
       },
     ])
 
-    expect(result).toHaveLength(2)
-    expect(result.every((event) => event.status === "new_lead")).toBe(true)
-    expect(result.every((event) => event.type === "function")).toBe(true)
-    expect(result.every((event) => typeof event.id === "string" && event.id.length > 0)).toBe(true)
+    expect(result.duplicateCalendarIds).toEqual([])
+    expect(result.inserted).toHaveLength(2)
+    expect(result.inserted.every((event) => event.status === "new_lead")).toBe(true)
+    expect(result.inserted.every((event) => event.type === "function")).toBe(true)
+    expect(result.inserted.every((event) => typeof event.id === "string" && event.id.length > 0)).toBe(true)
+    expect(result.inserted.map((event) => event.calendarId)).toEqual(["uid-A", "uid-B"])
+    expect(result.inserted[0]?.internalNotes).toBe("Imported from Google Calendar:\n\nBring clubs")
+  })
+
+  it("importFromCalendar skips calendar ids that already exist or repeat within the batch", () => {
+    if (!testDb) throw new Error("Expected test DB to be initialized")
+
+    const repo = createEventsRepository(testDb.db)
+    testDb.db.insert(events).values(createEventRecord({ title: "Existing", calendarId: "uid-taken" })).run()
+
+    const row = {
+      startDateTime: "2026-06-14T17:00:00.000Z",
+      endDateTime: "2026-06-14T18:00:00.000Z",
+      internalNotes: null,
+    }
+    const result = repo.importFromCalendar([
+      { ...row, title: "Taken", calendarId: "uid-taken" },
+      { ...row, title: "New", calendarId: "uid-new" },
+      { ...row, title: "New again", calendarId: "uid-new" },
+    ])
+
+    expect(result.inserted.map((event) => event.title)).toEqual(["New"])
+    expect(result.duplicateCalendarIds).toEqual(["uid-taken", "uid-new"])
+    expect(repo.getAll()).toHaveLength(2)
   })
 
   it("search validates minimum query length", () => {
@@ -341,21 +368,25 @@ describe("events repository date range validation", () => {
     expect(updated.endDateTime).toBeNull()
   })
 
-  it("insertMany rejects when any row has an invalid range", () => {
+  it("importFromCalendar inserts nothing when any row has an invalid range", () => {
     if (!testDb) throw new Error("Expected test DB to be initialized")
     const repo = createEventsRepository(testDb.db)
 
     expect(() =>
-      repo.insertMany([
+      repo.importFromCalendar([
         {
           title: "Valid",
+          calendarId: "uid-valid",
           startDateTime: "2026-07-14T15:00:00.000Z",
           endDateTime: "2026-07-14T16:00:00.000Z",
+          internalNotes: null,
         },
         {
           title: "Invalid",
+          calendarId: "uid-invalid",
           startDateTime: "2026-07-14T16:00:00.000Z",
           endDateTime: "2026-07-14T15:00:00.000Z",
+          internalNotes: null,
         },
       ]),
     ).toThrow("endDateTime cannot be before startDateTime")

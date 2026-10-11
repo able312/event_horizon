@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
+import { onMenuNavigate } from '~/lib/ipc/appMenu'
 
 export function useIpcNavigation() {
   const navigate = useNavigate()
@@ -14,10 +15,6 @@ export function useIpcNavigation() {
       navigate(path)
     }
 
-    window.electron.ipcRenderer.on('navigate', handler)
-
-    return () => {
-      window.electron.ipcRenderer.removeListener('navigate', handler)
-    }
+    return onMenuNavigate(handler)
   }, [navigate])
 }

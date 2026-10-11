@@ -1,7 +1,7 @@
 import { act, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { BeverageSectionPayload } from "~/definitions/beverage/beverage-types"
-import * as beverageItemsIpc from "~/lib/ipc/beverageItems"
+import * as beverageItemsIpc from "~/lib/data/beverageItems"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
 import { useBeverageSection } from "./useBeverageSection"
 
@@ -21,7 +21,7 @@ vi.mock("./useTimeblockMutations", () => ({
   }),
 }))
 
-vi.mock("~/lib/ipc/beverageItems", () => ({
+vi.mock("~/lib/data/beverageItems", () => ({
   getBeverageSectionWithItems: vi.fn(),
   createBeverageItem: vi.fn(),
   createBeverageItemAssignedToTimeblock: vi.fn(),
