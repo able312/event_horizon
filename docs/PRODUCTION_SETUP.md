@@ -167,20 +167,20 @@ Whichever you choose:
 
 Choose a quiet time. After this, the old app's data is frozen and production becomes the source of truth.
 
-- [ ] 🧑 Tell the team (or yourself) **not to edit anything** in the old app from now on.
-- [ ] 🧑 Quit the old Event Horizon app completely.
-- [ ] 🧑 Make a fresh copy of the live database:
+- [x] 🧑 Tell the team (or yourself) **not to edit anything** in the old app from now on.
+- [x] 🧑 Quit the old Event Horizon app completely.
+- [x] 🧑 Make a fresh copy of the live database:
   `~/Library/Application Support/Event Horizon/app.sqlite` → somewhere safe, e.g. `~/Documents/Coding/app-final-YYYY-MM-DD.sqlite`.
   - Keep this copy permanently. It's your fallback.
-- [ ] 🤖 **Dry run**, which only reads and changes nothing:
+- [x] 🤖 **Dry run**, which only reads and changes nothing:
   `npm run legacy-import -- --sqlite <copy> --dry-run`
   - It should end with "All references resolve and every row matches the Convex schema."
-- [ ] 🧑 Approve the real import, then 🤖 run:
+- [x] 🧑 Approve the real import, then 🤖 run:
   `npm run legacy-import -- --sqlite <copy> --target prod`
   - It should end with "Every row, field and reference matches."
-- [ ] 🧑 Take a **manual backup** in the Convex dashboard (Production → Backups → Backup now).
-- [ ] 🧑 Open the production build and spot-check a few events and their PDFs again.
-- [ ] 🧑 Approve, then 🤖 publish the `v0.2.0` draft release (`npm run release:publish`). Installed apps, including the production Mac, then update to the shared database.
+- [x] 🧑 Take a **manual backup** in the Convex dashboard (Production → Backups → Backup now).
+- [x] 🧑 Open the production build and spot-check a few events and their PDFs again.
+- [x] 🧑 Approve, then 🤖 publish the `v0.2.0` draft release (`npm run release:publish`). Installed apps, including the production Mac, then update to the shared database.
 
 > **If something goes wrong:** the old app and its `app.sqlite` are untouched, so you can keep using the old app. A failed import rolls itself back, so you can simply run it again. If the script is interrupted, 🤖 `npm run legacy-import -- --reset --target prod` empties production, and then the import can be re-run. It lists what it will delete and asks you to type `prod`. It deletes everything, including anything made in the app, so only use it before the team starts using production. The app refuses edits while an import or reset is running.
 
