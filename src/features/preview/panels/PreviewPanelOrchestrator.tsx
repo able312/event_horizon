@@ -8,6 +8,7 @@ import { useFoodSection } from "~/hooks/useFoodSection"
 import { useNoteSection } from "~/hooks/useNoteSection"
 import { usePaymentsSection } from "~/hooks/usePaymentsSection"
 import { useSetupInstructionSection } from "~/hooks/useSetupInstrucionSection"
+import { FINANCIAL_DOCUMENT_KIND_OPTIONS } from "~/features/preview/lib/financialDocumentKinds"
 import {
   getPreviewTypesForEvent,
   resolvePreviewType,
@@ -15,6 +16,7 @@ import {
 } from "~/features/preview/lib/previewTypes"
 import {
   PreviewOptionSection,
+  PreviewRadioRow,
   PreviewTimeblockSelector,
   PreviewToggleRow,
 } from "~/features/preview/panels/PreviewOptionControls"
@@ -384,46 +386,61 @@ const PreviewPanelOrchestrator: React.FC = () => {
           ) : null}
 
           {activeType === "financial-report" ? (
-            <PreviewOptionSection title="Options">
-              {(beverageItems?.length ?? 0) > 0 ? (
+            <>
+              <PreviewOptionSection title="Title">
+                {FINANCIAL_DOCUMENT_KIND_OPTIONS.map(({ kind, label }) => (
+                  <PreviewRadioRow
+                    key={kind}
+                    id={`financial-document-kind-${kind}`}
+                    name="financial-document-kind"
+                    label={label}
+                    checked={state["financial-report"].documentKind === kind}
+                    onSelect={() => dispatch({ type: "financial/setDocumentKind", value: kind })}
+                  />
+                ))}
+              </PreviewOptionSection>
+
+              <PreviewOptionSection title="Options">
+                {(beverageItems?.length ?? 0) > 0 ? (
+                  <PreviewToggleRow
+                    id="financial-beverage-appendix"
+                    label="Show beverage list"
+                    checked={state["financial-report"].showBeverageAppendix}
+                    onChange={(value) =>
+                      dispatch({ type: "financial/setShowBeverageAppendix", value })
+                    }
+                  />
+                ) : null}
+                {state["financial-report"].showBeverageAppendix && beverageNotesAvailable ? (
+                  <PreviewToggleRow
+                    id="financial-beverage-notes"
+                    label="Beverage notes"
+                    checked={state["financial-report"].showBeverageNotes}
+                    onChange={(value) =>
+                      dispatch({ type: "financial/setShowBeverageNotes", value })
+                    }
+                  />
+                ) : null}
                 <PreviewToggleRow
-                  id="financial-beverage-appendix"
-                  label="Show beverage list"
-                  checked={state["financial-report"].showBeverageAppendix}
+                  id="financial-charge-breakdown"
+                  label="Charge breakdown"
+                  checked={state["financial-report"].showChargeBreakdown}
                   onChange={(value) =>
-                    dispatch({ type: "financial/setShowBeverageAppendix", value })
+                    dispatch({ type: "financial/setShowChargeBreakdown", value })
                   }
                 />
-              ) : null}
-              {state["financial-report"].showBeverageAppendix && beverageNotesAvailable ? (
-                <PreviewToggleRow
-                  id="financial-beverage-notes"
-                  label="Beverage notes"
-                  checked={state["financial-report"].showBeverageNotes}
-                  onChange={(value) =>
-                    dispatch({ type: "financial/setShowBeverageNotes", value })
-                  }
-                />
-              ) : null}
-              <PreviewToggleRow
-                id="financial-charge-breakdown"
-                label="Charge breakdown"
-                checked={state["financial-report"].showChargeBreakdown}
-                onChange={(value) =>
-                  dispatch({ type: "financial/setShowChargeBreakdown", value })
-                }
-              />
-              {paymentsExist ? (
-                <PreviewToggleRow
-                  id="financial-payment-status"
-                  label="Payment status"
-                  checked={state["financial-report"].showPaymentStatus}
-                  onChange={(value) =>
-                    dispatch({ type: "financial/setShowPaymentStatus", value })
-                  }
-                />
-              ) : null}
-            </PreviewOptionSection>
+                {paymentsExist ? (
+                  <PreviewToggleRow
+                    id="financial-payment-status"
+                    label="Payment status"
+                    checked={state["financial-report"].showPaymentStatus}
+                    onChange={(value) =>
+                      dispatch({ type: "financial/setShowPaymentStatus", value })
+                    }
+                  />
+                ) : null}
+              </PreviewOptionSection>
+            </>
           ) : null}
         </div>
       </Panel.Content>

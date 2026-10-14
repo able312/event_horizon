@@ -1,3 +1,8 @@
+import {
+  DEFAULT_FINANCIAL_DOCUMENT_KIND,
+  type FinancialDocumentKind,
+} from "~/features/preview/lib/financialDocumentKinds"
+
 export type BeoSectionId =
   | "contact"
   | "internalNotes"
@@ -33,6 +38,7 @@ export type TimelinePreferences = {
 }
 
 export type FinancialPreferences = {
+  documentKind: FinancialDocumentKind
   showBeverageAppendix: boolean
   showBeverageNotes: boolean
   showChargeBreakdown: boolean
@@ -74,6 +80,7 @@ export type PreviewPreferencesAction =
   | { type: "beo-food/applyDefaultTimeblocks"; ids: string[] }
   | { type: "timeline/setShowInternalNotes"; value: boolean }
   | { type: "timeline/setIncludeSystemRows"; value: boolean }
+  | { type: "financial/setDocumentKind"; value: FinancialDocumentKind }
   | { type: "financial/setShowBeverageAppendix"; value: boolean }
   | { type: "financial/setShowBeverageNotes"; value: boolean }
   | { type: "financial/setShowChargeBreakdown"; value: boolean }
@@ -120,6 +127,7 @@ function createInitialTimelinePreferences(): TimelinePreferences {
 
 function createInitialFinancialPreferences(): FinancialPreferences {
   return {
+    documentKind: DEFAULT_FINANCIAL_DOCUMENT_KIND,
     showBeverageAppendix: false,
     showBeverageNotes: false,
     showChargeBreakdown: true,
