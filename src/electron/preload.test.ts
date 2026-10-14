@@ -73,6 +73,9 @@ describe("preload allowlist", () => {
       "system:open-external",
       "https://calendar.google.com/calendar/u/0/r/eventedit",
     )
+
+    await expect(api.ipcRenderer.invoke("events:import-ics:open")).resolves.toBeUndefined()
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith("events:import-ics:open")
   })
 
   it("blocks the removed SQLite data channels", async () => {

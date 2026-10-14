@@ -1,7 +1,7 @@
 // electron/menu.ts
-import { app, ipcMain, BrowserWindow, Menu, dialog, type MenuItemConstructorOptions } from "electron"
+import { app, ipcMain, BrowserWindow, Menu, type MenuItemConstructorOptions } from "electron"
 import { isDev } from "./utils.js"
-import { parseIcsImportFile } from "./services/icsImportService.js"
+import { openIcsImport } from "./ipcRoutes/icsImportHandler.js"
 import type { GenerateMenuContext } from "~/definitions/ipc.js"
 
 const windowState = new Map<number, GenerateMenuContext>()
@@ -76,33 +76,12 @@ export function rebuildAppMenu(targetWindowId?: number) {
     submenu: [
       {
         label: "Import .ics…",
-        click: async (_menuItem, browserWindow) => {
+        click: (_menuItem, browserWindow) => {
           const targetWindow = browserWindow instanceof BrowserWindow
             ? browserWindow
             : BrowserWindow.getFocusedWindow()
 
-          if (!targetWindow) return
-
-          const pickerResult = await dialog.showOpenDialog(targetWindow, {
-            filters: [{ name: "iCalendar", extensions: ["ics"] }],
-            properties: ["openFile"],
-          })
-
-          if (pickerResult.canceled || pickerResult.filePaths.length === 0) {
-            return
-          }
-
-          try {
-            const parsedPayload = await parseIcsImportFile(pickerResult.filePaths[0]!)
-            targetWindow.webContents.send("navigate", "/events")
-
-            // Give the renderer route a brief moment to mount listeners after navigation.
-            setTimeout(() => {
-              targetWindow.webContents.send("events:import-ics:review", parsedPayload)
-            }, 150)
-          } catch (error) {
-            console.error("Error parsing ICS file:", error)
-          }
+          if (targetWindow) void openIcsImport(targetWindow)
         },
       },
       { role: "reload"}

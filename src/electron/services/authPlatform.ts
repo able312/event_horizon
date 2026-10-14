@@ -68,7 +68,8 @@ async function listen(handler: (url: URL) => Promise<CallbackPage | null>) {
   return { close: () => { server.close() } }
 }
 
-function focusApp() {
+/** Brings the main window forward after sign-in or a second launch. */
+export function focusApp() {
   const window = BrowserWindow.getAllWindows()[0]
   if (!window) return
   if (window.isMinimized()) window.restore()

@@ -1,7 +1,8 @@
 import { Button } from "~/components/atoms/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/atoms/tooltip"
-import { CalendarX2, CirclePlus, Search, Users } from 'lucide-react'
+import { CalendarX2, CirclePlus, Import, Search, Users } from 'lucide-react'
 import { useNavigate } from "react-router"
+import { openIcsImportPicker } from "~/lib/ipc/icsImport"
 
 interface CalendarDefaultHeaderProps {
   onOpenSearch: () => void
@@ -95,6 +96,16 @@ const CalendarDefaultPanelHeader: React.FC<CalendarDefaultHeaderProps> = ({
         className="size-8 text-white transition-colors"
       >
         <Users className="h-6 w-6" />
+      </HeaderIconButton>
+      <HeaderIconButton
+        label="Import .ics"
+        ariaLabel="Import events from an .ics file"
+        onClick={() => {
+          openIcsImportPicker().catch((err: unknown) => console.error("Failed to open the .ics picker:", err))
+        }}
+        className="size-8 text-white transition-colors"
+      >
+        <Import className="h-6 w-6" />
       </HeaderIconButton>
     </>
   )

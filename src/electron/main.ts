@@ -10,7 +10,7 @@ import { createUpdaterLogger } from './services/updaterLogger.js';
 import { registerUpdaterIpcHandlers } from './ipcRoutes/updaterHandler.js';
 import { createAuthService } from './services/authService.js';
 import { resolveWorkOSClientId } from './services/authConfig.js';
-import { createWorkOSAuthClient, electronAuthPlatform } from './services/authPlatform.js';
+import { createWorkOSAuthClient, electronAuthPlatform, focusApp } from './services/authPlatform.js';
 import { registerAuthIpcHandlers } from './ipcRoutes/authHandler.js';
 
 const __filename = fileURLToPath(import.meta.url)
@@ -41,11 +41,12 @@ const createWindow = () => {
             nodeIntegration: false,
             webSecurity: true,
         },
-        trafficLightPosition: {
-            x: 15, // Padding from the left
-            y: 12  // Padding from the top
-        },
-        titleBarStyle: 'hidden'
+        titleBarStyle: 'hidden',
+        // Windows has no traffic lights: draw its native controls over the right end of the
+        // white body header. SplitLayout's Body.Header leaves room for them; 39px keeps its border visible.
+        ...(process.platform === 'win32'
+            ? { titleBarOverlay: { color: '#ffffff', symbolColor: '#44403c', height: 39 } }
+            : { trafficLightPosition: { x: 15, y: 12 } }),
     });
 
     mainWindow.maximize()
@@ -82,6 +83,13 @@ const setupAuth = () => {
     })
     return authService
 }
+
+// A second launch (e.g. a double-clicked shortcut) focuses the running window instead. Packaged
+// builds only: development runs share the packaged app's user data and would otherwise be locked out.
+if (app.isPackaged && !app.requestSingleInstanceLock()) {
+    app.exit(0)
+}
+app.on("second-instance", focusApp)
 
 app.on("ready", () => {
     registerAllIpcHandlers()

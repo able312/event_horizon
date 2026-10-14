@@ -10,8 +10,9 @@ type Updater = Pick<AppUpdater, "on" | "removeListener" | "checkForUpdates" |
   "allowPrerelease" | "allowDowngrade">
 type NativeUpdater = Pick<EventEmitter, "listeners" | "removeListener">
 
+/** Matches the release targets: Apple Silicon macOS (ZIP) and x64 Windows (NSIS). */
 export function isUpdaterEnabled(isPackaged: boolean, platform: string, arch: string): boolean {
-  return isPackaged && platform === "darwin" && arch === "arm64"
+  return isPackaged && ((platform === "darwin" && arch === "arm64") || (platform === "win32" && arch === "x64"))
 }
 
 export function createUpdaterService(
