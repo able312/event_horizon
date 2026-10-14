@@ -1,17 +1,21 @@
 import { createHash } from "node:crypto"
-import { createReadStream, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs"
+import { closeSync, createReadStream, mkdirSync, mkdtempSync, openSync, readFileSync, readSync, realpathSync, rmSync, statSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { spawn } from "node:child_process"
 import { setTimeout as delay } from "node:timers/promises"
-import { ArtifactValidationError, expectedAssetNames, parseMetadata, verifyFiles } from "./release-logic.ts"
-import type { FileInfo, Metadata } from "./release-logic.ts"
+import { extractFile, statFile } from "@electron/asar"
+import { ArtifactValidationError, expectedAssetNames, parseMetadata, platforms, verifyFiles } from "./release-logic.ts"
+import type { FileInfo, Metadata, Platform } from "./release-logic.ts"
 import { run } from "./release-commands.ts"
 
-export async function inspectArtifacts(directory: string, version: string): Promise<{ metadata: Metadata; files: FileInfo[] }> {
-  const metadata = parseMetadata(readFileSync(join(directory, "latest-mac.yml"), "utf8"), version)
+export type ReleaseMetadata = Record<Platform, Metadata>
+
+export async function inspectArtifacts(directory: string, version: string): Promise<{ metadata: ReleaseMetadata; files: FileInfo[] }> {
+  const read = (platform: Platform) => parseMetadata(readFileSync(join(directory, platforms[platform].metadataFile), "utf8"), version, platform)
+  const metadata = { mac: read("mac"), win: read("win") }
   const files: FileInfo[] = []
-  for (const name of expectedAssetNames(metadata)) {
+  for (const name of expectedAssetNames(version)) {
     const path = join(directory, name)
     const info = statSync(path)
     if (!info.isFile() || info.size === 0) throw new Error(`Missing or empty artifact: ${name}.`)
@@ -19,7 +23,8 @@ export async function inspectArtifacts(directory: string, version: string): Prom
     for await (const chunk of createReadStream(path)) hash.update(chunk)
     files.push({ name, size: info.size, sha512: hash.digest("base64") })
   }
-  verifyFiles(metadata, files)
+  verifyFiles(metadata.mac, files)
+  verifyFiles(metadata.win, files)
   return { metadata, files }
 }
 
@@ -105,19 +110,63 @@ function unpackable(action: () => void): void {
   catch (error) { throw new ArtifactValidationError(error instanceof Error ? error.message : String(error)) }
 }
 
-export async function verifyPackages(directory: string, metadata: Metadata): Promise<void> {
+/** Returns the PE machine type, or null if the file is not a Windows executable. */
+function peMachine(path: string): number | null {
+  const header = Buffer.alloc(4096)
+  const fd = openSync(path, "r")
+  try { readSync(fd, header, 0, header.length, 0) }
+  finally { closeSync(fd) }
+  if (header.toString("latin1", 0, 2) !== "MZ") return null
+  const offset = header.readUInt32LE(0x3c)
+  if (offset + 6 > header.length || header.toString("latin1", offset, offset + 4) !== "PE\0\0") return null
+  return header.readUInt16LE(offset + 4)
+}
+
+const AMD64 = 0x8664
+
+/**
+ * The Windows app can't be launched on a Mac, so check what electron-builder packed into the
+ * installer: an x64 executable, this version's app code, and an update feed pointing at our releases.
+ */
+export function verifyWindowsBuild(directory: string, version: string): void {
+  try { checkWindowsBuild(join(directory, "win-unpacked"), version) }
+  catch (error) { throw new ArtifactValidationError(`Windows build check failed: ${error instanceof Error ? error.message : String(error)}`) }
+}
+
+function checkWindowsBuild(appDirectory: string, version: string): void {
+  if (peMachine(join(appDirectory, "Event Horizon.exe")) !== AMD64) throw new Error("Event Horizon.exe is not an x64 Windows executable.")
+  const archive = join(appDirectory, "resources/app.asar")
+  const pkg = JSON.parse(extractFile(archive, "package.json").toString("utf8")) as { version?: string; main?: string }
+  if (pkg.version !== version || !pkg.main) throw new Error("Packaged package.json has the wrong version or no main entry.")
+  // statFile throws for paths missing from the archive.
+  for (const file of [pkg.main, "dist-react/index.html"]) statFile(archive, file)
+  const { publish } = JSON.parse(readFileSync("electron-builder.json", "utf8")) as { publish: { owner: string; repo: string } }
+  const feed = readFileSync(join(appDirectory, "resources/app-update.yml"), "utf8").split(/\r?\n/)
+  if (!["provider: github", `owner: ${publish.owner}`, `repo: ${publish.repo}`].every((line) => feed.includes(line))) {
+    throw new Error("app-update.yml does not point at the configured GitHub releases.")
+  }
+}
+
+function verifyWindowsInstaller(directory: string, metadata: Metadata): void {
+  for (const file of metadata.files) {
+    if (peMachine(join(directory, file.name)) === null) throw new ArtifactValidationError(`${file.name} is not a Windows executable.`)
+  }
+}
+
+export async function verifyPackages(directory: string, metadata: ReleaseMetadata): Promise<void> {
+  verifyWindowsInstaller(directory, metadata.win)
   const root = realpathSync(mkdtempSync(join(tmpdir(), "event-horizon-smoke-")))
   let stillMounted = false
   try {
-    const zip = metadata.files.find((file) => file.name.endsWith(".zip"))!
+    const zip = metadata.mac.files.find((file) => file.name.endsWith(".zip"))!
     unpackable(() => run("ditto", ["-x", "-k", join(directory, zip.name), join(root, "zip")]))
     const appPath = join(root, "zip/Event Horizon.app")
-    verifySignature(appPath, metadata.version)
-    const dmg = metadata.files.find((file) => file.name.endsWith(".dmg"))!
+    verifySignature(appPath, metadata.mac.version)
+    const dmg = metadata.mac.files.find((file) => file.name.endsWith(".dmg"))!
     const mount = join(root, "dmg")
     mkdirSync(mount)
     unpackable(() => run("hdiutil", ["attach", "-readonly", "-nobrowse", "-mountpoint", mount, join(directory, dmg.name)]))
-    try { verifySignature(join(mount, "Event Horizon.app"), metadata.version) }
+    try { verifySignature(join(mount, "Event Horizon.app"), metadata.mac.version) }
     finally { stillMounted = !detach(mount) }
     await smokeLaunch(appPath, root)
   } finally {

@@ -30,9 +30,10 @@ function setup(enabled = true) {
 afterEach(() => { vi.useRealTimers() })
 
 describe("updater service", () => {
-  it("enables only packaged macOS arm64 and leaves unsupported builds idle", () => {
+  it("enables only packaged macOS arm64 and Windows x64, and leaves unsupported builds idle", () => {
     expect(isUpdaterEnabled(true, "darwin", "arm64")).toBe(true)
-    for (const args of [[false, "darwin", "arm64"], [true, "win32", "arm64"], [true, "darwin", "x64"]] as const) {
+    expect(isUpdaterEnabled(true, "win32", "x64")).toBe(true)
+    for (const args of [[false, "darwin", "arm64"], [false, "win32", "x64"], [true, "win32", "arm64"], [true, "darwin", "x64"], [true, "linux", "x64"]] as const) {
       expect(isUpdaterEnabled(...args)).toBe(false)
     }
     const { service, updater } = setup(false)

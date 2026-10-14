@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { parseHotkeyCombo } from "~/lib/hotKeys"
+import { matchesHotkey, parseHotkeyCombo } from "~/lib/hotKeys"
 
 describe("parseHotkeyCombo", () => {
   it("parses cmd+f and keeps modifier intent", () => {
@@ -36,5 +36,34 @@ describe("parseHotkeyCombo", () => {
     expect(() => parseHotkeyCombo("a+b")).toThrow(
       /exactly one non-modifier key is required/i,
     )
+  })
+})
+
+describe("matchesHotkey", () => {
+  const key = (init: Partial<Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey">>) => ({
+    key: "f", metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, ...init,
+  })
+
+  it("matches Cmd with ⌘ on macOS", () => {
+    const parsed = parseHotkeyCombo("Cmd+f")
+    expect(matchesHotkey(parsed, key({ metaKey: true }), true)).toBe(true)
+    expect(matchesHotkey(parsed, key({ ctrlKey: true }), true)).toBe(false)
+  })
+
+  it("matches Cmd with Ctrl, not the Windows key, elsewhere", () => {
+    const parsed = parseHotkeyCombo("Cmd+f")
+    expect(matchesHotkey(parsed, key({ ctrlKey: true }), false)).toBe(true)
+    expect(matchesHotkey(parsed, key({ metaKey: true }), false)).toBe(false)
+  })
+
+  it("requires every requested modifier and the key", () => {
+    const parsed = parseHotkeyCombo("Cmd+Shift+c")
+    expect(matchesHotkey(parsed, key({ key: "C", ctrlKey: true, shiftKey: true }), false)).toBe(true)
+    expect(matchesHotkey(parsed, key({ key: "c", ctrlKey: true }), false)).toBe(false)
+    expect(matchesHotkey(parsed, key({ key: "x", ctrlKey: true, shiftKey: true }), false)).toBe(false)
+  })
+
+  it("matches the space key", () => {
+    expect(matchesHotkey(parseHotkeyCombo("space"), key({ key: " " }), false)).toBe(true)
   })
 })

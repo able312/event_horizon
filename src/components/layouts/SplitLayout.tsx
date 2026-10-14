@@ -63,7 +63,7 @@ export const Panel = {
 
 const BodyHeader: React.FC<{ children: ReactNode }> = ({ children }) => {
     return (
-     <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-6 window-drag-bar max-h-[40px]">
+     <div className="flex h-14 shrink-0 items-center justify-between border-b border-border pl-6 window-drag-bar window-controls-inset max-h-[40px]">
         { children }
       </div>
     )

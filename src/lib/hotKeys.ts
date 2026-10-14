@@ -57,6 +57,18 @@ export function parseHotkeyCombo(combo: KeyCombo): ParsedHotkey {
   }
 }
 
+type HotkeyEvent = Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey">
+
+/** "Cmd" means ⌘ on macOS and Ctrl elsewhere, where metaKey is the Windows key. */
+export function matchesHotkey(parsed: ParsedHotkey, e: HotkeyEvent, isMac: boolean): boolean {
+  const metaOk = parsed.wantsMeta ? (isMac ? e.metaKey : e.ctrlKey) : true
+  const ctrlOk = parsed.wantsCtrl ? e.ctrlKey : true
+  const shiftOk = parsed.wantsShift ? e.shiftKey : true
+  const altOk = parsed.wantsAlt ? e.altKey : true
+  const keyOk = parsed.key === " " ? e.key === " " : e.key.toLowerCase() === parsed.key
+  return metaOk && ctrlOk && shiftOk && altOk && keyOk
+}
+
 export function useHotkey(combo: KeyCombo, callback: (e: KeyboardEvent) => void) {
   useEffect(() => {
     let parsed: ParsedHotkey
@@ -70,23 +82,7 @@ export function useHotkey(combo: KeyCombo, callback: (e: KeyboardEvent) => void)
     }
 
     function handler(e: KeyboardEvent) {
-      const isMac = navigator.platform.toUpperCase().includes("MAC")
-
-      const metaOk = parsed.wantsMeta ? e.metaKey : true
-      const ctrlOk = parsed.wantsCtrl
-        ? e.ctrlKey
-        : parsed.wantsMeta
-        ? isMac
-          ? true // cmd only on mac
-          : e.ctrlKey // fallback to ctrl on windows
-        : true
-
-      const shiftOk = parsed.wantsShift ? e.shiftKey : true
-      const altOk = parsed.wantsAlt ? e.altKey : true
-
-      const keyOk = parsed.key === " " ? e.key === " " : e.key.toLowerCase() === parsed.key
-
-      if (metaOk && ctrlOk && shiftOk && altOk && keyOk) {
+      if (matchesHotkey(parsed, e, navigator.platform.toUpperCase().includes("MAC"))) {
         e.preventDefault()
         callback(e)
       }

@@ -13,7 +13,14 @@ export type Release = {
 export type Asset = { name: string; size: number; state: string; id?: number; digest?: string | null; updated_at?: string }
 export type FileInfo = { name: string; size: number; sha512: string }
 export type Metadata = { version: string; files: FileInfo[] }
+export type Platform = "mac" | "win"
 export class ArtifactValidationError extends Error {}
+
+// Every release carries both platforms. Each package's first file is the legacy `path` entry in its metadata.
+export const platforms: Record<Platform, { metadataFile: string; packages: (version: string) => string[] }> = {
+  mac: { metadataFile: "latest-mac.yml", packages: (version) => [`Event-Horizon-${version}-arm64.zip`, `Event-Horizon-${version}-arm64.dmg`] },
+  win: { metadataFile: "latest.yml", packages: (version) => [`Event-Horizon-${version}-x64.exe`] },
+}
 
 export function assertVersion(version: string): void {
   if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version) ||
@@ -95,7 +102,7 @@ export function assertVersionOnlyBump(basePackage: string, baseLock: string, nex
 
 // Deliberately accepts only electron-builder's small update-info schema. Unsupported
 // YAML is rejected instead of introducing a general-purpose parser dependency.
-export function parseMetadata(yaml: string, version: string): Metadata {
+export function parseMetadata(yaml: string, version: string, platform: Platform): Metadata {
   assertVersion(version)
   const values = new Map<string, string>()
   const files: Record<string, string>[] = []
@@ -124,16 +131,16 @@ export function parseMetadata(yaml: string, version: string): Metadata {
     values.set(top[1], scalar(top[2]))
   }
   if (values.get("version") !== version) throw new ArtifactValidationError("Update metadata version does not match package.json.")
-  const expected = [`Event-Horizon-${version}-arm64.zip`, `Event-Horizon-${version}-arm64.dmg`]
+  const expected = platforms[platform].packages(version)
   const parsed = files.map((file) => ({ name: file.url, size: Number(file.size), sha512: file.sha512 }))
-  if (parsed.length !== 2 || new Set(parsed.map((file) => file.name)).size !== 2 ||
+  if (parsed.length !== expected.length || new Set(parsed.map((file) => file.name)).size !== expected.length ||
       parsed.some((file) => !expected.includes(file.name) || !Number.isSafeInteger(file.size) || file.size <= 0 ||
         !/^[A-Za-z0-9+/]{86}==$/.test(file.sha512 ?? ""))) {
-    throw new ArtifactValidationError("Metadata must describe exactly the expected arm64 DMG and ZIP, with sizes and SHA-512 hashes.")
+    throw new ArtifactValidationError(`${platforms[platform].metadataFile} must describe exactly ${expected.join(" and ")}, with sizes and SHA-512 hashes.`)
   }
-  const zip = parsed.find((file) => file.name.endsWith(".zip"))!
-  if (values.get("path") !== zip.name || values.get("sha512") !== zip.sha512) {
-    throw new ArtifactValidationError("Legacy ZIP metadata disagrees with the files list.")
+  const primary = parsed.find((file) => file.name === expected[0])!
+  if (values.get("path") !== primary.name || values.get("sha512") !== primary.sha512) {
+    throw new ArtifactValidationError(`Legacy ${platforms[platform].metadataFile} path metadata disagrees with the files list.`)
   }
   return { version, files: parsed }
 }
@@ -151,21 +158,21 @@ export function verifyFiles(metadata: Metadata, actual: FileInfo[]): void {
   }
 }
 
-export function expectedAssetNames(metadata: Metadata): string[] {
-  return ["zip", "dmg"].flatMap((ext) => {
-    const name = `Event-Horizon-${metadata.version}-arm64.${ext}`
-    return [name, `${name}.blockmap`]
-  }).concat("latest-mac.yml")
+export function expectedAssetNames(version: string): string[] {
+  const packages = Object.values(platforms).flatMap((platform) => platform.packages(version))
+  return packages.flatMap((name) => [name, `${name}.blockmap`])
+    .concat(Object.values(platforms).map((platform) => platform.metadataFile))
 }
 
-export function verifyAssets(metadata: Metadata, assets: Asset[], local?: FileInfo[]): void {
-  const names = expectedAssetNames(metadata)
+/** `known` sizes come from local files after a build, or from parsed metadata before download. */
+export function verifyAssets(version: string, assets: Asset[], known: FileInfo[] = []): void {
+  const names = expectedAssetNames(version)
   if (assets.length !== names.length || new Set(assets.map((asset) => asset.name)).size !== names.length) {
-    throw new ArtifactValidationError("Draft must contain exactly the DMG, ZIP, both blockmaps and latest-mac.yml.")
+    throw new ArtifactValidationError("Draft must contain exactly the macOS DMG and ZIP, the Windows installer, their blockmaps, latest-mac.yml and latest.yml.")
   }
   for (const name of names) {
     const asset = assets.find((item) => item.name === name)
-    const size = local?.find((file) => file.name === name)?.size ?? metadata.files.find((file) => file.name === name)?.size
+    const size = known.find((file) => file.name === name)?.size
     if (!asset || asset.state !== "uploaded" || asset.size <= 0 || (size !== undefined && asset.size !== size)) {
       throw new ArtifactValidationError(`Missing, incomplete or wrong-sized uploaded asset: ${name}.`)
     }

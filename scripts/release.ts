@@ -2,9 +2,9 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { ArtifactValidationError, assertDraft, assertTagSha, assertUnchangedDraft, assertVersion, assertVersionOnlyBump, decideVersion, expectedAssetNames, githubRepository, parseMetadata, selectRelease, verifyAssets } from "./release-logic.ts"
-import type { Bump, Release } from "./release-logic.ts"
-import { inspectArtifacts, verifyPackages } from "./release-artifacts.ts"
+import { ArtifactValidationError, assertDraft, assertTagSha, assertUnchangedDraft, assertVersion, assertVersionOnlyBump, decideVersion, expectedAssetNames, githubRepository, parseMetadata, platforms, selectRelease, verifyAssets } from "./release-logic.ts"
+import type { Bump, Platform, Release } from "./release-logic.ts"
+import { inspectArtifacts, verifyPackages, verifyWindowsBuild } from "./release-artifacts.ts"
 import { npm, run } from "./release-commands.ts"
 
 const root = fileURLToPath(new URL("..", import.meta.url))
@@ -46,7 +46,7 @@ function tagSha(version: string): string | null {
 
 function preflight(build: boolean): void {
   if (process.platform !== "darwin" || process.arch !== "arm64") {
-    throw new Error("Releasing and publishing verify signed macOS packages and require an Apple Silicon Mac.")
+    throw new Error("Releasing and publishing build and verify the signed macOS and Windows packages, and require an Apple Silicon Mac.")
   }
   if (run("git", ["branch", "--show-current"]) !== "main") {
     throw new Error("Run this command from main. If a bump PR is waiting, merge it and pull main first.")
@@ -80,18 +80,22 @@ function verifySource(release: Release, version: string): void {
 
 async function verifyUploaded(release: Release, version: string): Promise<void> {
   assertDraft(release, version)
-  verifyAssets({ version, files: [] }, release.assets)
+  verifyAssets(version, release.assets)
   const directory = mkdtempSync(join(tmpdir(), "event-horizon-draft-"))
   try {
-    gh(["release", "download", release.tag_name, "--repo", repository, "--pattern", "latest-mac.yml", "--dir", directory])
-    const metadata = parseMetadata(readFileSync(join(directory, "latest-mac.yml"), "utf8"), version)
-    verifyAssets(metadata, release.assets)
+    const metadataFiles = Object.values(platforms).map((platform) => platform.metadataFile)
+    for (const name of metadataFiles) {
+      gh(["release", "download", release.tag_name, "--repo", repository, "--pattern", name, "--dir", directory])
+    }
+    const described = (Object.keys(platforms) as Platform[]).flatMap((platform) =>
+      parseMetadata(readFileSync(join(directory, platforms[platform].metadataFile), "utf8"), version, platform).files)
+    verifyAssets(version, release.assets, described)
     console.log("Verifying uploaded draft hashes…")
-    for (const name of expectedAssetNames(metadata).filter((name) => name !== "latest-mac.yml")) {
+    for (const name of expectedAssetNames(version).filter((name) => !metadataFiles.includes(name))) {
       gh(["release", "download", release.tag_name, "--repo", repository, "--pattern", name, "--dir", directory], transferTimeout)
     }
     const inspected = await inspectArtifacts(directory, version)
-    verifyAssets(inspected.metadata, release.assets, inspected.files)
+    verifyAssets(version, release.assets, inspected.files)
     // Hashes only prove self-consistency; re-check signatures, bundle identity and launch on what was downloaded.
     console.log("Verifying downloaded package signatures and isolated launch…")
     await verifyPackages(directory, inspected.metadata)
@@ -213,9 +217,10 @@ async function buildRelease(bump: Bump): Promise<void> {
   npm("typecheck:release")
   const directory = resolve("dist", `release-v${version}`)
   rmSync(directory, { recursive: true, force: true })
-  npm("dist:mac", [`-c.directories.output=${directory}`])
-  console.log("\nVerifying package metadata, signatures and isolated launch…")
+  npm("dist:release", [`-c.directories.output=${directory}`])
+  console.log("\nVerifying package metadata, signatures, the Windows build and isolated macOS launch…")
   const inspected = await inspectArtifacts(directory, version)
+  verifyWindowsBuild(directory, version)
   await verifyPackages(directory, inspected.metadata)
   if (run("git", ["status", "--porcelain"]) || run("git", ["rev-parse", "HEAD"]) !== sha) {
     throw new Error("Source changed during the build. Rerun from clean main.")
@@ -235,11 +240,11 @@ async function buildRelease(bump: Bump): Promise<void> {
   const draft = getRelease(created.id)
   assertDraft(draft, version)
   if (draft.target_commitish !== sha) throw new Error("Created draft targets the wrong source commit.")
-  gh(["release", "upload", `v${version}`, "--repo", repository, ...expectedAssetNames(inspected.metadata).map((name) => join(directory, name))], transferTimeout)
+  gh(["release", "upload", `v${version}`, "--repo", repository, ...expectedAssetNames(version).map((name) => join(directory, name))], transferTimeout)
   const uploaded = getRelease(draft.id)
   assertDraft(uploaded, version)
   verifySource(uploaded, version)
-  verifyAssets(inspected.metadata, uploaded.assets, inspected.files)
+  verifyAssets(version, uploaded.assets, inspected.files)
   finish(uploaded)
 }
 

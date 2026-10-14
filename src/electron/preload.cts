@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld("api", { updater: updaterApi, auth: authApi })
 const ALLOWED_INVOKE_CHANNELS = new Set([
   "generate-pdf",
   "system:open-external",
+  "events:import-ics:open",
 ])
 
 const ALLOWED_SEND_CHANNELS = new Set([
