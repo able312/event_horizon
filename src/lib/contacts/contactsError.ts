@@ -1,10 +1,10 @@
 import type { ContactsErrorCode, ContactsErrorPayload } from "../../definitions/contacts.js"
 
 /**
- * Typed error thrown by the contacts repositories.
+ * Typed error thrown by the contact rules.
  *
- * Electron only forwards an error's message across IPC, so handlers convert this
- * to a ContactsErrorPayload and the renderer rebuilds it with fromPayload.
+ * Convex only forwards structured error data, so the server sends this as a
+ * ContactsErrorPayload and the renderer rebuilds it with fromPayload.
  */
 export class ContactsError extends Error {
   readonly code: ContactsErrorCode

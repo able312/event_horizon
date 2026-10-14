@@ -1,6 +1,6 @@
 import type { NewVendorCategory } from "../../definitions/contacts.js"
 
-/** Keep in sync with the seed rows in migrations/drizzle/0019_contacts.sql. */
+/** The vendor categories a new deployment starts with (see convex/vendorCategories.ts). */
 export const DEFAULT_VENDOR_CATEGORIES: ReadonlyArray<Required<NewVendorCategory>> = [
   { key: "catering", label: "Catering", colorToken: "teal", sortOrder: 10 },
   { key: "rentals", label: "Rentals", colorToken: "amber", sortOrder: 20 },

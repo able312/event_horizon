@@ -6,29 +6,24 @@
   "type": "module",
   "main": "dist-electron/electron/main.js",
   "scripts": {
-    "dev": "npm run rebuild:electron && node --experimental-strip-types scripts/convex-worktree.ts --dev",
+    "dev": "node --experimental-strip-types scripts/convex-worktree.ts --dev",
     "dev:react": "vite",
     "dev:convex": "convex dev --env-file .env.local",
     "dev:electron": "npm run transpile:electron; NODE_ENV=development ELECTRON_RUN_AS_NODE= electron .",
     "typecheck:electron": "tsc --project src/electron/tsconfig.json --noEmit",
     "build": "npm run typecheck:electron && tsc -b && vite build",
-    "test:fast": "vitest run",
-    "postinstall": "npm run rebuild:node",
-    "test": "npm run rebuild:node && vitest run",
-    "test:watch": "npm run rebuild:node && vitest",
-    "rebuild:electron": "electron-rebuild -f -w better-sqlite3",
-    "rebuild:node": "npm rebuild better-sqlite3",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint .",
     "generate:icons": "bash scripts/generate-icons.sh",
     "preview": "vite preview",
-    "transpile:electron": "tsc --project src/electron/tsconfig.json && cp -r migrations dist-electron/",
-    "dist:mac": "npm run rebuild:electron && npm run transpile:electron && npm run build && electron-builder --mac --arm64 --publish never",
+    "transpile:electron": "tsc --project src/electron/tsconfig.json",
+    "dist:mac": "npm run transpile:electron && npm run build && electron-builder --mac --arm64 --publish never",
     "release": "node --experimental-strip-types scripts/release.ts",
     "release:publish": "node --experimental-strip-types scripts/release-publish.ts",
     "typecheck:release": "tsc --project scripts/tsconfig.json",
-    "dist:win": "npm run rebuild:electron && npm run transpile:electron && npm run build && electron-builder --win --x64 --publish never",
-    "convex:worktree": "node --experimental-strip-types scripts/convex-worktree.ts",
-    "legacy-import": "npm run rebuild:node && node --experimental-strip-types scripts/legacy-import.ts"
+    "dist:win": "npm run transpile:electron && npm run build && electron-builder --win --x64 --publish never",
+    "convex:worktree": "node --experimental-strip-types scripts/convex-worktree.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
@@ -40,11 +35,9 @@
     "@tailwindcss/vite": "^4.1.10",
     "@tanstack/react-query": "^5.90.16",
     "@workos-inc/node": "^11.0.0",
-    "better-sqlite3": "^12.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "convex": "^1.46.0",
-    "drizzle-orm": "^0.45.2",
     "electron-updater": "^6.8.9",
     "ical.js": "^2.2.1",
     "lucide-react": "^0.516.0",
@@ -60,15 +53,12 @@
   },
   "devDependencies": {
     "@edge-runtime/vm": "^5.0.0",
-    "@electron/rebuild": "^4.0.3",
     "@eslint/js": "^9.25.0",
     "@testing-library/react": "^16.3.2",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.4.1",
     "convex-test": "^0.0.60",
-    "drizzle-kit": "^0.31.10",
     "electron": "^41.10.7",
     "electron-builder": "^26.8.1",
     "eslint": "^9.25.0",
@@ -86,9 +76,6 @@
     "vitest": "^4.1.11"
   },
   "overrides": {
-    "@esbuild-kit/core-utils": {
-      "esbuild": "^0.25.12"
-    },
     "app-builder-lib@26.15.3": {
       "@electron/get@3.1.0": {
         "global-agent": "4.1.3"

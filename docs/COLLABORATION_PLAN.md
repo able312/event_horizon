@@ -448,6 +448,10 @@ Not yet done:
   - To restore it: stop dev, swap the directories back, and restore the `CONVEX_DEPLOYMENT` line.
 - Verification: `npm test` 170 files, 1,342 tests passed. Lint, the app, Convex and script typechecks passed.
 
+### SQLite removal (2026-10-14)
+
+After the production import (`docs/PRODUCTION_SETUP.md` Phase 6), the SQLite layer was removed: `better-sqlite3`, Drizzle, `src/electron/db`, the SQLite migrations, every data IPC handler and its preload channel, and the one-off `legacy-import` script with its Convex functions and import guard. The main process no longer touches a database. Step 2's "better-sqlite3 is removed" is done.
+
 ### Notes for the Step 2 detailed plan (found during Step 1)
 - Live updates: use the custom connector in `src/lib/data/liveQueries.ts`, preserving the existing key hierarchy. The unused `@convex-dev/react-query` adapter has been removed.
 - Cart details and tournament details are created on first read (`getOrCreate…`). Convex queries can't write, so these become "create with the event" or an explicit mutation.

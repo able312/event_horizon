@@ -63,49 +63,8 @@ describe("preload allowlist", () => {
   it("allows invoke channels and forwards args", async () => {
     const { api, ipcRenderer } = await loadPreload()
 
-    await expect(api.ipcRenderer.invoke("events:get-many", { id: 1 })).resolves.toBeUndefined()
-    expect(ipcRenderer.invoke).toHaveBeenCalledWith("events:get-many", { id: 1 })
-
-    await expect(api.ipcRenderer.invoke("events:get-by-month", "2026-04")).resolves.toBeUndefined()
-    expect(ipcRenderer.invoke).toHaveBeenCalledWith("events:get-by-month", "2026-04")
-
-    await expect(api.ipcRenderer.invoke("events:get-unscheduled")).resolves.toBeUndefined()
-    expect(ipcRenderer.invoke).toHaveBeenCalledWith("events:get-unscheduled")
-    await expect(
-      api.ipcRenderer.invoke("events:search", {
-        query: "alpha",
-        type: null,
-        status: null,
-        startFrom: null,
-        startTo: null,
-        page: 0,
-        pageSize: 50,
-      }),
-    ).resolves.toBeUndefined()
-    expect(ipcRenderer.invoke).toHaveBeenCalledWith("events:search", {
-      query: "alpha",
-      type: null,
-      status: null,
-      startFrom: null,
-      startTo: null,
-      page: 0,
-      pageSize: 50,
-    })
-
-    await expect(api.ipcRenderer.invoke("events:import-ics:insert", [])).resolves.toBeUndefined()
-    expect(ipcRenderer.invoke).toHaveBeenCalledWith("events:import-ics:insert", [])
-
-    await expect(api.ipcRenderer.invoke("events:get-by-calendar-ids", ["uid-1"])).resolves.toBeUndefined()
-    expect(ipcRenderer.invoke).toHaveBeenCalledWith("events:get-by-calendar-ids", ["uid-1"])
-
-    await expect(
-      api.ipcRenderer.invoke("events:get-by-start-range", "2026-06-13T00:00:00.000Z", "2026-06-16T00:00:00.000Z"),
-    ).resolves.toBeUndefined()
-    expect(ipcRenderer.invoke).toHaveBeenCalledWith(
-      "events:get-by-start-range",
-      "2026-06-13T00:00:00.000Z",
-      "2026-06-16T00:00:00.000Z",
-    )
+    await expect(api.ipcRenderer.invoke("generate-pdf", { defaultFileName: "BEO.pdf" })).resolves.toBeUndefined()
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith("generate-pdf", { defaultFileName: "BEO.pdf" })
 
     await expect(
       api.ipcRenderer.invoke("system:open-external", "https://calendar.google.com/calendar/u/0/r/eventedit"),
@@ -114,6 +73,14 @@ describe("preload allowlist", () => {
       "system:open-external",
       "https://calendar.google.com/calendar/u/0/r/eventedit",
     )
+  })
+
+  it("blocks the removed SQLite data channels", async () => {
+    const { api } = await loadPreload()
+
+    for (const channel of ["events:get-many", "contacts:search", "db-stats:get", "events:import-ics:insert"]) {
+      expect(() => api.ipcRenderer.invoke(channel)).toThrow(`Blocked IPC invoke channel: ${channel}`)
+    }
   })
 
   it("blocks unknown invoke channels", async () => {

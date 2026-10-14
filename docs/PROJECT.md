@@ -4,24 +4,26 @@
 
 - Name: Event Horizon
 - What it does:
-  - A local-only event ops tool to track all details about events we host at our venue.
+  - An in-house event ops tool to track all details about events we host at our venue.
   - Event creation → multi-day phased status process → track event status, deposits, all details → generate PDFs (Estimate/BEO/Timeline) for staff access.
 - Primary user(s):
-  - Single user, myselg
+  - The venue team (5–6 people: 4 on Windows, 1 on macOS). Everyone with a company account sees and edits the same data.
 - Operating mode:
-  - Local-only desktop app (Electron). No hosted backend. Data saved to sqlite database on disk.
+  - Desktop app (Electron) backed by a shared, hosted Convex database with live updates across clients.
+  - Sign-in through WorkOS AuthKit with Google; only `westlinks.ca` accounts are allowed.
+  - Online only. There is no offline mode or local copy of the data.
 
 ## Goals
 
 - Daily-use reliability: app boots quickly, strong UI/UX that is fast and easy to use, core flows don’t break.
-- Data integrity: no silent data loss; migrations are safe; backups are possible.
+- Data integrity: no silent data loss; schema changes are safe for existing data; backups are possible.
 - Reasonable security baseline: safe-by-default Electron settings and constrained IPC.
 - Maintainability: clear boundaries (renderer/preload/main/db) and predictable patterns.
 
 ## Non-Goals
 
-- Multi-user / accounts / auth
-- Cloud sync
+- Per-user permissions (any company account can read and edit everything)
+- Offline use
 - Enterprise-grade threat model
 - Perfect UI polish
 - Import / Export functionality (beyond PDF generation flow already implemented)
@@ -56,15 +58,18 @@
 
 Assumptions:
 
-- The app runs entirely on the user’s machine and stores data locally.
-- The renderer should be treated as _untrusted_ compared to the main process in order to gaurd the privilege boundary, even with local-only.
-- No remote content is loaded
+- Data lives in a hosted Convex deployment shared by the team. Anyone with a `westlinks.ca` Google account can sign in.
+- The renderer should be treated as _untrusted_ compared to the main process in order to gaurd the privilege boundary.
+- The renderer calls Convex directly. Convex functions never trust the client: each one checks for a signed-in company identity before touching data.
+- No remote content is loaded into the window. The renderer is bundled with the app; only Convex and WorkOS are contacted over the network.
 
 Security priorities:
 
+- Enforce sign-in and the company email domain server-side in every Convex function (`convex/lib/auth.ts`), not only in WorkOS.
 - Prevent arbitrary IPC channel access from renderer.
 - Avoid disabling Electron/Chromium security features unless justified.
-- Validate inputs crossing trust boundaries (renderer → main → DB / filesystem).
+- Validate inputs crossing trust boundaries (renderer → main → filesystem / OS, renderer → Convex).
+- No secrets ship with the app. The WorkOS client ID and Convex URL are public; sign-in is a PKCE flow, and the session is stored encrypted with Electron `safeStorage`.
 
 ## Tech Stack
 
@@ -83,9 +88,13 @@ Security priorities:
 
 ### Data Layer
 
-- SQLite (better-sqlite3)
-- drizzle-orm + drizzle-kit
-- UUIDs for IDs
+- Convex (hosted database, queries and mutations in `convex/`)
+- Convex document IDs; the renderer treats them as opaque strings
+
+### Auth
+
+- WorkOS AuthKit, with Google (company Google Workspace) as the only sign-in method
+- Convex validates WorkOS access tokens (`convex/auth.config.ts`); the token must carry the user's email
 
 ## Architecture Overview (high level)
 
@@ -97,11 +106,26 @@ Security priorities:
 - Preload:
   - Exposes explicit API surface (no generic `invoke(channel)` passthrough).
 - Main:
-  - Owns privileged operations: filesystem, OS, DB access, external linking.
-  - Implements `ipcMain.handle(...)` allowlisted endpoints.
-- Database:
-  - Schema migrations managed by drizzle-kit.
-  - Prefer transactions for multi-step writes.
+  - Owns privileged operations: filesystem (PDF save), OS integration, external linking, the app menu, ICS file parsing, sign-in and auto-update.
+  - Implements `ipcMain.handle(...)` allowlisted endpoints. It has no database access.
+  - Sign-in: opens the system browser for WorkOS, receives the callback on `http://127.0.0.1:42070/callback`, stores the session and hands access tokens to the renderer (`src/electron/services/auth*.ts`).
+- Convex (`convex/`):
+  - `schema.ts` defines the tables and indexes. Each public function is a `companyQuery` / `companyMutation` (`convex/lib/auth.ts`), which rejects callers who aren't signed in with a company account.
+  - Every write records who created and last edited the record (`convex/lib/audit.ts`).
+  - Each mutation runs as one transaction, so multi-step writes belong in a single mutation.
+
+### Deployments
+
+Each environment has its own isolated database, so branch work can't touch shared data:
+
+| Environment | Convex deployment | WorkOS environment |
+|---|---|---|
+| Installed app | Production (`VITE_CONVEX_PRODUCTION_URL`, set at build time; the app won't connect without it) | Production |
+| Main checkout (`npm run dev`) | Cloud dev deployment (`VITE_CONVEX_URL` in `.env.local`) | Event Horizon Dev (sandbox) |
+| Other worktrees | A local deployment per worktree (`npm run convex:worktree`, state in `.convex/local/default`), seeded with sample data | Event Horizon Dev (sandbox) |
+
+- `npm run dev` checks which deployment the checkout points at, then starts Convex, Vite and Electron together.
+- Production functions are pushed with `npx convex deploy` from the main checkout. Production backups are manual (Convex dashboard → Backups) on the free plan. See `docs/PRODUCTION_SETUP.md`.
 
 ## Core Flows
 
@@ -109,7 +133,7 @@ Security priorities:
 - Move through statuses/phases
 - Attach/track details and their attached timeblocks data
 - Generate PDFs (Estimate, BEO, Timeline)
-- Confirm persistence across restarts
+- Confirm persistence across restarts, and that edits appear live in a second signed-in window
 
 ## Quality Gates / How to Verify
 
@@ -118,7 +142,7 @@ Security priorities:
 - Dependencies: `npm audit` & `npm audit --omit=dev`
 - Tests: `npm run test`
 - Basic smoke test:
-  - Launch app
+  - Launch app and sign in with a company account
   - [Open main screen, create a record, restart app, confirm record persists]
 
 ## Repo Conventions (so agents match your style)
@@ -131,16 +155,18 @@ Security priorities:
   - Add handler in main
   - Add explicit method in preload
   - Add types for renderer usage
-- When changing DB schema:
-  - Add migration + confirm existing data survives.
+- When adding data operations:
+  - Add the Convex function using `companyQuery` / `companyMutation`
+  - Add the renderer call in `src/lib/data` (nothing else imports Convex)
+  - Add query keys and live sources in `src/lib/data/queries.ts` / `sources.ts`
+- When changing the Convex schema:
+  - Production already holds data. Make changes that existing documents still satisfy (e.g. new fields optional), or migrate the data first, and confirm existing data survives.
+  - `npx convex deploy` refuses a schema that existing documents don't match.
 
 ## Dependency Overrides
 
 `package.json` cannot hold comments, so every entry in `overrides` is recorded here. Re-check each one whenever its parent package is bumped, and delete it once upstream ships a fixed range (`npm audit` stays clean without it).
 
-- `@esbuild-kit/core-utils` → `esbuild ^0.25.12`
-  - Why: the esbuild version that core-utils requests is affected by an esbuild dev-server advisory. Dev-only (via drizzle-kit).
-  - Remove when: drizzle-kit no longer pulls in `@esbuild-kit/core-utils`, or core-utils depends on `esbuild >=0.25`.
 - `app-builder-lib@26.15.3` → `@electron/get@3.1.0` → `global-agent 4.1.3`
   - Why: `global-agent@3` → `roarr@2` → `sprintf-js` (GHSA-hp3w-g68c-fv3c, moderate DoS). Build-time only (electron-builder downloads Electron with it).
   - Compatibility: `@electron/get` only uses it in `proxy.js` (`require('global-agent').bootstrap()` when `ELECTRON_GET_USE_PROXY` is set). Checked that 3.0.0 and 4.1.3 resolve `GLOBAL_AGENT_HTTP(S)_PROXY`/`NO_PROXY` and install the same proxy agent.

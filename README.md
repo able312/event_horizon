@@ -1,12 +1,12 @@
 # Event Horizon
 
-Event Horizon is an in-house desktop application for managing venue events from initial intake through planning and document output. It is a local-first Electron app with a React renderer, a SQLite data layer, and a workflow built around a single user managing real event operations, including estimates, BEOs, timelines, payments, and scheduling details.
+Event Horizon is an in-house desktop application for managing venue events from initial intake through planning and document output. It is an Electron app with a React renderer and a shared Convex database, so the whole venue team works from the same live data: estimates, BEOs, timelines, payments, and scheduling details.
 
 ## Why This Project Exists
 
 This project exists to replace scattered event information spread across notes, ad hoc documents, and manual coordination. The goal is to keep the full operational picture for an event in one place: the event record itself, its schedule, linked planning details, financial entries, and exportable staff-facing documents.
 
-It is intentionally optimized for reliability, speed, and daily usability in a local venue workflow rather than multi-user collaboration or cloud sync.
+It is intentionally optimized for reliability, speed, and daily usability for a small venue team. Everyone signs in with a company Google account and sees the same data, with changes appearing live in every open app.
 
 ## What It Does
 
@@ -20,13 +20,14 @@ It is intentionally optimized for reliability, speed, and daily usability in a l
 
 ## Architecture Highlights
 
-Event Horizon is structured as a desktop app with explicit boundaries between UI, privileged Electron code, and storage.
+Event Horizon is structured as a desktop app with explicit boundaries between UI, privileged Electron code, and the backend.
 
 - Renderer: React + Vite SPA with feature-oriented UI modules
 - Preload: a constrained `contextBridge` layer exposing allowlisted IPC methods only
-- Main process: Electron window lifecycle, app menu actions, IPC handler registration, filesystem/OS access, and database initialization
-- Data layer: SQLite via `better-sqlite3`, modeled with Drizzle ORM and evolved through migrations
-- Storage model: main and installed builds use Electron's user data directory; development worktrees keep an ignored `.event-horizon/app.sqlite` inside each worktree
+- Main process: Electron window lifecycle, app menu actions, IPC handler registration, filesystem/OS access, sign-in and auto-update. It has no database access.
+- Data layer: Convex queries and mutations in `convex/`, called by the renderer only through `src/lib/data`. Cached reads stay subscribed, so other people's edits arrive without a refresh.
+- Auth: WorkOS AuthKit with Google sign-in. Every Convex function rejects callers who aren't signed in with a `westlinks.ca` account.
+- Deployments: installed builds use the Convex production deployment; the main checkout uses the cloud dev deployment; every other worktree runs its own local deployment, so branch work can't touch shared data
 
 The security and reliability baseline is also deliberate:
 
@@ -34,7 +35,8 @@ The security and reliability baseline is also deliberate:
 - `nodeIntegration: false`
 - `webSecurity: true`
 - allowlisted IPC channels instead of a generic passthrough bridge
-- migration-driven schema updates on app startup
+- auth and the company email domain enforced server-side in Convex
+- no secrets in the app: the WorkOS client ID and Convex URL are public, and sign-in uses PKCE
 
 ## Tech Stack
 
@@ -46,31 +48,34 @@ The security and reliability baseline is also deliberate:
 - Tailwind CSS
 - shadcn/ui and Radix UI
 - TanStack Query
-- SQLite with `better-sqlite3`
-- Drizzle ORM and Drizzle Kit
+- Convex
+- WorkOS AuthKit
 - Vitest
 
 ## Project Structure
 
 ```text
+convex/
 src/
   electron/
   features/
   lib/
   routes/
 docs/
-migrations/
+scripts/
 ```
 
-- `src/electron/main.ts` bootstraps Electron, creates the main window, initializes the database, and rebuilds the app menu
+- `convex/` contains the database schema and the queries and mutations the app calls, with their auth checks
 - `src/electron/preload.cts` exposes the allowlisted renderer API through `contextBridge`
-- `src/electron/ipcRoutes/` contains IPC handlers that receive renderer requests and forward them to the appropriate backend logic
-- `src/electron/db/` contains the database setup, schema, migrations support, and repository layer
+- `src/electron/main.ts` bootstraps Electron, sets up sign-in and the updater, creates the main window, and rebuilds the app menu
+- `src/electron/ipcRoutes/` contains IPC handlers for PDF saving, external links, sign-in and updates
+- `src/electron/services/` contains sign-in (WorkOS), auto-update and ICS parsing
 - `src/features/` contains higher-level renderer features such as calendar and event detail workflows
-- `src/lib/ipc/` contains the frontend-side IPC callers used by the renderer
+- `src/lib/data/` is the only renderer code that talks to Convex
+- `src/lib/ipc/` contains the frontend-side IPC callers used by the renderer for Electron features
 - `src/routes/previews/` contains preview routes for generated event documents such as estimates and timelines
 - `docs/PROJECT.md` documents the broader technical context and project goals
-- `migrations/` contains Drizzle migration files used to evolve the SQLite schema safely
+- `docs/PRODUCTION_SETUP.md` records how production (Convex, WorkOS, Google sign-in) was set up
 
 ## Local Development
 
@@ -88,57 +93,50 @@ npm run dev
 
 `npm run dev` does three important things:
 
-- rebuilds `better-sqlite3` for the Electron runtime
+- checks which Convex deployment this checkout points at (the cloud dev deployment in the main checkout, a local one in any other worktree) and starts it
 - starts the Vite dev server on port `42069`
 - transpiles and launches the Electron process
 
-On startup, the app runs the latest Drizzle migrations. The `main` branch and installed app use `app.sqlite` in Electron's user data directory. A development worktree uses `.event-horizon/app.sqlite` in its own folder. A new worktree database starts empty, runs migrations, then receives synthetic sample events, a timeblock, food item, payment, and touchpoint. Existing worktree databases are left as they are; they are never copied from another worktree or reseeded.
+In a new worktree, run `npm run convex:worktree` once first. It sets up the worktree's own local Convex deployment and fills it with sample events and contacts. Its data lives in the ignored `.convex/local/default` folder; to reset it, stop the app and delete that folder, then run the setup again.
 
-Before applying pending migrations to an existing database, the app makes a consistent SQLite snapshot in a neighboring `backups/` directory. Drizzle applies the pending migrations as one transaction, so one snapshot covers the full pending batch. If backup or migration fails, startup stops and shows an error. Backups and SQLite WAL sidecars are ignored by Git. To restore a backup, close the app, remove the target database's `-wal` and `-shm` sidecars, then copy the backup over `app.sqlite`. To reset a worktree, close its app and remove only its `.event-horizon` directory; the next launch creates a fresh seeded database. Older worktrees that already contain a copied database are preserved until explicitly reset.
-
-The app runs migrations automatically on its selected database. If you run `npx drizzle-kit migrate` directly, set `EVENT_HORIZON_DB_PATH` to the absolute path of the intended database first. The CLI has no implicit database target.
+Signing in during development uses the WorkOS sandbox environment and a company Google account.
 
 ## Useful Scripts
 
-- `npm run dev` starts the local development workflow for React and Electron
+- `npm run dev` starts Convex, Vite and Electron for local development
+- `npm run convex:worktree` sets up and seeds a worktree's local Convex deployment
 - `npm run build` type-checks Electron, builds the TypeScript project, and creates the renderer build
-- `npm run test` rebuilds `better-sqlite3` for Node and runs the Vitest suite
-- `npm run test:fast` runs tests without the Node rebuild step
+- `npm run test` runs the Vitest suite (app and Convex functions)
 - `npm run lint` runs ESLint across the repo
-- `npm run rebuild:electron` rebuilds `better-sqlite3` for the Electron runtime
-- `npm run rebuild:node` rebuilds `better-sqlite3` for the Node runtime
 - `npm run dist:mac` creates a macOS distribution build
 - `npm run dist:win` creates a Windows distribution build
-- `npx drizzle-kit generate` generates a new migration from schema changes
-- `EVENT_HORIZON_DB_PATH=/absolute/path/to/app.sqlite npx drizzle-kit migrate` applies migrations to that database
-
-The rebuild scripts matter because SQLite is backed by native bindings, and the binary target differs between plain Node and Electron.
+- `npm run release` builds, verifies and uploads a draft GitHub release; `npm run release:publish` publishes it
 
 ## Data Model Overview
 
-The schema centers on `events`, which acts as the root record for venue work. Each event stores core details such as title, type, status, schedule, client information, guest counts, notes, and tracking metadata.
+The schema (`convex/schema.ts`) centers on `events`, which acts as the root record for venue work. Each event stores core details such as title, type, status, schedule, client information, guest counts, notes, and tracking metadata.
 
 The main operational spine is `timeblocks`. Timeblocks represent timeline entries and bridge event-level planning to attached detail sections. That structure allows timeline-driven organization without flattening every event concern into a single table.
 
 Supporting tables store more specialized event data, including:
 
 - `payments`
-- `menu_of_charge_items`
-- `tournament_details`
-- `cart_details`
-- `notes`
-- `setup_instructions`
-- `vendor_items`
-- `food_items`
-- `beverage_items`
+- `menuOfChargeItems`
+- `tournamentDetails`
+- `cartDetails`
+- `foodItems`
+- `beverageItems`
+- `touchpoints`
+- `contacts`, `contactRoles`, `eventContacts` and `vendorCategories`
+- `users`, for recording who created and last edited each record
 
 This model keeps the event record central while allowing operational detail to expand in focused tables rather than a single overloaded structure.
 
 ## Design Decisions
 
-- Local-first desktop architecture: this app is designed for a real operational workflow on one machine, so SQLite and Electron are a better fit than introducing a hosted backend and sync layer
+- Shared hosted backend: the team needs one source of truth with live updates, so data lives in Convex. Authorization is plain TypeScript in each function rather than database policies
+- One data boundary: only `src/lib/data` talks to Convex, so hooks and components don't depend on the backend and it could be swapped in one place
 - Explicit IPC contracts: the renderer talks to the main process through named, allowlisted IPC routes rather than a generic bridge, which keeps the trust boundary clear
-- Migration-backed schema management: Drizzle migrations make schema evolution intentional and safer for long-lived local data
 - Feature-oriented renderer structure: renderer code is grouped around workflows such as calendar views and event detail management rather than only by technical layer
 - Preview-driven document output: estimate, BEO, and timeline generation are part of the application flow rather than treated as an external reporting system
 
@@ -154,4 +152,4 @@ For routine verification:
 
 ## Notes
 
-Event Horizon is actively used as a practical internal tool, and the repo doubles as a case study in building a local-first operational desktop application with explicit process boundaries, typed IPC, and migration-backed local storage.
+Event Horizon is actively used as a practical internal tool, and the repo doubles as a case study in building a collaborative operational desktop application with explicit process boundaries, typed IPC, and a shared reactive backend.

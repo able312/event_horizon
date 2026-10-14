@@ -14,7 +14,7 @@ dist-electron
 dist-ssr
 *.local
 
-# Local SQLite databases, including worktree snapshots and WAL sidecars
+# SQLite databases from before the move to Convex (old worktrees and backups)
 .event-horizon/
 *.sqlite*
 

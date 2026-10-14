@@ -1,11 +1,10 @@
-import { app, autoUpdater as nativeUpdater, BrowserWindow, dialog, nativeImage } from 'electron';
+import { app, autoUpdater as nativeUpdater, BrowserWindow, nativeImage } from 'electron';
 import electronUpdater from 'electron-updater';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url'
 import { isDev } from './utils.js';
 import { registerAllIpcHandlers } from './ipcRoutes/index.js';
 import { rebuildAppMenu } from './appMenu.js';
-import { initDB } from './db/index.js';
 import { createUpdaterService, isUpdaterEnabled } from './services/updaterService.js';
 import { createUpdaterLogger } from './services/updaterLogger.js';
 import { registerUpdaterIpcHandlers } from './ipcRoutes/updaterHandler.js';
@@ -53,7 +52,10 @@ const createWindow = () => {
 
     const rendererUrl = resolveRendererUrl()
     console.log("Loading", rendererUrl)
-    mainWindow.loadURL(rendererUrl)
+    mainWindow.loadURL(rendererUrl).then(
+        () => console.log("Renderer loaded:", rendererUrl),
+        (error: unknown) => console.error("Renderer failed to load:", error),
+    )
 }
 
 const setupUpdater = () => {
@@ -82,16 +84,6 @@ const setupAuth = () => {
 }
 
 app.on("ready", () => {
-    try {
-        initDB()
-    } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        console.error("Database startup failed:", error)
-        dialog.showErrorBox("Database startup failed", `${message}\n\nThe app will close without opening a window.`)
-        app.quit()
-        return
-    }
-
     registerAllIpcHandlers()
 
     const updater = setupUpdater()

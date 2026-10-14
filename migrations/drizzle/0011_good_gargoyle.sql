@@ -1,1 +1,0 @@
-CREATE INDEX `events_start_date_time_idx` ON `events` (`start_date_time`);

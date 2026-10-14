@@ -38,10 +38,6 @@ async function registeredFunctions(): Promise<[string, RegisteredFunction][]> {
 /** Internal functions run only through the Convex CLI with admin access. */
 const CLI_ONLY_FUNCTIONS = new Set([
   "./developmentSeed.ts:seed",
-  "./legacyImport.ts:nonEmptyTables",
-  "./legacyImport.ts:insertBatch",
-  "./legacyImport.ts:deletePage",
-  "./legacyImport.ts:dump",
 ])
 
 function authCode(error: unknown): unknown {
