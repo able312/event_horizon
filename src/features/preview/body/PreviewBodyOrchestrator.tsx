@@ -13,6 +13,7 @@ import {
   resolvePreviewType,
   type PreviewTypeId,
 } from "~/features/preview/lib/previewTypes"
+import { usePreviewPreferences } from "~/features/preview/preferences/PreviewPreferencesContext"
 import { useEvent } from "~/hooks/useEvent"
 import { usePrimaryClient } from "~/hooks/useEventContacts"
 import { useHotkey } from "~/lib/hotKeys"
@@ -68,6 +69,7 @@ const PreviewBodyOrchestrator: React.FC = () => {
   const previewType = resolvePreviewType(searchParams)
   const previewPage = useMemo(() => renderPreviewPage(previewType), [previewType])
   const { data: event } = useEvent()
+  const { state: previewPreferences } = usePreviewPreferences()
   const {
     data: client,
     isSuccess: contactsLoaded,
@@ -97,6 +99,7 @@ const PreviewBodyOrchestrator: React.FC = () => {
         clientName: client?.displayName,
         startDateTime: event?.startDateTime,
         previewType,
+        financialDocumentKind: previewPreferences["financial-report"].documentKind,
       })
       const saved = await callSavePDF({ defaultFileName })
       if (!saved) return

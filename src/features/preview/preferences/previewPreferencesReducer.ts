@@ -143,6 +143,14 @@ export function previewPreferencesReducer(
         ...state,
         timeline: { ...state.timeline, includeSystemRows: action.value },
       }
+    case "financial/setDocumentKind":
+      return {
+        ...state,
+        "financial-report": {
+          ...state["financial-report"],
+          documentKind: action.value,
+        },
+      }
     case "financial/setShowBeverageAppendix":
       return {
         ...state,

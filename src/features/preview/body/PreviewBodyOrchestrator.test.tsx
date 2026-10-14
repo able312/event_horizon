@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter, Route, Routes, useNavigate } from "react-router"
 import { describe, expect, it, vi } from "vitest"
+import { PreviewPreferencesProvider } from "../preferences/PreviewPreferencesContext"
 import PreviewBodyOrchestrator from "./PreviewBodyOrchestrator"
 
 const status = vi.hoisted(() => {
@@ -47,7 +48,9 @@ function PreviewHarness() {
 
 function App() {
   return <MemoryRouter initialEntries={["/preview/event?type=beo"]}>
-    <Routes><Route path="/preview/:id" element={<PreviewHarness />} /></Routes>
+    <PreviewPreferencesProvider>
+      <Routes><Route path="/preview/:id" element={<PreviewHarness />} /></Routes>
+    </PreviewPreferencesProvider>
   </MemoryRouter>
 }
 

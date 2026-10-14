@@ -9,6 +9,7 @@ import {
   computeFinancialPreviewModel,
   toCurrency,
 } from "~/features/event-detail/workspace/lib/financial"
+import { getFinancialDocumentKindLabels } from "~/features/preview/lib/financialDocumentKinds"
 import { PreviewBlock, PreviewDocument } from "~/features/preview/pagination/PreviewDocument"
 import { usePreviewPreferences } from "~/features/preview/preferences/PreviewPreferencesContext"
 import {
@@ -183,6 +184,7 @@ export default function FinancialPreview() {
   } = usePaymentsSection()
   const { state } = usePreviewPreferences()
   const prefs = state["financial-report"]
+  const documentLabels = getFinancialDocumentKindLabels(prefs.documentKind)
 
   const chargeItemsByCategory = useMemo(() => {
     return (chargeItems ?? []).reduce(
@@ -245,7 +247,7 @@ export default function FinancialPreview() {
         <div>
           <div className="flex items-center justify-between pb-6">
             <div>
-              <h2 className="text-xl font-bold">Event Estimate</h2>
+              <h2 className="text-xl font-bold">{documentLabels.title}</h2>
               <p className="text-sm font-medium">The Club at Westlinks</p>
               <p className="text-xs italic">2089 Bruce Rd 17, Port Elgin, ON</p>
             </div>
@@ -280,7 +282,7 @@ export default function FinancialPreview() {
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 pb-2 text-sm">
               <dt className="text-muted-foreground">Event Date</dt>
               <dd className="font-medium">{formatDate(event?.startDateTime ?? "")}</dd>
-              <dt className="text-muted-foreground">Estimate Date</dt>
+              <dt className="text-muted-foreground">{documentLabels.dateLabel}</dt>
               <dd className="font-medium">{formatDate(new Date().toString())}</dd>
             </dl>
           </div>
