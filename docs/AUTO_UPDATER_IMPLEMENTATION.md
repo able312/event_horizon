@@ -1,4 +1,4 @@
-# macOS updater implementation
+# Updater implementation (macOS and Windows)
 
 Local signing evidence is in [MACOS_SIGNING.md](MACOS_SIGNING.md).
 The published `0.1.1` release was detected, downloaded, and installed through the
@@ -9,8 +9,9 @@ code (see acceptance results). Releases are built and published locally with
 
 ## Behavior
 
-- Real updates run only in packaged macOS arm64 apps, after successful database
-  initialization and IPC registration. They check at startup and every six hours.
+- Real updates run only in packaged macOS arm64 and Windows x64 apps, after IPC
+  registration. They check at startup and every six hours. macOS reads
+  `latest-mac.yml` and Windows reads `latest.yml` from the same GitHub release.
 - Checks cannot replace a download, preparation, or ready state. Automatic
   downloads are enabled; installation on ordinary quit is disabled.
 - A 100% progress event does not establish readiness. The `update-downloaded`
@@ -22,6 +23,12 @@ code (see acceptance results). Releases are built and published locally with
   The handoff's install-on-download listener is removed on failure so a late
   native completion cannot unexpectedly close the app. If Squirrel finishes
   staging after that timeout, macOS applies the staged update on the next quit.
+- On Windows, `quitAndInstall()` starts the downloaded NSIS installer and quits.
+  It shows a brief progress window, then reopens the app. The installer is
+  unsigned and no `publisherName` is configured, so Electron Updater skips
+  signature verification. Integrity comes from the SHA-512 in `latest.yml`, served
+  over HTTPS from GitHub. Updates downloaded by the app carry no download mark,
+  so SmartScreen only warns on the first, browser-downloaded install.
 - A failed check (for example an offline startup) is logged and returns to idle
   without showing an error. Only a failed download shows the error indicator,
   which clears on the next scheduled check. Raw details stay in the local
@@ -95,20 +102,29 @@ merge, pull `main`, then rerun. It does not enable auto-merge or bypass protecti
 On the merged commit, the quality gate runs tests with two workers, lint and the
 release-script TypeScript check; the production build runs once, inside packaging. Dependency audits are
 excluded from this gate because of the existing findings recorded below.
-Packaging reuses `dist:mac`, which rebuilds SQLite for Electron, transpiles the
-main process, builds the renderer, and invokes
-`electron-builder --mac --arm64 --publish never`. Output is isolated under
+Packaging uses `dist:release`, which transpiles the main process, builds the
+renderer once, and invokes `electron-builder --mac --win --publish never`. The
+architectures come from `electron-builder.json`: arm64 for macOS and x64 for
+Windows. Windows is cross-built on the Mac; with no native modules, no Wine is
+needed. Output is isolated under
 `dist/release-vX.Y.Z/`; stale output there is removed before rebuilding.
 
-The explicit artifact name produces `Event-Horizon-X.Y.Z-arm64.dmg` and
-`Event-Horizon-X.Y.Z-arm64.zip`, with matching `.blockmap` files. No manual rename
-is needed. Electron Builder generates `latest-mac.yml` and the bundled
-`app-update.yml` from the existing public GitHub provider configuration.
+The explicit artifact name produces `Event-Horizon-X.Y.Z-arm64.dmg`,
+`Event-Horizon-X.Y.Z-arm64.zip` and the per-user NSIS installer
+`Event-Horizon-X.Y.Z-x64.exe`, each with a matching `.blockmap` file. No manual
+rename is needed. Electron Builder generates `latest-mac.yml`, `latest.yml` and
+each platform's bundled `app-update.yml` from the existing public GitHub provider
+configuration.
 
 Before creating or replacing a draft, the script checks:
 
-- Update metadata version, exact filenames, byte sizes and SHA-512 hashes.
-- Both blockmaps are present and nonempty.
+- Both platforms' update metadata: version, exact filenames, byte sizes and SHA-512 hashes.
+- All three blockmaps are present and nonempty.
+- The Windows build, which can't be launched on a Mac. `win-unpacked` must hold an
+  x64 `Event Horizon.exe` and an `app.asar` whose `package.json` has this version.
+  Its main entry and `dist-react/index.html` must exist, and `app-update.yml` must
+  point at the configured GitHub repository. The installer must be a Windows
+  executable.
 - Strict, deep signature verification of the ZIP-extracted and DMG-mounted apps,
   the expected authority and app identifier, hardened runtime, version and arm64.
 - A launch of the ZIP-extracted app with a temporary user-data directory. The
@@ -128,7 +144,7 @@ More than one release for the version stops the command. A draft whose target
 is not a full commit SHA (for example, after editing it in the GitHub UI) is
 rebuilt like an incomplete draft. Only a checked draft can be deleted for replacement. Published releases are
 never deleted. The replacement gets generated release notes, then `gh release
-upload` (allowed up to an hour) uploads exactly the DMG, ZIP, both blockmaps and `latest-mac.yml`. The
+upload` (allowed up to an hour) uploads exactly eight files: the DMG, ZIP, Windows installer, their three blockmaps, `latest-mac.yml` and `latest.yml`. A macOS-only draft is incomplete and gets rebuilt. The
 script checks the remote asset list and sizes against the local verified files,
 prints the draft URL, opens it in interactive use, and exits.
 
@@ -136,7 +152,9 @@ prints the draft URL, opens it in interactive use, and exits.
 
 `release:publish` requires the current version's normal draft. It verifies the
 source and tag SHA, downloads the uploaded files to a temporary directory, checks
-metadata and artifact hashes/sizes, and rechecks that the draft has not changed.
+both platforms' metadata and artifact hashes/sizes, re-runs the macOS signature
+and launch checks and the Windows installer check, and rechecks that the draft
+has not changed.
 It then runs `gh release edit vX.Y.Z --draft=false --latest`. No rebuild occurs,
 so the uploaded artifacts are exactly the ones published. A complete-draft retry
 uses the same remote verification; network/authentication failures stop without

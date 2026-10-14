@@ -202,19 +202,45 @@ Do this only after Phase 6 is confirmed good.
 
 ## Phase 8: Windows build and rollout to the team
 
-- [ ] 🤖 Add the Windows installer build and make sure sign-in works on Windows.
-- [ ] 🤖 Set up auto-update for both macOS and Windows from GitHub Releases.
-- [ ] 🧑 **Decision:** Windows builds won't be paid-signed, so choose one:
-  - [ ] Unsigned installer. Each person clicks **More info → Run anyway** the first time.
+### 8a. Code changes 🤖
+
+- [x] 🤖 Add the Windows installer: a per-user NSIS installer for x64, cross-built on the Mac. No admin rights are needed to install or update.
+- [x] 🤖 Fit the window to Windows. The minimise, maximise and close buttons sit in the top-right corner. Shortcuts use **Ctrl** instead of ⌘, and **Import .ics** has a button in the calendar sidebar, because Windows has no menu bar.
+- [x] 🤖 Turn on auto-update for Windows. Both platforms update from the same GitHub release.
+- [x] 🤖 Make `npm run release` build, verify and upload the macOS **and** Windows packages to one draft. A release can't go out with only one platform.
+- [x] 🧑 **Decision:** Windows builds won't be paid-signed, so choose one:
+  - [x] Unsigned installer. Each person clicks **More info → Run anyway** the first time.
   - [ ] Self-signed certificate installed on each of the 4 Windows PCs, like the Mac setup.
-- [ ] 🧑 On one Windows PC:
-  - [ ] Install.
-  - [ ] Sign in.
+- [ ] 🧑 Review and merge the pull request.
+
+### 8b. First Windows release
+
+- [ ] 🤖 Run `npm run release -- minor` from the main checkout. This makes the `v0.3.0` draft with the Mac and Windows files.
+- [ ] 🧑 On one Windows PC, check **Settings → Privacy & security → Windows Security → App & browser control → Smart App Control**. If it's **On**, the unsigned app is blocked with no way around it. Turn it **Off** first.
+- [ ] 🧑 Copy `Event-Horizon-0.3.0-x64.exe` from the draft to that PC. The draft is only visible to you on GitHub, so use a USB stick or shared drive, or download it there while signed in to GitHub.
+- [ ] 🧑 Install it on that PC:
+  - [ ] If Edge says the file "isn't commonly downloaded": **⋯ → Keep → Show more → Keep anyway**.
+  - [ ] Run it. At "Windows protected your PC": **More info → Run anyway**. It installs in a few seconds and opens the app. There are no installer screens.
+  - [ ] Check the window: the minimise, maximise and close buttons are in the top-right corner and don't cover any header buttons.
+  - [ ] Sign in. The browser should return to `127.0.0.1:42070` and the app should sign in.
   - [ ] See the shared events.
   - [ ] Edit one and watch it update on your Mac.
-  - [ ] Receive an update.
-- [ ] 🧑 Roll out to the other 3 Windows users and any other Mac users.
+  - [ ] Try **Ctrl+F** and **Ctrl+N** on the calendar, and open an Estimate, BEO and Timeline PDF. Fonts differ from the Mac, so check the page breaks.
+  - [ ] Import a `.ics` file with the sidebar button.
+- [ ] 🧑 Approve, then 🤖 publish it (`npm run release:publish`). Your Mac updates to `0.3.0` as usual.
+
+### 8c. Check that Windows updates itself
+
+- [ ] 🤖 Make any small change, then run `npm run release` (patch → `v0.3.1`) and, after you approve, `npm run release:publish`.
+- [ ] 🧑 On the Windows PC, restart the app (or wait up to six hours). It downloads `0.3.1` and shows an update button in the sidebar. Click **Update and restart**. Then a small progress window appears and the app reopens on `0.3.1`. SmartScreen won't ask again.
+
+### 8d. Roll out
+
+- [ ] 🧑 Send the other 3 Windows users the link to the [latest release](https://github.com/able312/event_horizon/releases/latest). Tell them to download the `.exe`, check Smart App Control, click through the two warnings above, and sign in with their `westlinks.ca` Google account.
+- [ ] 🧑 Any other Mac users install the `.dmg` and the self-signed certificate (see [MACOS_SIGNING.md](MACOS_SIGNING.md)).
 - [ ] 🧑 Archive the old app's `app.sqlite` somewhere safe and stop using the old version.
+
+> **If Windows says the app is damaged or Defender quarantines it:** unsigned apps sometimes trip antivirus. In Windows Security → **Protection history**, choose **Allow** for Event Horizon, then reinstall. Updates install themselves after that.
 
 ---
 

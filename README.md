@@ -109,8 +109,9 @@ Signing in during development uses the WorkOS sandbox environment and a company 
 - `npm run test` runs the Vitest suite (app and Convex functions)
 - `npm run lint` runs ESLint across the repo
 - `npm run dist:mac` creates a macOS distribution build
-- `npm run dist:win` creates a Windows distribution build
-- `npm run release` builds, verifies and uploads a draft GitHub release; `npm run release:publish` publishes it
+- `npm run dist:win` creates a Windows installer (cross-built on the Mac, unsigned)
+- `npm run dist:release` builds both, as the release command does
+- `npm run release` builds, verifies and uploads a draft GitHub release with the macOS and Windows packages; `npm run release:publish` publishes it
 
 ## Data Model Overview
 
