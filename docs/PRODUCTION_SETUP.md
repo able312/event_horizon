@@ -190,9 +190,13 @@ Choose a quiet time. After this, the old app's data is frozen and production bec
 
 Do this only after Phase 6 is confirmed good.
 
-- [ ] 🤖 Remove SQLite (`better-sqlite3`), the old main-process database code and its IPC handlers.
-- [ ] 🤖 Remove the one-off import script once you're happy it's no longer needed.
-- [ ] 🤖 Update `docs/PROJECT.md` to describe the new setup (shared Convex database, WorkOS sign-in).
+- [x] 🤖 Remove SQLite (`better-sqlite3`), the old main-process database code and its IPC handlers.
+- [x] 🤖 Remove the one-off import script once you're happy it's no longer needed.
+- [x] 🤖 Update `docs/PROJECT.md` to describe the new setup (shared Convex database, WorkOS sign-in).
+
+> Drizzle, the SQLite migrations, the `legacy-import` script and its Convex functions are gone too, along with the "no edits during an import" guard. The commands in Phase 6 no longer exist on `main`. If a re-import is ever needed, they're in git history before this change.
+>
+> 🤖 After this is merged, run `npx convex deploy` from the main checkout so production drops the unused import functions. Until then production keeps the old functions, which do no harm.
 
 ---
 

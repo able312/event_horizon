@@ -47,8 +47,8 @@ export default tseslint.config(
               message: 'Only ~/lib/data may talk to the data backend.',
             },
             {
-              group: ['~/electron/*', '**/electron/*', 'drizzle-orm', 'drizzle-orm/*', 'better-sqlite3'],
-              message: 'Renderer code must not depend on main-process or storage code. Use types from ~/definitions.',
+              group: ['~/electron/*', '**/electron/*'],
+              message: 'Renderer code must not depend on main-process code. Use types from ~/definitions.',
             },
           ],
         },

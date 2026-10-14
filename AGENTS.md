@@ -17,8 +17,9 @@ Key docs for AI Agents and their purpose:
 
 - Runtime: Node 22
 - Framework: React Vite (pages router)
-- DB: better-sqlite3
-- Tests: not implemented
+- DB: Convex (hosted, shared by the team)
+- Auth: WorkOS AuthKit with Google sign-in
+- Tests: Vitest (`npm run test`)
 
 ## Test Policy
 Tests are required for migrations, repositories, IPC handlers, and pure logic. Do not write render-only tests for React components unless the component contains non-trivial logic.

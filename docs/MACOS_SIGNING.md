@@ -8,7 +8,7 @@ release instructions are in [AUTO_UPDATER_IMPLEMENTATION.md](AUTO_UPDATER_IMPLEM
 
 ## Build configuration
 
-`npm run dist:mac` rebuilds SQLite for Electron, compiles the app, and produces
+`npm run dist:mac` compiles the app and produces
 arm64 DMG and ZIP packages under `dist/`. It explicitly uses `--publish never`.
 The GitHub feed is configured for public releases in `able312/event_horizon`.
 `npm run release` runs the quality gate, lands a version bump through a PR when

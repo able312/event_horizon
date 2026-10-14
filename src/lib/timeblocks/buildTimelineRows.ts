@@ -72,7 +72,7 @@ function addTime(timeStr: string, timeToAdd: string): string | null {
   return isValidHHmm(nextTime) ? nextTime : null
 }
 
-/** Builds the same timeline for SQLite and Convex. Omit timeZone for desktop local time. */
+/** Builds an event's timeline rows for timeblocks.getAllTimelineBlocks. Omit timeZone for desktop local time. */
 export function buildTimelineRows({
   event, persistedTimeblocks, rawTournamentDetails, rawCartDetails, timeZone,
 }: {

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { createReadStream, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs"
+import { createReadStream, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { spawn } from "node:child_process"
@@ -69,15 +69,14 @@ async function smokeLaunch(appPath: string, root: string): Promise<void> {
     stream.on("data", (data: Buffer) => { output = (output + data.toString()).slice(-100_000) })
   }
   const closed = new Promise<void>((resolve) => child.once("close", () => resolve()))
-  const database = join(userData, "app.sqlite")
   const started = Date.now()
   try {
     // Stay up for at least 10 seconds; allow a slow first launch (e.g. Gatekeeper scanning) up to 60.
     for (;;) {
       const running = !failure && child.exitCode === null && child.signalCode === null
-      const migrated = existsSync(database) && output.includes(`Database migrated: ${database}`)
+      const loaded = output.includes("Renderer loaded:")
       const elapsed = Date.now() - started
-      if (running && migrated && elapsed >= 10_000) break
+      if (running && loaded && elapsed >= 10_000) break
       if (!running || elapsed >= 60_000) throw new ArtifactValidationError(`Isolated app launch failed: ${failure?.message ?? output}`)
       await delay(500)
     }

@@ -12,8 +12,8 @@ import type {
 } from "./enums.js"
 
 // Record shapes shared by the UI and the data layer. They are written out by hand
-// so they don't depend on a storage backend; src/electron/db/schemaConformance.ts
-// checks that the SQLite schema still matches them.
+// so they don't depend on a storage backend; the typed functions in src/lib/data
+// fail the typecheck if a Convex function's result stops matching them.
 
 // ============================================================================
 // Audit
@@ -154,16 +154,6 @@ export type MenuOfChargeItem = {
   unitPriceCents: number | null
   createdAt: string
 }
-export type NewMenuOfChargeItem = {
-  id: string
-  eventId: string
-  name: string
-  createdAt: string
-  quantity?: number | null
-  category?: ChargeCategory | null
-  includes?: string | null
-  unitPriceCents?: number | null
-}
 export type UpdateMenuOfChargeItem = Partial<Omit<MenuOfChargeItem, "id" | "createdAt" | "updatedAt">>
 
 // ============================================================================
@@ -179,15 +169,6 @@ export type Payment = {
   recieptNumber: string | null
   notes: string | null
   createdAt: string
-}
-export type NewPayment = {
-  id: string
-  eventId: string
-  amountCents: number
-  date: string
-  createdAt: string
-  recieptNumber?: string | null
-  notes?: string | null
 }
 export type UpdatePayment = Partial<Omit<Payment, "id" | "createdAt">>
 
@@ -237,17 +218,6 @@ export type Timeblock = {
   createdAt: string
   updatedAt: string | null
 }
-export type NewTimeblock = {
-  id: string
-  eventId: string
-  title: string
-  sectionType: TimeblockSectionType
-  createdAt: string
-  time?: string | null
-  details?: string | null
-  assignedTo?: string | null
-  updatedAt?: string | null
-}
 /** Allowlisted fields for ordinary timeblock patches from the renderer. */
 export type UpdateTimeblock = {
   title?: string
@@ -271,16 +241,6 @@ export type FoodItem = {
   includes: string | null
   unitPriceCents: number | null
 }
-export type NewFoodItem = {
-  id: string
-  timeblockId: string
-  name: string
-  quantity?: number | null
-  serviceStyle?: FoodServiceStyle | null
-  includes?: string | null
-  unitPriceCents?: number | null
-}
-export type UpdateFoodItem = Partial<Omit<FoodItem, "id">>
 
 // ============================================================================
 // Beverage Items
@@ -299,20 +259,3 @@ export type BeverageItem = {
   includes: string | null
   unitPriceCents: number | null
 }
-export type NewBeverageItem = {
-  id: string
-  eventId: string
-  name: string
-  type: BeverageItemType
-  quantity?: number | null
-  serviceStyle?: BeverageServiceStyle | null
-  includes?: string | null
-  unitPriceCents?: number | null
-}
-export type UpdateBeverageItem = Partial<Omit<BeverageItem, "id">>
-
-export type BeverageItemTimeblock = {
-  beverageItemId: string
-  timeblockId: string
-}
-export type NewBeverageItemTimeblock = BeverageItemTimeblock
