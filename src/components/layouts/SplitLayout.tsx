@@ -61,12 +61,9 @@ export const Panel = {
 
 
 
-// Windows draws its window controls (138px) over this header's right end; see titleBarOverlay in main.ts.
-const reservesWindowControls = typeof navigator !== "undefined" && navigator.platform.toUpperCase().startsWith("WIN")
-
 const BodyHeader: React.FC<{ children: ReactNode }> = ({ children }) => {
     return (
-     <div className={`flex h-14 shrink-0 items-center justify-between border-b border-border pl-6 window-drag-bar max-h-[40px] ${reservesWindowControls ? "pr-[154px]" : "pr-6"}`}>
+     <div className="flex h-14 shrink-0 items-center justify-between border-b border-border pl-6 window-drag-bar window-controls-inset max-h-[40px]">
         { children }
       </div>
     )

@@ -43,7 +43,7 @@ const createWindow = () => {
         },
         titleBarStyle: 'hidden',
         // Windows has no traffic lights: draw its native controls over the right end of the
-        // white body header. SplitLayout's Body.Header leaves room for them; 39px keeps its border visible.
+        // white body header. Top-edge headers leave room via .window-controls-inset (App.css); 39px keeps its border visible.
         ...(process.platform === 'win32'
             ? { titleBarOverlay: { color: '#ffffff', symbolColor: '#44403c', height: 39 } }
             : { trafficLightPosition: { x: 15, y: 12 } }),

@@ -114,7 +114,7 @@ const PreviewBodyOrchestrator: React.FC = () => {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-neutral-300 print:bg-white">
-      <div className="print:hidden z-10 flex shrink-0 items-center justify-between border-b border-neutral-200 bg-white px-6 py-1 shadow-sm">
+      <div className="print:hidden z-10 flex shrink-0 items-center justify-between border-b border-neutral-200 bg-white pl-6 window-controls-inset py-1 shadow-sm">
         <Button
           variant="ghost"
           size="sm"

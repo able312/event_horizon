@@ -9,6 +9,13 @@
   user-select: none;
 }
 
+/* Right padding for headers on the window's top edge. On Windows, titleBarOverlay (main.ts)
+   draws the native window controls over the right end of the window; the browser reports their
+   area through these env() values. Where there is no overlay (macOS) only the 1.5rem remains. */
+.window-controls-inset {
+  padding-right: calc(1.5rem + 100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
+}
+
 
 /* ─── Print page setup ─────────────────────────── */
 /* Margins live on .preview-page wrappers (0.75in) so screen and print match. */
