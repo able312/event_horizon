@@ -40,9 +40,9 @@ Production sign-in can't work without these.
 - [x] 🤖 **Update the dev WorkOS environment's redirect list** to match. `127.0.0.1` is now the default. The old `localhost` entry stays until this PR is merged, so `main` keeps signing in. Remove it after the merge.
 - [x] 🤖 **Add the production WorkOS client ID** (`client_01M4GQCAWTANP82H2RZ0Y5MV37`) to `src/electron/services/authConfig.ts`. It's public, not a secret.
 - [x] 🤖 Run the tests (1,342 passed), lint and build.
-- [ ] 🧑 Re-test sign-in in this worktree (`npm run dev` → **Sign in**). The browser should return to `127.0.0.1:42070` and the app should sign in.
-- [ ] 🧑 Review and merge the pull request. Claude doesn't merge into `main`.
-- [ ] 🤖 After the merge, remove `http://localhost:42070/callback` from the dev WorkOS redirect list.
+- [x] 🧑 Re-test sign-in in this worktree (`npm run dev` → **Sign in**). The browser should return to `127.0.0.1:42070` and the app should sign in.
+- [x] 🧑 Review and merge the pull request. Claude doesn't merge into `main`.
+- [x] 🤖 After the merge, remove `http://localhost:42070/callback` from the dev WorkOS redirect list.
 
 > The WorkOS connection Claude uses can change the sandbox (dev) environment, but **not** Production. Phase 3 has to be done in the dashboard.
 
@@ -55,36 +55,36 @@ WorkOS production can't use WorkOS's shared demo Google login. It needs your com
 **Sign in to [console.cloud.google.com](https://console.cloud.google.com) with your `westlinks.ca` Google Workspace account.** Use a Workspace account, not a personal Gmail.
 
 ### 2a. Create a project
-- [ ] Use the project dropdown (top left) → **New Project**.
-- [ ] Name it something like `Event Horizon Sign-in`.
-- [ ] Make sure **Organization** is `westlinks.ca`. This is what allows "Internal" in step 2b.
-- [ ] Click **Create**, then select the new project.
+- [x] Use the project dropdown (top left) → **New Project**.
+- [x] Name it something like `Event Horizon Sign-in`.
+- [x] Make sure **Organization** is `westlinks.ca`. This is what allows "Internal" in step 2b.
+- [x] Click **Create**, then select the new project.
 
 ### 2b. Set up the consent screen (what people see when they sign in)
-- [ ] Open the menu (☰) → **APIs & Services** → **OAuth consent screen**. Newer consoles call this the **Google Auth Platform**. Click **Get started** if asked.
-- [ ] **App name:** `Event Horizon`.
-- [ ] **User support email:** your email.
+- [x] Open the menu (☰) → **APIs & Services** → **OAuth consent screen**. Newer consoles call this the **Google Auth Platform**. Click **Get started** if asked.
+- [x] **App name:** `Event Horizon`.
+- [x] **User support email:** your email.
 - [ ] **Audience:** choose **Internal**.
   - Only people with a `westlinks.ca` account can sign in. Google blocks everyone else before they reach the app.
   - There's no Google review process and nothing to publish.
   - If **Internal** is greyed out, the project isn't under the `westlinks.ca` organisation. Go back to 2a.
-- [ ] **Contact email:** your email.
-- [ ] Agree to the policy and click **Create**.
-- [ ] **Data Access** or **Scopes:** only `openid`, `email` and `profile` are needed. These are the defaults, so nothing extra to add.
+- [x] **Contact email:** your email.
+- [x] Agree to the policy and click **Create**.
+- [x] **Data Access** or **Scopes:** only `openid`, `email` and `profile` are needed. These are the defaults, so nothing extra to add.
 
 ### 2c. Get the redirect address from WorkOS (keep this tab open)
-- [ ] In a second tab, open the [WorkOS dashboard](https://dashboard.workos.com) and switch the environment (top left) to **Production**.
-- [ ] Go to **Authentication** → **OAuth providers** → **Google** → **Manage**.
-- [ ] Choose **Your app's credentials**.
-- [ ] Copy the **Redirect URI** it shows. It looks like `https://api.workos.com/sso/oauth/google/.../callback`.
+- [x] In a second tab, open the [WorkOS dashboard](https://dashboard.workos.com) and switch the environment (top left) to **Production**.
+- [x] Go to **Authentication** → **OAuth providers** → **Google** → **Manage**.
+- [x] Choose **Your app's credentials**.
+- [x] Copy the **Redirect URI** it shows. It looks like `https://api.workos.com/sso/oauth/google/.../callback`.
 
 ### 2d. Create the OAuth client
-- [ ] Back in Google: **Clients** (or **Credentials**) → **Create client** (or **Create credentials → OAuth client ID**).
-- [ ] **Application type:** **Web application**. This is correct even though Event Horizon is a desktop app, because Google talks to WorkOS, not to the app.
-- [ ] **Name:** `WorkOS – Event Horizon Production`.
-- [ ] **Authorized redirect URIs** → **Add URI** → paste the WorkOS Redirect URI from 2c.
-- [ ] Click **Create**.
-- [ ] **Copy the Client ID and Client Secret right away.** Google may not show the secret again.
+- [x] Back in Google: **Clients** (or **Credentials**) → **Create client** (or **Create credentials → OAuth client ID**).
+- [x] **Application type:** **Web application**. This is correct even though Event Horizon is a desktop app, because Google talks to WorkOS, not to the app.
+- [x] **Name:** `WorkOS – Event Horizon Production`.
+- [x] **Authorized redirect URIs** → **Add URI** → paste the WorkOS Redirect URI from 2c.
+- [x] Click **Create**.
+- [x] **Copy the Client ID and Client Secret right away.** Google may not show the secret again.
   - Paste them straight into WorkOS (next phase). Don't save them in a file, email or chat.
 
 > Google can take up to 5 minutes to activate a new client. If the first sign-in test fails with a Google error, wait a few minutes and try again.
@@ -96,29 +96,29 @@ WorkOS production can't use WorkOS's shared demo Google login. It needs your com
 All in the [WorkOS dashboard](https://dashboard.workos.com), with the environment switcher set to **Production**. Double-check this, because dev is called **Event Horizon Dev**.
 
 ### 3a. Connect Google
-- [ ] **Authentication** → **OAuth providers** → **Google** → **Manage**, in the same dialog as 2c.
-- [ ] Choose **Your app's credentials**.
-- [ ] Paste the **Client ID** and **Client Secret** from 2d.
-- [ ] Turn Google **on**, then click **Save**.
+- [x] **Authentication** → **OAuth providers** → **Google** → **Manage**, in the same dialog as 2c.
+- [x] Choose **Your app's credentials**.
+- [x] Paste the **Client ID** and **Client Secret** from 2d.
+- [x] Turn Google **on**, then click **Save**.
 
 ### 3b. Turn everything else off
-- [ ] **Authentication** → **Methods**: turn **off** Email + Password, Magic Auth and Passkeys.
-- [ ] **Authentication** → **OAuth providers**: turn **off** everything except Google, including Apple, GitHub and Microsoft.
-- [ ] If there's an **SSO** setting, leave it off.
+- [x] **Authentication** → **Methods**: turn **off** Email + Password, Magic Auth and Passkeys.
+- [x] **Authentication** → **OAuth providers**: turn **off** everything except Google, including Apple, GitHub and Microsoft.
+- [x] If there's an **SSO** setting, leave it off.
 
 ### 3c. Tell WorkOS where to send people after sign-in
-- [ ] **Redirects** → **Redirect URIs** → add `http://127.0.0.1:42070/callback`.
+- [x] **Redirects** → **Redirect URIs** → add `http://127.0.0.1:42070/callback`.
   - It must be exactly this, with `127.0.0.1` and not `localhost`. Phase 1 changes the app to match.
-- [ ] Make it the **default**.
+- [x] Make it the **default**.
 
 ### 3d. Put the email address in the sign-in token
 The database checks every request for a `westlinks.ca` email. Without this step, every request is rejected as "Forbidden."
-- [ ] **Authentication** → **Sessions** → **JWT Template**. It may be under **Sessions → Configure**.
-- [ ] Set the template to exactly:
+- [x] **Authentication** → **Sessions** → **JWT Template**. It may be under **Sessions → Configure**.
+- [x] Set the template to exactly:
   ```json
   { "email": {{ user.email }} }
   ```
-- [ ] **Save**.
+- [x] **Save**.
 
 > Claude can check 3a–3d for you afterwards through the WorkOS connection. Ask it to "verify the WorkOS production settings."
 
@@ -128,38 +128,38 @@ The database checks every request for a `westlinks.ca` email. Without this step,
 
 ### 4a. Create the production deployment and push the code
 Run these from the **main checkout**, not a worktree, after Phase 1 is merged.
-- [ ] 🤖 Point production at the WorkOS production environment. Claude runs:
+- [x] 🤖 Point production at the WorkOS production environment. Claude runs:
   ```
   npx convex env set WORKOS_CLIENT_ID client_01M4GQCAWTANP82H2RZ0Y5MV37 --prod
   ```
-- [ ] 🧑 Approve, then 🤖 run `npx convex deploy`.
+- [x] 🧑 Approve, then 🤖 run `npx convex deploy`.
   - This creates the production database tables and functions. It starts empty.
   - It asks for confirmation before touching production.
-- [ ] 🧑 In the [Convex dashboard](https://dashboard.convex.dev), open the **event-horizon** project → **Production**. Check that the tables and functions are there, and that no table has data yet.
-- [ ] 🧑 Copy the production URL from **Settings → URL & Deploy Key** (`https://<name>.convex.cloud`) and give it to Claude.
+- [x] 🧑 In the [Convex dashboard](https://dashboard.convex.dev), open the **event-horizon** project → **Production**. Check that the tables and functions are there, and that no table has data yet.
+- [x] 🧑 Copy the production URL from **Settings → URL & Deploy Key** (`https://<name>.convex.cloud`) and give it to Claude.
 
 ### 4b. Backups: decision needed 🧑
 Convex **automatic** (scheduled) backups need the **Convex Pro plan** (paid). Choose one:
 - [ ] **Option A: upgrade to Pro.** Then open **Production → Settings → Backups** and tick **Backup automatically**.
   - Daily backups are kept for 7 days. Weekly backups are kept for 14 days.
-- [ ] **Option B: stay on the free plan.** Take a manual backup (**Backups → Backup now**) before risky changes. Claude can also set up a scheduled `npx convex export` that saves a copy to your Mac on a timer.
+- [x] **Option B: stay on the free plan.** Take a manual backup (**Backups → Backup now**) before risky changes. Claude can also set up a scheduled `npx convex export` that saves a copy to your Mac on a timer.
 
 Whichever you choose:
-- [ ] 🧑 Take one manual backup right after the import in Phase 6.
+- [x] 🧑 Take one manual backup right after the import in Phase 6.
 
 ---
 
 ## Phase 5: Build an app that talks to production
 
-- [ ] 🤖 In the main checkout's `.env.local`, add `VITE_CONVEX_PRODUCTION_URL=<URL from 4a>`.
+- [x] 🤖 In the main checkout's `.env.local`, add `VITE_CONVEX_PRODUCTION_URL=<URL from 4a>`.
   - This file is never committed.
   - Installed builds refuse to start without it, which stops them pointing at dev by accident.
-- [ ] 🤖 Build a macOS test version (`npm run dist:mac`). No release is published at this step.
-- [ ] 🧑 Install it and click **Sign in**.
-  - [ ] Google shows the account chooser, and your `westlinks.ca` account works.
-  - [ ] A personal Gmail account is **refused**.
-  - [ ] The app opens with an empty event list, as expected before the import.
-  - [ ] Create a test event, then delete it. Ask Claude to confirm the production tables are empty again before Phase 6, since the import needs an empty database.
+- [x] 🤖 Build a macOS test version (`npm run dist:mac`). No release is published at this step.
+- [x] 🧑 Install it and click **Sign in**.
+  - [x] Google shows the account chooser, and your `westlinks.ca` account works.
+  - [x] A personal Gmail account is **refused**.
+  - [x] The app opens with an empty event list, as expected before the import.
+  - [x] Create a test event, then delete it. Ask Claude to confirm the production tables are empty again before Phase 6, since the import needs an empty database.
 
 ---
 
@@ -180,6 +180,7 @@ Choose a quiet time. After this, the old app's data is frozen and production bec
   - It should end with "Every row, field and reference matches."
 - [ ] 🧑 Take a **manual backup** in the Convex dashboard (Production → Backups → Backup now).
 - [ ] 🧑 Open the production build and spot-check a few events and their PDFs again.
+- [ ] 🧑 Approve, then 🤖 publish the `v0.2.0` draft release (`npm run release:publish`). Installed apps, including the production Mac, then update to the shared database.
 
 > **If something goes wrong:** the old app and its `app.sqlite` are untouched, so you can keep using the old app. A failed import rolls itself back, so you can simply run it again. If the script is interrupted, 🤖 `npm run legacy-import -- --reset --target prod` empties production, and then the import can be re-run. It lists what it will delete and asks you to type `prod`. It deletes everything, including anything made in the app, so only use it before the team starts using production. The app refuses edits while an import or reset is running.
 
