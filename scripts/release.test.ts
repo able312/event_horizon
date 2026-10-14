@@ -3,12 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ArtifactValidationError, expectedAssetNames } from "./release-logic.ts"
 import type { Release } from "./release-logic.ts"
 import { run, npm } from "./release-commands.ts"
-import { inspectArtifacts, verifyPackages } from "./release-artifacts.ts"
+import { inspectArtifacts, verifyPackages, verifyWindowsBuild } from "./release-artifacts.ts"
 import { runRelease } from "./release.ts"
 import { mkdirSync, rmSync } from "node:fs"
 
 vi.mock("./release-commands.ts", () => ({ run: vi.fn(), npm: vi.fn() }))
-vi.mock("./release-artifacts.ts", () => ({ inspectArtifacts: vi.fn(), verifyPackages: vi.fn() }))
+vi.mock("./release-artifacts.ts", () => ({ inspectArtifacts: vi.fn(), verifyPackages: vi.fn(), verifyWindowsBuild: vi.fn() }))
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>()
   return {
@@ -17,6 +17,7 @@ vi.mock("node:fs", async (importOriginal) => {
       if (path === "package.json") return JSON.stringify({ version: localVersion })
       if (path === "package-lock.json") return JSON.stringify({ version: localVersion, packages: { "": { version: localVersion } } })
       if (path.endsWith("latest-mac.yml")) return yaml.replaceAll(version, localVersion)
+      if (path.endsWith("latest.yml")) return winYaml.replaceAll(version, localVersion)
       return actual.readFileSync(path, encoding)
     },
   }
@@ -41,7 +42,18 @@ path: ${metadata.files[0].name}
 sha512: ${hash}
 releaseDate: '2026-10-07T12:00:00Z'
 `
-const assets = expectedAssetNames(metadata).map((name) => ({ name, size: metadata.files.find((file) => file.name === name)?.size ?? 10, state: "uploaded" }))
+const winMetadata = { version, files: [{ name: `Event-Horizon-${version}-x64.exe`, size: 789, sha512: hash }] }
+const winYaml = `version: ${version}
+files:
+  - url: ${winMetadata.files[0].name}
+    sha512: ${hash}
+    size: 789
+path: ${winMetadata.files[0].name}
+sha512: ${hash}
+releaseDate: '2026-10-07T12:00:00Z'
+`
+const described = [...metadata.files, ...winMetadata.files]
+const assets = expectedAssetNames(version).map((name) => ({ name, size: described.find((file) => file.name === name)?.size ?? 10, state: "uploaded" }))
 const draft: Release = { id: 1, tag_name: `v${version}`, draft: true, prerelease: false, target_commitish: sha, html_url: "https://github.com/able312/event_horizon/releases/1", assets }
 
 let current: Release | null
@@ -61,14 +73,15 @@ let listLags: boolean
 let unlisted: number | null
 
 function artifactsFor(targetVersion: string) {
-  const info = { version: targetVersion, files: metadata.files.map((file) => ({ ...file, name: file.name.replace(version, targetVersion) })) }
+  const retarget = (info: typeof metadata) => ({ version: targetVersion, files: info.files.map((file) => ({ ...file, name: file.name.replace(version, targetVersion) })) })
+  const info = { mac: retarget(metadata), win: retarget(winMetadata) }
   const uploaded = assets.map((asset) => ({ ...asset, name: asset.name.replace(version, targetVersion) }))
   return { metadata: info, files: uploaded.map((asset) => ({ ...asset, sha512: hash })) }
 }
 
 beforeEach(() => {
   mkdirSync("node_modules/.release-test-git", { recursive: true })
-  for (const mock of [run, npm, inspectArtifacts, verifyPackages]) vi.mocked(mock).mockReset()
+  for (const mock of [run, npm, inspectArtifacts, verifyPackages, verifyWindowsBuild]) vi.mocked(mock).mockReset()
   vi.spyOn(process, "platform", "get").mockReturnValue("darwin")
   vi.spyOn(process, "arch", "get").mockReturnValue("arm64")
   current = structuredClone(draft)
@@ -219,7 +232,8 @@ describe("release orchestration", () => {
   it("repairs a partial draft at the same version after all gates pass", async () => {
     current = { ...draft, assets: assets.slice(1) }
     await runRelease([])
-    expect(vi.mocked(npm).mock.calls.map(([script]) => script)).toEqual(["test", "lint", "typecheck:release", "dist:mac"])
+    expect(vi.mocked(npm).mock.calls.map(([script]) => script)).toEqual(["test", "lint", "typecheck:release", "dist:release"])
+    expect(verifyWindowsBuild).toHaveBeenCalledOnce()
     expect(verifyPackages).toHaveBeenCalledOnce()
     expect(writeKinds()).toEqual(["DELETE", "POST", "upload"])
     const create = ghWrites()[1][1]
@@ -274,6 +288,21 @@ describe("release orchestration", () => {
     await expect(runRelease([])).rejects.toThrow("signature failed")
     expect(ghWrites()).toEqual([])
   })
+  it("preserves an incomplete draft when the Windows build check fails", async () => {
+    current = { ...draft, assets: [] }
+    vi.mocked(verifyWindowsBuild).mockImplementationOnce(() => { throw new ArtifactValidationError("wrong feed") })
+    await expect(runRelease([])).rejects.toThrow("wrong feed")
+    expect(ghWrites()).toEqual([])
+  })
+  it("repairs a macOS-only draft by rebuilding both platforms", async () => {
+    current = { ...draft, assets: assets.filter((asset) => !asset.name.includes(".exe") && asset.name !== "latest.yml") }
+    await runRelease([])
+    expect(npm).toHaveBeenCalledWith("dist:release", [expect.stringContaining("-c.directories.output=")])
+    expect(writeKinds()).toEqual(["DELETE", "POST", "upload"])
+    const upload = ghWrites().find(([, args]) => args[1] === "upload")![1]
+    expect(upload.some((arg) => arg.endsWith(`Event-Horizon-${version}-x64.exe`))).toBe(true)
+    expect(upload.some((arg) => arg.endsWith("latest.yml"))).toBe(true)
+  })
   it("does not rebuild or delete a draft after a network failure", async () => {
     downloadsFail = true
     await expect(runRelease([])).rejects.toThrow("network unavailable")
@@ -290,6 +319,7 @@ describe("release orchestration", () => {
   it("publishes the verified uploaded draft without rebuilding", async () => {
     await runRelease([], true)
     expect(npm).not.toHaveBeenCalled()
+    expect(verifyWindowsBuild).not.toHaveBeenCalled()
     expect(inspectArtifacts).toHaveBeenCalledOnce()
     expect(verifyPackages).toHaveBeenCalledOnce()
     expect(ghWrites()).toHaveLength(1)

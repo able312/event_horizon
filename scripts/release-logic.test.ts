@@ -22,7 +22,19 @@ sha512: ${sha512}
 releaseDate: '2026-10-07T12:00:00.000Z'
 `
 const metadata = { version, files }
-const assets = expectedAssetNames(metadata).map((name) => ({ name, size: files.find((file) => file.name === name)?.size ?? 10, state: "uploaded" }))
+const exe: FileInfo = { name: `Event-Horizon-${version}-x64.exe`, size: 789, sha512 }
+const winYaml = `version: ${version}
+files:
+  - url: ${exe.name}
+    sha512: ${sha512}
+    size: 789
+path: ${exe.name}
+sha512: ${sha512}
+releaseDate: '2026-10-07T12:00:00.000Z'
+`
+const winMetadata = { version, files: [exe] }
+const described = [...files, exe]
+const assets = expectedAssetNames(version).map((name) => ({ name, size: described.find((file) => file.name === name)?.size ?? 10, state: "uploaded" }))
 const draft: Release = { id: 1, tag_name: `v${version}`, draft: true, prerelease: false, target_commitish: "a".repeat(40), html_url: "https://github.com/owner/repo/releases/1", assets }
 
 describe("version decisions", () => {
@@ -102,11 +114,26 @@ describe("draft and source safety", () => {
 
 describe("update metadata and files", () => {
   it("parses builder output and checks actual bytes", () => {
-    expect(parseMetadata(yaml, version)).toEqual(metadata)
+    expect(parseMetadata(yaml, version, "mac")).toEqual(metadata)
     expect(() => verifyFiles(metadata, files)).not.toThrow()
   })
+  it("parses the Windows installer metadata", () => {
+    expect(parseMetadata(winYaml, version, "win")).toEqual(winMetadata)
+    expect(() => verifyFiles(winMetadata, [exe])).not.toThrow()
+  })
   it("accepts quoted scalars, CRLF and optional blockMapSize", () => {
-    expect(parseMetadata(yaml.replace(`version: ${version}`, `version: '${version}'`).replace("size: 123", "size: 123\n    blockMapSize: 10").replaceAll("\n", "\r\n"), version)).toEqual(metadata)
+    expect(parseMetadata(yaml.replace(`version: ${version}`, `version: '${version}'`).replace("size: 123", "size: 123\n    blockMapSize: 10").replaceAll("\n", "\r\n"), version, "mac")).toEqual(metadata)
+  })
+  it.each([
+    winYaml.replace(exe.name, `Event-Horizon-${version}-arm64.exe`),
+    winYaml.replace(`path: ${exe.name}`, "path: other.exe"),
+    winYaml.replace("files:", `files:\n  - url: ${files[0].name}\n    sha512: ${sha512}\n    size: 123`),
+  ])("rejects Windows metadata for the wrong or extra packages", (invalid) => {
+    expect(() => parseMetadata(invalid, version, "win")).toThrow(ArtifactValidationError)
+  })
+  it("refuses to read one platform's metadata as the other's", () => {
+    expect(() => parseMetadata(yaml, version, "win")).toThrow(ArtifactValidationError)
+    expect(() => parseMetadata(winYaml, version, "mac")).toThrow(ArtifactValidationError)
   })
   it.each([
     yaml.replace("version: 1.2.3", "version: 1.2.4"),
@@ -127,7 +154,7 @@ describe("update metadata and files", () => {
     yaml.replace("files:", "files:\n  unknown: value"),
     yaml.replace(/ {2}- url:[\s\S]*?path:/, "path:"),
   ])("rejects malformed, unsafe or inconsistent metadata", (invalid) => {
-    expect(() => parseMetadata(invalid, version)).toThrow(ArtifactValidationError)
+    expect(() => parseMetadata(invalid, version, "mac")).toThrow(ArtifactValidationError)
   })
   it.each([
     [],
@@ -140,7 +167,19 @@ describe("update metadata and files", () => {
 })
 
 describe("uploaded asset verification", () => {
-  it("accepts exactly five complete uploads", () => expect(() => verifyAssets(metadata, assets)).not.toThrow())
+  it("expects both platforms' packages, blockmaps and metadata", () => {
+    expect(expectedAssetNames(version)).toEqual([
+      `Event-Horizon-${version}-arm64.zip`, `Event-Horizon-${version}-arm64.zip.blockmap`,
+      `Event-Horizon-${version}-arm64.dmg`, `Event-Horizon-${version}-arm64.dmg.blockmap`,
+      `Event-Horizon-${version}-x64.exe`, `Event-Horizon-${version}-x64.exe.blockmap`,
+      "latest-mac.yml", "latest.yml",
+    ])
+  })
+  it("accepts exactly eight complete uploads", () => expect(() => verifyAssets(version, assets, described)).not.toThrow())
+  it("rejects a macOS-only draft", () => {
+    const macOnly = assets.filter((asset) => !asset.name.includes(".exe") && asset.name !== "latest.yml")
+    expect(() => verifyAssets(version, macOnly)).toThrow(ArtifactValidationError)
+  })
   it.each([
     assets.slice(1),
     [...assets, { name: "extra.txt", size: 1, state: "uploaded" }],
@@ -150,15 +189,15 @@ describe("uploaded asset verification", () => {
     assets.map((asset, i) => i === 1 ? { ...asset, name: "Event.Horizon.zip.blockmap" } : asset),
     assets.map((asset, i) => i === 1 ? assets[0] : asset),
   ].map((invalid) => [invalid] as const))("rejects missing, extra, duplicate, misnamed, incomplete or wrong-sized uploads", (invalid) => {
-    expect(() => verifyAssets(metadata, invalid)).toThrow(ArtifactValidationError)
+    expect(() => verifyAssets(version, invalid, described)).toThrow(ArtifactValidationError)
   })
   it("also checks metadata and blockmap sizes against local files after upload", () => {
     const local = assets.map((asset) => ({ name: asset.name, size: asset.size, sha512 }))
-    expect(() => verifyAssets(metadata, assets, local)).not.toThrow()
+    expect(() => verifyAssets(version, assets, local)).not.toThrow()
     local[1].size++
-    expect(() => verifyAssets(metadata, assets, local)).toThrow(ArtifactValidationError)
+    expect(() => verifyAssets(version, assets, local)).toThrow(ArtifactValidationError)
     local[1].size--
-    local[4].size++
-    expect(() => verifyAssets(metadata, assets, local)).toThrow(ArtifactValidationError)
+    local[7].size++
+    expect(() => verifyAssets(version, assets, local)).toThrow(ArtifactValidationError)
   })
 })

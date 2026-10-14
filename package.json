@@ -22,7 +22,8 @@
     "release": "node --experimental-strip-types scripts/release.ts",
     "release:publish": "node --experimental-strip-types scripts/release-publish.ts",
     "typecheck:release": "tsc --project scripts/tsconfig.json",
-    "dist:win": "npm run transpile:electron && npm run build && electron-builder --win --x64 --publish never",
+    "dist:win": "npm run transpile:electron && npm run build && electron-builder --win --publish never",
+    "dist:release": "npm run transpile:electron && npm run build && electron-builder --mac --win --publish never",
     "convex:worktree": "node --experimental-strip-types scripts/convex-worktree.ts"
   },
   "dependencies": {
@@ -53,6 +54,7 @@
   },
   "devDependencies": {
     "@edge-runtime/vm": "^5.0.0",
+    "@electron/asar": "^3.4.1",
     "@eslint/js": "^9.25.0",
     "@testing-library/react": "^16.3.2",
     "@types/react": "^19.1.2",
