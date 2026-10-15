@@ -1,6 +1,8 @@
 import React, { useId, useState } from "react"
 import { UserPlus } from "lucide-react"
 import type { ContactWithRoles } from "~/definitions/contacts"
+import { ContactResultSummary } from "~/features/contacts/components/ContactResultSummary"
+import { ContactSearchStatus } from "~/features/contacts/components/ContactSearchStatus"
 import { useContactSearch } from "~/hooks/useEventContacts"
 import { useDebounceValue } from "~/lib/debounce"
 import { cn } from "~/lib/utils"
@@ -91,59 +93,39 @@ const ClientSearchInput: React.FC<ClientSearchInputProps> = ({
       />
 
       {showDropdown ? (
-        <ul
-          id={listboxId}
-          role="listbox"
-          aria-label="Matching contacts"
-          className="mt-1 overflow-hidden rounded-lg border border-white/15 bg-stone-800 py-1 shadow-lg"
-        >
-          {search.isError ? (
-            // A failed search must not read as "no matches": that invites creating a duplicate
-            <li className="flex items-center justify-between gap-2 px-3 py-2 text-xs text-red-300">
-              Could not search contacts.
-              <button
-                type="button"
-                className="text-stone-100 underline"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => void search.refetch()}
+        <div className="mt-1 overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-lg">
+          <ContactSearchStatus
+            isLoading={search.isFetching}
+            isError={search.isError}
+            hasResults={contacts.length > 0}
+            onRetry={() => void search.refetch()}
+            emptyMessage={null}
+          />
+          <ul id={listboxId} role="listbox" aria-label="Matching contacts" className="py-1">
+            {contacts.map((contact, index) => (
+              <ClientOption
+                key={contact.id}
+                id={optionId(index)}
+                isHighlighted={highlighted === index}
+                onHover={() => setHighlighted(index)}
+                onSelect={() => selectOption(index)}
               >
-                Retry
-              </button>
-            </li>
-          ) : search.isFetching && contacts.length === 0 ? (
-            <li className="px-3 py-2 text-xs text-stone-400">Searching contacts…</li>
-          ) : null}
+                <ContactResultSummary contact={contact} />
+              </ClientOption>
+            ))}
 
-          {contacts.map((contact, index) => (
             <ClientOption
-              key={contact.id}
-              id={optionId(index)}
-              isHighlighted={highlighted === index}
-              onHover={() => setHighlighted(index)}
-              onSelect={() => selectOption(index)}
+              id={optionId(createIndex)}
+              isHighlighted={highlighted >= createIndex}
+              className={cn("text-sm text-orange-300", contacts.length > 0 && "border-t border-border")}
+              onHover={() => setHighlighted(createIndex)}
+              onSelect={() => selectOption(createIndex)}
             >
-              <span className="block truncate text-sm text-stone-100">{contact.displayName}</span>
-              {contact.email || contact.phone ? (
-                <span className="block truncate text-xs text-stone-400">
-                  {[contact.email, contact.phone].filter(Boolean).join(" · ")}
-                </span>
-              ) : null}
-            </ClientOption>
-          ))}
-
-          <ClientOption
-            id={optionId(createIndex)}
-            isHighlighted={highlighted >= createIndex}
-            className={contacts.length > 0 ? "border-t border-white/10" : undefined}
-            onHover={() => setHighlighted(createIndex)}
-            onSelect={() => selectOption(createIndex)}
-          >
-            <span className="flex items-center gap-2 text-sm text-orange-300">
               <UserPlus className="size-4 shrink-0" />
               <span className="truncate">Create new contact “{query.trim()}”</span>
-            </span>
-          </ClientOption>
-        </ul>
+            </ClientOption>
+          </ul>
+        </div>
       ) : null}
 
       {error && !showDropdown ? <p className="mt-1 text-xs text-red-300">{error}</p> : null}
@@ -165,7 +147,7 @@ const ClientOption: React.FC<ClientOptionProps> = ({ id, isHighlighted, classNam
     id={id}
     role="option"
     aria-selected={isHighlighted}
-    className={cn("cursor-pointer px-3 py-1.5", isHighlighted && "bg-white/10", className)}
+    className={cn("flex cursor-pointer items-center gap-3 px-3 py-1.5", isHighlighted && "bg-accent", className)}
     // Keep focus in the input so blur doesn't close the list before the click lands
     onMouseDown={(e) => e.preventDefault()}
     onMouseEnter={onHover}

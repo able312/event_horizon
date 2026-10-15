@@ -22,6 +22,7 @@ const janeSmith = {
   displayName: "Jane Smith",
   email: "jane@example.com",
   phone: null,
+  roles: [] as ContactWithRoles["roles"],
 } as ContactWithRoles
 
 function createDeferred<T>() {
