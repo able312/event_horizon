@@ -40,14 +40,18 @@ const ClientSearchInput: React.FC<ClientSearchInputProps> = ({
   const hasQuery = query.trim().length > 0
   const search = useContactSearch(debouncedQuery, debouncedQuery.trim().length > 0, { limit: MAX_RESULTS })
 
-  const contacts = hasQuery ? search.data?.items ?? [] : []
+  // search.data is retained across queries, so only trust it once it belongs to what is typed now
+  const isCurrent = debouncedQuery.trim() === query.trim() && !search.isFetching
+  const contacts = hasQuery && isCurrent && !search.isError ? search.data?.items ?? [] : []
+  // Offering "create" before the search settles (or after it fails) risks duplicating an existing contact
+  const canCreate = hasQuery && isCurrent && !search.isError
   const createIndex = contacts.length
   const showDropdown = isOpen && hasQuery
 
   const selectOption = (index: number) => {
     const contact = contacts[index]
     if (contact) onPick(contact)
-    else onCreateNew()
+    else if (canCreate) onCreateNew()
   }
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -76,7 +80,7 @@ const ClientSearchInput: React.FC<ClientSearchInputProps> = ({
         aria-expanded={showDropdown}
         aria-controls={listboxId}
         aria-autocomplete="list"
-        aria-activedescendant={showDropdown ? optionId(Math.min(highlighted, createIndex)) : undefined}
+        aria-activedescendant={showDropdown && (canCreate || contacts.length > 0) ? optionId(Math.min(highlighted, createIndex)) : undefined}
         autoFocus={autoFocus}
         autoComplete="off"
         placeholder="Search by name or email"
@@ -95,7 +99,7 @@ const ClientSearchInput: React.FC<ClientSearchInputProps> = ({
       {showDropdown ? (
         <div className="mt-1 overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-lg">
           <ContactSearchStatus
-            isLoading={search.isFetching}
+            isLoading={!isCurrent}
             isError={search.isError}
             hasResults={contacts.length > 0}
             onRetry={() => void search.refetch()}
@@ -114,6 +118,7 @@ const ClientSearchInput: React.FC<ClientSearchInputProps> = ({
               </ClientOption>
             ))}
 
+            {canCreate ? (
             <ClientOption
               id={optionId(createIndex)}
               isHighlighted={highlighted >= createIndex}
@@ -124,6 +129,7 @@ const ClientSearchInput: React.FC<ClientSearchInputProps> = ({
               <UserPlus className="size-4 shrink-0" />
               <span className="truncate">Create new contact “{query.trim()}”</span>
             </ClientOption>
+            ) : null}
           </ul>
         </div>
       ) : null}
