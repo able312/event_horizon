@@ -71,7 +71,12 @@ const ClientSearchInput: React.FC<ClientSearchInputProps> = ({
   const optionId = (index: number) => `${listboxId}-option-${index}`
 
   return (
-    <div>
+    <div
+      // Close only when focus leaves the picker, so the Retry button inside the dropdown stays reachable
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) setIsOpen(false)
+      }}
+    >
       <label htmlFor={`${listboxId}-input`} className="mb-1 block text-sm font-medium text-stone-100">Client</label>
       <input
         type="text"
@@ -91,13 +96,13 @@ const ClientSearchInput: React.FC<ClientSearchInputProps> = ({
           setIsOpen(true)
         }}
         onFocus={() => setIsOpen(true)}
-        onBlur={() => setIsOpen(false)}
         onKeyDown={handleKeyDown}
         className={formFieldClasses}
       />
 
       {showDropdown ? (
         <div className="mt-1 overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-lg">
+          <div onMouseDown={(e) => e.preventDefault()}>
           <ContactSearchStatus
             isLoading={!isCurrent}
             isError={search.isError}
@@ -105,6 +110,7 @@ const ClientSearchInput: React.FC<ClientSearchInputProps> = ({
             onRetry={() => void search.refetch()}
             emptyMessage={null}
           />
+          </div>
           <ul id={listboxId} role="listbox" aria-label="Matching contacts" className="py-1">
             {contacts.map((contact, index) => (
               <ClientOption
