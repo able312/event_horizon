@@ -1,10 +1,10 @@
-import type { NewContact } from "~/definitions/contacts"
+import type { AssignContactTarget } from "~/definitions/contacts"
 import type { NewEvent, Event, UpdateEvent } from "~/definitions/database"
 import type { EventSearchRequest, EventSearchResponse } from "~/definitions/ipc"
 import type { IcsImportEventInput, IcsImportInsertResult } from "~/definitions/events/icsImport"
 import { api } from "../../../convex/_generated/api"
 import { fetchSource, pickFields, runMutation, runQuery } from "./backend"
-import { CONTACT_FIELDS } from "./contacts"
+import { toContactTargetArgs } from "./eventContacts"
 import { toId } from "./ids"
 import { sources } from "./sources"
 
@@ -31,11 +31,11 @@ export function getEventById(id: string): Promise<Event> {
   return fetchSource(sources.events.byId(id))
 }
 
-/** When a client is given, the back end also assigns them as the event's primary client. */
-export function createEvent(newEvent: NewEvent, client?: NewContact | null): Promise<Event> {
+/** When a client is given (an existing contact or a new one), the back end also assigns them as the event's primary client. */
+export function createEvent(newEvent: NewEvent, client?: AssignContactTarget | null): Promise<Event> {
   return runMutation(api.events.create, {
     input: pickFields(newEvent, EVENT_FIELDS),
-    client: client ? pickFields(client, CONTACT_FIELDS) : null,
+    client: client ? toContactTargetArgs(client) : null,
   })
 }
 

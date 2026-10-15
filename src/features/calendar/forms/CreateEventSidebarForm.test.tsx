@@ -1,6 +1,28 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import type { ContactWithRoles } from "~/definitions/contacts"
+import { ContactsError } from "~/lib/contacts/contactsError"
 import CreateEventSidebarForm from "./CreateEventSidebarForm"
+
+const searchResults = vi.hoisted(() => ({ items: [] as ContactWithRoles[] }))
+
+vi.mock("~/hooks/useEventContacts", () => ({
+  useContactSearch: (query: string) => ({
+    data: { items: query ? searchResults.items : [] },
+    isFetching: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+}))
+
+vi.mock("~/lib/debounce", () => ({ useDebounceValue: <T,>(value: T) => value }))
+
+const janeSmith = {
+  id: "contact-jane",
+  displayName: "Jane Smith",
+  email: "jane@example.com",
+  phone: null,
+} as ContactWithRoles
 
 function createDeferred<T>() {
   let resolve: (value: T | PromiseLike<T>) => void = () => undefined
@@ -304,33 +326,105 @@ describe("CreateEventSidebarForm save timing", () => {
     })
   })
 
-  it("passes the client section as a new contact alongside the event", async () => {
+  it("attaches a contact picked from the search dropdown", async () => {
+    searchResults.items = [janeSmith]
     const onCreate = vi.fn(async () => undefined)
     render(<CreateEventSidebarForm onCreate={onCreate} onCancel={vi.fn()} />)
 
     fireEvent.change(screen.getByPlaceholderText("e.g., Smith Wedding"), { target: { value: "Smith Wedding" } })
-    fireEvent.change(screen.getByLabelText("Client Name"), { target: { value: "Jane Smith" } })
-    fireEvent.change(screen.getByLabelText("Client Email"), { target: { value: "jane@example.com" } })
+    fireEvent.change(screen.getByRole("combobox", { name: "Client" }), { target: { value: "jane" } })
+    fireEvent.click(screen.getByRole("option", { name: /Jane Smith/ }))
+
+    expect(screen.getByTestId("picked-client").textContent).toBe("Jane Smith")
     fireEvent.click(screen.getByRole("button", { name: "Create" }))
 
     await waitFor(() => {
       expect(onCreate).toHaveBeenCalledWith(
         expect.objectContaining({ title: "Smith Wedding" }),
-        expect.objectContaining({ firstName: "Jane", lastName: "Smith", email: "jane@example.com" }),
+        { contactId: "contact-jane" },
       )
     })
   })
 
-  it("blocks create until a client with contact details also has a name", () => {
+  it("picks the highlighted contact with the keyboard and can clear it", () => {
+    searchResults.items = [janeSmith]
+    render(<CreateEventSidebarForm onCreate={vi.fn(async () => undefined)} onCancel={vi.fn()} />)
+
+    const search = screen.getByRole("combobox", { name: "Client" })
+    fireEvent.change(search, { target: { value: "jane" } })
+    fireEvent.keyDown(search, { key: "Enter" })
+    expect(screen.getByTestId("picked-client").textContent).toBe("Jane Smith")
+
+    fireEvent.click(screen.getByRole("button", { name: "Change client" }))
+    expect((screen.getByRole("combobox", { name: "Client" }) as HTMLInputElement).value).toBe("")
+  })
+
+  it("blocks create while client text is typed but nothing is picked", () => {
+    searchResults.items = []
     render(<CreateEventSidebarForm onCreate={vi.fn(async () => undefined)} onCancel={vi.fn()} />)
 
     fireEvent.change(screen.getByPlaceholderText("e.g., Smith Wedding"), { target: { value: "Smith Wedding" } })
-    fireEvent.change(screen.getByLabelText("Client Phone"), { target: { value: "555-0100" } })
+    fireEvent.change(screen.getByRole("combobox", { name: "Client" }), { target: { value: "Jane" } })
 
+    expect((screen.getByRole("button", { name: "Create" }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it("creates a new contact pre-filled with the searched name", async () => {
+    searchResults.items = [janeSmith]
+    const onCreate = vi.fn(async () => undefined)
+    render(<CreateEventSidebarForm onCreate={onCreate} onCancel={vi.fn()} />)
+
+    fireEvent.change(screen.getByPlaceholderText("e.g., Smith Wedding"), { target: { value: "Doe Wedding" } })
+    fireEvent.change(screen.getByRole("combobox", { name: "Client" }), { target: { value: "John Doe" } })
+    fireEvent.click(screen.getByRole("option", { name: /Create new contact/ }))
+
+    expect((screen.getByLabelText("Client Name") as HTMLInputElement).value).toBe("John Doe")
+    fireEvent.change(screen.getByLabelText("Client Phone"), { target: { value: "555-0100" } })
+    fireEvent.click(screen.getByRole("button", { name: "Create" }))
+
+    await waitFor(() => {
+      expect(onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Doe Wedding" }),
+        { newContact: expect.objectContaining({ firstName: "John", lastName: "Doe", phone: "555-0100" }) },
+      )
+    })
+  })
+
+  it("pre-fills the email for an email search and requires a name", () => {
+    searchResults.items = []
+    render(<CreateEventSidebarForm onCreate={vi.fn(async () => undefined)} onCancel={vi.fn()} />)
+
+    fireEvent.change(screen.getByPlaceholderText("e.g., Smith Wedding"), { target: { value: "Smith Wedding" } })
+    fireEvent.change(screen.getByRole("combobox", { name: "Client" }), { target: { value: "jane@example.com" } })
+    fireEvent.click(screen.getByRole("option", { name: /Create new contact/ }))
+
+    expect((screen.getByLabelText("Client Email") as HTMLInputElement).value).toBe("jane@example.com")
     expect(screen.getByText("A first or last name is required")).toBeTruthy()
     expect((screen.getByRole("button", { name: "Create" }) as HTMLButtonElement).disabled).toBe(true)
 
     fireEvent.change(screen.getByLabelText("Client Name"), { target: { value: "Jane" } })
     expect((screen.getByRole("button", { name: "Create" }) as HTMLButtonElement).disabled).toBe(false)
+  })
+
+  it("offers the existing contact when a new contact's email is taken", async () => {
+    searchResults.items = [janeSmith]
+    const onCreate = vi.fn(async () => {
+      throw new ContactsError("EmailTaken", "jane@example.com already belongs to Jane Smith", "contact-jane")
+    })
+    const onCancel = vi.fn()
+    render(<CreateEventSidebarForm onCreate={onCreate} onCancel={onCancel} />)
+
+    fireEvent.change(screen.getByPlaceholderText("e.g., Smith Wedding"), { target: { value: "Smith Wedding" } })
+    fireEvent.change(screen.getByRole("combobox", { name: "Client" }), { target: { value: "jane@example.com" } })
+    fireEvent.click(screen.getByRole("option", { name: /Create new contact/ }))
+    fireEvent.change(screen.getByLabelText("Client Name"), { target: { value: "Janet" } })
+    fireEvent.click(screen.getByRole("button", { name: "Create" }))
+
+    await screen.findByText("jane@example.com already belongs to Jane Smith.")
+    expect(onCancel).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole("button", { name: "Find existing contact" }))
+    expect((screen.getByRole("combobox", { name: "Client" }) as HTMLInputElement).value).toBe("jane@example.com")
+    expect(screen.getByRole("option", { name: /Jane Smith/ })).toBeTruthy()
   })
 })

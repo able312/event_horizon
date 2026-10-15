@@ -37,6 +37,13 @@ export function getPrimaryClients(eventIds: string[]): Promise<Record<string, Pr
   return fetchSource(sources.eventContacts.primaryClients(eventIds))
 }
 
+/** Converts an assign target to the Convex argument shape. */
+export function toContactTargetArgs(target: AssignContactTarget) {
+  return "contactId" in target
+    ? { contactId: toId<"contacts">(target.contactId) }
+    : { newContact: pickFields(target.newContact, CONTACT_FIELDS) }
+}
+
 export function assignEventContact(
   eventId: string,
   target: AssignContactTarget,
@@ -45,9 +52,7 @@ export function assignEventContact(
 ): Promise<EventContact> {
   return runMutation(api.eventContacts.assign, {
     eventId: toId<"events">(eventId),
-    target: "contactId" in target
-      ? { contactId: toId<"contacts">(target.contactId) }
-      : { newContact: pickFields(target.newContact, CONTACT_FIELDS) },
+    target: toContactTargetArgs(target),
     role,
     ...(opts ? { opts: toAssignmentFields(opts) } : {}),
   })

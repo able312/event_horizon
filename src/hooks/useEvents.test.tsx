@@ -160,7 +160,7 @@ describe("useEvents month-scoped queries and mutations", () => {
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
 
     const newEvent = { title: "Created Event", startDateTime: "2026-04-20T12:00:00.000Z" } as NewEvent
-    const client = { firstName: "Jane", lastName: "Smith", email: "jane@example.com" }
+    const client = { newContact: { firstName: "Jane", lastName: "Smith", email: "jane@example.com" } }
 
     await act(async () => {
       await result.current.createEvent(newEvent, client)
