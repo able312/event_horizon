@@ -6,6 +6,7 @@ import CalendarPage from "./CalendarPage"
 import type { UseEventsReturn } from "~/hooks/useEvents"
 import { usePrimaryClients } from "~/hooks/useEventContacts"
 import { ClientNamesError } from "../views/ClientNamesError"
+import { InlineQueryError } from "~/features/contacts/components/InlineQueryError"
 import { useCallback } from "react"
 import { getCurrentMonthParam } from "~/lib/months"
 import EventsTable from "~/features/calendar/views/EventsTable"
@@ -79,14 +80,24 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
 
             {bodyView === "leads-list" && <>
                 <Body.Content>
-                    <ClientNamesError query={primaryClients} />
-                    <EventsTable
-                        events={leads}
-                        clientsByEventId={clientsByEventId}
-                        isLoading={leadsQuery.isLoading}
-                        onEdit={handleUpdateEvent}
-                        onDelete={onDeleteRequest}
-                    />
+                    {/* A failed load would otherwise read as "no new leads" */}
+                    {leadsQuery.isError ? (
+                        <InlineQueryError
+                            message="Could not load new leads."
+                            onRetry={() => void leadsQuery.refetch()}
+                            isRetrying={leadsQuery.isFetching}
+                            className="mx-4 my-2 shrink-0"
+                        />
+                    ) : <>
+                        <ClientNamesError query={primaryClients} />
+                        <EventsTable
+                            events={leads}
+                            clientsByEventId={clientsByEventId}
+                            isLoading={leadsQuery.isLoading}
+                            onEdit={handleUpdateEvent}
+                            onDelete={onDeleteRequest}
+                        />
+                    </>}
                 </Body.Content>
             </>}
 

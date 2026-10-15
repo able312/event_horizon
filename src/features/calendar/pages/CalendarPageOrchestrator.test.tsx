@@ -7,6 +7,9 @@ const monthNavigatorPropsMock = vi.fn()
 const eventsTablePropsMock = vi.fn()
 const calendarPagePropsMock = vi.fn()
 const dispatchMock = vi.fn()
+const leadsRefetchMock = vi.fn()
+let bodyMode = "calendar"
+let leadsQuery: { isLoading: boolean; isError?: boolean; isFetching?: boolean; refetch?: () => Promise<unknown> } = { isLoading: false }
 
 vi.mock("~/features/calendar/navigation/MonthNavigator", () => ({
   default: ({
@@ -42,7 +45,7 @@ vi.mock("./CalendarPage", () => ({
 }))
 
 vi.mock("~/hooks/useNewLeads", () => ({
-  useNewLeads: () => ({ leadsQuery: { isLoading: false }, leads: [] }),
+  useNewLeads: () => ({ leadsQuery, leads: [] }),
 }))
 
 vi.mock("~/hooks/useEventContacts", () => ({
@@ -90,7 +93,7 @@ vi.mock("~/features/calendar/views/EventsTable", () => ({
 vi.mock("../state/useCalendarPanelState", () => ({
   useCalendarPanelState: () => ({
     dispatch: dispatchMock,
-    ui: { bodyMode: "calendar" },
+    ui: { bodyMode },
   }),
 }))
 
@@ -157,6 +160,9 @@ describe("CalendarPageOrchestrator", () => {
     monthNavigatorPropsMock.mockReset()
     eventsTablePropsMock.mockReset()
     calendarPagePropsMock.mockReset()
+    leadsRefetchMock.mockReset()
+    bodyMode = "calendar"
+    leadsQuery = { isLoading: false }
   })
   afterEach(() => {
     cleanup()
@@ -231,5 +237,25 @@ describe("CalendarPageOrchestrator", () => {
     expect(dispatchMock).toHaveBeenCalledWith(
       expect.objectContaining({ type: "OPEN_EDIT" }),
     )
+  })
+
+  it("shows a retryable error instead of an empty leads list when the leads query fails", () => {
+    bodyMode = "leads"
+    leadsQuery = { isLoading: false, isError: true, isFetching: false, refetch: leadsRefetchMock }
+    const { queryState } = createQueryState(null)
+
+    render(
+      <CalendarPageOrchastrator
+        queryState={queryState as never}
+        eventsHook={createEventsHook() as never}
+        searchController={createSearchController() as never}
+        onDeleteRequest={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole("alert").textContent).toContain("Could not load new leads.")
+    expect(screen.queryByTestId("events-table-view")).toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+    expect(leadsRefetchMock).toHaveBeenCalled()
   })
 })
