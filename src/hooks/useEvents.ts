@@ -63,7 +63,9 @@ export function useEvents(month: string) {
   const queryClient = useQueryClient()
   const { monthQuery, events: monthEvents } = useEventsMonthQuery(month)
 
-  const unscheduledQuery = useQuery(eventQueries.unscheduled())
+  // Kept subscribed only so optimistic updates can find undated events in the cache. No view
+  // renders it, so its failures stay out of the route-blocking state below.
+  useQuery(eventQueries.unscheduled())
 
   const createMutation = useMutation({
     mutationFn: ({ newEvent, client }: CreateEventVariables) => eventsApi.createEvent(newEvent, client),
@@ -253,20 +255,11 @@ export function useEvents(month: string) {
     return await deleteMutation.mutateAsync(id)
   }
 
-  const unscheduledEvents = unscheduledQuery.data ?? []
-  const monthError = monthQuery.error
-  const unscheduledError = unscheduledQuery.error
-  const error = monthError ?? unscheduledError
-  const isLoading = monthQuery.isLoading || unscheduledQuery.isLoading
-  const isFetching = monthQuery.isFetching || unscheduledQuery.isFetching
-  const isError = monthQuery.isError || unscheduledQuery.isError
-  const isSuccess = monthQuery.isSuccess && unscheduledQuery.isSuccess
+  const { error, isLoading, isFetching, isError, isSuccess } = monthQuery
 
   return {
     monthEvents,
-    unscheduledEvents,
     monthQuery,
-    unscheduledQuery,
     error,
     isLoading,
     isFetching,

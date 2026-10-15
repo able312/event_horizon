@@ -1,14 +1,15 @@
 import { Button } from "~/components/atoms/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/atoms/tooltip"
-import { CalendarX2, CirclePlus, Import, Search, Users } from 'lucide-react'
+import { CirclePlus, Import, Search, Sparkle, Users } from 'lucide-react'
 import { useNavigate } from "react-router"
 import { openIcsImportPicker } from "~/lib/ipc/icsImport"
 
 interface CalendarDefaultHeaderProps {
   onOpenSearch: () => void
   onOpenCreate: () => void
-  onToggleUnscheduledView: () => void
-  isUnscheduledActive?: boolean
+  onToggleLeadsView: () => void
+  isLeadsActive?: boolean
+  newLeadsCount?: number
 }
 
 interface HeaderIconButtonProps {
@@ -54,8 +55,9 @@ const HeaderIconButton: React.FC<HeaderIconButtonProps> = ({
 const CalendarDefaultPanelHeader: React.FC<CalendarDefaultHeaderProps> = ({
   onOpenSearch,
   onOpenCreate,
-  onToggleUnscheduledView,
-  isUnscheduledActive = false,
+  onToggleLeadsView,
+  isLeadsActive = false,
+  newLeadsCount = 0,
 }) => {
   const navigate = useNavigate()
   const modifier = modifierKeyLabel()
@@ -81,13 +83,19 @@ const CalendarDefaultPanelHeader: React.FC<CalendarDefaultHeaderProps> = ({
         <Search className="h-6 w-6" />
       </HeaderIconButton>
       <HeaderIconButton
-        label="Unscheduled events"
-        hotkey={isUnscheduledActive ? "Esc" : undefined}
-        ariaLabel="Toggle unscheduled events list"
-        onClick={onToggleUnscheduledView}
-        className={isUnscheduledActive ? "size-8 text-orange-500 transition-colors" : "size-8 text-white transition-colors"}
+        label="New leads"
+        hotkey={isLeadsActive ? "Esc" : `${modifier}L`}
+        ariaLabel="Toggle new leads list"
+        onClick={onToggleLeadsView}
+        className={`h-8 w-auto min-w-8 gap-1 px-1.5 transition-colors ${isLeadsActive ? "text-orange-500" : "text-white"}`}
       >
-        <CalendarX2 className="h-6 w-6" />
+        {/* Smaller icon so the count sits beside it at a readable size */}
+        <Sparkle className="size-4" />
+        {newLeadsCount > 0 ? (
+          <span aria-hidden="true" className="text-xs font-semibold tabular-nums leading-none">
+            {newLeadsCount > 99 ? "99+" : newLeadsCount}
+          </span>
+        ) : null}
       </HeaderIconButton>
       <HeaderIconButton
         label="Contacts"

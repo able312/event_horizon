@@ -74,9 +74,8 @@ vi.mock("~/components/atoms/route-blocking-error", () => ({
 }))
 
 describe("CalendarWorkspace", () => {
-  it("shows blocking error state when events data fails and retries both queries", async () => {
+  it("shows blocking error state when events data fails and retries the month query", async () => {
     const monthRefetch = vi.fn(async () => undefined)
-    const unscheduledRefetch = vi.fn(async () => undefined)
 
     useEventsQueryStateMock.mockReturnValue({
       state: { date: "2026-05", search: null, type: null, status: null },
@@ -85,7 +84,6 @@ describe("CalendarWorkspace", () => {
       error: new Error("load failed"),
       isFetching: false,
       monthQuery: { refetch: monthRefetch },
-      unscheduledQuery: { refetch: unscheduledRefetch },
       deleteEvent: vi.fn(),
     })
     useCalendarSearchControllerMock.mockReturnValue({})
@@ -110,7 +108,6 @@ describe("CalendarWorkspace", () => {
     expect(screen.getByTestId("route-blocking-error")).toBeTruthy()
     fireEvent.click(screen.getByRole("button", { name: "retry-load" }))
     expect(monthRefetch).toHaveBeenCalledTimes(1)
-    expect(unscheduledRefetch).toHaveBeenCalledTimes(1)
     expect(routeBlockingErrorPropsMock).toHaveBeenCalledWith(
       expect.objectContaining({
         title: "Could not load events",
@@ -148,7 +145,6 @@ describe("CalendarWorkspace", () => {
       isFetching: false,
       deleteEvent: vi.fn(),
       monthQuery: { refetch: vi.fn() },
-      unscheduledQuery: { refetch: vi.fn() },
     })
     useCalendarSearchControllerMock.mockReturnValue({})
     useIcsImportControllerMock.mockReturnValue({

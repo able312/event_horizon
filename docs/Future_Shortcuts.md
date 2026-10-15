@@ -15,4 +15,5 @@ Scroll down (on main calendar) - snap to next month
 ### Actions
 
 Cmd + N - New Event
+Cmd + L - Toggle the New Leads view
 Cmd + P - Pretty Print the current month

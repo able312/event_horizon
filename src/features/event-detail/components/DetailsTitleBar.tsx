@@ -10,6 +10,7 @@ import {
   EVENT_TYPE_LABELS,
 } from "~/definitions/events/ui"
 import { ITER_EVENT_STATUSES } from "~/definitions/events/event-constants"
+import { EVENT_STATUS_REQUIRES_DATE_ERROR, isStatusAllowedForDate } from "~/lib/events/eventStatusRules"
 
 import { EntityKebabMenu } from "~/components/atoms/entity-kebab-menu"
 import {
@@ -116,14 +117,30 @@ const DetailsTitleBar: React.FC<DetailsTitleBarProps> = ({ eventResource }) => {
                           <ChevronDown className="h-3 w-3" />
                         </button>
                         {statusDropdownOpen && (
-                          <div className="absolute top-full left-0 mt-1 w-64 bg-white border rounded-lg shadow-lg z-50 py-1 max-h-64 overflow-y-auto">
+                          <div className="absolute top-full left-0 mt-1 w-64 bg-white border rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
+                            {!event.startDateTime ? (
+                              <div className="mx-2 mb-1 rounded-md bg-orange-50 px-3 py-2 text-xs text-orange-900">
+                                <p>{EVENT_STATUS_REQUIRES_DATE_ERROR}.</p>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setStatusDropdownOpen(false)
+                                    setDateDialogOpen(true)
+                                  }}
+                                  className="mt-1 font-medium text-orange-700 underline underline-offset-2 hover:text-orange-800"
+                                >
+                                  Set date
+                                </button>
+                              </div>
+                            ) : null}
                             {ITER_EVENT_STATUSES.map((status) => (
                               <button
                                 key={status}
                                 type="button"
+                                disabled={!isStatusAllowedForDate(status, event.startDateTime)}
                                 onClick={() => onStatusChange(status)}
-                                className={`flex w-full items-center gap-2 text-left px-3 py-2 text-sm ${
-                                  event.status === status ? `${EVENT_STATUS_COLORS[status]} hover:opacity-80` : "hover:bg-stone-50"
+                                className={`flex w-full items-center gap-2 text-left px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${
+                                  event.status === status ? `${EVENT_STATUS_COLORS[status]} hover:opacity-80` : "enabled:hover:bg-stone-50"
                                 }`}
                               >
                                 <StatusIcon status={status} />
@@ -197,8 +214,9 @@ const DetailsTitleBar: React.FC<DetailsTitleBarProps> = ({ eventResource }) => {
                 onOpenChange={setDateDialogOpen}
                 startDateTime={event.startDateTime ?? null}
                 endDateTime={event.endDateTime ?? null}
-                onSave={(startDateTime, endDateTime) => {
-                  void updateEvent({ startDateTime, endDateTime })
+                status={event.status}
+                onSave={(updates) => {
+                  void updateEvent(updates)
                 }}
               />
         

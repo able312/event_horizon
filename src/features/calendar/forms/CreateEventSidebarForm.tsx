@@ -7,7 +7,7 @@ import ClientPickerField from "./ClientPickerField"
 import EventFormFields, {
   type EventFormValues,
 } from "./EventFormFields"
-import { isEventFormValid } from "./eventFormValidation"
+import { isCreateEventFormValid } from "./eventFormValidation"
 import {
   EMPTY_CLIENT_SELECTION,
   toClientTarget,
@@ -54,7 +54,7 @@ const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
   const [emailConflict, setEmailConflict] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const clientErrors = validateClientSelection(clientSelection)
-  const canCreate = isEventFormValid(formValues) && !hasFormErrors(clientErrors) && !isSubmitting
+  const canCreate = isCreateEventFormValid(formValues) && !hasFormErrors(clientErrors) && !isSubmitting
 
   useEffect(() => {
     if (!onDraftPreviewChange) return

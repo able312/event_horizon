@@ -95,7 +95,7 @@ function CompactEventPopoverContent({
         <Button type="button" size="sm" onClick={onOpenEvent}>
           Open event
         </Button>
-        {onStatusChange ? <EventStatusChangeMenu status={event.status} onStatusChange={onStatusChange} /> : null}
+        {onStatusChange ? <EventStatusChangeMenu status={event.status} startDateTime={event.startDateTime} onStatusChange={onStatusChange} /> : null}
       </div>
     </PopoverContent>
   )

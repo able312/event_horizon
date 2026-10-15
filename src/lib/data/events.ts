@@ -23,6 +23,11 @@ export function getUnscheduledEvents(): Promise<Event[]> {
   return fetchSource(sources.events.unscheduled())
 }
 
+/** Every New Lead event: dated soonest first, then undated oldest first. */
+export function getNewLeadEvents(): Promise<Event[]> {
+  return fetchSource(sources.events.newLeads())
+}
+
 export function searchEvents(payload: EventSearchRequest): Promise<EventSearchResponse> {
   return fetchSource(sources.events.search(payload))
 }

@@ -2,13 +2,11 @@
  * EventsCalendar Component
  * 
  * A calendar view displaying events organized by date.
- * Shows a monthly calendar grid with events on their respective days,
- * plus an "Unscheduled Events" section for events without dates.
+ * Shows a monthly calendar grid with events on their respective days.
  * 
  * Features:
  * - Monthly calendar grid with navigation
  * - Events displayed as colored chips on calendar days
- * - Unscheduled events section for events without dates
  * - Click events to navigate to detail page
  * 
  * Location: src/features/calendar/views/EventsCalendar.tsx
@@ -116,7 +114,6 @@ const EventsCalendar: React.FC<EventsCalendarProps> = ({
     /**
      * Main Container
      * - Calendar section with grid
-     * - Unscheduled events section below
      */
     <div className="space-y-4 h-full min-h-0">
       

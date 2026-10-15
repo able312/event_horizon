@@ -10,7 +10,7 @@ function renderHeader(props: Partial<React.ComponentProps<typeof CalendarDefault
       <CalendarDefaultPanelHeader
         onOpenSearch={vi.fn()}
         onOpenCreate={vi.fn()}
-        onToggleUnscheduledView={vi.fn()}
+        onToggleLeadsView={vi.fn()}
         {...props}
       />
     </MemoryRouter>,
@@ -18,12 +18,12 @@ function renderHeader(props: Partial<React.ComponentProps<typeof CalendarDefault
 }
 
 describe("CalendarDefaultPanelHeader", () => {
-  it("calls unscheduled toggle handler when Calendar-X is clicked", () => {
-    const onToggleUnscheduledView = vi.fn()
-    renderHeader({ onToggleUnscheduledView })
+  it("calls the leads toggle handler when the New leads button is clicked", () => {
+    const onToggleLeadsView = vi.fn()
+    renderHeader({ onToggleLeadsView })
 
-    fireEvent.click(screen.getByRole("button", { name: "Toggle unscheduled events list" }))
-    expect(onToggleUnscheduledView).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole("button", { name: "Toggle new leads list" }))
+    expect(onToggleLeadsView).toHaveBeenCalledTimes(1)
   })
 
   it("links to the contacts directory", () => {

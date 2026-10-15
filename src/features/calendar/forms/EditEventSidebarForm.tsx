@@ -5,6 +5,8 @@ import EventFormFields, {
   type EventFormValues,
 } from "./EventFormFields"
 import { isEventFormValid } from "./eventFormValidation"
+import { isStatusAllowedForDate } from "~/lib/events/eventStatusRules"
+import RemoveEventDateConfirmDialog from "~/components/molecules/RemoveEventDateConfirmDialog"
 
 interface EditEventSidebarFormProps {
   event: Event | null
@@ -53,12 +55,25 @@ const EditEventFields: React.FC<EditEventSidebarFormProps & { event: Event }> = 
   const source = useMemo(() => createFormValuesFromEvent(event), [event])
   const { values: formValues, update } = useLiveDraft(source)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [confirmingDateRemoval, setConfirmingDateRemoval] = useState(false)
 
   const handleSave = async () => {
     if (!isEventFormValid(formValues) || isSubmitting) return
+    if (!isStatusAllowedForDate(formValues.status, formValues.startDateTime)) {
+      setConfirmingDateRemoval(true)
+      return
+    }
+    await saveValues(formValues)
+  }
 
+  const handleConfirmDateRemoval = async () => {
+    setConfirmingDateRemoval(false)
+    await saveValues({ ...formValues, status: "new_lead" })
+  }
+
+  const saveValues = async (values: EventFormValues) => {
     // Only fields changed here, so other people's edits to the rest survive.
-    const updates: UpdateEvent = changedFields(source, formValues)
+    const updates: UpdateEvent = changedFields(source, values)
     if (!hasChanges(updates)) {
       onCancel()
       return
@@ -104,6 +119,13 @@ const EditEventFields: React.FC<EditEventSidebarFormProps & { event: Event }> = 
           Save
         </button>
       </div>
+
+      <RemoveEventDateConfirmDialog
+        open={confirmingDateRemoval}
+        status={formValues.status}
+        onCancel={() => setConfirmingDateRemoval(false)}
+        onConfirm={() => void handleConfirmDateRemoval()}
+      />
     </div>
   )
 }

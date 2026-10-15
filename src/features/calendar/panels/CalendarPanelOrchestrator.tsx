@@ -13,6 +13,7 @@ import type { UseEventsReturn } from "~/hooks/useEvents"
 import EditEventSidebarForm from "~/features/calendar/forms/EditEventSidebarForm"
 import type { UseCalendarSearchControllerReturn } from "../hooks/useCalendarSearchController"
 import { useCalendarWorkspaceViewModel } from "../hooks/useCalendarWorkspaceViewModel"
+import { useNewLeads } from "~/hooks/useNewLeads"
 
 interface CalendarPanelOrchastratorProps {
     queryState: UseEventsQueryStateReturn
@@ -29,6 +30,7 @@ const CalendarPanelOrchastrator: React.FC<CalendarPanelOrchastratorProps> = ({
     const { state, setDate, searchInput, setSearchInput, setType, setStatus } = queryState
     const { ui, dispatch } = useCalendarPanelState()
     const workspaceVm = useCalendarWorkspaceViewModel(queryState, eventsHook, searchController)
+    const { leads } = useNewLeads()
 
     const handleDraftPreviewChange = useCallback((draft: CalendarDraftPreview | null) => {
         dispatch({type: ACTIONS.SET_CREATE_DRAFT_PREVIEW, preview: draft})
@@ -43,8 +45,9 @@ const CalendarPanelOrchastrator: React.FC<CalendarPanelOrchastratorProps> = ({
                     <CalendarDefaultPanelHeader 
                         onOpenSearch={ workspaceVm.panelActions.openSearchPanel }
                         onOpenCreate={ workspaceVm.panelActions.openCreatePanel }
-                        onToggleUnscheduledView={workspaceVm.panelActions.toggleUnscheduledView}
-                        isUnscheduledActive={ui.bodyMode === "unscheduled"}
+                        onToggleLeadsView={workspaceVm.panelActions.toggleLeadsView}
+                        isLeadsActive={ui.bodyMode === "leads"}
+                        newLeadsCount={leads.length}
                     />
                 </Panel.Header>
 

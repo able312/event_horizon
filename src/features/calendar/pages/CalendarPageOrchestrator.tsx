@@ -6,11 +6,13 @@ import CalendarPage from "./CalendarPage"
 import type { UseEventsReturn } from "~/hooks/useEvents"
 import { usePrimaryClients } from "~/hooks/useEventContacts"
 import { ClientNamesError } from "../views/ClientNamesError"
+import { InlineQueryError } from "~/features/contacts/components/InlineQueryError"
 import { useCallback } from "react"
 import { getCurrentMonthParam } from "~/lib/months"
 import EventsTable from "~/features/calendar/views/EventsTable"
 import type { Event } from "~/definitions/database"
 import { useCalendarPanelState } from "../state/useCalendarPanelState"
+import { useNewLeads } from "~/hooks/useNewLeads"
 import type { UseCalendarSearchControllerReturn } from "../hooks/useCalendarSearchController"
 
 
@@ -31,17 +33,18 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
     const { state, setDate } = queryState
     const { isLoading } = eventsHook
     const { dispatch, ui } = useCalendarPanelState()
+    const { leadsQuery, leads } = useNewLeads()
     const { result: searchResult, isFetching: isSearchFetching, enabled: isSearchEnabled } = searchController.searchQuery
     const hasSearchQuery = Boolean(state.search && state.search.length > 0)
     const bodyView = hasSearchQuery
       ? "search-results"
-      : ui.bodyMode === "unscheduled"
-      ? "unscheduled-list"
+      : ui.bodyMode === "leads"
+      ? "leads-list"
       : "calendar-month"
     const searchEvents = isSearchEnabled ? searchResult.items : []
     const tableEvents =
       bodyView === "search-results" ? searchEvents
-      : bodyView === "unscheduled-list" ? eventsHook.unscheduledEvents
+      : bodyView === "leads-list" ? leads
       : []
     const primaryClients = usePrimaryClients(tableEvents.map((event) => event.id))
     const clientsByEventId = primaryClients.data
@@ -75,16 +78,26 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
                 </Body.Content>
             </>}
 
-            {bodyView === "unscheduled-list" && <>
+            {bodyView === "leads-list" && <>
                 <Body.Content>
-                    <ClientNamesError query={primaryClients} />
-                    <EventsTable
-                        events={eventsHook.unscheduledEvents}
-                        clientsByEventId={clientsByEventId}
-                        isLoading={isLoading}
-                        onEdit={handleUpdateEvent}
-                        onDelete={onDeleteRequest}
-                    />
+                    {/* A failed load would otherwise read as "no new leads" */}
+                    {leadsQuery.isError ? (
+                        <InlineQueryError
+                            message="Could not load new leads."
+                            onRetry={() => void leadsQuery.refetch()}
+                            isRetrying={leadsQuery.isFetching}
+                            className="mx-4 my-2 shrink-0"
+                        />
+                    ) : <>
+                        <ClientNamesError query={primaryClients} />
+                        <EventsTable
+                            events={leads}
+                            clientsByEventId={clientsByEventId}
+                            isLoading={leadsQuery.isLoading}
+                            onEdit={handleUpdateEvent}
+                            onDelete={onDeleteRequest}
+                        />
+                    </>}
                 </Body.Content>
             </>}
 

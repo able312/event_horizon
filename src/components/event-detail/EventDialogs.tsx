@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useEffect } from "react"
-import type { EventType } from "~/definitions/database"
+import type { EventStatus, EventType } from "~/definitions/database"
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,8 @@ import {
   isValidEventDateRange,
   resolveEndDateTimeForStart,
 } from "~/lib/events/eventDateRange"
+import { isDateRemovalBlockedByStatus } from "~/lib/events/eventStatusRules"
+import RemoveEventDateConfirmDialog from "~/components/molecules/RemoveEventDateConfirmDialog"
 
 // ============================================================================
 // Types
@@ -53,8 +55,10 @@ interface DateTimeDialogProps {
   startDateTime: string | null
   /** Current event end datetime */
   endDateTime: string | null
-  /** Callback to save the new date/time values */
-  onSave: (startDateTime: string | null, endDateTime: string | null) => void
+  /** Current event status; removing the date from a status that needs one asks first */
+  status: EventStatus
+  /** Callback to save the new date/time values, with the status when it must move back */
+  onSave: (updates: { startDateTime: string | null; endDateTime: string | null; status?: EventStatus }) => void
 }
 
 /**
@@ -68,10 +72,12 @@ export const DateTimeDialog: React.FC<DateTimeDialogProps> = ({
   onOpenChange,
   startDateTime,
   endDateTime,
+  status,
   onSave,
 }) => {
   const [tempStartDateTime, setTempStartDateTime] = useState<string | null>(null)
   const [tempEndDateTime, setTempEndDateTime] = useState<string | null>(null)
+  const [confirmingDateRemoval, setConfirmingDateRemoval] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -94,7 +100,17 @@ export const DateTimeDialog: React.FC<DateTimeDialogProps> = ({
 
   const handleSave = () => {
     if (!rangeValid) return
-    onSave(tempStartDateTime, tempEndDateTime)
+    if (isDateRemovalBlockedByStatus(status, startDateTime, tempStartDateTime)) {
+      setConfirmingDateRemoval(true)
+      return
+    }
+    onSave({ startDateTime: tempStartDateTime, endDateTime: tempEndDateTime })
+    onOpenChange(false)
+  }
+
+  const handleConfirmDateRemoval = () => {
+    setConfirmingDateRemoval(false)
+    onSave({ startDateTime: null, endDateTime: tempEndDateTime, status: "new_lead" })
     onOpenChange(false)
   }
 
@@ -128,6 +144,13 @@ export const DateTimeDialog: React.FC<DateTimeDialogProps> = ({
           <Button onClick={handleSave} disabled={!rangeValid}>Save</Button>
         </DialogFooter>
       </DialogContent>
+
+      <RemoveEventDateConfirmDialog
+        open={confirmingDateRemoval}
+        status={status}
+        onCancel={() => setConfirmingDateRemoval(false)}
+        onConfirm={handleConfirmDateRemoval}
+      />
     </Dialog>
   )
 }

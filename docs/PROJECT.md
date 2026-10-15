@@ -131,6 +131,8 @@ Each environment has its own isolated database, so branch work can't touch share
 
 - Create event
 - Move through statuses/phases
+  - An event without a start date can only be New Lead or Lost; Tentative, Confirmed and Complete need a date (`src/lib/events/eventStatusRules.ts`, enforced in `convex/events.ts`). Removing the date from a dated-status event asks first, then moves it back to New Lead in the same update.
+  - The calendar's New leads view lists every New Lead, dated or not, so undated events always have a home.
 - Attach/track details and their attached timeblocks data
 - Generate PDFs (Estimate, BEO, Timeline)
 - Confirm persistence across restarts, and that edits appear live in a second signed-in window
