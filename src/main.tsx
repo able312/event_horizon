@@ -18,6 +18,11 @@ const queryClient = createAppQueryClient({
     }
 })
 
+// macOS already draws thin overlay scrollbars; everywhere else gets the minimal ones in App.css.
+if (!navigator.platform.toUpperCase().includes("MAC")) {
+    document.documentElement.classList.add('minimal-scrollbars')
+}
+
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
         <QueryClientProvider client={queryClient}>
