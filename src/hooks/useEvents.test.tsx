@@ -51,13 +51,25 @@ describe("useEvents month-scoped queries and mutations", () => {
     getEventsByMonthMock.mockResolvedValue([makeEvent()])
     getUnscheduledEventsMock.mockResolvedValue([makeEvent({ id: "unscheduled", startDateTime: null })])
 
-    const { result } = renderHookWithProviders(() => useEvents("2026-04"))
+    const { result, queryClient } = renderHookWithProviders(() => useEvents("2026-04"))
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => expect(queryClient.getQueryData<Event[]>(eventKeys.unscheduled())).toHaveLength(1))
 
     expect(getEventsByMonthMock).toHaveBeenCalledWith("2026-04")
     expect(getUnscheduledEventsMock).toHaveBeenCalledTimes(1)
     expect(result.current.monthEvents).toHaveLength(1)
-    expect(result.current.unscheduledEvents).toHaveLength(1)
+  })
+
+  it("does not surface an unscheduled query failure, since no view renders it", async () => {
+    vi.mocked(eventsApi.getEventsByMonth).mockResolvedValue([makeEvent()])
+    vi.mocked(eventsApi.getUnscheduledEvents).mockRejectedValue(new Error("unscheduled failed"))
+
+    const { result, queryClient } = renderHookWithProviders(() => useEvents("2026-04"))
+    await waitFor(() => expect(queryClient.getQueryState(eventKeys.unscheduled())?.status).toBe("error"))
+
+    expect(result.current.isSuccess).toBe(true)
+    expect(result.current.isError).toBe(false)
+    expect(result.current.error).toBeNull()
   })
 
   it("refetches month query when the selected month changes", async () => {

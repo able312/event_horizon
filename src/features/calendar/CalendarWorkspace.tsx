@@ -21,11 +21,11 @@ const CalendarWorkspace: React.FC = () => {
     const searchController = useCalendarSearchController(QueryState)
     const icsImportController = useIcsImportController()
     const deleteController = useEventDeleteConfirmation(packagedEventHook.deleteEvent)
-    const { error, isFetching, monthQuery, unscheduledQuery } = packagedEventHook
+    const { error, isFetching, monthQuery } = packagedEventHook
 
     const handleRetryLoad = useCallback(async () => {
-        await Promise.all([monthQuery.refetch(), unscheduledQuery.refetch()])
-    }, [monthQuery, unscheduledQuery])
+        await monthQuery.refetch()
+    }, [monthQuery])
 
     if (error) {
         return (

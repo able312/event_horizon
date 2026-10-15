@@ -133,7 +133,6 @@ function createQueryState(search: string | null = null) {
 function createEventsHook() {
   return {
     isLoading: false,
-    unscheduledEvents: [],
   }
 }
 
