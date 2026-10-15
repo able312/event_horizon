@@ -16,6 +16,29 @@
   padding-right: calc(1.5rem + 100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
 }
 
+/* Thin, trackless scrollbars on Windows (class set in main.tsx), in place of Chromium's
+   classic grey bars with arrow buttons. The transparent border insets the thumb from the edge. */
+.minimal-scrollbars ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.minimal-scrollbars ::-webkit-scrollbar-track,
+.minimal-scrollbars ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.minimal-scrollbars ::-webkit-scrollbar-button {
+  display: none;
+}
+.minimal-scrollbars ::-webkit-scrollbar-thumb {
+  background-color: color-mix(in oklch, var(--foreground) 18%, transparent);
+  background-clip: padding-box;
+  border: 3px solid transparent;
+  border-radius: 9999px;
+}
+.minimal-scrollbars ::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in oklch, var(--foreground) 35%, transparent);
+}
+
 
 /* ─── Print page setup ─────────────────────────── */
 /* Margins live on .preview-page wrappers (0.75in) so screen and print match. */
