@@ -1,11 +1,10 @@
 import { Check, UserPlus } from "lucide-react"
 
 import type { ContactWithRoles } from "~/definitions/contacts"
-import { deriveInitials } from "~/lib/contacts/contactRules"
 import { cn } from "~/lib/utils"
 
-import { describeStandingRoles } from "../lib/eventContactsPanel"
-import { InlineQueryError } from "./InlineQueryError"
+import { ContactResultSummary } from "./ContactResultSummary"
+import { ContactSearchStatus } from "./ContactSearchStatus"
 
 type ContactSearchResultsProps = {
   contacts: ContactWithRoles[]
@@ -28,20 +27,15 @@ export const ContactSearchResults: React.FC<ContactSearchResultsProps> = ({
   disabled,
   onSelect,
 }) => {
-  // A failed search must not read as "no matches": that invites creating a duplicate of an existing contact
-  if (isError) {
-    return <InlineQueryError message="Could not search contacts." onRetry={onRetry} isRetrying={isLoading} className="m-2" />
-  }
-
-  if (isLoading && contacts.length === 0) {
-    return <p className="px-2 py-6 text-center text-xs text-muted-foreground">Searching contacts…</p>
-  }
-
-  if (contacts.length === 0) {
+  if (isError || contacts.length === 0) {
     return (
-      <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-        {hasQuery ? "No matching contacts. Create a new one below." : "Your contact directory is empty."}
-      </p>
+      <ContactSearchStatus
+        isLoading={isLoading}
+        isError={isError}
+        hasResults={contacts.length > 0}
+        onRetry={onRetry}
+        emptyMessage={hasQuery ? "No matching contacts. Create a new one below." : "Your contact directory is empty."}
+      />
     )
   }
 
@@ -49,8 +43,6 @@ export const ContactSearchResults: React.FC<ContactSearchResultsProps> = ({
     <ul className="divide-y divide-border">
       {contacts.map((contact) => {
         const assigned = isAssigned(contact.id)
-        const details = [contact.email, contact.phone].filter(Boolean).join(" · ")
-        const roles = describeStandingRoles(contact)
 
         return (
           <li key={contact.id}>
@@ -63,16 +55,7 @@ export const ContactSearchResults: React.FC<ContactSearchResultsProps> = ({
               )}
               onClick={() => onSelect(contact)}
             >
-              <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-stone-100 text-[11px] font-bold tracking-tight text-stone-700">
-                {deriveInitials(contact.displayName)}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">{contact.displayName}</span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {details || "No email or phone"}
-                  {roles ? <span className="text-muted-foreground/70"> · {roles}</span> : null}
-                </span>
-              </span>
+              <ContactResultSummary contact={contact} />
               {assigned ? (
                 <span className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
                   <Check className="size-3.5" /> Added
