@@ -75,6 +75,7 @@ export function useCalendarWorkspaceViewModel(
 
   useHotkey("Cmd+f", openSearchPanel)
   useHotkey("Cmd+N", openCreatePanel)
+  useHotkey("Cmd+L", toggleLeadsView)
   useHotkey("escape", () => {
     if (ui.bodyMode === "leads" && ui.sidebarMode !== "create" && ui.sidebarMode !== "edit") {
       dispatch({ type: ACTIONS.OPEN_CALENDAR_VIEW })

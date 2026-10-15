@@ -84,17 +84,15 @@ const CalendarDefaultPanelHeader: React.FC<CalendarDefaultHeaderProps> = ({
       </HeaderIconButton>
       <HeaderIconButton
         label="New leads"
-        hotkey={isLeadsActive ? "Esc" : undefined}
+        hotkey={isLeadsActive ? "Esc" : `${modifier}L`}
         ariaLabel="Toggle new leads list"
         onClick={onToggleLeadsView}
-        className={`relative size-8 transition-colors ${isLeadsActive ? "text-orange-500" : "text-white"}`}
+        className={`h-8 w-auto min-w-8 gap-1 px-1.5 transition-colors ${isLeadsActive ? "text-orange-500" : "text-white"}`}
       >
-        <Sparkle className="h-6 w-6" />
+        {/* Smaller icon so the count sits beside it at a readable size */}
+        <Sparkle className="size-4" />
         {newLeadsCount > 0 ? (
-          <span
-            aria-hidden="true"
-            className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-semibold leading-none text-white"
-          >
+          <span aria-hidden="true" className="text-xs font-semibold tabular-nums leading-none">
             {newLeadsCount > 99 ? "99+" : newLeadsCount}
           </span>
         ) : null}
