@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react"
 
-import type { NewContact } from "~/definitions/contacts"
+import type { AssignContactTarget } from "~/definitions/contacts"
 import type { Event, NewEvent, UpdateEvent } from "~/definitions/database"
 import type { UseEventsReturn } from "~/hooks/useEvents"
 import type { UseEventsQueryStateReturn } from "~/hooks/useEventsQueryState"
@@ -59,7 +59,7 @@ export function useCalendarWorkspaceViewModel(
   }, [dispatch])
 
   const onCreateEvent = useCallback(
-    async (event: NewEvent, client?: NewContact | null) => {
+    async (event: NewEvent, client?: AssignContactTarget | null) => {
       await createEvent(event, client)
     },
     [createEvent],

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import type { NewContact } from "~/definitions/contacts"
+import type { AssignContactTarget } from "~/definitions/contacts"
 import type { Event, NewEvent, UpdateEvent } from "~/definitions/database"
 import * as eventsApi from "~/lib/data/events"
 import { eventKeys, eventQueries } from "~/lib/data/queries"
@@ -14,7 +14,7 @@ import { useEventsMonthQuery } from "./useEventsMonthQuery"
 
 type CreateEventVariables = {
   newEvent: NewEvent
-  client?: NewContact | null
+  client?: AssignContactTarget | null
 }
 
 type SnapshotEntry = {
@@ -241,7 +241,7 @@ export function useEvents(month: string) {
     },
   })
 
-  const createEvent = async (newEvent: NewEvent, client?: NewContact | null): Promise<Event> => {
+  const createEvent = async (newEvent: NewEvent, client?: AssignContactTarget | null): Promise<Event> => {
     return await createMutation.mutateAsync({ newEvent, client })
   }
 

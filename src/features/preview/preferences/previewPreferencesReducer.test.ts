@@ -60,6 +60,18 @@ describe("previewPreferencesReducer", () => {
     })
   })
 
+  it("defaults the financial report to an estimate and switches its title", () => {
+    let state = createInitialPreviewPreferences()
+    expect(state["financial-report"].documentKind).toBe("estimate")
+
+    state = previewPreferencesReducer(state, {
+      type: "financial/setDocumentKind",
+      value: "invoice",
+    })
+    expect(state["financial-report"].documentKind).toBe("invoice")
+    expect(state["financial-report"].showChargeBreakdown).toBe(true)
+  })
+
   it("defaults financial payment status from whether payments exist", () => {
     let state = createInitialPreviewPreferences()
     expect(state["financial-report"].showPaymentStatus).toBe(false)

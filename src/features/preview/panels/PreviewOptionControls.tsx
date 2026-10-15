@@ -45,6 +45,39 @@ export function PreviewToggleRow({
   )
 }
 
+export function PreviewRadioRow({
+  label,
+  name,
+  checked,
+  onSelect,
+  id,
+}: {
+  id: string
+  name: string
+  label: string
+  checked: boolean
+  onSelect: () => void
+}) {
+  return (
+    <label
+      htmlFor={id}
+      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-stone-300 hover:bg-white/5"
+    >
+      <input
+        id={id}
+        type="radio"
+        name={name}
+        checked={checked}
+        onChange={(e) => {
+          if (e.target.checked) onSelect()
+        }}
+        className="h-3.5 w-3.5 border-stone-500 bg-transparent accent-stone-100"
+      />
+      <span className="truncate">{label}</span>
+    </label>
+  )
+}
+
 export function PreviewTimeblockSelector({
   sectionLabel,
   options,

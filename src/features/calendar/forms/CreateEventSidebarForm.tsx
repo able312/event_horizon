@@ -1,25 +1,26 @@
 import React, { useEffect, useState } from "react"
-import type { NewContact } from "~/definitions/contacts"
+import type { AssignContactTarget } from "~/definitions/contacts"
 import type { NewEvent } from "~/definitions/database"
 import { hasFormErrors } from "~/features/contacts/lib/contactForm"
+import { isContactsError } from "~/lib/contacts/contactsError"
+import ClientPickerField from "./ClientPickerField"
 import EventFormFields, {
   type EventFormValues,
 } from "./EventFormFields"
 import { isCreateEventFormValid } from "./eventFormValidation"
-import NewClientFields from "./NewClientFields"
 import {
-  EMPTY_NEW_CLIENT,
-  toNewClientContact,
-  validateNewClient,
-  type NewClientFormValues,
-} from "./newClientForm"
+  EMPTY_CLIENT_SELECTION,
+  toClientTarget,
+  validateClientSelection,
+  type ClientSelection,
+} from "./clientPickerForm"
 import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
 
 interface CreateEventSidebarFormProps {
   initialStartDateTime?: string
   initialEndDateTime?: string
-  /** client is null when the client section was left blank */
-  onCreate: (event: NewEvent, client: NewContact | null) => Promise<void>
+  /** client is an existing contact or a new one to create, or null when the client section was left blank */
+  onCreate: (event: NewEvent, client: AssignContactTarget | null) => Promise<void>
   onCancel: () => void
   onDraftPreviewChange?: (draft: CalendarDraftPreview | null) => void
 }
@@ -49,9 +50,10 @@ const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
   const [formValues, setFormValues] = useState<EventFormValues>(() =>
     createDefaultFormValues(initialStartDateTime, initialEndDateTime),
   )
-  const [clientValues, setClientValues] = useState<NewClientFormValues>(EMPTY_NEW_CLIENT)
+  const [clientSelection, setClientSelection] = useState<ClientSelection>(EMPTY_CLIENT_SELECTION)
+  const [emailConflict, setEmailConflict] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const clientErrors = validateNewClient(clientValues)
+  const clientErrors = validateClientSelection(clientSelection)
   const canCreate = isCreateEventFormValid(formValues) && !hasFormErrors(clientErrors) && !isSubmitting
 
   useEffect(() => {
@@ -79,8 +81,13 @@ const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
   const handleCancel = () => {
     onDraftPreviewChange?.(null)
     setFormValues(createDefaultFormValues(initialStartDateTime, initialEndDateTime))
-    setClientValues(EMPTY_NEW_CLIENT)
+    setClientSelection(EMPTY_CLIENT_SELECTION)
     onCancel()
+  }
+
+  const handleClientChange = (selection: ClientSelection) => {
+    setClientSelection(selection)
+    setEmailConflict(null)
   }
 
   const handleCreate = async () => {
@@ -97,12 +104,13 @@ const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
         minGuests: formValues.minGuests,
         maxGuests: formValues.maxGuests,
       } as NewEvent
-      await onCreate(newEvent, toNewClientContact(clientValues))
+      await onCreate(newEvent, toClientTarget(clientSelection))
       setFormValues(createDefaultFormValues(initialStartDateTime, initialEndDateTime))
-      setClientValues(EMPTY_NEW_CLIENT)
+      setClientSelection(EMPTY_CLIENT_SELECTION)
       onCancel()
-    } catch {
-      // Mutation errors are surfaced by hook-level toasts.
+    } catch (err) {
+      // Other mutation errors are surfaced by hook-level toasts.
+      if (isContactsError(err) && err.code === "EmailTaken") setEmailConflict(err.message)
     } finally {
       setIsSubmitting(false)
     }
@@ -120,10 +128,11 @@ const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
         onChange={(updates) => setFormValues((current) => ({ ...current, ...updates }))}
         autoFocusTitle
         clientFields={
-          <NewClientFields
-            values={clientValues}
+          <ClientPickerField
+            selection={clientSelection}
             errors={clientErrors}
-            onChange={(updates) => setClientValues((current) => ({ ...current, ...updates }))}
+            emailConflict={emailConflict}
+            onChange={handleClientChange}
           />
         }
       />

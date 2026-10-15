@@ -24,7 +24,7 @@ interface EventFormFieldsProps {
   values: EventFormValues
   onChange: (updates: Partial<EventFormValues>) => void
   autoFocusTitle?: boolean
-  /** Rendered between status and dates, e.g. the new-client inputs on the create form */
+  /** Rendered between status and dates, e.g. the client picker on the create form */
   clientFields?: React.ReactNode
 }
 
