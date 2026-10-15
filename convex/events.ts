@@ -1,4 +1,4 @@
-import { v } from "convex/values"
+import { v, type Infer } from "convex/values"
 import { companyMutation, companyQuery } from "./lib/auth"
 import type { MutationCtx } from "./_generated/server"
 import { contactFields } from "./lib/contactValidators"
@@ -42,12 +42,20 @@ export const getByCalendarIds = companyQuery({ args: { calendarIds: v.array(v.st
   for (const id of new Set(calendarIds.map(id => id.trim()).filter(Boolean))) result.push(...(await ctx.db.query("events").withIndex("by_calendarId", q => q.eq("calendarId", id)).collect()).map(toRecord))
   return result
 } })
-export const create = companyMutation({ args: { input: v.object(fields), client: v.optional(nullable(v.object(contactFields))) }, handler: (ctx, { input, client }) => contactOperation(async () => {
+// The bare contact shape is what installed builds released before the client picker send; drop it once they've all updated.
+const legacyClient = v.object(contactFields)
+const primaryClient = v.union(v.object({ contactId: v.id("contacts") }), v.object({ newContact: v.object(contactFields) }), legacyClient)
+async function legacyClientTarget(ctx: MutationCtx, client: Infer<typeof legacyClient>) {
+  const email = normalizeEmail(client.email)
+  const existing = email ? (await ctx.db.query("contacts").withIndex("by_emailNormalized", q => q.eq("emailNormalized", email)).collect()).find(c => !c.archivedAt) : null
+  return existing ? { contactId: existing._id } : { newContact: client }
+}
+// A new contact whose email is taken fails with EmailTaken (rolling back the event) so the form can offer the existing contact.
+export const create = companyMutation({ args: { input: v.object(fields), client: v.optional(nullable(primaryClient)) }, handler: (ctx, { input, client }) => contactOperation(async () => {
   const event = await insertEvent(ctx, input)
   if (client) {
-    const email = normalizeEmail(client.email)
-    const existing = email ? (await ctx.db.query("contacts").withIndex("by_emailNormalized", q => q.eq("emailNormalized", email)).collect()).find(c => !c.archivedAt) : null
-    await assignContact(ctx, event.id, existing ? { contactId: existing._id } : { newContact: client }, "client", { isPrimary: true })
+    const target = "contactId" in client || "newContact" in client ? client : await legacyClientTarget(ctx, client)
+    await assignContact(ctx, event.id, target, "client", { isPrimary: true })
   }
   return event
 }) })

@@ -7,7 +7,7 @@ const modules = import.meta.glob("./**/*.{ts,js}")
 const setup = () => convexTest(schema, modules).withIdentity(companyIdentity)
 
 describe("Convex events", () => {
-  it("creates defaults and an atomic primary client, reusing active email matches", async () => {
+  it("creates defaults and a legacy primary client, reusing active email matches", async () => {
     const t = setup()
     const empty = await t.mutation(api.events.create, { input: {} })
     expect(empty).toMatchObject({ title: "", type: "function", status: "new_lead", startDateTime: null, endDateTime: null, isInternal: 0, updatedAt: null })
@@ -26,6 +26,20 @@ describe("Convex events", () => {
     await t.mutation(api.contacts.archive, { id: contactId })
     await t.mutation(api.events.create, { input: { title: "New contact" }, client: { displayName: "Replacement", email: "ada@example.com" } })
     expect((await t.query(api.contacts.search, { limit: 100, includeArchived: true })).items).toHaveLength(2)
+  })
+  it("attaches a picked contact or creates a new one as the primary client", async () => {
+    const t = setup()
+    const created = await t.mutation(api.events.create, { input: { title: "First" }, client: { newContact: { firstName: "Ada", email: "ada@example.com" } } })
+    const contactId = (await t.query(api.contacts.search, { limit: 100 })).items[0]!.id
+    const picked = await t.mutation(api.events.create, { input: { title: "Second" }, client: { contactId } })
+    const clients = await t.query(api.eventContacts.getPrimaryClients, { eventIds: [created.id, picked.id] })
+    expect(clients[created.id]?.displayName).toBe("Ada")
+    expect(clients[picked.id]?.contactId).toBe(contactId)
+    expect((await t.query(api.eventContacts.getPanel, { eventId: picked.id })).groups[0]?.items[0]?.isPrimary).toBe(true)
+    // A taken email is reported instead of silently reusing the contact, and the event rolls back
+    await expect(t.mutation(api.events.create, { input: { title: "Taken" }, client: { newContact: { firstName: "Other", email: " ADA@example.com " } } })).rejects.toThrow("already belongs to Ada")
+    expect(await t.query(api.events.getUnscheduled, {})).toHaveLength(2)
+    expect((await t.query(api.contacts.search, { limit: 100 })).items).toHaveLength(1)
   })
   it("checks date ranges and patch fields, preserves parents/timestamps and rejects missing events", async () => {
     const t = setup()
