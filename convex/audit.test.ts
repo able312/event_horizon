@@ -32,7 +32,7 @@ describe("audit fields", () => {
     const asOther = t.withIdentity(otherIdentity)
 
     // No users.store call first: the mutation still attributes the write.
-    const event = await asStaff.mutation(api.events.create, { input: { title: "Gala" } })
+    const event = await asStaff.mutation(api.events.create, { input: { title: "Gala", startDateTime: "2026-10-10T00:00:00Z" } })
     const staffId = await userIdFor(t, companyIdentity.subject)
     expect(event).toMatchObject({ createdBy: staffId, updatedBy: staffId })
 

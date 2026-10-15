@@ -7,24 +7,24 @@ import {
 } from "./calendarSidePanelReducer"
 
 describe("calendarSidePanelReducer", () => {
-  it("toggles body mode between calendar and unscheduled", () => {
+  it("toggles body mode between calendar and leads", () => {
     const opened = calendarSidePanelReducer(initialCalendarSidePanelState, {
-      type: ACTIONS.TOGGLE_UNSCHEDULED_VIEW,
+      type: ACTIONS.TOGGLE_LEADS_VIEW,
     })
-    expect(opened.bodyMode).toBe("unscheduled")
+    expect(opened.bodyMode).toBe("leads")
 
     const closed = calendarSidePanelReducer(opened, {
-      type: ACTIONS.TOGGLE_UNSCHEDULED_VIEW,
+      type: ACTIONS.TOGGLE_LEADS_VIEW,
     })
     expect(closed.bodyMode).toBe("calendar")
   })
 
   it("keeps body mode through sidebar mode transitions", () => {
-    const unscheduledState = calendarSidePanelReducer(initialCalendarSidePanelState, {
-      type: ACTIONS.TOGGLE_UNSCHEDULED_VIEW,
+    const leadsState = calendarSidePanelReducer(initialCalendarSidePanelState, {
+      type: ACTIONS.TOGGLE_LEADS_VIEW,
     })
 
-    const openedSearch = calendarSidePanelReducer(unscheduledState, {
+    const openedSearch = calendarSidePanelReducer(leadsState, {
       type: ACTIONS.OPEN_SEARCH,
     })
     const openedCreate = calendarSidePanelReducer(openedSearch, {
@@ -32,7 +32,7 @@ describe("calendarSidePanelReducer", () => {
       prefillIso: null,
     })
 
-    expect(openedSearch.bodyMode).toBe("unscheduled")
-    expect(openedCreate.bodyMode).toBe("unscheduled")
+    expect(openedSearch.bodyMode).toBe("leads")
+    expect(openedCreate.bodyMode).toBe("leads")
   })
 })

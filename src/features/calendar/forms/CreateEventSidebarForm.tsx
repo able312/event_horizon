@@ -5,7 +5,7 @@ import { hasFormErrors } from "~/features/contacts/lib/contactForm"
 import EventFormFields, {
   type EventFormValues,
 } from "./EventFormFields"
-import { isEventFormValid } from "./eventFormValidation"
+import { isCreateEventFormValid } from "./eventFormValidation"
 import NewClientFields from "./NewClientFields"
 import {
   EMPTY_NEW_CLIENT,
@@ -52,7 +52,7 @@ const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
   const [clientValues, setClientValues] = useState<NewClientFormValues>(EMPTY_NEW_CLIENT)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const clientErrors = validateNewClient(clientValues)
-  const canCreate = isEventFormValid(formValues) && !hasFormErrors(clientErrors) && !isSubmitting
+  const canCreate = isCreateEventFormValid(formValues) && !hasFormErrors(clientErrors) && !isSubmitting
 
   useEffect(() => {
     if (!onDraftPreviewChange) return

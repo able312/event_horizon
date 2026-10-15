@@ -54,8 +54,8 @@ export function useCalendarWorkspaceViewModel(
     dispatch({ type: ACTIONS.OPEN_DEFAULT })
   }, [dispatch])
 
-  const toggleUnscheduledView = useCallback(() => {
-    dispatch({ type: ACTIONS.TOGGLE_UNSCHEDULED_VIEW })
+  const toggleLeadsView = useCallback(() => {
+    dispatch({ type: ACTIONS.TOGGLE_LEADS_VIEW })
   }, [dispatch])
 
   const onCreateEvent = useCallback(
@@ -76,7 +76,7 @@ export function useCalendarWorkspaceViewModel(
   useHotkey("Cmd+f", openSearchPanel)
   useHotkey("Cmd+N", openCreatePanel)
   useHotkey("escape", () => {
-    if (ui.bodyMode === "unscheduled" && ui.sidebarMode !== "create" && ui.sidebarMode !== "edit") {
+    if (ui.bodyMode === "leads" && ui.sidebarMode !== "create" && ui.sidebarMode !== "edit") {
       dispatch({ type: ACTIONS.OPEN_CALENDAR_VIEW })
     }
   })
@@ -91,7 +91,7 @@ export function useCalendarWorkspaceViewModel(
         openCreatePanelWithPrefill,
         openEditPanel,
         openDefaultPanel,
-        toggleUnscheduledView,
+        toggleLeadsView,
       },
       mutations: {
         onCreateEvent,
@@ -107,7 +107,7 @@ export function useCalendarWorkspaceViewModel(
       openDefaultPanel,
       openEditPanel,
       openSearchPanel,
-      toggleUnscheduledView,
+      toggleLeadsView,
       ui,
     ],
   )

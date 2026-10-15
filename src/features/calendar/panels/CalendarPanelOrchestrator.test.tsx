@@ -50,6 +50,10 @@ vi.mock("./headers/ClosePanelHeader", () => ({
   default: () => <div data-testid="close-header-mock" />,
 }))
 
+vi.mock("~/hooks/useNewLeads", () => ({
+  useNewLeads: () => ({ leadsQuery: { isLoading: false }, leads: [] }),
+}))
+
 vi.mock("../state/useCalendarPanelState", () => ({
   useCalendarPanelState: () => useCalendarPanelStateMock(),
 }))
@@ -86,7 +90,7 @@ describe("CalendarPanelOrchastrator create form remount behavior", () => {
         openCreatePanel: vi.fn(),
         openDefaultPanel: vi.fn(),
         closeSearchPanel: vi.fn(),
-        toggleUnscheduledView: vi.fn(),
+        toggleLeadsView: vi.fn(),
       },
       mutations: {
         onCreateEvent: vi.fn(),

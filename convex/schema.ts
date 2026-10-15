@@ -53,6 +53,8 @@ export default defineSchema({
   })
     // Month ranges, and unscheduled events (null start) in creation order
     .index("by_start", ["startDateTime", "createdAt"])
+    // New leads view: one status, undated (null start) first in creation order, then by start
+    .index("by_status", ["status", "startDateTime", "createdAt"])
     .index("by_calendarId", ["calendarId"]),
 
   tournamentDetails: defineTable({

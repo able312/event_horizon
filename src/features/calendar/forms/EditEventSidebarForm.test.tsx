@@ -135,7 +135,7 @@ describe("EditEventSidebarForm save timing", () => {
     editTitle("My title")
     rerender(
       <EditEventSidebarForm
-        event={makeEvent({ title: "Their title", status: "confirmed" })}
+        event={makeEvent({ title: "Their title", status: "confirmed", startDateTime: "2026-10-10T15:00:00.000Z" })}
         onSave={onSave}
         onCancel={vi.fn()}
       />,
@@ -159,5 +159,56 @@ describe("EditEventSidebarForm save timing", () => {
     )
 
     expect(titleInput().value).toBe("Event 2")
+  })
+})
+
+describe("EditEventSidebarForm date removal", () => {
+  const dated = {
+    status: "confirmed" as const,
+    startDateTime: "2026-10-10T15:00:00.000Z",
+    endDateTime: "2026-10-10T20:00:00.000Z",
+  }
+
+  function clearStartDate() {
+    fireEvent.click(screen.getAllByRole("button", { name: "Clear date" })[0]!)
+  }
+
+  it("asks before removing the date of a Confirmed event, and keeps it on cancel", async () => {
+    const onSave = vi.fn(async () => undefined)
+    render(<EditEventSidebarForm event={makeEvent(dated)} onSave={onSave} onCancel={vi.fn()} />)
+
+    clearStartDate()
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+
+    expect(onSave).not.toHaveBeenCalled()
+    fireEvent.click(await screen.findByRole("button", { name: "Keep date" }))
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it("removes the date and moves back to New Lead in one save when confirmed", async () => {
+    const onSave = vi.fn(async () => undefined)
+    render(<EditEventSidebarForm event={makeEvent(dated)} onSave={onSave} onCancel={vi.fn()} />)
+
+    clearStartDate()
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Remove date & move to New Lead" }))
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith({ startDateTime: null, status: "new_lead" })
+    })
+  })
+
+  it("removes the date of a New Lead without asking", async () => {
+    const onSave = vi.fn(async () => undefined)
+    render(
+      <EditEventSidebarForm event={makeEvent({ ...dated, status: "new_lead" })} onSave={onSave} onCancel={vi.fn()} />,
+    )
+
+    clearStartDate()
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith({ startDateTime: null })
+    })
   })
 })

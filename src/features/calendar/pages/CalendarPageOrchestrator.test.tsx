@@ -41,6 +41,10 @@ vi.mock("./CalendarPage", () => ({
   },
 }))
 
+vi.mock("~/hooks/useNewLeads", () => ({
+  useNewLeads: () => ({ leadsQuery: { isLoading: false }, leads: [] }),
+}))
+
 vi.mock("~/hooks/useEventContacts", () => ({
   usePrimaryClients: () => ({ data: {} }),
 }))

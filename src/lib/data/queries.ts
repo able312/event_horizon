@@ -37,6 +37,7 @@ export const eventKeys = {
   /** `month` must already be normalized to YYYY-MM. */
   month: (month: string) => [...eventKeys.months(), month] as const,
   unscheduled: () => ["events", "unscheduled"] as const,
+  newLeads: () => ["events", "newLeads"] as const,
   /** Prefix of every search result page. */
   searches: () => ["events", "search"] as const,
   search: (params: EventSearchRequest) => [
@@ -66,6 +67,11 @@ export const eventQueries = {
     queryKey: eventKeys.unscheduled(),
     queryFn: () => eventsApi.getUnscheduledEvents(),
     ...liveMeta(sources.events.unscheduled()),
+  }),
+  newLeads: () => queryOptions({
+    queryKey: eventKeys.newLeads(),
+    queryFn: () => eventsApi.getNewLeadEvents(),
+    ...liveMeta(sources.events.newLeads()),
   }),
   search: (params: EventSearchRequest) => queryOptions({
     queryKey: eventKeys.search(params),

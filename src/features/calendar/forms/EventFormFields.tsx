@@ -7,6 +7,7 @@ import {
   isValidEventDateRange,
   resolveEndDateTimeForStart,
 } from "~/lib/events/eventDateRange"
+import { isStatusAllowedForDate, statusRequiresDate } from "~/lib/events/eventStatusRules"
 import { formFieldClasses } from "./eventFormStyles"
 
 export interface EventFormValues {
@@ -40,6 +41,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
   clientFields,
 }) => {
   const rangeInvalid = !isValidEventDateRange(values.startDateTime, values.endDateTime)
+  const statusNeedsDate = !isStatusAllowedForDate(values.status, values.startDateTime)
 
   const handleStartChange = (startDateTime: string | null) => {
     const endDateTime = resolveEndDateTimeForStart(
@@ -88,11 +90,19 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
             className={formFieldClasses}
           >
             {ITER_EVENT_STATUSES.filter((status) => status !== "lost").map((status) => (
-              <option key={status} value={status} className="bg-stone-900 text-stone-100">
+              <option
+                key={status}
+                value={status}
+                disabled={!values.startDateTime && statusRequiresDate(status)}
+                className="bg-stone-900 text-stone-100"
+              >
                 {EVENT_STATUS_LABELS[status]}
               </option>
             ))}
           </select>
+          {!values.startDateTime && !statusNeedsDate ? (
+            <p className="mt-1 text-xs text-stone-400">Set a start date to move past New Lead</p>
+          ) : null}
         </div>
       </div>
 
@@ -102,6 +112,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
         label="Start Date"
         value={values.startDateTime}
         onChange={handleStartChange}
+        error={statusNeedsDate ? `${EVENT_STATUS_LABELS[values.status]} events need a start date` : undefined}
         labelClassName="text-stone-100"
         dateInputClassName={dateTimeFieldClasses}
         timeInputClassName={timeFieldClasses}

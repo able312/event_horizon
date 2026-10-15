@@ -7,6 +7,7 @@ import { assertUpdates, requireDocument, toRecord } from "./lib/records"
 import { eventStatus, eventType, nullable } from "./lib/validators"
 import { normalizeEmail } from "../src/lib/contacts/contactRules"
 import { assertValidEventDateRange } from "../src/lib/events/eventDateRange"
+import { assertStatusAllowedForDate } from "../src/lib/events/eventStatusRules"
 
 const fields = {
   title: v.optional(v.string()), type: v.optional(eventType), status: v.optional(eventStatus),
@@ -19,6 +20,7 @@ type EventInput = Partial<Omit<import("./_generated/dataModel").Doc<"events">, "
 async function insertEvent(ctx: MutationCtx, data: EventInput, createdAt = Date.now().toString()) {
   const startDateTime = data.startDateTime ?? null, endDateTime = data.endDateTime ?? null
   assertValidEventDateRange(startDateTime, endDateTime)
+  assertStatusAllowedForDate(data.status ?? "new_lead", startDateTime)
   const id = await ctx.db.insert("events", {
     title: data.title ?? "", type: data.type ?? "function", status: data.status ?? "new_lead", startDateTime, endDateTime,
     minGuests: data.minGuests ?? null, maxGuests: data.maxGuests ?? null, guestCountFinal: data.guestCountFinal ?? null,
@@ -37,6 +39,11 @@ export const getStartingBetween = companyQuery({ args: { startFrom: v.string(), 
   return (await ctx.db.query("events").withIndex("by_start", q => q.gte("startDateTime", startFrom).lt("startDateTime", startTo)).collect()).map(toRecord)
 } })
 export const getUnscheduled = companyQuery({ args: {}, handler: async ctx => (await ctx.db.query("events").withIndex("by_start", q => q.eq("startDateTime", null)).collect()).map(toRecord) })
+// Dated leads soonest first, then undated leads oldest first.
+export const getNewLeads = companyQuery({ args: {}, handler: async ctx => {
+  const leads = await ctx.db.query("events").withIndex("by_status", q => q.eq("status", "new_lead")).collect()
+  return [...leads.filter(e => e.startDateTime !== null), ...leads.filter(e => e.startDateTime === null)].map(toRecord)
+} })
 export const getByCalendarIds = companyQuery({ args: { calendarIds: v.array(v.string()) }, handler: async (ctx, { calendarIds }) => {
   const result = []
   for (const id of new Set(calendarIds.map(id => id.trim()).filter(Boolean))) result.push(...(await ctx.db.query("events").withIndex("by_calendarId", q => q.eq("calendarId", id)).collect()).map(toRecord))
@@ -54,7 +61,11 @@ export const create = companyMutation({ args: { input: v.object(fields), client:
 export const update = companyMutation({ args: { id: v.id("events"), updates: v.object(fields) }, handler: async (ctx, { id, updates }) => {
   assertUpdates(updates)
   const current = await requireDocument(ctx, "events", id)
-  assertValidEventDateRange(updates.startDateTime === undefined ? current.startDateTime : updates.startDateTime, updates.endDateTime === undefined ? current.endDateTime : updates.endDateTime)
+  const startDateTime = updates.startDateTime === undefined ? current.startDateTime : updates.startDateTime
+  assertValidEventDateRange(startDateTime, updates.endDateTime === undefined ? current.endDateTime : updates.endDateTime)
+  // Checked only when status or date changes, so unrelated edits never fail on the rule.
+  // Clearing the date of a dated-status event must move the status back in the same update.
+  if (updates.status !== undefined || updates.startDateTime !== undefined) assertStatusAllowedForDate(updates.status ?? current.status, startDateTime)
   await ctx.db.patch("events", id, { ...updates, updatedAt: Date.now().toString() })
   return toRecord(await requireDocument(ctx, "events", id))
 } })

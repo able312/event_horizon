@@ -32,6 +32,7 @@ const search = { query: "dinner", page: 0, pageSize: 20, type: null, status: nul
 const contracts: Contract[] = [
   { name: "events.getStartingBetween", kind: "source", call: () => events.getEventsByMonth("2026-04"), args: { startFrom: month.startInclusiveIso, startTo: month.endExclusiveIso } },
   { name: "events.getUnscheduled", kind: "source", call: () => events.getUnscheduledEvents(), args: {} },
+  { name: "events.getNewLeads", kind: "source", call: () => events.getNewLeadEvents(), args: {} },
   { name: "events.getById", kind: "source", call: () => events.getEventById(id), args: { id } },
   { name: "events.search", kind: "source", call: () => events.searchEvents(search), args: search },
   { name: "events.create", kind: "mutation", call: () => events.createEvent({ ...input, id, createdAt: "old" }, person), args: { input, client: person } },

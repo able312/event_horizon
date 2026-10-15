@@ -57,6 +57,33 @@ describe("Convex events", () => {
     await expect(t.query(api.events.getStartingBetween, { startFrom: "bad", startTo: second.startDateTime! })).rejects.toThrow("Invalid event start range")
     await expect(t.query(api.events.getStartingBetween, { startFrom: second.startDateTime!, startTo: first.startDateTime! })).rejects.toThrow()
   })
+  it("requires a start date for every status past New Lead, except Lost", async () => {
+    const t = setup()
+    const date = "2026-10-10T00:00:00Z"
+    await expect(t.mutation(api.events.create, { input: { status: "tentative" } })).rejects.toThrow("Set an event date")
+    expect(await t.mutation(api.events.create, { input: { status: "lost" } })).toMatchObject({ status: "lost", startDateTime: null })
+    const lead = await t.mutation(api.events.create, { input: { title: "Lead" } })
+    await expect(t.mutation(api.events.update, { id: lead.id, updates: { status: "confirmed" } })).rejects.toThrow("Set an event date")
+    const confirmed = await t.mutation(api.events.update, { id: lead.id, updates: { status: "confirmed", startDateTime: date } })
+    expect(confirmed).toMatchObject({ status: "confirmed", startDateTime: date })
+    // No automatic walk-back: clearing the date alone is rejected...
+    await expect(t.mutation(api.events.update, { id: lead.id, updates: { startDateTime: null } })).rejects.toThrow("Set an event date")
+    expect(await t.query(api.events.getById, { id: lead.id })).toMatchObject({ status: "confirmed", startDateTime: date })
+    // ...but clearing it together with moving back to New Lead succeeds.
+    expect(await t.mutation(api.events.update, { id: lead.id, updates: { startDateTime: null, status: "new_lead" } })).toMatchObject({ status: "new_lead", startDateTime: null })
+    const lost = await t.mutation(api.events.create, { input: { status: "lost", startDateTime: date } })
+    expect(await t.mutation(api.events.update, { id: lost.id, updates: { startDateTime: null } })).toMatchObject({ status: "lost", startDateTime: null })
+  })
+  it("lists only New Leads, dated soonest first then undated oldest first", async () => {
+    const t = setup()
+    const undatedOld = await t.mutation(api.events.create, { input: { title: "Undated old" } })
+    const later = await t.mutation(api.events.create, { input: { title: "Later", startDateTime: "2026-12-01T00:00:00Z" } })
+    const sooner = await t.mutation(api.events.create, { input: { title: "Sooner", startDateTime: "2026-11-01T00:00:00Z" } })
+    await t.mutation(api.events.create, { input: { title: "Confirmed", status: "confirmed", startDateTime: "2026-10-01T00:00:00Z" } })
+    await t.mutation(api.events.create, { input: { title: "Lost", status: "lost" } })
+    const undatedNew = await t.mutation(api.events.create, { input: { title: "Undated new" } })
+    expect((await t.query(api.events.getNewLeads, {})).map(e => e.id)).toEqual([sooner.id, later.id, undatedOld.id, undatedNew.id])
+  })
   it("imports atomically, rechecks existing/batch calendar IDs and validates rows", async () => {
     const t = setup()
     const row = { calendarId: "calendar", title: "Dinner", startDateTime: "2026-10-10T00:00:00Z", endDateTime: "2026-10-10T03:00:00Z", internalNotes: "All day" }

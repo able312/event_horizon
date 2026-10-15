@@ -27,6 +27,7 @@ export const sources = {
     byId: (id: string) => liveSource(api.events.getById, { id: toId<"events">(id) }),
     month: (month: string) => liveSource(api.events.getStartingBetween, monthRange(month)),
     unscheduled: () => liveSource(api.events.getUnscheduled, {}),
+    newLeads: () => liveSource(api.events.getNewLeads, {}),
     search: (params: EventSearchRequest) => liveSource(api.events.search, params),
   },
   touchpoints: {
