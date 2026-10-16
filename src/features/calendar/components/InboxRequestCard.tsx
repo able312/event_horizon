@@ -27,7 +27,7 @@ export const InboxRequestCard: React.FC<InboxRequestCardProps> = ({ request, sel
       >
         <span className="flex items-baseline gap-2">
           <span className="min-w-0 flex-1 truncate text-sm font-medium text-stone-100">{requestTitle(request)}</span>
-          <span className="shrink-0 text-[11px] text-stone-400">{formatReceivedAt(request.submittedAt)}</span>
+          <span className="shrink-0 text-[11px] text-stone-400">{formatReceivedAt(request.receivedAt)}</span>
         </span>
         <span className="block truncate text-xs text-stone-300">
           {requestClientName(request)} · {EVENT_TYPE_LABELS[request.eventType]}

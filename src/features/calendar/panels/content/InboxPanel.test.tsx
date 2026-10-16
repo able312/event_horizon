@@ -7,7 +7,7 @@ import InboxPanel from "./InboxPanel"
 
 const request = (id: string, eventName: string, firstName: string) =>
   ({
-    id, submittedAt: "2026-10-16T15:00:00.000Z", eventName, firstName, lastName: "Smith", organizationName: null,
+    id, submittedAt: "2026-10-16T15:00:00.000Z", receivedAt: "2026-10-16T15:00:01.000Z", eventName, firstName, lastName: "Smith", organizationName: null,
     email: `${firstName.toLowerCase()}@example.test`, phone: "555-0100", eventType: "wedding", preferredDate: null,
     guestCount: 80, details: null, extraAnswers: [],
   }) as unknown as EventRequest

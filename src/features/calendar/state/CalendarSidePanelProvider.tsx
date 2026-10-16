@@ -1,4 +1,4 @@
-import { useCallback, useReducer, type ReactNode } from "react"
+import { useCallback, useMemo, useReducer, type ReactNode } from "react"
 import { ACTIONS, calendarSidePanelReducer, initialCalendarSidePanelState, type BodyMode, type CalendarSidePanelAction } from "./calendarSidePanelReducer"
 import { CalendarPanelStateContext } from "./useCalendarPanelState"
 
@@ -20,7 +20,7 @@ export const CalendarPanelStateProvider:React.FC<{
     }
     reducerDispatch(action)
   }, [bodyMode, onBodyModeChange])
-  const ui = { ...state, bodyMode }
+  const ui = useMemo(() => ({ ...state, bodyMode }), [state, bodyMode])
 
   return (
     <CalendarPanelStateContext.Provider value={{ ui, dispatch }}>
