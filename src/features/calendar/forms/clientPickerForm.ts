@@ -58,11 +58,17 @@ function toContactFormValues(values: NewClientFormValues): ContactFormValues {
   }
 }
 
-/** Typed-but-unpicked search text blocks create, so a client is never silently dropped. */
-export function validateClientSelection(selection: ClientSelection): ContactFormErrors {
+export const REQUIRED_CLIENT_ERROR = "Choose or create the client"
+
+/**
+ * Typed-but-unpicked search text blocks create, so a client is never silently dropped.
+ * `required` also blocks an empty section (accepting a website request always records who asked).
+ */
+export function validateClientSelection(selection: ClientSelection, { required = false } = {}): ContactFormErrors {
   switch (selection.mode) {
     case "search":
-      return selection.query.trim() ? { name: UNPICKED_CLIENT_ERROR } : {}
+      if (selection.query.trim()) return { name: UNPICKED_CLIENT_ERROR }
+      return required ? { name: REQUIRED_CLIENT_ERROR } : {}
     case "picked":
       return {}
     case "create":

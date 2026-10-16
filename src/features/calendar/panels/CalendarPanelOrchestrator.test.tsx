@@ -50,8 +50,8 @@ vi.mock("./headers/ClosePanelHeader", () => ({
   default: () => <div data-testid="close-header-mock" />,
 }))
 
-vi.mock("~/hooks/useNewLeads", () => ({
-  useNewLeads: () => ({ leadsQuery: { isLoading: false }, leads: [] }),
+vi.mock("~/hooks/useEventRequests", () => ({
+  useEventRequests: () => ({ requests: [] }),
 }))
 
 vi.mock("../state/useCalendarPanelState", () => ({
@@ -90,7 +90,7 @@ describe("CalendarPanelOrchastrator create form remount behavior", () => {
         openCreatePanel: vi.fn(),
         openDefaultPanel: vi.fn(),
         closeSearchPanel: vi.fn(),
-        toggleLeadsView: vi.fn(),
+        toggleInboxView: vi.fn(),
       },
       mutations: {
         onCreateEvent: vi.fn(),
@@ -145,6 +145,47 @@ describe("CalendarPanelOrchastrator create form remount behavior", () => {
       expect.objectContaining({
         initialStartDateTime: "2026-07-15T10:00:00.000Z",
         initialEndDateTime: "2026-07-15T10:00:00.000Z",
+      }),
+    )
+  })
+
+  it("starts the create form from the request under review and saves it by accepting the request", () => {
+    const onCreateEvent = vi.fn()
+    const onAcceptRequest = vi.fn()
+    useCalendarWorkspaceViewModelMock.mockReturnValue({
+      panelActions: { openDefaultPanel: vi.fn() },
+      mutations: { onCreateEvent, onAcceptRequest, onSaveEventUpdates: vi.fn() },
+    })
+    useCalendarPanelStateMock.mockReturnValue({
+      dispatch: vi.fn(),
+      ui: {
+        sidebarMode: "create",
+        bodyMode: "inbox",
+        editingEvent: null,
+        createDraftPreview: null,
+        createPrefillIso: null,
+        reviewingRequest: {
+          id: "req-1", submittedAt: "2026-10-16T15:00:00.000Z", firstName: "Jane", lastName: "Smith", organizationName: null,
+          email: "jane@example.test", phone: "555-0100", eventType: "wedding", preferredDate: null, alternateDate: null,
+          startTime: null, guestCount: 80, details: null, referralSource: null, extraAnswers: [],
+        },
+        createFormVersion: 1,
+        searchFocusVersion: 0,
+      },
+    })
+
+    render(
+      <CalendarPanelOrchastrator
+        queryState={{ state: {} } as never}
+        eventsHook={{} as never}
+        searchController={{} as never}
+      />,
+    )
+
+    expect(createFormPropsMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        prefill: expect.objectContaining({ values: expect.objectContaining({ title: "Smith Wedding", maxGuests: 80 }) }),
+        onCreate: onAcceptRequest,
       }),
     )
   })

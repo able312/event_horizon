@@ -1,8 +1,9 @@
 import { useCallback, useMemo } from "react"
 
 import type { AssignContactTarget } from "~/definitions/contacts"
-import type { Event, NewEvent, UpdateEvent } from "~/definitions/database"
+import type { Event, EventRequest, NewEvent, UpdateEvent } from "~/definitions/database"
 import type { UseEventsReturn } from "~/hooks/useEvents"
+import { useEventRequests } from "~/hooks/useEventRequests"
 import type { UseEventsQueryStateReturn } from "~/hooks/useEventsQueryState"
 import { useHotkey } from "~/lib/hotKeys"
 
@@ -18,6 +19,7 @@ export function useCalendarWorkspaceViewModel(
   const { dispatch, ui } = useCalendarPanelState()
   const { setSearch, setStatus, setType, setSearchInput } = queryState
   const { createEvent, updateEvent } = eventsHook
+  const { acceptRequest } = useEventRequests()
 
   const closeSearchPanel = useCallback(() => {
     setSearch("")
@@ -54,15 +56,31 @@ export function useCalendarWorkspaceViewModel(
     dispatch({ type: ACTIONS.OPEN_DEFAULT })
   }, [dispatch])
 
-  const toggleLeadsView = useCallback(() => {
-    dispatch({ type: ACTIONS.TOGGLE_LEADS_VIEW })
+  const toggleInboxView = useCallback(() => {
+    dispatch({ type: ACTIONS.TOGGLE_INBOX_VIEW })
   }, [dispatch])
+
+  const openReviewRequestPanel = useCallback(
+    (request: EventRequest) => {
+      dispatch({ type: ACTIONS.OPEN_REVIEW_REQUEST, request })
+    },
+    [dispatch],
+  )
 
   const onCreateEvent = useCallback(
     async (event: NewEvent, client?: AssignContactTarget | null) => {
       await createEvent(event, client)
     },
     [createEvent],
+  )
+
+  // The review form requires a client, so a missing one never reaches here.
+  const onAcceptRequest = useCallback(
+    async (event: NewEvent, client: AssignContactTarget | null) => {
+      if (!ui.reviewingRequest || !client) return
+      await acceptRequest(ui.reviewingRequest.id, event, client)
+    },
+    [acceptRequest, ui.reviewingRequest],
   )
 
   const onSaveEventUpdates = useCallback(
@@ -75,9 +93,9 @@ export function useCalendarWorkspaceViewModel(
 
   useHotkey("Cmd+f", openSearchPanel)
   useHotkey("Cmd+N", openCreatePanel)
-  useHotkey("Cmd+L", toggleLeadsView)
+  useHotkey("Cmd+L", toggleInboxView)
   useHotkey("escape", () => {
-    if (ui.bodyMode === "leads" && ui.sidebarMode !== "create" && ui.sidebarMode !== "edit") {
+    if (ui.bodyMode === "inbox" && ui.sidebarMode !== "create" && ui.sidebarMode !== "edit") {
       dispatch({ type: ACTIONS.OPEN_CALENDAR_VIEW })
     }
   })
@@ -92,23 +110,27 @@ export function useCalendarWorkspaceViewModel(
         openCreatePanelWithPrefill,
         openEditPanel,
         openDefaultPanel,
-        toggleLeadsView,
+        openReviewRequestPanel,
+        toggleInboxView,
       },
       mutations: {
         onCreateEvent,
+        onAcceptRequest,
         onSaveEventUpdates,
       },
     }),
     [
       closeSearchPanel,
+      onAcceptRequest,
       onCreateEvent,
       onSaveEventUpdates,
       openCreatePanel,
       openCreatePanelWithPrefill,
       openDefaultPanel,
       openEditPanel,
+      openReviewRequestPanel,
       openSearchPanel,
-      toggleLeadsView,
+      toggleInboxView,
       ui,
     ],
   )

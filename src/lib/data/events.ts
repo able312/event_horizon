@@ -9,7 +9,7 @@ import { toId } from "./ids"
 import { sources } from "./sources"
 
 /** Fields a create or update may set; the server owns IDs and timestamps. */
-const EVENT_FIELDS = [
+export const EVENT_FIELDS = [
   "title", "type", "status", "startDateTime", "endDateTime", "minGuests", "maxGuests", "guestCountFinal",
   "driveFolderId", "calendarId", "clientNotes", "internalNotes", "isInternal",
 ] as const

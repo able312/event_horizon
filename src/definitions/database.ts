@@ -3,6 +3,7 @@ import type {
   BEVERAGE_TYPES,
   CART_LAYOUTS,
   CHARGE_CATEGORIES,
+  EVENT_REQUEST_STATUSES,
   EVENT_STATUSES,
   EVENT_TYPES,
   FOOD_SERVICE_STYLES,
@@ -88,6 +89,43 @@ export type NewEvent = {
   updatedAt?: string | null
 }
 export type UpdateEvent = Partial<Omit<Event, "id" | "createdAt" | keyof AuditFields>>
+
+// ============================================================================
+// Event Requests (website form)
+// ============================================================================
+
+export type EventRequestStatus = (typeof EVENT_REQUEST_STATUSES)[number]
+
+export type EventRequest = {
+  id: string
+  /** The Google Forms response ID */
+  responseId: string
+  /** ISO datetime the client submitted the form */
+  submittedAt: string
+  /** ISO datetime the app received it */
+  receivedAt: string
+  firstName: string
+  lastName: string
+  organizationName: string | null
+  email: string
+  phone: string
+  eventType: EventType
+  /** yyyy-MM-dd, the client's calendar day */
+  preferredDate: string | null
+  /** yyyy-MM-dd */
+  alternateDate: string | null
+  /** HH:mm */
+  startTime: string | null
+  guestCount: number
+  details: string | null
+  referralSource: string | null
+  /** Answers to form questions the app doesn't map to a field */
+  extraAnswers: { question: string; answer: string }[]
+  status: EventRequestStatus
+  eventId: string | null
+  reviewedBy: string | null
+  reviewedAt: string | null
+}
 
 // ============================================================================
 // Tournament Details

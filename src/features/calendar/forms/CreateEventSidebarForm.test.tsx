@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { ContactWithRoles } from "~/definitions/contacts"
 import { ContactsError } from "~/lib/contacts/contactsError"
+import type { CreateEventPrefill } from "~/features/calendar/lib/eventRequestPrefill"
 import CreateEventSidebarForm from "./CreateEventSidebarForm"
 
 const searchResults = vi.hoisted(() => ({ items: [] as ContactWithRoles[] }))
@@ -427,5 +428,40 @@ describe("CreateEventSidebarForm save timing", () => {
     fireEvent.click(screen.getByRole("button", { name: "Find existing contact" }))
     expect((screen.getByRole("combobox", { name: "Client" }) as HTMLInputElement).value).toBe("jane@example.com")
     expect(screen.getByRole("option", { name: /Jane Smith/ })).toBeTruthy()
+  })
+})
+
+describe("CreateEventSidebarForm reviewing a website request", () => {
+  const prefill: CreateEventPrefill = {
+    values: { title: "Smith Wedding", type: "wedding", status: "new_lead", startDateTime: null, endDateTime: null, minGuests: 0, maxGuests: 120 },
+    client: { mode: "create", query: "jane@example.com", values: { name: "Jane Smith", email: "jane@example.com", phone: "555-0100" } },
+    notes: { clientNotes: "Outdoor ceremony", internalNotes: "Website request submitted Oct 16, 2026" },
+  }
+
+  it("starts from the request and accepts it with the notes and new client", async () => {
+    const onCreate = vi.fn(async () => undefined)
+    render(<CreateEventSidebarForm prefill={prefill} onCreate={onCreate} onCancel={vi.fn()} />)
+
+    expect((screen.getByPlaceholderText("e.g., Smith Wedding") as HTMLInputElement).value).toBe("Smith Wedding")
+    expect((screen.getByLabelText("Client Name") as HTMLInputElement).value).toBe("Jane Smith")
+    fireEvent.click(screen.getByRole("button", { name: "Accept" }))
+
+    await waitFor(() => {
+      expect(onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Smith Wedding", maxGuests: 120, clientNotes: "Outdoor ceremony", internalNotes: "Website request submitted Oct 16, 2026" }),
+        { newContact: expect.objectContaining({ firstName: "Jane", lastName: "Smith", email: "jane@example.com" }) },
+      )
+    })
+  })
+
+  it("requires a client before accepting", () => {
+    searchResults.items = []
+    render(<CreateEventSidebarForm prefill={prefill} onCreate={vi.fn(async () => undefined)} onCancel={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to search" }))
+    fireEvent.change(screen.getByRole("combobox", { name: "Client" }), { target: { value: "" } })
+
+    expect(screen.getByText("Choose or create the client")).toBeTruthy()
+    expect((screen.getByRole("button", { name: "Accept" }) as HTMLButtonElement).disabled).toBe(true)
   })
 })

@@ -1,16 +1,18 @@
 // src/features/calendar/state/calendarWorkspaceReducer.ts
 
-import type { Event } from "~/definitions/database"
+import type { Event, EventRequest } from "~/definitions/database"
 import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
 
 export type SidebarMode = "default" | "search" | "create" | "edit"
-export type BodyMode = "calendar" | "leads"
+export type BodyMode = "calendar" | "inbox"
 
 export interface CalendarSidePanelState {
   sidebarMode: SidebarMode
   bodyMode: BodyMode
   editingEvent: Event | null
   createPrefillIso: string | null
+  /** Set while the create form is reviewing a website request; saving it accepts the request. */
+  reviewingRequest: EventRequest | null
   createDraftPreview: CalendarDraftPreview | null
   createFormVersion: number
   searchFocusVersion: number
@@ -22,7 +24,8 @@ export const ACTIONS = {
   CLOSE_SEARCH: "CLOSE_SEARCH",
   OPEN_CREATE: "OPEN_CREATE",
   OPEN_EDIT: "OPEN_EDIT",
-  TOGGLE_LEADS_VIEW: "TOGGLE_LEADS_VIEW",
+  OPEN_REVIEW_REQUEST: "OPEN_REVIEW_REQUEST",
+  TOGGLE_INBOX_VIEW: "TOGGLE_INBOX_VIEW",
   OPEN_CALENDAR_VIEW: "OPEN_CALENDAR_VIEW",
   SET_CREATE_DRAFT_PREVIEW: "SET_CREATE_DRAFT_PREVIEW",
 } as const
@@ -33,7 +36,8 @@ export type CalendarSidePanelAction =
   | { type: "CLOSE_SEARCH" }
   | { type: "OPEN_CREATE"; prefillIso: string | null }
   | { type: "OPEN_EDIT"; event: Event }
-  | { type: "TOGGLE_LEADS_VIEW" }
+  | { type: "OPEN_REVIEW_REQUEST"; request: EventRequest }
+  | { type: "TOGGLE_INBOX_VIEW" }
   | { type: "OPEN_CALENDAR_VIEW" }
   | { type: "SET_CREATE_DRAFT_PREVIEW"; preview: CalendarDraftPreview | null }
 
@@ -44,6 +48,7 @@ export const initialCalendarSidePanelState: CalendarSidePanelState = {
   bodyMode: "calendar",
   editingEvent: null,
   createPrefillIso: null,
+  reviewingRequest: null,
   createDraftPreview: null,
   createFormVersion: 0,
   searchFocusVersion: 0,
@@ -61,6 +66,7 @@ export function calendarSidePanelReducer(
         editingEvent: null,
         createDraftPreview: null,
         createPrefillIso: null,
+        reviewingRequest: null,
       }
 
     case ACTIONS.OPEN_SEARCH:
@@ -69,6 +75,7 @@ export function calendarSidePanelReducer(
         sidebarMode: "search",
         editingEvent: null,
         createDraftPreview: null,
+        reviewingRequest: null,
         searchFocusVersion: state.searchFocusVersion + 1,
       }
 
@@ -85,6 +92,18 @@ export function calendarSidePanelReducer(
         editingEvent: null,
         createDraftPreview: null,
         createPrefillIso: action.prefillIso,
+        reviewingRequest: null,
+        createFormVersion: state.createFormVersion + 1,
+      }
+
+    case ACTIONS.OPEN_REVIEW_REQUEST:
+      return {
+        ...state,
+        sidebarMode: "create",
+        editingEvent: null,
+        createDraftPreview: null,
+        createPrefillIso: null,
+        reviewingRequest: action.request,
         createFormVersion: state.createFormVersion + 1,
       }
 
@@ -93,13 +112,14 @@ export function calendarSidePanelReducer(
         ...state,
         sidebarMode: "edit",
         createDraftPreview: null,
+        reviewingRequest: null,
         editingEvent: action.event,
       }
 
-    case ACTIONS.TOGGLE_LEADS_VIEW:
+    case ACTIONS.TOGGLE_INBOX_VIEW:
       return {
         ...state,
-        bodyMode: state.bodyMode === "calendar" ? "leads" : "calendar",
+        bodyMode: state.bodyMode === "calendar" ? "inbox" : "calendar",
       }
 
     case ACTIONS.OPEN_CALENDAR_VIEW:

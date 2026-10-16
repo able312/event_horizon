@@ -30,6 +30,9 @@ export const sources = {
     newLeads: () => liveSource(api.events.getNewLeads, {}),
     search: (params: EventSearchRequest) => liveSource(api.events.search, params),
   },
+  eventRequests: {
+    pending: () => liveSource(api.eventRequests.listPending, {}),
+  },
   touchpoints: {
     byEvent: (eventId: string) => liveSource(api.touchpoints.getByEventId, { eventId: toId<"events">(eventId) }),
     incomplete: () => liveSource(api.touchpoints.getIncompleteWithEvent, {}),

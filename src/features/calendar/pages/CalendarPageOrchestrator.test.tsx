@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import type { Event } from "~/definitions/database"
+import type { Event, EventRequest } from "~/definitions/database"
 import CalendarPageOrchastrator from "./CalendarPageOrchestrator"
 
 const monthNavigatorPropsMock = vi.fn()
@@ -46,6 +46,13 @@ vi.mock("./CalendarPage", () => ({
 
 vi.mock("~/hooks/useNewLeads", () => ({
   useNewLeads: () => ({ leadsQuery, leads: [] }),
+}))
+
+const dismissRequestMock = vi.fn()
+let pendingRequests: EventRequest[] = []
+let requestsQuery = { isLoading: false, isError: false, isFetching: false, refetch: vi.fn() }
+vi.mock("~/hooks/useEventRequests", () => ({
+  useEventRequests: () => ({ requestsQuery, requests: pendingRequests, dismissRequest: dismissRequestMock }),
 }))
 
 vi.mock("~/hooks/useEventContacts", () => ({
@@ -162,6 +169,8 @@ describe("CalendarPageOrchestrator", () => {
     leadsRefetchMock.mockReset()
     bodyMode = "calendar"
     leadsQuery = { isLoading: false }
+    pendingRequests = []
+    requestsQuery = { isLoading: false, isError: false, isFetching: false, refetch: vi.fn() }
   })
   afterEach(() => {
     cleanup()
@@ -239,7 +248,7 @@ describe("CalendarPageOrchestrator", () => {
   })
 
   it("shows a retryable error instead of an empty leads list when the leads query fails", () => {
-    bodyMode = "leads"
+    bodyMode = "inbox"
     leadsQuery = { isLoading: false, isError: true, isFetching: false, refetch: leadsRefetchMock }
     const { queryState } = createQueryState(null)
 
@@ -256,5 +265,54 @@ describe("CalendarPageOrchestrator", () => {
     expect(screen.queryByTestId("events-table-view")).toBeNull()
     fireEvent.click(screen.getByRole("button", { name: "Retry" }))
     expect(leadsRefetchMock).toHaveBeenCalled()
+  })
+
+  it("shows pending requests above the new leads, and reviews or dismisses them", () => {
+    bodyMode = "inbox"
+    const request = {
+      id: "req-1", submittedAt: "2026-10-16T15:00:00.000Z", firstName: "Jane", lastName: "Smith", organizationName: null,
+      email: "jane@example.test", phone: "555-0100", eventType: "wedding", preferredDate: "2027-06-20", startTime: null,
+      guestCount: 120, details: "Outdoor ceremony",
+    } as EventRequest
+    pendingRequests = [request]
+    const { queryState } = createQueryState(null)
+
+    render(
+      <CalendarPageOrchastrator
+        queryState={queryState as never}
+        eventsHook={createEventsHook() as never}
+        searchController={createSearchController() as never}
+        onDeleteRequest={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole("heading", { name: "Requests (1)" })).toBeTruthy()
+    expect(screen.getByRole("heading", { name: "New leads" })).toBeTruthy()
+    expect(screen.getByTestId("events-table-view")).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "Review request from Jane Smith" }))
+    expect(dispatchMock).toHaveBeenCalledWith({ type: "OPEN_REVIEW_REQUEST", request })
+
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss request from Jane Smith" }))
+    expect(dismissRequestMock).toHaveBeenCalledWith("req-1")
+  })
+
+  it("shows a retryable error instead of an empty requests list when the requests query fails", () => {
+    bodyMode = "inbox"
+    requestsQuery = { isLoading: false, isError: true, isFetching: false, refetch: vi.fn() }
+    const { queryState } = createQueryState(null)
+
+    render(
+      <CalendarPageOrchastrator
+        queryState={queryState as never}
+        eventsHook={createEventsHook() as never}
+        searchController={createSearchController() as never}
+        onDeleteRequest={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole("alert").textContent).toContain("Could not load website requests.")
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+    expect(requestsQuery.refetch).toHaveBeenCalled()
   })
 })

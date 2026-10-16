@@ -13,6 +13,9 @@ import EventsTable from "~/features/calendar/views/EventsTable"
 import type { Event } from "~/definitions/database"
 import { useCalendarPanelState } from "../state/useCalendarPanelState"
 import { useNewLeads } from "~/hooks/useNewLeads"
+import { useEventRequests } from "~/hooks/useEventRequests"
+import InboxView from "~/features/calendar/views/InboxView"
+import type { EventRequest } from "~/definitions/database"
 import type { UseCalendarSearchControllerReturn } from "../hooks/useCalendarSearchController"
 
 
@@ -34,17 +37,18 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
     const { isLoading } = eventsHook
     const { dispatch, ui } = useCalendarPanelState()
     const { leadsQuery, leads } = useNewLeads()
+    const { requestsQuery, requests, dismissRequest } = useEventRequests()
     const { result: searchResult, isFetching: isSearchFetching, enabled: isSearchEnabled } = searchController.searchQuery
     const hasSearchQuery = Boolean(state.search && state.search.length > 0)
     const bodyView = hasSearchQuery
       ? "search-results"
-      : ui.bodyMode === "leads"
-      ? "leads-list"
+      : ui.bodyMode === "inbox"
+      ? "inbox"
       : "calendar-month"
     const searchEvents = isSearchEnabled ? searchResult.items : []
     const tableEvents =
       bodyView === "search-results" ? searchEvents
-      : bodyView === "leads-list" ? leads
+      : bodyView === "inbox" ? leads
       : []
     const primaryClients = usePrimaryClients(tableEvents.map((event) => event.id))
     const clientsByEventId = primaryClients.data
@@ -56,6 +60,10 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
 
     const handleUpdateEvent = (event: Event) => {
         dispatch({ type: "OPEN_EDIT", event })
+    }
+
+    const handleReviewRequest = (request: EventRequest) => {
+        dispatch({ type: "OPEN_REVIEW_REQUEST", request })
     }
 
     return (
@@ -78,26 +86,33 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
                 </Body.Content>
             </>}
 
-            {bodyView === "leads-list" && <>
+            {bodyView === "inbox" && <>
                 <Body.Content>
-                    {/* A failed load would otherwise read as "no new leads" */}
-                    {leadsQuery.isError ? (
-                        <InlineQueryError
-                            message="Could not load new leads."
-                            onRetry={() => void leadsQuery.refetch()}
-                            isRetrying={leadsQuery.isFetching}
-                            className="mx-4 my-2 shrink-0"
-                        />
-                    ) : <>
-                        <ClientNamesError query={primaryClients} />
-                        <EventsTable
-                            events={leads}
-                            clientsByEventId={clientsByEventId}
-                            isLoading={leadsQuery.isLoading}
-                            onEdit={handleUpdateEvent}
-                            onDelete={onDeleteRequest}
-                        />
-                    </>}
+                    <InboxView
+                        requests={requests}
+                        requestsQuery={requestsQuery}
+                        onReviewRequest={handleReviewRequest}
+                        onDismissRequest={dismissRequest}
+                    >
+                        {/* A failed load would otherwise read as "no new leads" */}
+                        {leadsQuery.isError ? (
+                            <InlineQueryError
+                                message="Could not load new leads."
+                                onRetry={() => void leadsQuery.refetch()}
+                                isRetrying={leadsQuery.isFetching}
+                                className="mx-4 my-2 shrink-0"
+                            />
+                        ) : <>
+                            <ClientNamesError query={primaryClients} />
+                            <EventsTable
+                                events={leads}
+                                clientsByEventId={clientsByEventId}
+                                isLoading={leadsQuery.isLoading}
+                                onEdit={handleUpdateEvent}
+                                onDelete={onDeleteRequest}
+                            />
+                        </>}
+                    </InboxView>
                 </Body.Content>
             </>}
 
