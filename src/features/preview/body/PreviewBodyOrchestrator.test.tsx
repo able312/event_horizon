@@ -1,8 +1,11 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { MemoryRouter, Route, Routes, useNavigate } from "react-router"
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-router"
 import { describe, expect, it, vi } from "vitest"
 import { PreviewPreferencesProvider } from "../preferences/PreviewPreferencesContext"
 import PreviewBodyOrchestrator from "./PreviewBodyOrchestrator"
+import { savePreviewReturnState } from "../lib/previewReturnState"
+import { createInitialPreviewPreferences } from "../preferences/previewPreferencesReducer"
+import { buildPreviewPath } from "../lib/previewTypes"
 
 const status = vi.hoisted(() => {
   const listeners = new Set<() => void>()
@@ -80,5 +83,71 @@ describe("preview export readiness", () => {
     rerender(<App />)
     expect((screen.getByRole("button", { name: "Print" }) as HTMLButtonElement).disabled).toBe(false)
     print.mockRestore()
+  })
+})
+
+function ReturnDestination() {
+  const location = useLocation()
+  return <p data-testid="destination">{location.pathname}{location.search}{location.hash}</p>
+}
+
+describe("preview return navigation", () => {
+  it.each([
+    "/events/event/financial?returnTo=%2Fevents%3Fview%3Dinbox",
+    "/events/event/timeblock/note-1?returnTo=%2Fcontacts%2Fcontact-1",
+  ])("returns to the original event section and keeps its origin: %s", (returnTo) => {
+    render(
+      <MemoryRouter initialEntries={[buildPreviewPath("event", "beo", returnTo)]}>
+        <PreviewPreferencesProvider>
+          <Routes>
+            <Route path="/preview/:id" element={<PreviewBodyOrchestrator />} />
+            <Route path="/events/*" element={<ReturnDestination />} />
+          </Routes>
+        </PreviewPreferencesProvider>
+      </MemoryRouter>,
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Back" }))
+    expect(screen.getByTestId("destination").textContent).toBe(returnTo)
+  })
+
+  it("falls back to the event when preview was opened directly", () => {
+    render(
+      <MemoryRouter initialEntries={["/preview/event?type=beo"]}>
+        <PreviewPreferencesProvider>
+          <Routes>
+            <Route path="/preview/:id" element={<PreviewBodyOrchestrator />} />
+            <Route path="/events/*" element={<ReturnDestination />} />
+          </Routes>
+        </PreviewPreferencesProvider>
+      </MemoryRouter>,
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Back" }))
+    expect(screen.getByTestId("destination").textContent).toBe("/events/event")
+  })
+})
+
+describe("preview scroll restoration", () => {
+  it("waits for pagination, restores scroll once, and allows further scrolling", async () => {
+    status.timeline = false
+    const path = savePreviewReturnState(
+      { pathname: "/preview/event", search: "?type=timeline", hash: "" },
+      { scrollTop: 1450, preferences: createInitialPreviewPreferences() },
+    )
+    const { container } = render(
+      <MemoryRouter initialEntries={[path]}>
+        <PreviewPreferencesProvider>
+          <Routes><Route path="/preview/:id" element={<PreviewBodyOrchestrator />} /></Routes>
+        </PreviewPreferencesProvider>
+      </MemoryRouter>,
+    )
+    await screen.findByText("Timeline document")
+    const viewport = container.querySelector<HTMLElement>("[data-preview-scroll]")!
+    expect(viewport.scrollTop).toBe(0)
+    act(() => { status.timeline = true; status.notify() })
+    await waitFor(() => expect(viewport.scrollTop).toBe(1450))
+    viewport.scrollTop = 1600
+    act(() => { status.timeline = false; status.notify() })
+    act(() => { status.timeline = true; status.notify() })
+    expect(viewport.scrollTop).toBe(1600)
   })
 })

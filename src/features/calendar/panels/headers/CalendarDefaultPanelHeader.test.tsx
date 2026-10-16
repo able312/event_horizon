@@ -10,7 +10,7 @@ function renderHeader(props: Partial<React.ComponentProps<typeof CalendarDefault
       <CalendarDefaultPanelHeader
         onOpenSearch={vi.fn()}
         onOpenCreate={vi.fn()}
-        onToggleLeadsView={vi.fn()}
+        onToggleInbox={vi.fn()}
         {...props}
       />
     </MemoryRouter>,
@@ -18,12 +18,24 @@ function renderHeader(props: Partial<React.ComponentProps<typeof CalendarDefault
 }
 
 describe("CalendarDefaultPanelHeader", () => {
-  it("calls the leads toggle handler when the New leads button is clicked", () => {
-    const onToggleLeadsView = vi.fn()
-    renderHeader({ onToggleLeadsView })
+  it("calls the inbox toggle handler when the Inbox button is clicked", () => {
+    const onToggleInbox = vi.fn()
+    renderHeader({ onToggleInbox })
 
-    fireEvent.click(screen.getByRole("button", { name: "Toggle new leads list" }))
-    expect(onToggleLeadsView).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole("button", { name: "Toggle inbox" }))
+    expect(onToggleInbox).toHaveBeenCalledTimes(1)
+  })
+
+  it("badges the Inbox with the pending request count, capped at 99+", () => {
+    const { rerender } = renderHeader({ pendingRequestsCount: 3 })
+    expect(screen.getByRole("button", { name: "Toggle inbox" }).textContent).toBe("3")
+
+    rerender(
+      <MemoryRouter>
+        <CalendarDefaultPanelHeader onOpenSearch={vi.fn()} onOpenCreate={vi.fn()} onToggleInbox={vi.fn()} pendingRequestsCount={120} />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole("button", { name: "Toggle inbox" }).textContent).toBe("99+")
   })
 
   it("links to the contacts directory", () => {

@@ -71,6 +71,18 @@ describe("POST /event-requests", () => {
       status: "pending", eventId: null, reviewedBy: null, reviewedAt: null,
     })
     expect(Date.parse(request!.receivedAt)).not.toBeNaN()
+    // The form's "Event name" question is optional
+    expect(request!.eventName).toBeNull()
+  })
+
+  it("stores the client's event name", async () => {
+    vi.stubEnv("EVENT_REQUEST_SECRET", SECRET)
+    const t = newTest()
+    const payload = body()
+    const response = await post(t, { ...payload, answers: { ...payload.answers, [QUESTIONS.eventName]: "Ada & Charles' wedding" } })
+    expect(response.status).toBe(200)
+    const [request] = await t.withIdentity(companyIdentity).query(api.eventRequests.listPending, {})
+    expect(request!.eventName).toBe("Ada & Charles' wedding")
   })
 })
 
@@ -99,6 +111,22 @@ describe("Convex eventRequests", () => {
     expect((await staff.query(api.eventRequests.listPending, {})).map(r => r.responseId)).toEqual(["newer", "older"])
   })
 
+  it("lists a late-delivered response by when it arrived, not when it was submitted", async () => {
+    vi.stubEnv("EVENT_REQUEST_SECRET", SECRET)
+    vi.useFakeTimers({ toFake: ["Date"] })
+    try {
+      const t = newTest()
+      vi.setSystemTime(new Date("2026-10-15T10:00:00.000Z"))
+      await submit(t, "on-time", "2026-10-15T09:59:00.000Z")
+      vi.setSystemTime(new Date("2026-10-16T10:00:00.000Z"))
+      await submit(t, "retried", "2026-10-01T10:00:00.000Z")
+      const pending = await t.withIdentity(companyIdentity).query(api.eventRequests.listPending, {})
+      expect(pending.map(r => r.responseId)).toEqual(["retried", "on-time"])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("dismisses once and records who reviewed it", async () => {
     vi.stubEnv("EVENT_REQUEST_SECRET", SECRET)
     const t = newTest()
@@ -111,6 +139,20 @@ describe("Convex eventRequests", () => {
     expect(stored!.reviewedBy).not.toBeNull()
     await expect(staff.mutation(api.eventRequests.dismiss, { id: request!.id })).rejects.toMatchObject({ data: { code: "AlreadyReviewed" } })
     await expect(staff.mutation(api.eventRequests.accept, { id: request!.id, input: {}, client: ADA })).rejects.toMatchObject({ data: { code: "AlreadyReviewed" } })
+  })
+
+  it("restores a dismissed request to the Inbox, but nothing else", async () => {
+    vi.stubEnv("EVENT_REQUEST_SECRET", SECRET)
+    const t = newTest()
+    await submit(t)
+    const staff = t.withIdentity(companyIdentity)
+    const [request] = await staff.query(api.eventRequests.listPending, {})
+    await expect(staff.mutation(api.eventRequests.restore, { id: request!.id })).rejects.toMatchObject({ data: { code: "NotDismissed" } })
+    await staff.mutation(api.eventRequests.dismiss, { id: request!.id })
+    await staff.mutation(api.eventRequests.restore, { id: request!.id })
+    expect(await t.run(ctx => ctx.db.get("eventRequests", request!.id))).toMatchObject({ status: "pending", reviewedBy: null, reviewedAt: null })
+    expect((await staff.query(api.eventRequests.listPending, {})).map(r => r.id)).toEqual([request!.id])
+    await expect(t.mutation(api.eventRequests.restore, { id: request!.id })).rejects.toMatchObject({ data: { code: "Unauthenticated" } })
   })
 
   it("accepts into an event with its primary client in one step", async () => {

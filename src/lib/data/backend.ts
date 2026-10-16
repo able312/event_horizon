@@ -68,6 +68,17 @@ export function isBackendAuthError(err: unknown): err is BackendAuthError {
   return err instanceof BackendAuthError
 }
 
+/** A coded server refusal outside contacts and auth, such as AlreadyReviewed. Its message is written for users. */
+export class BackendError extends Error {
+  readonly code: string
+
+  constructor(code: string, message: string) {
+    super(message)
+    this.name = "BackendError"
+    this.code = code
+  }
+}
+
 const CONTACTS_ERROR_CODES = new Set<ContactsErrorCode>([
   "NotFound",
   "EmailTaken",
@@ -101,7 +112,7 @@ export function translateBackendError(err: unknown): unknown {
     }
     return ContactsError.fromPayload(payload)
   }
-  return new Error(message)
+  return new BackendError(code, message)
 }
 
 export async function runQuery<Query extends FunctionReference<"query">>(

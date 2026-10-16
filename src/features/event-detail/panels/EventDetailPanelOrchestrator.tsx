@@ -1,6 +1,6 @@
 import { FileText, Plus } from "lucide-react"
 import { useCallback, useRef, useState } from "react"
-import { useNavigate, useParams } from "react-router"
+import { useLocation, useNavigate, useParams } from "react-router"
 
 import { Panel } from "~/components/layouts/SplitLayout"
 import { Button } from "~/components/atoms/button"
@@ -35,6 +35,7 @@ const EventDetailPanelOrchestrator: React.FC<EventDetailPanelOrchestratorProps> 
   onNavigateToOverview,
 }) => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { id: eventId } = useParams()
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [searchQuery, setSearchQuery] = useState("")
@@ -61,14 +62,16 @@ const EventDetailPanelOrchestrator: React.FC<EventDetailPanelOrchestratorProps> 
     }
   }, [addNoteAsync, isCreating, onNavigateToNote, onNavigateToOverview])
 
+  const handleOpenPreview = () => {
+    if (!eventId) return
+    navigate(buildPreviewPath(eventId, undefined, `${location.pathname}${location.search}${location.hash}`))
+  }
+
   useHotkey("Cmd+f", focusSearch)
   useHotkey("Cmd+N", () => {
     void handleCreateNote()
   })
-  useHotkey("Cmd+P", () => {
-    if (!eventId) return
-    navigate(buildPreviewPath(eventId))
-  })
+  useHotkey("Cmd+P", handleOpenPreview)
 
   return (
     <>
@@ -80,10 +83,7 @@ const EventDetailPanelOrchestrator: React.FC<EventDetailPanelOrchestratorProps> 
             size="icon"
             aria-label="Open preview workspace"
             disabled={!eventId}
-            onClick={() => {
-              if (!eventId) return
-              navigate(buildPreviewPath(eventId))
-            }}
+            onClick={handleOpenPreview}
             className="shrink-0 text-stone-300 hover:text-stone-100"
           >
             <FileText className="h-5 w-5" />

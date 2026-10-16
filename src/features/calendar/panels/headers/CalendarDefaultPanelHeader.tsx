@@ -1,15 +1,16 @@
 import { Button } from "~/components/atoms/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/atoms/tooltip"
-import { CirclePlus, Import, Search, Sparkle, Users } from 'lucide-react'
+import { CirclePlus, Import, Inbox, Search, Users } from 'lucide-react'
 import { useNavigate } from "react-router"
 import { openIcsImportPicker } from "~/lib/ipc/icsImport"
 
 interface CalendarDefaultHeaderProps {
   onOpenSearch: () => void
   onOpenCreate: () => void
-  onToggleLeadsView: () => void
-  isLeadsActive?: boolean
-  newLeadsCount?: number
+  onToggleInbox: () => void
+  isInboxActive?: boolean
+  /** Website requests waiting for review */
+  pendingRequestsCount?: number
 }
 
 interface HeaderIconButtonProps {
@@ -55,9 +56,9 @@ const HeaderIconButton: React.FC<HeaderIconButtonProps> = ({
 const CalendarDefaultPanelHeader: React.FC<CalendarDefaultHeaderProps> = ({
   onOpenSearch,
   onOpenCreate,
-  onToggleLeadsView,
-  isLeadsActive = false,
-  newLeadsCount = 0,
+  onToggleInbox,
+  isInboxActive = false,
+  pendingRequestsCount = 0,
 }) => {
   const navigate = useNavigate()
   const modifier = modifierKeyLabel()
@@ -83,17 +84,17 @@ const CalendarDefaultPanelHeader: React.FC<CalendarDefaultHeaderProps> = ({
         <Search className="h-6 w-6" />
       </HeaderIconButton>
       <HeaderIconButton
-        label="New leads"
-        hotkey={isLeadsActive ? "Esc" : `${modifier}L`}
-        ariaLabel="Toggle new leads list"
-        onClick={onToggleLeadsView}
-        className={`h-8 w-auto min-w-8 gap-1 px-1.5 transition-colors ${isLeadsActive ? "text-orange-500" : "text-white"}`}
+        label="Inbox"
+        hotkey={isInboxActive ? "Esc" : `${modifier}L`}
+        ariaLabel="Toggle inbox"
+        onClick={onToggleInbox}
+        className={`h-8 w-auto min-w-8 gap-1 px-1.5 transition-colors ${isInboxActive ? "text-orange-500" : "text-white"}`}
       >
         {/* Smaller icon so the count sits beside it at a readable size */}
-        <Sparkle className="size-4" />
-        {newLeadsCount > 0 ? (
+        <Inbox className="size-4" />
+        {pendingRequestsCount > 0 ? (
           <span aria-hidden="true" className="text-xs font-semibold tabular-nums leading-none">
-            {newLeadsCount > 99 ? "99+" : newLeadsCount}
+            {pendingRequestsCount > 99 ? "99+" : pendingRequestsCount}
           </span>
         ) : null}
       </HeaderIconButton>

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   EMPTY_CLIENT_SELECTION,
   pickClient,
+  REQUIRED_CLIENT_ERROR,
   searchClients,
   startNewClient,
   toClientTarget,
@@ -25,6 +26,13 @@ describe("client picker form", () => {
   it("blocks create while search text is typed but nothing is picked", () => {
     expect(validateClientSelection(searchClients("Jane"))).toEqual({ name: UNPICKED_CLIENT_ERROR })
     expect(toClientTarget(searchClients("Jane"))).toBeNull()
+  })
+
+  it("blocks an empty client section only when a client is required", () => {
+    expect(validateClientSelection(EMPTY_CLIENT_SELECTION, { required: true })).toEqual({ name: REQUIRED_CLIENT_ERROR })
+    expect(validateClientSelection(searchClients("Jane"), { required: true })).toEqual({ name: UNPICKED_CLIENT_ERROR })
+    expect(validateClientSelection(pickClient({ id: "c1", displayName: "Jane" }), { required: true })).toEqual({})
+    expect(validateClientSelection(newClient("Jane Smith"), { required: true })).toEqual({})
   })
 
   it("attaches a picked contact by id", () => {

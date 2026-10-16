@@ -12,7 +12,9 @@ import { getCurrentMonthParam } from "~/lib/months"
 import EventsTable from "~/features/calendar/views/EventsTable"
 import type { Event } from "~/definitions/database"
 import { useCalendarPanelState } from "../state/useCalendarPanelState"
-import { useNewLeads } from "~/hooks/useNewLeads"
+import { useEventRequests } from "~/hooks/useEventRequests"
+import InboxBodyHeader from "~/features/calendar/views/InboxBodyHeader"
+import RequestDetailView from "~/features/calendar/views/RequestDetailView"
 import type { UseCalendarSearchControllerReturn } from "../hooks/useCalendarSearchController"
 
 
@@ -33,20 +35,19 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
     const { state, setDate } = queryState
     const { isLoading } = eventsHook
     const { dispatch, ui } = useCalendarPanelState()
-    const { leadsQuery, leads } = useNewLeads()
+    const { requests, dismissRequest } = useEventRequests()
     const { searchQuery } = searchController
     const { result: searchResult, isFetching: isSearchFetching, enabled: isSearchEnabled, invalidDateRange } = searchQuery
     const hasSearchQuery = Boolean(state.search && state.search.length > 0)
-    const bodyView = hasSearchQuery || isSearchEnabled
+    const isSearchActive = hasSearchQuery || isSearchEnabled
+    // Filters left in the URL (e.g. on a Back to Inbox link) must not hide the Inbox; an open search panel still shows its results.
+    const bodyView = isSearchActive && (ui.sidebarMode === "search" || ui.bodyMode !== "inbox")
       ? "search-results"
-      : ui.bodyMode === "leads"
-      ? "leads-list"
+      : ui.bodyMode === "inbox"
+      ? "inbox"
       : "calendar-month"
     const searchEvents = isSearchEnabled ? searchResult.items : []
-    const tableEvents =
-      bodyView === "search-results" ? searchEvents
-      : bodyView === "leads-list" ? leads
-      : []
+    const tableEvents = bodyView === "search-results" ? searchEvents : []
     const primaryClients = usePrimaryClients(tableEvents.map((event) => event.id))
     const clientsByEventId = primaryClients.data
 
@@ -59,15 +60,36 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
         dispatch({ type: "OPEN_EDIT", event })
     }
 
+    const selectedRequest = requests.find((request) => request.id === ui.selectedRequestId) ?? null
+    const isReviewingSelected = ui.sidebarMode === "create" && ui.reviewingRequest?.id === selectedRequest?.id
+
+    const handleDismissRequest = (requestId: string) => {
+        // The review form would otherwise try to accept a dismissed request
+        if (ui.reviewingRequest?.id === requestId) dispatch({ type: "OPEN_DEFAULT" })
+        dispatch({ type: "SELECT_REQUEST", requestId: null })
+        dismissRequest(requestId)
+    }
+
     return (
         <>
-            <Body.Header>
-                <MonthNavigator 
-                    month={ state.date }
-                    onGoToToday={ handleGoToToday }
-                    onMonthChange={setDate}
+            {bodyView === "inbox" ? (
+                <InboxBodyHeader
+                    onBack={() => dispatch({ type: "OPEN_CALENDAR_VIEW" })}
+                    requestActions={selectedRequest ? {
+                        isReviewing: isReviewingSelected,
+                        onReview: () => dispatch({ type: "OPEN_REVIEW_REQUEST", request: selectedRequest }),
+                        onDismiss: () => handleDismissRequest(selectedRequest.id),
+                    } : null}
                 />
-            </Body.Header>
+            ) : (
+                <Body.Header>
+                    <MonthNavigator 
+                        month={ state.date }
+                        onGoToToday={ handleGoToToday }
+                        onMonthChange={setDate}
+                    />
+                </Body.Header>
+            )}
 
             {bodyView === "calendar-month" && <>
                 <Body.Content>
@@ -79,26 +101,15 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
                 </Body.Content>
             </>}
 
-            {bodyView === "leads-list" && <>
+            {bodyView === "inbox" && <>
                 <Body.Content>
-                    {/* A failed load would otherwise read as "no new leads" */}
-                    {leadsQuery.isError ? (
-                        <InlineQueryError
-                            message="Could not load new leads."
-                            onRetry={() => void leadsQuery.refetch()}
-                            isRetrying={leadsQuery.isFetching}
-                            className="mx-4 my-2 shrink-0"
-                        />
-                    ) : <>
-                        <ClientNamesError query={primaryClients} />
-                        <EventsTable
-                            events={leads}
-                            clientsByEventId={clientsByEventId}
-                            isLoading={leadsQuery.isLoading}
-                            onEdit={handleUpdateEvent}
-                            onDelete={onDeleteRequest}
-                        />
-                    </>}
+                    {selectedRequest ? (
+                        <RequestDetailView key={selectedRequest.id} request={selectedRequest} />
+                    ) : (
+                        <div className="flex flex-1 items-center justify-center p-4">
+                            <p className="text-sm text-muted-foreground">Select a request to see what the client sent.</p>
+                        </div>
+                    )}
                 </Body.Content>
             </>}
 

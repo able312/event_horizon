@@ -21,11 +21,14 @@ type PreviewPreferencesContextValue = {
 
 const PreviewPreferencesContext = createContext<PreviewPreferencesContextValue | null>(null)
 
-export function PreviewPreferencesProvider({ children }: { children: ReactNode }) {
+export function PreviewPreferencesProvider({ children, initialState }: {
+  children: ReactNode
+  initialState?: PreviewPreferencesState
+}) {
   const [state, dispatch] = useReducer(
     previewPreferencesReducer,
-    undefined,
-    createInitialPreviewPreferences,
+    initialState,
+    (saved) => saved ?? createInitialPreviewPreferences(),
   )
 
   const value = useMemo(() => ({ state, dispatch }), [state, dispatch])

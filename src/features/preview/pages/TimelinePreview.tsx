@@ -1,3 +1,9 @@
+import { useLocation, useNavigate } from "react-router"
+import { buildWorkspaceNav } from "~/features/event-detail/workspace/lib/buildWorkspaceNav"
+import { toEventDetailPath } from "~/features/event-detail/workspace/lib/eventDetailRouteState"
+import { buildScheduledNodeId } from "~/features/event-detail/workspace/lib/navPolicy"
+import { savePreviewReturnState } from "~/features/preview/lib/previewReturnState"
+import type { TimelineTimeblock } from "~/definitions/timeblocks/timeblocks-types"
 import { PreviewBlock, PreviewDocument } from "~/features/preview/pagination/PreviewDocument"
 import { usePreviewPreferences } from "~/features/preview/preferences/PreviewPreferencesContext"
 import { isSystemTimelineRow } from "~/features/preview/preferences/selectors"
@@ -8,6 +14,8 @@ import TimelineBlock from "./timeline/TimelineBlock"
 import { sortTimelineTimeblocks } from "./timeline/sortTimelineTimeblocks"
 
 export default function TimelinePreview() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const {
     data: event,
     isSuccess: eventReady,
@@ -30,6 +38,18 @@ export default function TimelinePreview() {
   const sortedTimeblocks = sortTimelineTimeblocks(allTimeblocks ?? []).filter((timeblock) =>
     prefs.includeSystemRows ? true : !isSystemTimelineRow(timeblock),
   )
+
+  const openTimeblock = (timeblock: TimelineTimeblock, scrollTop: number) => {
+    if (!event) return
+    const returnTo = savePreviewReturnState(location, { scrollTop, preferences: state })
+    const navModel = buildWorkspaceNav({ event, timelineRows: allTimeblocks ?? [], sectionRows: [] })
+    navigate(toEventDetailPath({
+      eventId: event.id,
+      selectedNodeId: buildScheduledNodeId(timeblock.id),
+      navModel,
+      returnTo,
+    }))
+  }
 
   const hasTimedRows = sortedTimeblocks.some(
     (tb) => typeof tb.time === "string" && tb.time.trim().length > 0,
@@ -98,7 +118,7 @@ export default function TimelinePreview() {
               id={`timeline-row-${timeblock.id}`}
               continuationKey="timeline"
             >
-              <TimelineBlock timeblock={timeblock} />
+              <TimelineBlock timeblock={timeblock} onOpen={event ? (scrollTop) => openTimeblock(timeblock, scrollTop) : undefined} />
             </PreviewBlock>
           )
         })

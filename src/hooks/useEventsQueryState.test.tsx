@@ -58,6 +58,16 @@ describe("useEventsQueryState", () => {
     })
   })
 
+  it("preserves the Inbox destination during canonicalization and filter changes", () => {
+    const { result } = renderHook(() => useEventsQueryState(), {
+      wrapper: createWrapper("/events?view=inbox&date=2026-10"),
+    })
+    expect(result.current.state.view).toBe("inbox")
+    expect(latestSearch).toBe("?date=2026-10&view=inbox")
+    act(() => result.current.setType("wedding"))
+    expect(latestSearch).toBe("?date=2026-10&view=inbox&type=wedding")
+  })
+
   it("sanitizes and normalizes incoming params", async () => {
     const { result } = renderHook(() => useEventsQueryState(), {
       wrapper: createWrapper(

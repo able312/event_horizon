@@ -15,6 +15,7 @@ import {
   type ClientSelection,
 } from "./clientPickerForm"
 import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
+import type { CreateEventPrefill } from "~/features/calendar/lib/eventRequestPrefill"
 
 interface CreateEventSidebarFormProps {
   initialStartDateTime?: string
@@ -23,12 +24,16 @@ interface CreateEventSidebarFormProps {
   onCreate: (event: NewEvent, client: AssignContactTarget | null) => Promise<void>
   onCancel: () => void
   onDraftPreviewChange?: (draft: CalendarDraftPreview | null) => void
+  /** Reviewing a website request: the form starts from it, a client is required, and saving accepts it. */
+  prefill?: CreateEventPrefill
 }
 
 function createDefaultFormValues(
   initialStartDateTime?: string,
   initialEndDateTime?: string,
+  prefill?: CreateEventPrefill,
 ): EventFormValues {
+  if (prefill) return prefill.values
   return {
     title: "",
     type: "function",
@@ -46,14 +51,16 @@ const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
   onCreate,
   onCancel,
   onDraftPreviewChange,
+  prefill,
 }) => {
+  const isReview = prefill !== undefined
   const [formValues, setFormValues] = useState<EventFormValues>(() =>
-    createDefaultFormValues(initialStartDateTime, initialEndDateTime),
+    createDefaultFormValues(initialStartDateTime, initialEndDateTime, prefill),
   )
-  const [clientSelection, setClientSelection] = useState<ClientSelection>(EMPTY_CLIENT_SELECTION)
+  const [clientSelection, setClientSelection] = useState<ClientSelection>(prefill?.client ?? EMPTY_CLIENT_SELECTION)
   const [emailConflict, setEmailConflict] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const clientErrors = validateClientSelection(clientSelection)
+  const clientErrors = validateClientSelection(clientSelection, { required: isReview })
   const canCreate = isCreateEventFormValid(formValues) && !hasFormErrors(clientErrors) && !isSubmitting
 
   useEffect(() => {
@@ -80,8 +87,8 @@ const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
 
   const handleCancel = () => {
     onDraftPreviewChange?.(null)
-    setFormValues(createDefaultFormValues(initialStartDateTime, initialEndDateTime))
-    setClientSelection(EMPTY_CLIENT_SELECTION)
+    setFormValues(createDefaultFormValues(initialStartDateTime, initialEndDateTime, prefill))
+    setClientSelection(prefill?.client ?? EMPTY_CLIENT_SELECTION)
     onCancel()
   }
 
@@ -103,10 +110,11 @@ const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
         endDateTime: formValues.endDateTime,
         minGuests: formValues.minGuests,
         maxGuests: formValues.maxGuests,
+        ...prefill?.notes,
       } as NewEvent
       await onCreate(newEvent, toClientTarget(clientSelection))
-      setFormValues(createDefaultFormValues(initialStartDateTime, initialEndDateTime))
-      setClientSelection(EMPTY_CLIENT_SELECTION)
+      setFormValues(createDefaultFormValues(initialStartDateTime, initialEndDateTime, prefill))
+      setClientSelection(prefill?.client ?? EMPTY_CLIENT_SELECTION)
       onCancel()
     } catch (err) {
       // Other mutation errors are surfaced by hook-level toasts.
@@ -119,8 +127,12 @@ const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
   return (
     <div className="space-y-6 p-4">
       <div>
-        <h2 className="text-lg font-semibold text-stone-100">Create New Event</h2>
-        <p className="mt-1 text-sm text-stone-300">Add the core details to get this event started.</p>
+        <h2 className="text-lg font-semibold text-stone-100">{isReview ? "Review Request" : "Create New Event"}</h2>
+        <p className="mt-1 text-sm text-stone-300">
+          {isReview
+            ? "Check the details from the website request, then accept it as a New Lead."
+            : "Add the core details to get this event started."}
+        </p>
       </div>
 
       <EventFormFields
@@ -151,7 +163,7 @@ const CreateEventSidebarForm: React.FC<CreateEventSidebarFormProps> = ({
           disabled={!canCreate}
           className="flex-1 rounded-lg bg-orange-500 px-4 py-2 font-medium text-stone-950 transition-colors hover:bg-orange-400 disabled:bg-stone-900 disabled:text-stone-700"
         >
-          Create
+          {isReview ? "Accept" : "Create"}
         </button>
       </div>
     </div>

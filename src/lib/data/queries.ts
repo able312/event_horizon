@@ -8,6 +8,7 @@ import * as cartDetailsApi from "./cartDetails"
 import * as contactRolesApi from "./contactRoles"
 import * as contactsApi from "./contacts"
 import * as eventContactsApi from "./eventContacts"
+import * as eventRequestsApi from "./eventRequests"
 import * as eventsApi from "./events"
 import * as foodItemsApi from "./foodItems"
 import * as menuOfChargeItemsApi from "./menuOfChargeItems"
@@ -77,6 +78,22 @@ export const eventQueries = {
     queryKey: eventKeys.search(params),
     queryFn: () => eventsApi.searchEvents(params),
     ...liveMeta(sources.events.search(params)),
+  }),
+}
+
+// ============================================================================
+// Event requests (website form)
+// ============================================================================
+
+export const eventRequestKeys = {
+  pending: () => ["eventRequests", "pending"] as const,
+}
+
+export const eventRequestQueries = {
+  pending: () => queryOptions({
+    queryKey: eventRequestKeys.pending(),
+    queryFn: () => eventRequestsApi.getPendingEventRequests(),
+    ...liveMeta(sources.eventRequests.pending()),
   }),
 }
 

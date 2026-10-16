@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import { parseEventRequestPayload, QUESTIONS, secretsMatch } from "./eventRequestPayload"
 
 const answers = {
+  [QUESTIONS.eventName]: "Ada & Charles' wedding",
   [QUESTIONS.firstName]: " Ada ",
   [QUESTIONS.lastName]: "Lovelace",
   [QUESTIONS.phone]: "519-555-0100",
@@ -21,12 +22,17 @@ describe("parseEventRequestPayload", () => {
   it("maps form answers to a cleaned submission", () => {
     const result = parseEventRequestPayload(payload({}, { [QUESTIONS.organizationName]: "  ", "Dietary needs?": ["Vegan", "Gluten free"] }))
     expect(result).toEqual({ ok: true, submission: {
-      responseId: "resp-1", submittedAt: "2026-10-16T14:00:00.000Z", firstName: "Ada", lastName: "Lovelace",
+      responseId: "resp-1", submittedAt: "2026-10-16T14:00:00.000Z", eventName: "Ada & Charles' wedding", firstName: "Ada", lastName: "Lovelace",
       organizationName: null, email: "ada@example.com", phone: "519-555-0100", eventType: "wedding",
       preferredDate: "2027-06-12", alternateDate: null, startTime: "16:30", guestCount: 120,
       details: "Ceremony on the patio", referralSource: null,
       extraAnswers: [{ question: "Dietary needs?", answer: "Vegan, Gluten free" }],
     } })
+  })
+
+  it("treats the event name as optional", () => {
+    const result = parseEventRequestPayload(payload({}, { [QUESTIONS.eventName]: "  " }))
+    expect(result.ok && result.submission.eventName).toBeNull()
   })
 
   it("maps each event type choice", () => {
@@ -48,8 +54,9 @@ describe("parseEventRequestPayload", () => {
     const result = parseEventRequestPayload(payload({ submittedAt: "yesterday", respondentEmail: "not-an-email" }, {
       [QUESTIONS.eventType]: "Party", [QUESTIONS.preferredDate]: "2027-02-30", [QUESTIONS.alternateDate]: "June 12",
       [QUESTIONS.startTime]: "4pm", [QUESTIONS.guestCount]: "about 100", [QUESTIONS.firstName]: "x".repeat(101),
+      [QUESTIONS.eventName]: "x".repeat(101),
     }))
-    expect(problems(result)).toHaveLength(8)
+    expect(problems(result)).toHaveLength(9)
     expect(problems(parseEventRequestPayload(payload({}, { [QUESTIONS.guestCount]: "0" })))).toHaveLength(1)
     expect(problems(parseEventRequestPayload(payload({}, { [QUESTIONS.guestCount]: "10001" })))).toHaveLength(1)
   })

@@ -41,7 +41,10 @@ const CalendarWorkspace: React.FC = () => {
     return (
         <>
             <SplitLayout>
-                <CalendarPanelStateProvider>
+                <CalendarPanelStateProvider
+                    bodyMode={QueryState.state.view === "inbox" ? "inbox" : "calendar"}
+                    onBodyModeChange={QueryState.setView}
+                >
 
                     <SplitLayout.PanelWrapper>
                         <CalendarPanelOrchastrator 

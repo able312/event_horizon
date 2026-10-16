@@ -1,8 +1,9 @@
 import { useContext, createContext } from "react"
-import type { CalendarSidePanelAction, CalendarSidePanelState } from "./calendarSidePanelReducer"
+import type { BodyMode, CalendarSidePanelAction, CalendarSidePanelState } from "./calendarSidePanelReducer"
 
 type CalendarPanelStateContextValue = {
-  ui: CalendarSidePanelState
+  /** Reducer state plus the body mode, which comes from the URL. */
+  ui: CalendarSidePanelState & { bodyMode: BodyMode }
   dispatch: React.Dispatch<CalendarSidePanelAction>
 }
 

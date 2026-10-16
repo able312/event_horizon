@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useMemo, useState } from "react"
+import { lazy, Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { ErrorBoundary } from "react-error-boundary"
 import { useNavigate, useParams, useSearchParams } from "react-router"
 import { ArrowLeft, Printer, Save } from "lucide-react"
@@ -6,7 +6,10 @@ import { toast } from "sonner"
 
 import { PreviewReadinessContext } from "~/features/preview/pagination/PreviewReadinessContext"
 
+import { normalizeReturnTo } from "~/features/event-detail/workspace/lib/eventDetailRouteState"
+
 import { Button } from "~/components/atoms/button"
+import { getPreviewReturnState } from "~/features/preview/lib/previewReturnState"
 import { buildPdfFileName } from "~/features/preview/lib/buildPdfFileName"
 import {
   getPreviewTypeLabel,
@@ -66,6 +69,8 @@ const PreviewBodyOrchestrator: React.FC = () => {
   const navigate = useNavigate()
   const { id: eventId } = useParams()
   const [searchParams] = useSearchParams()
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const restoredTicket = useRef<string | null>(null)
   const previewType = resolvePreviewType(searchParams)
   const previewPage = useMemo(() => renderPreviewPage(previewType), [previewType])
   const { data: event } = useEvent()
@@ -86,6 +91,16 @@ const PreviewBodyOrchestrator: React.FC = () => {
   // The file name needs the client; documents that print contacts gate their own readiness on them,
   // so a background contacts refetch does not silently disable export here.
   const canExport = contactsLoaded && documentStatus.key === documentKey && documentStatus.ready
+
+  useLayoutEffect(() => {
+    const ticket = searchParams.get("resume")
+    const saved = getPreviewReturnState(searchParams)
+    if (!ticket || !saved || restoredTicket.current === ticket) return
+    // Paginated pages must exist before assigning scrollTop, or the browser clamps it to zero.
+    if (documentStatus.key !== documentKey || !documentStatus.ready || !scrollRef.current) return
+    scrollRef.current.scrollTop = saved.scrollTop
+    restoredTicket.current = ticket
+  }, [documentKey, documentStatus, searchParams])
 
   const handlePrint = () => {
     if (!canExport) return
@@ -123,11 +138,8 @@ const PreviewBodyOrchestrator: React.FC = () => {
           size="sm"
           className="ml-14"
           onClick={() => {
-            if (eventId) {
-              navigate(`/events/${eventId}`)
-              return
-            }
-            navigate("/events")
+            const fallback = eventId ? `/events/${eventId}` : "/events"
+            navigate(normalizeReturnTo(searchParams.get("returnTo") ?? fallback))
           }}
         >
           <ArrowLeft className="h-4 w-4" />
@@ -161,7 +173,7 @@ const PreviewBodyOrchestrator: React.FC = () => {
         scroll viewport. print:contents keeps this wrapper out of the print box tree.
         Pages are composed by PreviewDocument inside each preview type.
       */}
-      <div className="print:contents flex min-h-0 flex-1 items-start justify-center overflow-y-auto py-10 print:p-0">
+      <div ref={scrollRef} data-preview-scroll className="print:contents flex min-h-0 flex-1 items-start justify-center overflow-y-auto py-10 print:p-0">
         <PreviewReadinessContext.Provider value={reportReadiness}>
           <ErrorBoundary
             key={documentKey}

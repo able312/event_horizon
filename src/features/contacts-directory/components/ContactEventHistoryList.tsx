@@ -1,7 +1,8 @@
 import { CalendarDays, Star } from "lucide-react"
-import { Link } from "react-router"
+import { Link, useLocation } from "react-router"
 
 import type { ContactEventHistory } from "~/definitions/contacts"
+import { buildEventDetailEntryPath } from "~/features/event-detail/workspace/lib/eventDetailRouteState"
 import { EVENT_STATUS_LABELS } from "~/definitions/events/ui"
 import { InlineQueryError } from "~/features/contacts/components/InlineQueryError"
 import { getRoleBadgeClass } from "~/features/contacts/lib/contactStyles"
@@ -13,6 +14,8 @@ import { cn } from "~/lib/utils"
 import { groupEventHistory } from "../lib/eventHistory"
 
 const EventHistoryCard: React.FC<{ row: ContactEventHistory }> = ({ row }) => {
+  const location = useLocation()
+  const returnTo = `${location.pathname}${location.search}`
   const removed = Boolean(row.removedAt)
   const roleLabel =
     row.role === "vendor" && row.vendorCategory ? `${row.vendorCategory.label} vendor` : ROLE_LABELS[row.role].singular
@@ -20,7 +23,7 @@ const EventHistoryCard: React.FC<{ row: ContactEventHistory }> = ({ row }) => {
   return (
     <li className={cn("rounded-lg border border-border bg-card p-4 transition-colors hover:border-orange-500/50", removed && "opacity-60")}>
       <div className="flex items-start justify-between gap-2">
-        <Link to={`/events/${row.eventId}`} className="min-w-0 truncate text-sm font-semibold hover:underline">
+        <Link to={buildEventDetailEntryPath(row.eventId, returnTo)} className="min-w-0 truncate text-sm font-semibold hover:underline">
           {row.eventTitle}
         </Link>
         {row.isPrimary ? (

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import type { EventRequest } from "~/definitions/database"
 
 import {
   ACTIONS,
@@ -7,32 +8,41 @@ import {
 } from "./calendarSidePanelReducer"
 
 describe("calendarSidePanelReducer", () => {
-  it("toggles body mode between calendar and leads", () => {
-    const opened = calendarSidePanelReducer(initialCalendarSidePanelState, {
-      type: ACTIONS.TOGGLE_LEADS_VIEW,
+  it("opens the create form for a request and clears it when another sidebar opens", () => {
+    const request = { id: "req-1" } as EventRequest
+    const reviewing = calendarSidePanelReducer(initialCalendarSidePanelState, {
+      type: ACTIONS.OPEN_REVIEW_REQUEST,
+      request,
     })
-    expect(opened.bodyMode).toBe("leads")
+    expect(reviewing).toMatchObject({ sidebarMode: "create", reviewingRequest: request, selectedRequestId: "req-1", createFormVersion: 1 })
 
-    const closed = calendarSidePanelReducer(opened, {
-      type: ACTIONS.TOGGLE_LEADS_VIEW,
-    })
-    expect(closed.bodyMode).toBe("calendar")
+    const plainCreate = calendarSidePanelReducer(reviewing, { type: ACTIONS.OPEN_CREATE, prefillIso: null })
+    expect(plainCreate.reviewingRequest).toBeNull()
+    expect(plainCreate.createFormVersion).toBe(2)
+
+    expect(calendarSidePanelReducer(reviewing, { type: ACTIONS.OPEN_DEFAULT }).reviewingRequest).toBeNull()
+    expect(calendarSidePanelReducer(reviewing, { type: ACTIONS.OPEN_SEARCH }).reviewingRequest).toBeNull()
   })
 
-  it("keeps body mode through sidebar mode transitions", () => {
-    const leadsState = calendarSidePanelReducer(initialCalendarSidePanelState, {
-      type: ACTIONS.TOGGLE_LEADS_VIEW,
-    })
+  it("selects a request in the Inbox and forgets it when leaving the Inbox", () => {
+    const selected = calendarSidePanelReducer(initialCalendarSidePanelState, { type: ACTIONS.SELECT_REQUEST, requestId: "req-1" })
+    expect(selected.selectedRequestId).toBe("req-1")
+    expect(calendarSidePanelReducer(selected, { type: ACTIONS.OPEN_DEFAULT }).selectedRequestId).toBe("req-1")
+    expect(calendarSidePanelReducer(selected, { type: ACTIONS.SELECT_REQUEST, requestId: null }).selectedRequestId).toBeNull()
+    expect(calendarSidePanelReducer(selected, { type: ACTIONS.TOGGLE_INBOX_VIEW }).selectedRequestId).toBeNull()
+    expect(calendarSidePanelReducer(selected, { type: ACTIONS.OPEN_CALENDAR_VIEW }).selectedRequestId).toBeNull()
+  })
 
-    const openedSearch = calendarSidePanelReducer(leadsState, {
-      type: ACTIONS.OPEN_SEARCH,
+  it("ends a request review when leaving the Inbox, but keeps a plain create form", () => {
+    const reviewing = calendarSidePanelReducer(initialCalendarSidePanelState, {
+      type: ACTIONS.OPEN_REVIEW_REQUEST,
+      request: { id: "req-1" } as EventRequest,
     })
-    const openedCreate = calendarSidePanelReducer(openedSearch, {
-      type: ACTIONS.OPEN_CREATE,
-      prefillIso: null,
-    })
+    for (const type of [ACTIONS.TOGGLE_INBOX_VIEW, ACTIONS.OPEN_CALENDAR_VIEW] as const) {
+      expect(calendarSidePanelReducer(reviewing, { type })).toMatchObject({ sidebarMode: "default", reviewingRequest: null, selectedRequestId: null })
+    }
 
-    expect(openedSearch.bodyMode).toBe("leads")
-    expect(openedCreate.bodyMode).toBe("leads")
+    const creating = calendarSidePanelReducer(initialCalendarSidePanelState, { type: ACTIONS.OPEN_CREATE, prefillIso: "2026-10-20" })
+    expect(calendarSidePanelReducer(creating, { type: ACTIONS.TOGGLE_INBOX_VIEW })).toMatchObject({ sidebarMode: "create", createPrefillIso: "2026-10-20" })
   })
 })

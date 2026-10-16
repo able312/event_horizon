@@ -92,6 +92,20 @@ describe("EventDetailHeaderBar", () => {
     expect(screen.getByRole("link", { name: /Back to Events/i })).toBeTruthy()
   })
 
+  it.each([
+    ["/events?date=2026-10&view=inbox", "Back to Inbox"],
+    ["/contacts/contact-1?search=Jane", "Back to Contact"],
+    ["/contacts?search=Jane", "Back to Contacts"],
+    ["/preview/event-1?type=timeline&resume=ticket", "Back to Print Preview"],
+  ])("returns to %s", (returnTo, label) => {
+    render(
+      <MemoryRouter initialEntries={[`/events/event-1/overview?returnTo=${encodeURIComponent(returnTo)}`]}>
+        <EventDetailHeaderBar eventResource={makeEventResource()} />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole("link", { name: label }).getAttribute("href")).toBe(returnTo)
+  })
+
   it("shows who last edited the event, when known", () => {
     const { rerender } = render(
       <MemoryRouter>

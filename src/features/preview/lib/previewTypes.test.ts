@@ -37,6 +37,13 @@ describe("getPreviewTypesForEvent", () => {
 })
 
 describe("buildPreviewPath", () => {
+  it("preserves the event section and its own return destination", () => {
+    const returnTo = "/events/evt_1/timeblock/note-1?returnTo=%2Fcontacts%2Fcontact-1"
+    const preview = new URL(buildPreviewPath("evt_1", "timeline", returnTo), "https://event-horizon.local")
+    expect(preview.searchParams.get("type")).toBe("timeline")
+    expect(preview.searchParams.get("returnTo")).toBe(returnTo)
+  })
+
   it("builds a preview route with the type query param", () => {
     expect(buildPreviewPath("evt_1")).toBe("/preview/evt_1?type=beo")
     expect(buildPreviewPath("evt_1", "timeline")).toBe("/preview/evt_1?type=timeline")

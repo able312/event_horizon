@@ -8,7 +8,7 @@ import { eventType, nullable } from "./lib/validators"
 import { createEventWithClient, eventInput, primaryClient } from "./events"
 
 const submission = {
-  responseId: v.string(), submittedAt: v.string(),
+  responseId: v.string(), submittedAt: v.string(), eventName: nullable(v.string()),
   firstName: v.string(), lastName: v.string(), organizationName: nullable(v.string()), email: v.string(), phone: v.string(),
   eventType, preferredDate: nullable(v.string()), alternateDate: nullable(v.string()), startTime: nullable(v.string()),
   guestCount: v.number(), details: nullable(v.string()), referralSource: nullable(v.string()),
@@ -25,10 +25,12 @@ export const receive = internalMutation({ args: submission, handler: async (ctx,
   return { id, duplicate: false }
 } })
 
-// Newest first.
-export const listPending = companyQuery({ args: {}, handler: async ctx =>
-  (await ctx.db.query("eventRequests").withIndex("by_status", q => q.eq("status", "pending")).order("desc").collect()).map(toRecord),
-})
+// Newest arrival first, so a response Apps Script delivers late still shows at the top.
+export const listPending = companyQuery({ args: {}, handler: async ctx => {
+  const pending = await ctx.db.query("eventRequests").withIndex("by_status", q => q.eq("status", "pending")).collect()
+  pending.sort((a, b) => b.receivedAt.localeCompare(a.receivedAt) || b._creationTime - a._creationTime)
+  return pending.map(toRecord)
+} })
 
 /** Two people can review the same request; only the first decision counts. */
 async function requirePending(ctx: CompanyMutationCtx, id: Id<"eventRequests">) {
@@ -43,6 +45,14 @@ const reviewed = (ctx: CompanyMutationCtx) => ({ reviewedBy: ctx.userId, reviewe
 export const dismiss = companyMutation({ args: { id: v.id("eventRequests") }, handler: async (ctx, { id }) => {
   await requirePending(ctx, id)
   await ctx.db.patch("eventRequests", id, { status: "dismissed", ...reviewed(ctx) })
+} })
+
+/** Undo for a dismiss: puts the request back in the Inbox. Accepted requests can't come back, since their event exists. */
+export const restore = companyMutation({ args: { id: v.id("eventRequests") }, handler: async (ctx, { id }) => {
+  const request = await ctx.db.get("eventRequests", id)
+  if (!request) throw new ConvexError({ code: "NotFound", message: "Event request not found" })
+  if (request.status !== "dismissed") throw new ConvexError({ code: "NotDismissed", message: `This request was ${request.status}, not dismissed` })
+  await ctx.db.patch("eventRequests", id, { status: "pending", reviewedBy: null, reviewedAt: null })
 } })
 
 // The renderer sends the event as reviewed in the pre-filled create form, so staff

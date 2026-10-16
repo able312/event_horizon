@@ -1,8 +1,11 @@
 import { useCallback, useMemo } from "react"
+import { useLocation, useNavigate } from "react-router"
+import { buildEventDetailEntryPath } from "~/features/event-detail/workspace/lib/eventDetailRouteState"
 
 import type { AssignContactTarget } from "~/definitions/contacts"
-import type { Event, NewEvent, UpdateEvent } from "~/definitions/database"
+import type { Event, EventRequest, NewEvent, UpdateEvent } from "~/definitions/database"
 import type { UseEventsReturn } from "~/hooks/useEvents"
+import { useEventRequests } from "~/hooks/useEventRequests"
 import type { UseEventsQueryStateReturn } from "~/hooks/useEventsQueryState"
 import { useHotkey } from "~/lib/hotKeys"
 
@@ -15,9 +18,12 @@ export function useCalendarWorkspaceViewModel(
   eventsHook: UseEventsReturn,
   searchController: UseCalendarSearchControllerReturn,
 ) {
+  const navigate = useNavigate()
+  const location = useLocation()
   const { dispatch, ui } = useCalendarPanelState()
   const { setSearch, setStatus, setType, setSearchInput } = queryState
   const { createEvent, updateEvent } = eventsHook
+  const { acceptRequest } = useEventRequests()
 
   const closeSearchPanel = useCallback(() => {
     setSearch("")
@@ -54,15 +60,37 @@ export function useCalendarWorkspaceViewModel(
     dispatch({ type: ACTIONS.OPEN_DEFAULT })
   }, [dispatch])
 
-  const toggleLeadsView = useCallback(() => {
-    dispatch({ type: ACTIONS.TOGGLE_LEADS_VIEW })
+  const toggleInboxView = useCallback(() => {
+    dispatch({ type: ACTIONS.TOGGLE_INBOX_VIEW })
   }, [dispatch])
+
+  const openReviewRequestPanel = useCallback(
+    (request: EventRequest) => {
+      dispatch({ type: ACTIONS.OPEN_REVIEW_REQUEST, request })
+    },
+    [dispatch],
+  )
 
   const onCreateEvent = useCallback(
     async (event: NewEvent, client?: AssignContactTarget | null) => {
       await createEvent(event, client)
     },
     [createEvent],
+  )
+
+  // The review form requires a client, so a missing one never reaches here.
+  const onAcceptRequest = useCallback(
+    async (event: NewEvent, client: AssignContactTarget | null) => {
+      if (!ui.reviewingRequest || !client) return
+      const createdEvent = await acceptRequest(ui.reviewingRequest.id, event, client)
+      const inboxParams = new URLSearchParams(location.search)
+      inboxParams.set("view", "inbox")
+      inboxParams.delete("search")
+      const returnTo = `/events?${inboxParams.toString()}`
+      dispatch({ type: ACTIONS.SELECT_REQUEST, requestId: null })
+      navigate(buildEventDetailEntryPath(createdEvent.id, returnTo))
+    },
+    [acceptRequest, dispatch, location.search, navigate, ui.reviewingRequest],
   )
 
   const onSaveEventUpdates = useCallback(
@@ -75,9 +103,10 @@ export function useCalendarWorkspaceViewModel(
 
   useHotkey("Cmd+f", openSearchPanel)
   useHotkey("Cmd+N", openCreatePanel)
-  useHotkey("Cmd+L", toggleLeadsView)
+  useHotkey("Cmd+L", toggleInboxView)
+  // The search, create and edit panels close themselves on Escape.
   useHotkey("escape", () => {
-    if (ui.bodyMode === "leads" && ui.sidebarMode !== "create" && ui.sidebarMode !== "edit") {
+    if (ui.bodyMode === "inbox" && ui.sidebarMode === "default") {
       dispatch({ type: ACTIONS.OPEN_CALENDAR_VIEW })
     }
   })
@@ -92,23 +121,27 @@ export function useCalendarWorkspaceViewModel(
         openCreatePanelWithPrefill,
         openEditPanel,
         openDefaultPanel,
-        toggleLeadsView,
+        openReviewRequestPanel,
+        toggleInboxView,
       },
       mutations: {
         onCreateEvent,
+        onAcceptRequest,
         onSaveEventUpdates,
       },
     }),
     [
       closeSearchPanel,
+      onAcceptRequest,
       onCreateEvent,
       onSaveEventUpdates,
       openCreatePanel,
       openCreatePanelWithPrefill,
       openDefaultPanel,
       openEditPanel,
+      openReviewRequestPanel,
       openSearchPanel,
-      toggleLeadsView,
+      toggleInboxView,
       ui,
     ],
   )

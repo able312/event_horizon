@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { getFunctionName } from "convex/server"
 import * as backend from "./backend"
 import * as events from "./events"
+import * as eventRequests from "./eventRequests"
 import * as timeblocks from "./timeblocks"
 import * as beverage from "./beverageItems"
 import * as food from "./foodItems"
@@ -44,6 +45,9 @@ const contracts: Contract[] = [
   { name: "events.getByCalendarIds", kind: "query", call: () => events.getEventsByCalendarIds(["uid"]), args: { calendarIds: ["uid"] } },
   { name: "events.getStartingBetween", kind: "query", call: () => events.getEventsStartingBetween("start", "end"), args: { startFrom: "start", startTo: "end" } },
   { name: "events.importFromCalendar", kind: "mutation", call: () => events.importCalendarEvents([]), args: { rows: [] } },
+  { name: "eventRequests.listPending", kind: "source", call: () => eventRequests.getPendingEventRequests(), args: {} },
+  { name: "eventRequests.accept", kind: "mutation", call: () => eventRequests.acceptEventRequest(id, { ...input, id, createdAt: "old", clientNotes: "Notes" }, { newContact: person }), args: { id, input: { ...input, clientNotes: "Notes" }, client: { newContact: person } } },
+  { name: "eventRequests.accept", kind: "mutation", call: () => eventRequests.acceptEventRequest(id, { ...input, id, createdAt: "old" }, { contactId: "contact-1" }), args: { id, input, client: { contactId: "contact-1" } } },
   { name: "timeblocks.getByEventIdAndSectionType", kind: "source", call: () => timeblocks.getTimeblocksByEventAndSection(eventId, "note"), args: { eventId, sectionType: "note" } },
   { name: "timeblocks.getById", kind: "source", call: () => timeblocks.getTimeblockById(id), args: { id } },
   { name: "timeblocks.getAllTimelineBlocks", kind: "source", call: () => timeblocks.getAllTimelineBlocks(eventId), args: { eventId, timeZone: desktopTimeZone() } },
@@ -107,6 +111,8 @@ const contracts: Contract[] = [
   { name: "menuOfChargeItems.remove", kind: "mutation", call: () => charges.deleteMenuOfChargeItem(id), args: { id } },
   ...([
     ["contacts.archive", () => contacts.archiveContact(id), { id }],
+    ["eventRequests.dismiss", () => eventRequests.dismissEventRequest(id), { id }],
+    ["eventRequests.restore", () => eventRequests.restoreEventRequest(id), { id }],
     ["contacts.restore", () => contacts.restoreContact(id), { id }],
     ["contacts.remove", () => contacts.deleteContact(id), { id }],
     ["vendorCategories.archive", () => categories.archiveVendorCategory(id), { id }],
