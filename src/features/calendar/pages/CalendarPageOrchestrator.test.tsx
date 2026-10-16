@@ -136,12 +136,16 @@ function createEventsHook() {
   }
 }
 
-function createSearchController(enabled = false) {
+function createSearchController(enabled = false, overrides: { invalidDateRange?: boolean; isError?: boolean } = {}) {
   return {
     searchQuery: {
       result: { items: [], total: 0 },
       isFetching: false,
       enabled,
+      invalidDateRange: false,
+      isError: false,
+      refetch: vi.fn(),
+      ...overrides,
     },
     pagination: {
       canPrev: false,
@@ -200,6 +204,23 @@ describe("CalendarPageOrchestrator", () => {
 
     rerender(<CalendarPageOrchastrator {...props} searchController={createSearchController() as never} />)
     expect(screen.getByTestId("calendar-month-view")).toBeTruthy()
+    expect(screen.queryByTestId("events-table-view")).toBeNull()
+  })
+
+  it.each([
+    [{ invalidDateRange: true }, /"From" date must be on or before/],
+    [{ isError: true }, /Could not search events/],
+  ])("shows why a search has no results instead of \"0 results\": %o", (overrides, message) => {
+    render(
+      <CalendarPageOrchastrator
+        queryState={createQueryState(null).queryState as never}
+        eventsHook={createEventsHook() as never}
+        searchController={createSearchController(true, overrides) as never}
+        onDeleteRequest={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole("alert").textContent).toMatch(message)
+    expect(screen.queryByText("0 results")).toBeNull()
     expect(screen.queryByTestId("events-table-view")).toBeNull()
   })
 

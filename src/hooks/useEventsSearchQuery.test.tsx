@@ -51,6 +51,23 @@ describe("useEventsSearchQuery", () => {
     expect(eventsApi.searchEvents).toHaveBeenCalledTimes(1)
   })
 
+  it("flags an inverted date range instead of sending a search the server rejects", () => {
+    const { result } = renderHook(
+      () =>
+        useEventsSearchQuery({
+          query: "", type: null, status: null,
+          startFrom: "2026-10-16T00:00:00Z", startTo: "2026-10-10T00:00:00Z",
+          page: 0, pageSize: 50,
+        }),
+      { wrapper: wrapperFactory() },
+    )
+
+    expect(result.current.enabled).toBe(true)
+    expect(result.current.invalidDateRange).toBe(true)
+    expect(result.current.result.items).toEqual([])
+    expect(eventsApi.searchEvents).not.toHaveBeenCalled()
+  })
+
   it("does not search when query is shorter than 2 characters", () => {
     const wrapper = wrapperFactory()
     renderHook(
