@@ -25,7 +25,9 @@ const EMPTY_RESULT: EventSearchResponse = {
 
 export function useEventsSearchQuery(params: EventsSearchParams) {
   const normalizedQuery = params.query.trim()
-  const enabled = normalizedQuery.length >= 2
+  const enabled = normalizedQuery.length >= 2 || Boolean(
+    params.type || params.status || params.startFrom || params.startTo,
+  )
 
   const query = useQuery({
     ...eventQueries.search({

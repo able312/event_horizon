@@ -136,12 +136,12 @@ function createEventsHook() {
   }
 }
 
-function createSearchController() {
+function createSearchController(enabled = false) {
   return {
     searchQuery: {
       result: { items: [], total: 0 },
       isFetching: false,
-      enabled: true,
+      enabled,
     },
     pagination: {
       canPrev: false,
@@ -181,6 +181,24 @@ describe("CalendarPageOrchestrator", () => {
     )
 
     expect(screen.getByTestId("month-nav")).toBeTruthy()
+    expect(screen.getByTestId("calendar-month-view")).toBeTruthy()
+    expect(screen.queryByTestId("events-table-view")).toBeNull()
+  })
+
+  it("shows filter-only results and returns to the calendar when filters are cleared", () => {
+    const props = {
+      queryState: createQueryState(null).queryState as never,
+      eventsHook: createEventsHook() as never,
+      onDeleteRequest: vi.fn(),
+    }
+    const { rerender } = render(
+      <CalendarPageOrchastrator {...props} searchController={createSearchController(true) as never} />,
+    )
+    expect(screen.getByTestId("events-table-view")).toBeTruthy()
+    expect(screen.getByText("0 results")).toBeTruthy()
+    expect(screen.queryByTestId("calendar-month-view")).toBeNull()
+
+    rerender(<CalendarPageOrchastrator {...props} searchController={createSearchController() as never} />)
     expect(screen.getByTestId("calendar-month-view")).toBeTruthy()
     expect(screen.queryByTestId("events-table-view")).toBeNull()
   })

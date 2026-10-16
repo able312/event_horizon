@@ -36,7 +36,7 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
     const { leadsQuery, leads } = useNewLeads()
     const { result: searchResult, isFetching: isSearchFetching, enabled: isSearchEnabled } = searchController.searchQuery
     const hasSearchQuery = Boolean(state.search && state.search.length > 0)
-    const bodyView = hasSearchQuery
+    const bodyView = hasSearchQuery || isSearchEnabled
       ? "search-results"
       : ui.bodyMode === "leads"
       ? "leads-list"
