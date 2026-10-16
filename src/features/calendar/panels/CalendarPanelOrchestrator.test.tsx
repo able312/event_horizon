@@ -58,13 +58,7 @@ vi.mock("~/hooks/useEventRequests", () => ({
   useEventRequests: () => ({ requests: [], requestsQuery: {} }),
 }))
 
-vi.mock("~/hooks/useNewLeads", () => ({
-  useNewLeads: () => ({ leads: [], leadsQuery: {} }),
-}))
 
-vi.mock("~/hooks/useEventContacts", () => ({
-  usePrimaryClients: () => ({ data: undefined }),
-}))
 
 vi.mock("../state/useCalendarPanelState", () => ({
   useCalendarPanelState: () => useCalendarPanelStateMock(),
@@ -128,7 +122,7 @@ describe("CalendarPanelOrchastrator create form remount behavior", () => {
         queryState={queryState}
         eventsHook={eventsHook}
         searchController={searchController}
-        onDeleteRequest={vi.fn()}
+       
       />,
     )
 
@@ -150,7 +144,7 @@ describe("CalendarPanelOrchastrator create form remount behavior", () => {
         queryState={queryState}
         eventsHook={eventsHook}
         searchController={searchController}
-        onDeleteRequest={vi.fn()}
+       
       />,
     )
 
@@ -193,7 +187,7 @@ describe("CalendarPanelOrchastrator create form remount behavior", () => {
         queryState={{ state: {} } as never}
         eventsHook={{} as never}
         searchController={{} as never}
-        onDeleteRequest={vi.fn()}
+       
       />,
     )
 
@@ -212,14 +206,14 @@ describe("CalendarPanelOrchastrator create form remount behavior", () => {
     const queryState = { state: { date: "2026-05" }, setDate: vi.fn() } as never
 
     const { getByTestId, queryByTestId, rerender } = render(
-      <CalendarPanelOrchastrator queryState={queryState} eventsHook={{} as never} searchController={{} as never} onDeleteRequest={vi.fn()} />,
+      <CalendarPanelOrchastrator queryState={queryState} eventsHook={{} as never} searchController={{} as never} />,
     )
     expect(getByTestId("inbox-panel-mock")).toBeTruthy()
     expect(queryByTestId("default-panel-mock")).toBeNull()
 
     useCalendarPanelStateMock.mockReturnValue({ dispatch: vi.fn(), ui: { ...ui, bodyMode: "calendar" } })
     rerender(
-      <CalendarPanelOrchastrator queryState={queryState} eventsHook={{} as never} searchController={{} as never} onDeleteRequest={vi.fn()} />,
+      <CalendarPanelOrchastrator queryState={queryState} eventsHook={{} as never} searchController={{} as never} />,
     )
     expect(getByTestId("default-panel-mock")).toBeTruthy()
     expect(queryByTestId("inbox-panel-mock")).toBeNull()

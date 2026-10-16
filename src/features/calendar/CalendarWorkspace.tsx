@@ -48,7 +48,6 @@ const CalendarWorkspace: React.FC = () => {
                             queryState={ QueryState }
                             eventsHook={ packagedEventHook }
                             searchController={searchController}
-                            onDeleteRequest={deleteController.requestDelete}
                         />
                     </SplitLayout.PanelWrapper>
                     

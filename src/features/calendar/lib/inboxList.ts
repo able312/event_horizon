@@ -1,5 +1,4 @@
-import type { PrimaryClient } from "~/definitions/contacts"
-import type { Event, EventRequest } from "~/definitions/database"
+import type { EventRequest } from "~/definitions/database"
 import { EVENT_TYPE_LABELS } from "~/definitions/events/ui"
 
 import { requestClientName, requestTitle } from "./eventRequestPrefill"
@@ -32,20 +31,6 @@ export function filterInboxRequests(requests: EventRequest[], query: string): Ev
       words,
     ),
   )
-}
-
-/** New leads whose title, type or primary client match the Inbox search. */
-export function filterInboxLeads(
-  leads: Event[],
-  clientsByEventId: Record<string, PrimaryClient> | undefined,
-  query: string,
-): Event[] {
-  const words = searchWords(query)
-  if (words.length === 0) return leads
-  return leads.filter((lead) => {
-    const client = clientsByEventId?.[lead.id]
-    return matchesWords([lead.title, EVENT_TYPE_LABELS[lead.type], client?.displayName, client?.email], words)
-  })
 }
 
 function isSameLocalDay(a: Date, b: Date): boolean {

@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest"
 
-import type { PrimaryClient } from "~/definitions/contacts"
-import type { Event, EventRequest } from "~/definitions/database"
+import type { EventRequest } from "~/definitions/database"
 
-import { filterInboxLeads, filterInboxRequests, formatReceivedAt } from "./inboxList"
+import { filterInboxRequests, formatReceivedAt } from "./inboxList"
 
 function request(overrides: Partial<EventRequest>): EventRequest {
   return {
@@ -35,20 +34,6 @@ describe("filterInboxRequests", () => {
 
   it("needs every word to match", () => {
     expect(filterInboxRequests(requests, "sarah acme")).toEqual([])
-  })
-})
-
-describe("filterInboxLeads", () => {
-  const lead = (id: string, title: string) => ({ id, title, type: "wedding" }) as Event
-  const leads = [lead("e-1", "Patel Wedding"), lead("e-2", "Board dinner")]
-  const clients: Record<string, PrimaryClient> = {
-    "e-2": { contactId: "c-1", displayName: "Morgan Reyes", email: "morgan@example.test", phone: null },
-  }
-
-  it("matches the lead's title or its primary client", () => {
-    expect(filterInboxLeads(leads, clients, "patel")).toEqual([leads[0]])
-    expect(filterInboxLeads(leads, clients, "morgan")).toEqual([leads[1]])
-    expect(filterInboxLeads(leads, undefined, "")).toEqual(leads)
   })
 })
 

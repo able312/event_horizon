@@ -71,6 +71,18 @@ describe("POST /event-requests", () => {
       status: "pending", eventId: null, reviewedBy: null, reviewedAt: null,
     })
     expect(Date.parse(request!.receivedAt)).not.toBeNaN()
+    // The form's "Event name" question is optional
+    expect(request!.eventName).toBeNull()
+  })
+
+  it("stores the client's event name", async () => {
+    vi.stubEnv("EVENT_REQUEST_SECRET", SECRET)
+    const t = newTest()
+    const payload = body()
+    const response = await post(t, { ...payload, answers: { ...payload.answers, [QUESTIONS.eventName]: "Ada & Charles' wedding" } })
+    expect(response.status).toBe(200)
+    const [request] = await t.withIdentity(companyIdentity).query(api.eventRequests.listPending, {})
+    expect(request!.eventName).toBe("Ada & Charles' wedding")
   })
 })
 

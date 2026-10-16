@@ -1,11 +1,9 @@
 import { Search } from "lucide-react"
 import { useState, type ReactNode } from "react"
 
-import type { PrimaryClient } from "~/definitions/contacts"
-import type { Event, EventRequest } from "~/definitions/database"
-import { InboxLeadCard } from "~/features/calendar/components/InboxLeadCard"
+import type { EventRequest } from "~/definitions/database"
 import { InboxRequestCard } from "~/features/calendar/components/InboxRequestCard"
-import { filterInboxLeads, filterInboxRequests } from "~/features/calendar/lib/inboxList"
+import { filterInboxRequests } from "~/features/calendar/lib/inboxList"
 import { InlineQueryError } from "~/features/contacts/components/InlineQueryError"
 
 type QueryStatus = { isLoading: boolean; isError: boolean; isFetching: boolean; refetch: () => Promise<unknown> }
@@ -15,11 +13,6 @@ type InboxPanelProps = {
   requestsQuery: QueryStatus
   selectedRequestId: string | null
   onSelectRequest: (request: EventRequest) => void
-  leads: Event[]
-  leadsQuery: QueryStatus
-  clientsByEventId: Record<string, PrimaryClient> | undefined
-  onEditLead: (event: Event) => void
-  onDeleteLead: (eventId: string) => void
 }
 
 type InboxSectionProps = {
@@ -43,22 +36,15 @@ const EmptyNote: React.FC<{ children: ReactNode }> = ({ children }) => (
   <p className="px-3 py-3 text-xs text-stone-500">{children}</p>
 )
 
-/** The Inbox sidebar: website requests waiting for review, then New Lead events, with one search over both. */
+/** The Inbox sidebar: website requests waiting for review, with a search. */
 const InboxPanel: React.FC<InboxPanelProps> = ({
   requests,
   requestsQuery,
   selectedRequestId,
   onSelectRequest,
-  leads,
-  leadsQuery,
-  clientsByEventId,
-  onEditLead,
-  onDeleteLead,
 }) => {
   const [query, setQuery] = useState("")
   const shownRequests = filterInboxRequests(requests, query)
-  const shownLeads = filterInboxLeads(leads, clientsByEventId, query)
-  const noMatchText = query.trim() ? "No matches." : null
 
   return (
     <>
@@ -86,7 +72,7 @@ const InboxPanel: React.FC<InboxPanelProps> = ({
             className="mx-3 my-1"
           />
         ) : requestsQuery.isLoading ? null : shownRequests.length === 0 ? (
-          <EmptyNote>{noMatchText ?? "No new requests from the website."}</EmptyNote>
+          <EmptyNote>{query.trim() ? "No matches." : "No new requests from the website."}</EmptyNote>
         ) : (
           <ul className="divide-y divide-white/10">
             {shownRequests.map((request) => (
@@ -95,31 +81,6 @@ const InboxPanel: React.FC<InboxPanelProps> = ({
                 request={request}
                 selected={request.id === selectedRequestId}
                 onSelect={onSelectRequest}
-              />
-            ))}
-          </ul>
-        )}
-      </InboxSection>
-
-      <InboxSection id="inbox-leads-heading" title="New leads" count={leads.length}>
-        {leadsQuery.isError ? (
-          <InlineQueryError
-            message="Could not load new leads."
-            onRetry={() => void leadsQuery.refetch()}
-            isRetrying={leadsQuery.isFetching}
-            className="mx-3 my-1"
-          />
-        ) : leadsQuery.isLoading ? null : shownLeads.length === 0 ? (
-          <EmptyNote>{noMatchText ?? "No new leads."}</EmptyNote>
-        ) : (
-          <ul className="divide-y divide-white/10">
-            {shownLeads.map((lead) => (
-              <InboxLeadCard
-                key={lead.id}
-                lead={lead}
-                client={clientsByEventId?.[lead.id]}
-                onEdit={onEditLead}
-                onDelete={onDeleteLead}
               />
             ))}
           </ul>
