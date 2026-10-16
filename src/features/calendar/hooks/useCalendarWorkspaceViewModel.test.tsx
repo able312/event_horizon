@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { EventRequest, NewEvent } from "~/definitions/database"
 import type { UseEventsReturn } from "~/hooks/useEvents"
 import { useEventsQueryState } from "~/hooks/useEventsQueryState"
+import { useHotkey } from "~/lib/hotKeys"
 import { CalendarPanelStateProvider } from "../state/CalendarSidePanelProvider"
 import { useCalendarPanelState } from "../state/useCalendarPanelState"
 import type { UseCalendarSearchControllerReturn } from "./useCalendarSearchController"
@@ -89,5 +90,22 @@ describe("request acceptance navigation", () => {
     act(() => result.current.vm.panelActions.toggleInboxView())
     expect(result.current.ui.bodyMode).toBe("inbox")
     expect(new URLSearchParams(result.current.location.search).get("view")).toBe("inbox")
+  })
+
+  it("leaves the Inbox on Escape only when no panel would close instead", () => {
+    const { result } = renderHook(useSubject, { wrapper })
+    const pressEscape = () => {
+      const escapes = vi.mocked(useHotkey).mock.calls.filter(([combo]) => combo === "escape")
+      const escape = escapes[escapes.length - 1]![1]
+      act(() => escape(new KeyboardEvent("keydown", { key: "Escape" })))
+    }
+
+    act(() => result.current.vm.panelActions.openSearchPanel())
+    pressEscape()
+    expect(result.current.ui.bodyMode).toBe("inbox")
+
+    act(() => result.current.vm.panelActions.openDefaultPanel())
+    pressEscape()
+    expect(result.current.ui.bodyMode).toBe("calendar")
   })
 })

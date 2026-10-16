@@ -104,8 +104,9 @@ export function useCalendarWorkspaceViewModel(
   useHotkey("Cmd+f", openSearchPanel)
   useHotkey("Cmd+N", openCreatePanel)
   useHotkey("Cmd+L", toggleInboxView)
+  // The search, create and edit panels close themselves on Escape.
   useHotkey("escape", () => {
-    if (ui.bodyMode === "inbox" && ui.sidebarMode !== "create" && ui.sidebarMode !== "edit") {
+    if (ui.bodyMode === "inbox" && ui.sidebarMode === "default") {
       dispatch({ type: ACTIONS.OPEN_CALENDAR_VIEW })
     }
   })
