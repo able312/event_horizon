@@ -12,7 +12,7 @@ type ContactDetailsListProps = {
 /** Contact info, notes and roles across the top, with full-width event history below. */
 export const ContactDetailsList: React.FC<ContactDetailsListProps> = ({ contact }) => (
   <div className="space-y-8">
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,240px),1fr))] items-stretch gap-4">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,320px),1fr))] items-stretch gap-4">
       <ContactSectionCard title="Contact info">
         <dl className="space-y-1.5">
           <ContactDetailRow label="Email" value={contact.email} />

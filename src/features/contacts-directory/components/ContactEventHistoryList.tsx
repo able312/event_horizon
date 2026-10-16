@@ -50,7 +50,7 @@ const EventGroup: React.FC<{ title: string; rows: ContactEventHistory[] }> = ({ 
       <h4 className="text-xs font-medium text-muted-foreground">
         {title} · {rows.length}
       </h4>
-      <ul className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+      <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,300px),1fr))] gap-3">
         {rows.map((row) => (
           <EventHistoryCard key={row.eventContactId} row={row} />
         ))}
