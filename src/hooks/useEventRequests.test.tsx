@@ -8,15 +8,16 @@ import * as eventRequestsApi from "~/lib/data/eventRequests"
 import { eventRequestKeys } from "~/lib/data/queries"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
 
-import { useEventRequests } from "./useEventRequests"
+import { DISMISS_UNDO_MS, useEventRequests } from "./useEventRequests"
 
 vi.mock("~/lib/data/eventRequests", () => ({
   getPendingEventRequests: vi.fn(),
   acceptEventRequest: vi.fn(),
   dismissEventRequest: vi.fn(),
+  restoreEventRequest: vi.fn(),
 }))
 
-vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
+vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }))
 
 const first = { id: "req-1" } as EventRequest
 const second = { id: "req-2" } as EventRequest
@@ -45,6 +46,22 @@ describe("useEventRequests", () => {
     await act(async () => rejectDismiss(new Error("offline")))
     await waitFor(() => expect(queryClient.getQueryData(eventRequestKeys.pending())).toEqual([first, second]))
     expect(toast.error).toHaveBeenCalledWith("Failed to dismiss request")
+  })
+
+  it("offers Undo after a dismiss, which restores the request", async () => {
+    vi.mocked(eventRequestsApi.getPendingEventRequests).mockResolvedValue([first])
+    vi.mocked(eventRequestsApi.dismissEventRequest).mockResolvedValue()
+    vi.mocked(eventRequestsApi.restoreEventRequest).mockResolvedValue()
+    const { result } = renderHookWithProviders(() => useEventRequests())
+    await waitFor(() => expect(result.current.requests).toHaveLength(1))
+
+    act(() => result.current.dismissRequest("req-1"))
+    await waitFor(() => expect(toast).toHaveBeenCalledWith("Request dismissed", expect.objectContaining({ duration: DISMISS_UNDO_MS })))
+
+    const undo = vi.mocked(toast).mock.calls[0]![1]!.action as unknown as { onClick: () => void }
+    act(() => undo.onClick())
+    await waitFor(() => expect(eventRequestsApi.restoreEventRequest).toHaveBeenCalledWith("req-1"))
+    expect(toast.error).not.toHaveBeenCalled()
   })
 
   it("leaves a taken email to the review form but reports other accept failures", async () => {

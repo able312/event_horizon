@@ -6,6 +6,9 @@ import { isContactsError } from "~/lib/contacts/contactsError"
 import * as eventRequestsApi from "~/lib/data/eventRequests"
 import { eventRequestKeys, eventRequestQueries } from "~/lib/data/queries"
 
+/** How long Undo stays offered after a dismiss. */
+export const DISMISS_UNDO_MS = 10_000
+
 type AcceptVariables = { id: string; newEvent: NewEvent; client: AssignContactTarget }
 
 /** Website requests waiting in the Inbox, newest first, with accept and dismiss. Shared by the Inbox and its header badge. */
@@ -22,7 +25,15 @@ export function useEventRequests() {
     },
   })
 
-  // Hidden right away, and put back if the dismiss fails.
+  // The live query shows the request again once it is pending.
+  const restoreMutation = useMutation({
+    mutationFn: (id: string) => eventRequestsApi.restoreEventRequest(id),
+    onError: () => {
+      toast.error("Failed to restore request")
+    },
+  })
+
+  // Hidden right away, and put back if the dismiss fails. Undo is offered only once the dismiss has happened.
   const dismissMutation = useMutation({
     mutationFn: (id: string) => eventRequestsApi.dismissEventRequest(id),
     onMutate: async (id) => {
@@ -34,6 +45,12 @@ export function useEventRequests() {
     onError: (_err, _id, context) => {
       queryClient.setQueryData(eventRequestKeys.pending(), context?.previous)
       toast.error("Failed to dismiss request")
+    },
+    onSuccess: (_result, id) => {
+      toast("Request dismissed", {
+        duration: DISMISS_UNDO_MS,
+        action: { label: "Undo", onClick: () => restoreMutation.mutate(id) },
+      })
     },
   })
 

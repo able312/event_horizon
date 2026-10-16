@@ -50,8 +50,20 @@ vi.mock("./headers/ClosePanelHeader", () => ({
   default: () => <div data-testid="close-header-mock" />,
 }))
 
+vi.mock("./content/InboxPanel", () => ({
+  default: () => <div data-testid="inbox-panel-mock" />,
+}))
+
 vi.mock("~/hooks/useEventRequests", () => ({
-  useEventRequests: () => ({ requests: [] }),
+  useEventRequests: () => ({ requests: [], requestsQuery: {} }),
+}))
+
+vi.mock("~/hooks/useNewLeads", () => ({
+  useNewLeads: () => ({ leads: [], leadsQuery: {} }),
+}))
+
+vi.mock("~/hooks/useEventContacts", () => ({
+  usePrimaryClients: () => ({ data: undefined }),
 }))
 
 vi.mock("../state/useCalendarPanelState", () => ({
@@ -116,6 +128,7 @@ describe("CalendarPanelOrchastrator create form remount behavior", () => {
         queryState={queryState}
         eventsHook={eventsHook}
         searchController={searchController}
+        onDeleteRequest={vi.fn()}
       />,
     )
 
@@ -137,6 +150,7 @@ describe("CalendarPanelOrchastrator create form remount behavior", () => {
         queryState={queryState}
         eventsHook={eventsHook}
         searchController={searchController}
+        onDeleteRequest={vi.fn()}
       />,
     )
 
@@ -165,7 +179,7 @@ describe("CalendarPanelOrchastrator create form remount behavior", () => {
         createDraftPreview: null,
         createPrefillIso: null,
         reviewingRequest: {
-          id: "req-1", submittedAt: "2026-10-16T15:00:00.000Z", firstName: "Jane", lastName: "Smith", organizationName: null,
+          id: "req-1", submittedAt: "2026-10-16T15:00:00.000Z", eventName: null, firstName: "Jane", lastName: "Smith", organizationName: null,
           email: "jane@example.test", phone: "555-0100", eventType: "wedding", preferredDate: null, alternateDate: null,
           startTime: null, guestCount: 80, details: null, referralSource: null, extraAnswers: [],
         },
@@ -179,6 +193,7 @@ describe("CalendarPanelOrchastrator create form remount behavior", () => {
         queryState={{ state: {} } as never}
         eventsHook={{} as never}
         searchController={{} as never}
+        onDeleteRequest={vi.fn()}
       />,
     )
 
@@ -188,5 +203,25 @@ describe("CalendarPanelOrchastrator create form remount behavior", () => {
         onCreate: onAcceptRequest,
       }),
     )
+  })
+
+  it("shows the Inbox list in place of the mini calendar while the Inbox is open", () => {
+    useCalendarWorkspaceViewModelMock.mockReturnValue({ panelActions: {}, mutations: {} })
+    const ui = { sidebarMode: "default", bodyMode: "inbox", selectedRequestId: null, reviewingRequest: null }
+    useCalendarPanelStateMock.mockReturnValue({ dispatch: vi.fn(), ui })
+    const queryState = { state: { date: "2026-05" }, setDate: vi.fn() } as never
+
+    const { getByTestId, queryByTestId, rerender } = render(
+      <CalendarPanelOrchastrator queryState={queryState} eventsHook={{} as never} searchController={{} as never} onDeleteRequest={vi.fn()} />,
+    )
+    expect(getByTestId("inbox-panel-mock")).toBeTruthy()
+    expect(queryByTestId("default-panel-mock")).toBeNull()
+
+    useCalendarPanelStateMock.mockReturnValue({ dispatch: vi.fn(), ui: { ...ui, bodyMode: "calendar" } })
+    rerender(
+      <CalendarPanelOrchastrator queryState={queryState} eventsHook={{} as never} searchController={{} as never} onDeleteRequest={vi.fn()} />,
+    )
+    expect(getByTestId("default-panel-mock")).toBeTruthy()
+    expect(queryByTestId("inbox-panel-mock")).toBeNull()
   })
 })

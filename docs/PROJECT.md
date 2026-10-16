@@ -135,7 +135,7 @@ Each environment has its own isolated database, so branch work can't touch share
 - Move through statuses/phases
   - An event without a start date can only be New Lead or Lost; Tentative, Confirmed and Complete need a date (`src/lib/events/eventStatusRules.ts`, enforced in `convex/events.ts`). Removing the date from a dated-status event asks first, then moves it back to New Lead in the same update.
   - The calendar's Inbox (`⌘L` / `Ctrl+L`) lists every New Lead, dated or not, so undated events always have a home.
-- Review website requests: the Inbox lists pending requests above the New leads. Review opens the create form pre-filled from the request (`src/features/calendar/lib/eventRequestPrefill.ts`); saving it accepts the request (a client is required), and Dismiss sets it aside.
+- Review website requests: the Inbox replaces the sidebar with pending requests above the New leads, with one search over both. Selecting a request shows everything the client sent in the body; Review (top right) opens the create form pre-filled from the request (`src/features/calendar/lib/eventRequestPrefill.ts`), and saving it accepts the request (a client is required). Dismiss sets it aside, with Undo for 10 seconds (`eventRequests.restore`).
 - Attach/track details and their attached timeblocks data
 - Generate PDFs (Estimate, BEO, Timeline)
 - Confirm persistence across restarts, and that edits appear live in a second signed-in window

@@ -4,7 +4,7 @@ import { eventRequestToPrefill, formatRequestDate, formatRequestTime, requestCli
 
 function request(overrides: Partial<EventRequest> = {}): EventRequest {
   return {
-    id: "req-1", responseId: "resp-1", submittedAt: "2026-10-16T15:00:00.000Z", receivedAt: "2026-10-16T15:00:01.000Z",
+    id: "req-1", responseId: "resp-1", submittedAt: "2026-10-16T15:00:00.000Z", receivedAt: "2026-10-16T15:00:01.000Z", eventName: null,
     firstName: "Jane", lastName: "Smith", organizationName: null, email: "jane@example.test", phone: "555-0100",
     eventType: "wedding", preferredDate: "2027-06-20", alternateDate: null, startTime: "18:30",
     guestCount: 120, details: "Outdoor ceremony", referralSource: null, extraAnswers: [],
@@ -30,6 +30,10 @@ describe("eventRequestToPrefill", () => {
     const undated = eventRequestToPrefill(request({ preferredDate: null })).values
     expect(undated.startDateTime).toBeNull()
     expect(undated.endDateTime).toBeNull()
+  })
+
+  it("titles the event with the client's own event name when they gave one", () => {
+    expect(eventRequestToPrefill(request({ eventName: "Jane & Sam's wedding", organizationName: "Acme Corp" })).values.title).toBe("Jane & Sam's wedding")
   })
 
   it("titles the event after the organization when there is one", () => {

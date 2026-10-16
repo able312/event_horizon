@@ -7,9 +7,10 @@ const monthNavigatorPropsMock = vi.fn()
 const eventsTablePropsMock = vi.fn()
 const calendarPagePropsMock = vi.fn()
 const dispatchMock = vi.fn()
-const leadsRefetchMock = vi.fn()
 let bodyMode = "calendar"
-let leadsQuery: { isLoading: boolean; isError?: boolean; isFetching?: boolean; refetch?: () => Promise<unknown> } = { isLoading: false }
+let ui: { selectedRequestId: string | null; sidebarMode: string; reviewingRequest: EventRequest | null } = {
+  selectedRequestId: null, sidebarMode: "default", reviewingRequest: null,
+}
 
 vi.mock("~/features/calendar/navigation/MonthNavigator", () => ({
   default: ({
@@ -44,15 +45,10 @@ vi.mock("./CalendarPage", () => ({
   },
 }))
 
-vi.mock("~/hooks/useNewLeads", () => ({
-  useNewLeads: () => ({ leadsQuery, leads: [] }),
-}))
-
 const dismissRequestMock = vi.fn()
 let pendingRequests: EventRequest[] = []
-let requestsQuery = { isLoading: false, isError: false, isFetching: false, refetch: vi.fn() }
 vi.mock("~/hooks/useEventRequests", () => ({
-  useEventRequests: () => ({ requestsQuery, requests: pendingRequests, dismissRequest: dismissRequestMock }),
+  useEventRequests: () => ({ requests: pendingRequests, dismissRequest: dismissRequestMock }),
 }))
 
 vi.mock("~/hooks/useEventContacts", () => ({
@@ -100,7 +96,7 @@ vi.mock("~/features/calendar/views/EventsTable", () => ({
 vi.mock("../state/useCalendarPanelState", () => ({
   useCalendarPanelState: () => ({
     dispatch: dispatchMock,
-    ui: { bodyMode },
+    ui: { bodyMode, ...ui },
   }),
 }))
 
@@ -166,11 +162,10 @@ describe("CalendarPageOrchestrator", () => {
     monthNavigatorPropsMock.mockReset()
     eventsTablePropsMock.mockReset()
     calendarPagePropsMock.mockReset()
-    leadsRefetchMock.mockReset()
+    dismissRequestMock.mockReset()
     bodyMode = "calendar"
-    leadsQuery = { isLoading: false }
+    ui = { selectedRequestId: null, sidebarMode: "default", reviewingRequest: null }
     pendingRequests = []
-    requestsQuery = { isLoading: false, isError: false, isFetching: false, refetch: vi.fn() }
   })
   afterEach(() => {
     cleanup()
@@ -247,72 +242,60 @@ describe("CalendarPageOrchestrator", () => {
     )
   })
 
-  it("shows a retryable error instead of an empty leads list when the leads query fails", () => {
-    bodyMode = "inbox"
-    leadsQuery = { isLoading: false, isError: true, isFetching: false, refetch: leadsRefetchMock }
-    const { queryState } = createQueryState(null)
-
-    render(
-      <CalendarPageOrchastrator
-        queryState={queryState as never}
-        eventsHook={createEventsHook() as never}
-        searchController={createSearchController() as never}
-        onDeleteRequest={vi.fn()}
-      />,
-    )
-
-    expect(screen.getByRole("alert").textContent).toContain("Could not load new leads.")
-    expect(screen.queryByTestId("events-table-view")).toBeNull()
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
-    expect(leadsRefetchMock).toHaveBeenCalled()
-  })
-
-  it("shows pending requests above the new leads, and reviews or dismisses them", () => {
-    bodyMode = "inbox"
+  describe("Inbox", () => {
     const request = {
-      id: "req-1", submittedAt: "2026-10-16T15:00:00.000Z", firstName: "Jane", lastName: "Smith", organizationName: null,
-      email: "jane@example.test", phone: "555-0100", eventType: "wedding", preferredDate: "2027-06-20", startTime: null,
-      guestCount: 120, details: "Outdoor ceremony",
-    } as EventRequest
-    pendingRequests = [request]
-    const { queryState } = createQueryState(null)
+      id: "req-1", submittedAt: "2026-10-16T15:00:00.000Z", eventName: "Jane & Sam's wedding", firstName: "Jane", lastName: "Smith",
+      organizationName: null, email: "jane@example.test", phone: "555-0100", eventType: "wedding", preferredDate: "2027-06-20",
+      alternateDate: null, startTime: null, guestCount: 120, details: "Outdoor ceremony", referralSource: null, extraAnswers: [],
+    } as unknown as EventRequest
 
-    render(
-      <CalendarPageOrchastrator
-        queryState={queryState as never}
-        eventsHook={createEventsHook() as never}
-        searchController={createSearchController() as never}
-        onDeleteRequest={vi.fn()}
-      />,
-    )
+    function renderInbox() {
+      bodyMode = "inbox"
+      pendingRequests = [request]
+      render(
+        <CalendarPageOrchastrator
+          queryState={createQueryState(null).queryState as never}
+          eventsHook={createEventsHook() as never}
+          searchController={createSearchController() as never}
+          onDeleteRequest={vi.fn()}
+        />,
+      )
+    }
 
-    expect(screen.getByRole("heading", { name: "Requests (1)" })).toBeTruthy()
-    expect(screen.getByRole("heading", { name: "New leads" })).toBeTruthy()
-    expect(screen.getByTestId("events-table-view")).toBeTruthy()
+    it("asks for a selection, and goes back to the calendar", () => {
+      renderInbox()
+      expect(screen.getByText("Select a request to see what the client sent.")).toBeTruthy()
+      expect(screen.queryByRole("button", { name: "Review" })).toBeNull()
+      expect(screen.queryByTestId("month-nav")).toBeNull()
 
-    fireEvent.click(screen.getByRole("button", { name: "Review request from Jane Smith" }))
-    expect(dispatchMock).toHaveBeenCalledWith({ type: "OPEN_REVIEW_REQUEST", request })
+      fireEvent.click(screen.getByRole("button", { name: "Back to Calendar" }))
+      expect(dispatchMock).toHaveBeenCalledWith({ type: "OPEN_CALENDAR_VIEW" })
+    })
 
-    fireEvent.click(screen.getByRole("button", { name: "Dismiss request from Jane Smith" }))
-    expect(dismissRequestMock).toHaveBeenCalledWith("req-1")
-  })
+    it("shows the selected request, and reviews or dismisses it from the header", () => {
+      ui = { selectedRequestId: "req-1", sidebarMode: "default", reviewingRequest: null }
+      renderInbox()
+      expect(screen.getByRole("heading", { name: "Jane & Sam's wedding" })).toBeTruthy()
+      expect(screen.getByText("Outdoor ceremony")).toBeTruthy()
 
-  it("shows a retryable error instead of an empty requests list when the requests query fails", () => {
-    bodyMode = "inbox"
-    requestsQuery = { isLoading: false, isError: true, isFetching: false, refetch: vi.fn() }
-    const { queryState } = createQueryState(null)
+      fireEvent.click(screen.getByRole("button", { name: "Review" }))
+      expect(dispatchMock).toHaveBeenCalledWith({ type: "OPEN_REVIEW_REQUEST", request })
 
-    render(
-      <CalendarPageOrchastrator
-        queryState={queryState as never}
-        eventsHook={createEventsHook() as never}
-        searchController={createSearchController() as never}
-        onDeleteRequest={vi.fn()}
-      />,
-    )
+      fireEvent.click(screen.getByRole("button", { name: "Dismiss" }))
+      expect(dispatchMock).toHaveBeenCalledWith({ type: "SELECT_REQUEST", requestId: null })
+      expect(dispatchMock).not.toHaveBeenCalledWith({ type: "OPEN_DEFAULT" })
+      expect(dismissRequestMock).toHaveBeenCalledWith("req-1")
+    })
 
-    expect(screen.getByRole("alert").textContent).toContain("Could not load website requests.")
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
-    expect(requestsQuery.refetch).toHaveBeenCalled()
+    it("closes the review form when the request under review is dismissed", () => {
+      ui = { selectedRequestId: "req-1", sidebarMode: "create", reviewingRequest: request }
+      renderInbox()
+      expect(screen.queryByRole("button", { name: "Review" })).toBeNull()
+      expect(screen.getByText("Reviewing")).toBeTruthy()
+
+      fireEvent.click(screen.getByRole("button", { name: "Dismiss" }))
+      expect(dispatchMock).toHaveBeenCalledWith({ type: "OPEN_DEFAULT" })
+      expect(dismissRequestMock).toHaveBeenCalledWith("req-1")
+    })
   })
 })

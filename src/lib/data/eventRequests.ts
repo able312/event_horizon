@@ -21,6 +21,11 @@ export function acceptEventRequest(id: string, newEvent: NewEvent, client: Assig
   })
 }
 
+/** Undoes a dismiss, putting the request back in the Inbox. */
+export async function restoreEventRequest(id: string): Promise<void> {
+  await runMutation(api.eventRequests.restore, { id: toId<"eventRequests">(id) })
+}
+
 export async function dismissEventRequest(id: string): Promise<void> {
   await runMutation(api.eventRequests.dismiss, { id: toId<"eventRequests">(id) })
 }

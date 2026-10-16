@@ -112,6 +112,7 @@ const contracts: Contract[] = [
   ...([
     ["contacts.archive", () => contacts.archiveContact(id), { id }],
     ["eventRequests.dismiss", () => eventRequests.dismissEventRequest(id), { id }],
+    ["eventRequests.restore", () => eventRequests.restoreEventRequest(id), { id }],
     ["contacts.restore", () => contacts.restoreContact(id), { id }],
     ["contacts.remove", () => contacts.deleteContact(id), { id }],
     ["vendorCategories.archive", () => categories.archiveVendorCategory(id), { id }],

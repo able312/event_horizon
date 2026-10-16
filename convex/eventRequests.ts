@@ -8,7 +8,7 @@ import { eventType, nullable } from "./lib/validators"
 import { createEventWithClient, eventInput, primaryClient } from "./events"
 
 const submission = {
-  responseId: v.string(), submittedAt: v.string(),
+  responseId: v.string(), submittedAt: v.string(), eventName: nullable(v.string()),
   firstName: v.string(), lastName: v.string(), organizationName: nullable(v.string()), email: v.string(), phone: v.string(),
   eventType, preferredDate: nullable(v.string()), alternateDate: nullable(v.string()), startTime: nullable(v.string()),
   guestCount: v.number(), details: nullable(v.string()), referralSource: nullable(v.string()),
@@ -43,6 +43,14 @@ const reviewed = (ctx: CompanyMutationCtx) => ({ reviewedBy: ctx.userId, reviewe
 export const dismiss = companyMutation({ args: { id: v.id("eventRequests") }, handler: async (ctx, { id }) => {
   await requirePending(ctx, id)
   await ctx.db.patch("eventRequests", id, { status: "dismissed", ...reviewed(ctx) })
+} })
+
+/** Undo for a dismiss: puts the request back in the Inbox. Accepted requests can't come back, since their event exists. */
+export const restore = companyMutation({ args: { id: v.id("eventRequests") }, handler: async (ctx, { id }) => {
+  const request = await ctx.db.get("eventRequests", id)
+  if (!request) throw new ConvexError({ code: "NotFound", message: "Event request not found" })
+  if (request.status !== "dismissed") throw new ConvexError({ code: "NotDismissed", message: `This request was ${request.status}, not dismissed` })
+  await ctx.db.patch("eventRequests", id, { status: "pending", reviewedBy: null, reviewedAt: null })
 } })
 
 // The renderer sends the event as reviewed in the pre-filled create form, so staff

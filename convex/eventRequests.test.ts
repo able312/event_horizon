@@ -113,6 +113,20 @@ describe("Convex eventRequests", () => {
     await expect(staff.mutation(api.eventRequests.accept, { id: request!.id, input: {}, client: ADA })).rejects.toMatchObject({ data: { code: "AlreadyReviewed" } })
   })
 
+  it("restores a dismissed request to the Inbox, but nothing else", async () => {
+    vi.stubEnv("EVENT_REQUEST_SECRET", SECRET)
+    const t = newTest()
+    await submit(t)
+    const staff = t.withIdentity(companyIdentity)
+    const [request] = await staff.query(api.eventRequests.listPending, {})
+    await expect(staff.mutation(api.eventRequests.restore, { id: request!.id })).rejects.toMatchObject({ data: { code: "NotDismissed" } })
+    await staff.mutation(api.eventRequests.dismiss, { id: request!.id })
+    await staff.mutation(api.eventRequests.restore, { id: request!.id })
+    expect(await t.run(ctx => ctx.db.get("eventRequests", request!.id))).toMatchObject({ status: "pending", reviewedBy: null, reviewedAt: null })
+    expect((await staff.query(api.eventRequests.listPending, {})).map(r => r.id)).toEqual([request!.id])
+    await expect(t.mutation(api.eventRequests.restore, { id: request!.id })).rejects.toMatchObject({ data: { code: "Unauthenticated" } })
+  })
+
   it("accepts into an event with its primary client in one step", async () => {
     vi.stubEnv("EVENT_REQUEST_SECRET", SECRET)
     const t = newTest()

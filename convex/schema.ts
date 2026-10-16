@@ -231,6 +231,8 @@ export default defineSchema({
     responseId: v.string(),
     submittedAt: v.string(),
     receivedAt: v.string(),
+    /** The client's own name for the event; optional on the form. */
+    eventName: nullable(v.string()),
     firstName: v.string(),
     lastName: v.string(),
     organizationName: nullable(v.string()),

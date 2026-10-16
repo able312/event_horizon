@@ -104,6 +104,8 @@ export type EventRequest = {
   submittedAt: string
   /** ISO datetime the app received it */
   receivedAt: string
+  /** The client's own name for the event, e.g. "Sarah's 40th" */
+  eventName: string | null
   firstName: string
   lastName: string
   organizationName: string | null

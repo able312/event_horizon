@@ -6,16 +6,14 @@ import CalendarPage from "./CalendarPage"
 import type { UseEventsReturn } from "~/hooks/useEvents"
 import { usePrimaryClients } from "~/hooks/useEventContacts"
 import { ClientNamesError } from "../views/ClientNamesError"
-import { InlineQueryError } from "~/features/contacts/components/InlineQueryError"
 import { useCallback } from "react"
 import { getCurrentMonthParam } from "~/lib/months"
 import EventsTable from "~/features/calendar/views/EventsTable"
 import type { Event } from "~/definitions/database"
 import { useCalendarPanelState } from "../state/useCalendarPanelState"
-import { useNewLeads } from "~/hooks/useNewLeads"
 import { useEventRequests } from "~/hooks/useEventRequests"
-import InboxView from "~/features/calendar/views/InboxView"
-import type { EventRequest } from "~/definitions/database"
+import InboxBodyHeader from "~/features/calendar/views/InboxBodyHeader"
+import RequestDetailView from "~/features/calendar/views/RequestDetailView"
 import type { UseCalendarSearchControllerReturn } from "../hooks/useCalendarSearchController"
 
 
@@ -36,8 +34,7 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
     const { state, setDate } = queryState
     const { isLoading } = eventsHook
     const { dispatch, ui } = useCalendarPanelState()
-    const { leadsQuery, leads } = useNewLeads()
-    const { requestsQuery, requests, dismissRequest } = useEventRequests()
+    const { requests, dismissRequest } = useEventRequests()
     const { result: searchResult, isFetching: isSearchFetching, enabled: isSearchEnabled } = searchController.searchQuery
     const hasSearchQuery = Boolean(state.search && state.search.length > 0)
     const bodyView = hasSearchQuery
@@ -46,10 +43,7 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
       ? "inbox"
       : "calendar-month"
     const searchEvents = isSearchEnabled ? searchResult.items : []
-    const tableEvents =
-      bodyView === "search-results" ? searchEvents
-      : bodyView === "inbox" ? leads
-      : []
+    const tableEvents = bodyView === "search-results" ? searchEvents : []
     const primaryClients = usePrimaryClients(tableEvents.map((event) => event.id))
     const clientsByEventId = primaryClients.data
 
@@ -62,19 +56,36 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
         dispatch({ type: "OPEN_EDIT", event })
     }
 
-    const handleReviewRequest = (request: EventRequest) => {
-        dispatch({ type: "OPEN_REVIEW_REQUEST", request })
+    const selectedRequest = requests.find((request) => request.id === ui.selectedRequestId) ?? null
+    const isReviewingSelected = ui.sidebarMode === "create" && ui.reviewingRequest?.id === selectedRequest?.id
+
+    const handleDismissRequest = (requestId: string) => {
+        // The review form would otherwise try to accept a dismissed request
+        if (ui.reviewingRequest?.id === requestId) dispatch({ type: "OPEN_DEFAULT" })
+        dispatch({ type: "SELECT_REQUEST", requestId: null })
+        dismissRequest(requestId)
     }
 
     return (
         <>
-            <Body.Header>
-                <MonthNavigator 
-                    month={ state.date }
-                    onGoToToday={ handleGoToToday }
-                    onMonthChange={setDate}
+            {bodyView === "inbox" ? (
+                <InboxBodyHeader
+                    onBack={() => dispatch({ type: "OPEN_CALENDAR_VIEW" })}
+                    requestActions={selectedRequest ? {
+                        isReviewing: isReviewingSelected,
+                        onReview: () => dispatch({ type: "OPEN_REVIEW_REQUEST", request: selectedRequest }),
+                        onDismiss: () => handleDismissRequest(selectedRequest.id),
+                    } : null}
                 />
-            </Body.Header>
+            ) : (
+                <Body.Header>
+                    <MonthNavigator 
+                        month={ state.date }
+                        onGoToToday={ handleGoToToday }
+                        onMonthChange={setDate}
+                    />
+                </Body.Header>
+            )}
 
             {bodyView === "calendar-month" && <>
                 <Body.Content>
@@ -88,31 +99,13 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
 
             {bodyView === "inbox" && <>
                 <Body.Content>
-                    <InboxView
-                        requests={requests}
-                        requestsQuery={requestsQuery}
-                        onReviewRequest={handleReviewRequest}
-                        onDismissRequest={dismissRequest}
-                    >
-                        {/* A failed load would otherwise read as "no new leads" */}
-                        {leadsQuery.isError ? (
-                            <InlineQueryError
-                                message="Could not load new leads."
-                                onRetry={() => void leadsQuery.refetch()}
-                                isRetrying={leadsQuery.isFetching}
-                                className="mx-4 my-2 shrink-0"
-                            />
-                        ) : <>
-                            <ClientNamesError query={primaryClients} />
-                            <EventsTable
-                                events={leads}
-                                clientsByEventId={clientsByEventId}
-                                isLoading={leadsQuery.isLoading}
-                                onEdit={handleUpdateEvent}
-                                onDelete={onDeleteRequest}
-                            />
-                        </>}
-                    </InboxView>
+                    {selectedRequest ? (
+                        <RequestDetailView key={selectedRequest.id} request={selectedRequest} />
+                    ) : (
+                        <div className="flex flex-1 items-center justify-center p-4">
+                            <p className="text-sm text-muted-foreground">Select a request to see what the client sent.</p>
+                        </div>
+                    )}
                 </Body.Content>
             </>}
 

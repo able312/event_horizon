@@ -8,6 +8,7 @@ import { cleanText, isValidEmail } from "../../src/lib/contacts/contactRules"
 // Questions not listed here are kept as extra answers, so adding one is safe.
 
 export const QUESTIONS = {
+  eventName: "Event name",
   firstName: "First name",
   lastName: "Last name",
   organizationName: "Organization (if any)",
@@ -32,7 +33,7 @@ export const EVENT_TYPE_CHOICES: Readonly<Record<string, EventType>> = {
 export const MAX_BODY_BYTES = 32_000
 const MAX_GUESTS = 10_000
 const MAX_EXTRA_ANSWERS = 20
-const LIMITS = { name: 100, organization: 200, phone: 40, email: 254, short: 200, long: 5_000, question: 300, answer: 2_000, responseId: 200 }
+const LIMITS = { name: 100, eventName: 100, organization: 200, phone: 40, email: 254, short: 200, long: 5_000, question: 300, answer: 2_000, responseId: 200 }
 
 export type ExtraAnswer = { question: string; answer: string }
 
@@ -41,6 +42,8 @@ export type EventRequestSubmission = {
   responseId: string
   /** ISO datetime the client submitted the form */
   submittedAt: string
+  /** The client's own name for the event, e.g. "Sarah's 40th" */
+  eventName: string | null
   firstName: string
   lastName: string
   organizationName: string | null
@@ -157,6 +160,7 @@ export function parseEventRequestPayload(payload: unknown): ParseResult {
   const submission: EventRequestSubmission = {
     responseId,
     submittedAt: submittedAt && !Number.isNaN(Date.parse(submittedAt)) ? new Date(submittedAt).toISOString() : "",
+    eventName: answer(QUESTIONS.eventName, LIMITS.eventName),
     firstName: requiredAnswer(QUESTIONS.firstName, LIMITS.name),
     lastName: requiredAnswer(QUESTIONS.lastName, LIMITS.name),
     organizationName: answer(QUESTIONS.organizationName, LIMITS.organization),

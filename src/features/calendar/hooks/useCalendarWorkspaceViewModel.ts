@@ -79,8 +79,9 @@ export function useCalendarWorkspaceViewModel(
     async (event: NewEvent, client: AssignContactTarget | null) => {
       if (!ui.reviewingRequest || !client) return
       await acceptRequest(ui.reviewingRequest.id, event, client)
+      dispatch({ type: ACTIONS.SELECT_REQUEST, requestId: null })
     },
-    [acceptRequest, ui.reviewingRequest],
+    [acceptRequest, dispatch, ui.reviewingRequest],
   )
 
   const onSaveEventUpdates = useCallback(

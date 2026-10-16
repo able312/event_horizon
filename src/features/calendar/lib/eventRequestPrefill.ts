@@ -38,6 +38,11 @@ export function requestClientName(request: Pick<EventRequest, "firstName" | "las
   return `${request.firstName} ${request.lastName}`.trim()
 }
 
+/** The client's own event name, or "<organization or last name> <type>" when they left it blank. */
+export function requestTitle(request: Pick<EventRequest, "eventName" | "organizationName" | "lastName" | "eventType">): string {
+  return request.eventName ?? `${request.organizationName ?? request.lastName} ${EVENT_TYPE_LABELS[request.eventType]}`
+}
+
 /** The preferred day at the requested start time (midnight when no time was given), or null without a date. */
 function toStartDateTime(request: EventRequest): string | null {
   const day = request.preferredDate ? parseRequestDate(request.preferredDate) : null
@@ -57,10 +62,9 @@ function toInternalNotes(request: EventRequest): string {
 
 export function eventRequestToPrefill(request: EventRequest): CreateEventPrefill {
   const startDateTime = toStartDateTime(request)
-  const titleName = request.organizationName ?? request.lastName
   return {
     values: {
-      title: `${titleName} ${EVENT_TYPE_LABELS[request.eventType]}`,
+      title: requestTitle(request),
       type: request.eventType,
       status: "new_lead",
       startDateTime,

@@ -43,7 +43,7 @@ describe("calendarSidePanelReducer", () => {
       type: ACTIONS.OPEN_REVIEW_REQUEST,
       request,
     })
-    expect(reviewing).toMatchObject({ sidebarMode: "create", reviewingRequest: request, createFormVersion: 1 })
+    expect(reviewing).toMatchObject({ sidebarMode: "create", reviewingRequest: request, selectedRequestId: "req-1", createFormVersion: 1 })
 
     const plainCreate = calendarSidePanelReducer(reviewing, { type: ACTIONS.OPEN_CREATE, prefillIso: null })
     expect(plainCreate.reviewingRequest).toBeNull()
@@ -51,5 +51,15 @@ describe("calendarSidePanelReducer", () => {
 
     expect(calendarSidePanelReducer(reviewing, { type: ACTIONS.OPEN_DEFAULT }).reviewingRequest).toBeNull()
     expect(calendarSidePanelReducer(reviewing, { type: ACTIONS.OPEN_SEARCH }).reviewingRequest).toBeNull()
+  })
+
+  it("selects a request in the Inbox and forgets it when leaving the Inbox", () => {
+    const inbox = calendarSidePanelReducer(initialCalendarSidePanelState, { type: ACTIONS.TOGGLE_INBOX_VIEW })
+    const selected = calendarSidePanelReducer(inbox, { type: ACTIONS.SELECT_REQUEST, requestId: "req-1" })
+    expect(selected.selectedRequestId).toBe("req-1")
+    expect(calendarSidePanelReducer(selected, { type: ACTIONS.OPEN_DEFAULT }).selectedRequestId).toBe("req-1")
+    expect(calendarSidePanelReducer(selected, { type: ACTIONS.SELECT_REQUEST, requestId: null }).selectedRequestId).toBeNull()
+    expect(calendarSidePanelReducer(selected, { type: ACTIONS.TOGGLE_INBOX_VIEW }).selectedRequestId).toBeNull()
+    expect(calendarSidePanelReducer(selected, { type: ACTIONS.OPEN_CALENDAR_VIEW }).selectedRequestId).toBeNull()
   })
 })

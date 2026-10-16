@@ -15,23 +15,31 @@ import type { UseCalendarSearchControllerReturn } from "../hooks/useCalendarSear
 import { useCalendarWorkspaceViewModel } from "../hooks/useCalendarWorkspaceViewModel"
 import { useEventRequests } from "~/hooks/useEventRequests"
 import { eventRequestToPrefill } from "~/features/calendar/lib/eventRequestPrefill"
+import { useNewLeads } from "~/hooks/useNewLeads"
+import { usePrimaryClients } from "~/hooks/useEventContacts"
+import InboxPanel from "./content/InboxPanel"
 
 interface CalendarPanelOrchastratorProps {
     queryState: UseEventsQueryStateReturn
     eventsHook: UseEventsReturn
     searchController: UseCalendarSearchControllerReturn
+    onDeleteRequest: (eventId: string) => void
 }
 
 const CalendarPanelOrchastrator: React.FC<CalendarPanelOrchastratorProps> = ({
     queryState,
     eventsHook,
     searchController,
+    onDeleteRequest,
 }) => {
 
     const { state, setDate, searchInput, setSearchInput, setType, setStatus } = queryState
     const { ui, dispatch } = useCalendarPanelState()
     const workspaceVm = useCalendarWorkspaceViewModel(queryState, eventsHook, searchController)
-    const { requests } = useEventRequests()
+    const { requests, requestsQuery } = useEventRequests()
+    const isInbox = ui.bodyMode === "inbox"
+    const { leads, leadsQuery } = useNewLeads()
+    const leadClients = usePrimaryClients(isInbox ? leads.map((lead) => lead.id) : [])
     const reviewPrefill = useMemo(
         () => ui.reviewingRequest ? eventRequestToPrefill(ui.reviewingRequest) : undefined,
         [ui.reviewingRequest],
@@ -51,16 +59,30 @@ const CalendarPanelOrchastrator: React.FC<CalendarPanelOrchastratorProps> = ({
                         onOpenSearch={ workspaceVm.panelActions.openSearchPanel }
                         onOpenCreate={ workspaceVm.panelActions.openCreatePanel }
                         onToggleInbox={workspaceVm.panelActions.toggleInboxView}
-                        isInboxActive={ui.bodyMode === "inbox"}
+                        isInboxActive={isInbox}
                         pendingRequestsCount={requests.length}
                     />
                 </Panel.Header>
 
                 <Panel.Content>
-                    <CalendarDefaultPanel 
-                        UrlDate={ state.date }
-                        setDate={ setDate }
-                    />
+                    {isInbox ? (
+                        <InboxPanel
+                            requests={requests}
+                            requestsQuery={requestsQuery}
+                            selectedRequestId={ui.selectedRequestId}
+                            onSelectRequest={(request) => dispatch({ type: ACTIONS.SELECT_REQUEST, requestId: request.id })}
+                            leads={leads}
+                            leadsQuery={leadsQuery}
+                            clientsByEventId={leadClients.data}
+                            onEditLead={workspaceVm.panelActions.openEditPanel}
+                            onDeleteLead={onDeleteRequest}
+                        />
+                    ) : (
+                        <CalendarDefaultPanel 
+                            UrlDate={ state.date }
+                            setDate={ setDate }
+                        />
+                    )}
                 </Panel.Content> 
             </>}
             
