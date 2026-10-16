@@ -7,6 +7,7 @@ import {
   CHARGE_CATEGORIES,
   CONTACT_KINDS,
   CONTACT_ROLE_TYPES,
+  EVENT_REQUEST_STATUSES,
   EVENT_STATUSES,
   EVENT_TYPES,
   FOOD_SERVICE_STYLES,
@@ -28,6 +29,7 @@ export function nullable<T>(validator: Validator<T, "required", string>) {
 
 export const eventType = literalUnion(EVENT_TYPES)
 export const eventStatus = literalUnion(EVENT_STATUSES)
+export const eventRequestStatus = literalUnion(EVENT_REQUEST_STATUSES)
 export const startFormat = literalUnion(START_FORMATS)
 export const playFormat = literalUnion(PLAY_FORMATS)
 export const cartLayout = literalUnion(CART_LAYOUTS)

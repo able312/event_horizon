@@ -51,21 +51,25 @@ export const getByCalendarIds = companyQuery({ args: { calendarIds: v.array(v.st
 } })
 // The bare contact shape is what installed builds released before the client picker send; drop it once they've all updated.
 const legacyClient = v.object(contactFields)
-const primaryClient = v.union(v.object({ contactId: v.id("contacts") }), v.object({ newContact: v.object(contactFields) }), legacyClient)
+export const primaryClient = v.union(v.object({ contactId: v.id("contacts") }), v.object({ newContact: v.object(contactFields) }), legacyClient)
 async function legacyClientTarget(ctx: MutationCtx, client: Infer<typeof legacyClient>) {
   const email = normalizeEmail(client.email)
   const existing = email ? (await ctx.db.query("contacts").withIndex("by_emailNormalized", q => q.eq("emailNormalized", email)).collect()).find(c => !c.archivedAt) : null
   return existing ? { contactId: existing._id } : { newContact: client }
 }
-// A new contact whose email is taken fails with EmailTaken (rolling back the event) so the form can offer the existing contact.
-export const create = companyMutation({ args: { input: v.object(fields), client: v.optional(nullable(primaryClient)) }, handler: (ctx, { input, client }) => contactOperation(async () => {
+export const eventInput = v.object(fields)
+export const eventClient = v.optional(nullable(primaryClient))
+/** Creates an event and its primary client. Shared with accepting a website request (eventRequests.ts). */
+export async function createEventWithClient(ctx: MutationCtx, input: Infer<typeof eventInput>, client: Infer<typeof eventClient>) {
   const event = await insertEvent(ctx, input)
   if (client) {
     const target = "contactId" in client || "newContact" in client ? client : await legacyClientTarget(ctx, client)
     await assignContact(ctx, event.id, target, "client", { isPrimary: true })
   }
   return event
-}) })
+}
+// A new contact whose email is taken fails with EmailTaken (rolling back the event) so the form can offer the existing contact.
+export const create = companyMutation({ args: { input: eventInput, client: eventClient }, handler: (ctx, { input, client }) => contactOperation(() => createEventWithClient(ctx, input, client)) })
 export const update = companyMutation({ args: { id: v.id("events"), updates: v.object(fields) }, handler: async (ctx, { id, updates }) => {
   assertUpdates(updates)
   const current = await requireDocument(ctx, "events", id)
