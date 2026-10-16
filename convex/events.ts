@@ -115,10 +115,12 @@ export const remove = companyMutation({ args: { id: v.id("events") }, handler: a
 // before the dataset approaches Convex's transaction read limits.
 export const search = companyQuery({ args: { query: v.string(), page: v.number(), pageSize: v.number(), type: v.optional(nullable(eventType)), status: v.optional(nullable(eventStatus)), startFrom: v.optional(nullable(v.string())), startTo: v.optional(nullable(v.string())) }, handler: async (ctx, params) => {
   const query = params.query.trim().toLowerCase()
-  if (query.length < 2) throw new Error("searchEvents: query must be at least 2 characters")
   if (!Number.isFinite(params.page) || !Number.isFinite(params.pageSize)) throw new Error("Invalid search pagination")
   const page = Math.max(0, Math.floor(params.page)), pageSize = Math.min(50, Math.max(1, Math.floor(params.pageSize)))
   const startFrom = params.startFrom?.trim(), startTo = params.startTo?.trim()
+  if (query.length < 2 && !params.type && !params.status && !startFrom && !startTo) {
+    throw new Error("searchEvents: query must be at least 2 characters or a filter must be selected")
+  }
   if (startFrom && Number.isNaN(Date.parse(startFrom)) || startTo && Number.isNaN(Date.parse(startTo))) throw new Error("Invalid search date")
   if (startFrom && startTo) range(startFrom, startTo)
   const events = startFrom || startTo ? await ctx.db.query("events").withIndex("by_start", q => {

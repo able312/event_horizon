@@ -136,12 +136,16 @@ function createEventsHook() {
   }
 }
 
-function createSearchController() {
+function createSearchController(enabled = false, overrides: { invalidDateRange?: boolean; isError?: boolean } = {}) {
   return {
     searchQuery: {
       result: { items: [], total: 0 },
       isFetching: false,
-      enabled: true,
+      enabled,
+      invalidDateRange: false,
+      isError: false,
+      refetch: vi.fn(),
+      ...overrides,
     },
     pagination: {
       canPrev: false,
@@ -182,6 +186,41 @@ describe("CalendarPageOrchestrator", () => {
 
     expect(screen.getByTestId("month-nav")).toBeTruthy()
     expect(screen.getByTestId("calendar-month-view")).toBeTruthy()
+    expect(screen.queryByTestId("events-table-view")).toBeNull()
+  })
+
+  it("shows filter-only results and returns to the calendar when filters are cleared", () => {
+    const props = {
+      queryState: createQueryState(null).queryState as never,
+      eventsHook: createEventsHook() as never,
+      onDeleteRequest: vi.fn(),
+    }
+    const { rerender } = render(
+      <CalendarPageOrchastrator {...props} searchController={createSearchController(true) as never} />,
+    )
+    expect(screen.getByTestId("events-table-view")).toBeTruthy()
+    expect(screen.getByText("0 results")).toBeTruthy()
+    expect(screen.queryByTestId("calendar-month-view")).toBeNull()
+
+    rerender(<CalendarPageOrchastrator {...props} searchController={createSearchController() as never} />)
+    expect(screen.getByTestId("calendar-month-view")).toBeTruthy()
+    expect(screen.queryByTestId("events-table-view")).toBeNull()
+  })
+
+  it.each([
+    [{ invalidDateRange: true }, /"From" date must be on or before/],
+    [{ isError: true }, /Could not search events/],
+  ])("shows why a search has no results instead of \"0 results\": %o", (overrides, message) => {
+    render(
+      <CalendarPageOrchastrator
+        queryState={createQueryState(null).queryState as never}
+        eventsHook={createEventsHook() as never}
+        searchController={createSearchController(true, overrides) as never}
+        onDeleteRequest={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole("alert").textContent).toMatch(message)
+    expect(screen.queryByText("0 results")).toBeNull()
     expect(screen.queryByTestId("events-table-view")).toBeNull()
   })
 

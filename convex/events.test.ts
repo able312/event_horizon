@@ -113,6 +113,23 @@ describe("Convex events", () => {
       expect(await t.query(api.events.getByCalendarIds, { calendarIds: ["rollback"] })).toEqual([])
     }
   })
+  it("searches by filters alone with exact totals, date bounds and pagination", async () => {
+    const t = setup()
+    const early = await t.mutation(api.events.create, { input: { title: "Alpha", type: "wedding", status: "confirmed", startDateTime: "2026-10-10T00:00:00Z" } })
+    const late = await t.mutation(api.events.create, { input: { title: "Beta", type: "wedding", startDateTime: "2026-10-15T00:00:00Z" } })
+    const undated = await t.mutation(api.events.create, { input: { title: "Gamma", type: "tournament" } })
+    const params = { query: "  ", page: 0, pageSize: 50 }
+    expect(await t.query(api.events.search, { ...params, type: "wedding", pageSize: 1 })).toMatchObject({ items: [early], total: 2, hasMore: true })
+    expect(await t.query(api.events.search, { ...params, type: "wedding", pageSize: 1, page: 1 })).toMatchObject({ items: [late], total: 2, hasMore: false })
+    expect((await t.query(api.events.search, { ...params, status: "confirmed" })).items).toEqual([early])
+    expect((await t.query(api.events.search, { ...params, type: "tournament" })).items).toEqual([undated])
+    expect((await t.query(api.events.search, { ...params, startFrom: "2026-10-15T00:00:00Z" })).items).toEqual([late])
+    expect((await t.query(api.events.search, { ...params, startTo: "2026-10-15T00:00:00Z" })).items).toEqual([early])
+    expect((await t.query(api.events.search, { ...params, type: "wedding", status: "confirmed", startFrom: "2026-10-10T00:00:00Z", startTo: "2026-10-15T00:00:00Z" })).items).toEqual([early])
+    expect((await t.query(api.events.search, { ...params, query: "b", type: "wedding" })).items).toEqual([late])
+    await expect(t.query(api.events.search, params)).rejects.toThrow("at least 2")
+  })
+
   it("preserves search relevance, literal matching, client joins, filters and exact pagination totals", async () => {
     const t = setup()
     const one = await t.mutation(api.events.create, { input: { title: "Wedding party", startDateTime: "2026-10-15T00:00:00Z" } })

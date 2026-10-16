@@ -34,9 +34,10 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
     const { isLoading } = eventsHook
     const { dispatch, ui } = useCalendarPanelState()
     const { leadsQuery, leads } = useNewLeads()
-    const { result: searchResult, isFetching: isSearchFetching, enabled: isSearchEnabled } = searchController.searchQuery
+    const { searchQuery } = searchController
+    const { result: searchResult, isFetching: isSearchFetching, enabled: isSearchEnabled, invalidDateRange } = searchQuery
     const hasSearchQuery = Boolean(state.search && state.search.length > 0)
-    const bodyView = hasSearchQuery
+    const bodyView = hasSearchQuery || isSearchEnabled
       ? "search-results"
       : ui.bodyMode === "leads"
       ? "leads-list"
@@ -103,6 +104,19 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
 
             {bodyView === "search-results" && <>
                 <Body.Content>
+                    {/* A rejected search would otherwise read as "0 results" */}
+                    {invalidDateRange ? (
+                        <p role="alert" className="mx-4 my-2 shrink-0 text-xs text-destructive">
+                            The "From" date must be on or before the "To" date.
+                        </p>
+                    ) : searchQuery.isError ? (
+                        <InlineQueryError
+                            message="Could not search events."
+                            onRetry={() => void searchQuery.refetch()}
+                            isRetrying={searchQuery.isFetching}
+                            className="mx-4 my-2 shrink-0"
+                        />
+                    ) : <>
                     <ClientNamesError query={primaryClients} />
                     <EventsTable 
                         events={searchEvents}
@@ -140,6 +154,7 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
                         </div>
                       </div>
                     )}
+                    </>}
                 </Body.Content>
             </>}
             
