@@ -9,6 +9,7 @@ import {
   chargeCategory,
   contactKind,
   contactRoleType,
+  eventRequestStatus,
   eventStatus,
   eventType,
   foodServiceStyle,
@@ -220,4 +221,36 @@ export default defineSchema({
     updatedAt: v.string(),
   })
     .index("by_workosUserId", ["workosUserId"]),
+
+  // Event requests from the website's Google Form, sent in by Apps Script
+  // (http.ts). They stay out of events until someone accepts one, which creates
+  // the event and client contact. Not audited: the HTTP route has no signed-in
+  // user, so reviewedBy records who accepted or dismissed it instead.
+  eventRequests: defineTable({
+    /** The Google Forms response ID; a resent response is ignored, not duplicated. */
+    responseId: v.string(),
+    submittedAt: v.string(),
+    receivedAt: v.string(),
+    firstName: v.string(),
+    lastName: v.string(),
+    organizationName: nullable(v.string()),
+    email: v.string(),
+    phone: v.string(),
+    eventType: eventType,
+    preferredDate: nullable(v.string()),
+    alternateDate: nullable(v.string()),
+    startTime: nullable(v.string()),
+    guestCount: v.number(),
+    details: nullable(v.string()),
+    referralSource: nullable(v.string()),
+    /** Answers to form questions the app doesn't map to a field. */
+    extraAnswers: v.array(v.object({ question: v.string(), answer: v.string() })),
+    status: eventRequestStatus,
+    eventId: nullable(v.id("events")),
+    reviewedBy: nullable(v.id("users")),
+    reviewedAt: nullable(v.string()),
+  })
+    .index("by_responseId", ["responseId"])
+    // Inbox: pending requests, newest first
+    .index("by_status", ["status", "submittedAt"]),
 })

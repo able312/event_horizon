@@ -3,6 +3,8 @@
 
 export const EVENT_TYPES = ["tournament", "wedding", "function"] as const
 export const EVENT_STATUSES = ["new_lead", "tentative", "confirmed", "closed", "lost"] as const
+/** Requests from the website form: waiting for review, turned into an event, or set aside. */
+export const EVENT_REQUEST_STATUSES = ["pending", "accepted", "dismissed"] as const
 
 export const START_FORMATS = ["Shotgun", "Tee Times"] as const
 export const PLAY_FORMATS = ["Scramble", "Best Ball", "Stroke Play", "Modified Stableford"] as const

@@ -35,9 +35,13 @@ async function registeredFunctions(): Promise<[string, RegisteredFunction][]> {
   return found
 }
 
-/** Internal functions run only through the Convex CLI with admin access. */
-const CLI_ONLY_FUNCTIONS = new Set([
+/**
+ * Internal functions: run through the Convex CLI with admin access, or by the
+ * secret-checked HTTP route in http.ts (website event requests).
+ */
+const INTERNAL_FUNCTIONS = new Set([
   "./developmentSeed.ts:seed",
+  "./eventRequests.ts:receive",
 ])
 
 function authCode(error: unknown): unknown {
@@ -76,9 +80,9 @@ describe("auth enforcement on every function", () => {
     expect((await registeredFunctions()).length).toBeGreaterThan(70)
   })
 
-  it("exposes only public queries and mutations, except the CLI-only seed and import functions", async () => {
+  it("exposes only public queries and mutations, except the internal seed and event request functions", async () => {
     for (const [name, fn] of await registeredFunctions()) {
-      if (CLI_ONLY_FUNCTIONS.has(name)) {
+      if (INTERNAL_FUNCTIONS.has(name)) {
         expect(fn.isInternal).toBe(true)
         expect(fn.isPublic).not.toBe(true)
         expect(fn.isAction).not.toBe(true)
@@ -90,7 +94,7 @@ describe("auth enforcement on every function", () => {
 
   it("rejects unauthenticated, wrong-domain, and email-less callers before reading data", async () => {
     for (const [name, fn] of await registeredFunctions()) {
-      if (CLI_ONLY_FUNCTIONS.has(name)) continue
+      if (INTERNAL_FUNCTIONS.has(name)) continue
       expect({ name, code: await rejection(fn, null) }).toEqual({ name, code: "Unauthenticated" })
       expect({ name, code: await rejection(fn, { subject: "user_x", email: "someone@gmail.com" }) }).toEqual({ name, code: "Forbidden" })
       expect({ name, code: await rejection(fn, { subject: "user_x", email: "someone@mail.westlinks.ca" }) }).toEqual({ name, code: "Forbidden" })

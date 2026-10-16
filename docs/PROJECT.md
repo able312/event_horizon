@@ -62,6 +62,7 @@ Assumptions:
 - The renderer should be treated as _untrusted_ compared to the main process in order to gaurd the privilege boundary.
 - The renderer calls Convex directly. Convex functions never trust the client: each one checks for a signed-in company identity before touching data.
 - No remote content is loaded into the window. The renderer is bundled with the app; only Convex and WorkOS are contacted over the network.
+- One HTTP route runs without a signed-in user: `POST /event-requests` (`convex/http.ts`), which receives website event requests from the Google Form's Apps Script. It requires the `EVENT_REQUEST_SECRET` deployment env var as a bearer token (each deployment has its own; without one the route refuses everything), validates every field (`convex/lib/eventRequestPayload.ts`), and can only insert a pending request.
 
 Security priorities:
 
@@ -113,6 +114,7 @@ Security priorities:
   - `schema.ts` defines the tables and indexes. Each public function is a `companyQuery` / `companyMutation` (`convex/lib/auth.ts`), which rejects callers who aren't signed in with a company account.
   - Every write records who created and last edited the record (`convex/lib/audit.ts`).
   - Each mutation runs as one transaction, so multi-step writes belong in a single mutation.
+  - `eventRequests` holds website requests waiting for review. They aren't events until someone accepts one; `eventRequests.accept` creates the event and client contact and marks the request in one transaction.
 
 ### Deployments
 
