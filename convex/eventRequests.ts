@@ -25,10 +25,12 @@ export const receive = internalMutation({ args: submission, handler: async (ctx,
   return { id, duplicate: false }
 } })
 
-// Newest first.
-export const listPending = companyQuery({ args: {}, handler: async ctx =>
-  (await ctx.db.query("eventRequests").withIndex("by_status", q => q.eq("status", "pending")).order("desc").collect()).map(toRecord),
-})
+// Newest arrival first, so a response Apps Script delivers late still shows at the top.
+export const listPending = companyQuery({ args: {}, handler: async ctx => {
+  const pending = await ctx.db.query("eventRequests").withIndex("by_status", q => q.eq("status", "pending")).collect()
+  pending.sort((a, b) => b.receivedAt.localeCompare(a.receivedAt) || b._creationTime - a._creationTime)
+  return pending.map(toRecord)
+} })
 
 /** Two people can review the same request; only the first decision counts. */
 async function requirePending(ctx: CompanyMutationCtx, id: Id<"eventRequests">) {

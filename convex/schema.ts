@@ -253,6 +253,6 @@ export default defineSchema({
     reviewedAt: nullable(v.string()),
   })
     .index("by_responseId", ["responseId"])
-    // Inbox: pending requests, newest first
+    // Inbox: pending requests
     .index("by_status", ["status", "submittedAt"]),
 })

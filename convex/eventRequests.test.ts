@@ -111,6 +111,22 @@ describe("Convex eventRequests", () => {
     expect((await staff.query(api.eventRequests.listPending, {})).map(r => r.responseId)).toEqual(["newer", "older"])
   })
 
+  it("lists a late-delivered response by when it arrived, not when it was submitted", async () => {
+    vi.stubEnv("EVENT_REQUEST_SECRET", SECRET)
+    vi.useFakeTimers({ toFake: ["Date"] })
+    try {
+      const t = newTest()
+      vi.setSystemTime(new Date("2026-10-15T10:00:00.000Z"))
+      await submit(t, "on-time", "2026-10-15T09:59:00.000Z")
+      vi.setSystemTime(new Date("2026-10-16T10:00:00.000Z"))
+      await submit(t, "retried", "2026-10-01T10:00:00.000Z")
+      const pending = await t.withIdentity(companyIdentity).query(api.eventRequests.listPending, {})
+      expect(pending.map(r => r.responseId)).toEqual(["retried", "on-time"])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("dismisses once and records who reviewed it", async () => {
     vi.stubEnv("EVENT_REQUEST_SECRET", SECRET)
     const t = newTest()
