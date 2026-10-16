@@ -1,4 +1,6 @@
 import { useCallback, useMemo } from "react"
+import { useLocation, useNavigate } from "react-router"
+import { buildEventDetailEntryPath } from "~/features/event-detail/workspace/lib/eventDetailRouteState"
 
 import type { AssignContactTarget } from "~/definitions/contacts"
 import type { Event, EventRequest, NewEvent, UpdateEvent } from "~/definitions/database"
@@ -16,6 +18,8 @@ export function useCalendarWorkspaceViewModel(
   eventsHook: UseEventsReturn,
   searchController: UseCalendarSearchControllerReturn,
 ) {
+  const navigate = useNavigate()
+  const location = useLocation()
   const { dispatch, ui } = useCalendarPanelState()
   const { setSearch, setStatus, setType, setSearchInput } = queryState
   const { createEvent, updateEvent } = eventsHook
@@ -78,10 +82,15 @@ export function useCalendarWorkspaceViewModel(
   const onAcceptRequest = useCallback(
     async (event: NewEvent, client: AssignContactTarget | null) => {
       if (!ui.reviewingRequest || !client) return
-      await acceptRequest(ui.reviewingRequest.id, event, client)
+      const createdEvent = await acceptRequest(ui.reviewingRequest.id, event, client)
+      const inboxParams = new URLSearchParams(location.search)
+      inboxParams.set("view", "inbox")
+      inboxParams.delete("search")
+      const returnTo = `/events?${inboxParams.toString()}`
       dispatch({ type: ACTIONS.SELECT_REQUEST, requestId: null })
+      navigate(buildEventDetailEntryPath(createdEvent.id, returnTo))
     },
-    [acceptRequest, dispatch, ui.reviewingRequest],
+    [acceptRequest, dispatch, location.search, navigate, ui.reviewingRequest],
   )
 
   const onSaveEventUpdates = useCallback(

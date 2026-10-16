@@ -6,7 +6,7 @@ import { ITER_EVENT_STATUSES } from "~/definitions/events/event-constants"
 import { EVENT_TYPE_OPTIONS } from "~/definitions/events/ui"
 import { getCurrentMonthParam, normalizeMonthParam } from "~/lib/months"
 
-export type EventView = "calendar" | "list"
+export type EventView = "calendar" | "list" | "inbox"
 
 export interface EventsQueryState {
   view: EventView
@@ -33,7 +33,7 @@ export interface UseEventsQueryStateReturn {
 
 const DEFAULT_VIEW: EventView = "calendar"
 const SEARCH_DEBOUNCE_MS = 300
-const VIEW_VALUES = new Set<EventView>(["calendar", "list"])
+const VIEW_VALUES = new Set<EventView>(["calendar", "list", "inbox"])
 const TYPE_VALUES = new Set<EventType>(EVENT_TYPE_OPTIONS)
 const STATUS_VALUES = new Set<EventStatus>(ITER_EVENT_STATUSES)
 
@@ -85,6 +85,7 @@ function parseState(searchParams: URLSearchParams): EventsQueryState {
 function toCanonicalSearchParams(state: EventsQueryState): URLSearchParams {
   const params = new URLSearchParams()
   params.set("date", state.date)
+  if (state.view === "inbox") params.set("view", "inbox")
 
   if (state.search) params.set("search", state.search)
   if (state.type) params.set("type", state.type)
