@@ -39,7 +39,9 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
     const { searchQuery } = searchController
     const { result: searchResult, isFetching: isSearchFetching, enabled: isSearchEnabled, invalidDateRange } = searchQuery
     const hasSearchQuery = Boolean(state.search && state.search.length > 0)
-    const bodyView = hasSearchQuery || isSearchEnabled
+    const isSearchActive = hasSearchQuery || isSearchEnabled
+    // Filters left in the URL (e.g. on a Back to Inbox link) must not hide the Inbox; an open search panel still shows its results.
+    const bodyView = isSearchActive && (ui.sidebarMode === "search" || ui.bodyMode !== "inbox")
       ? "search-results"
       : ui.bodyMode === "inbox"
       ? "inbox"

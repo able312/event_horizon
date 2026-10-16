@@ -288,14 +288,14 @@ describe("CalendarPageOrchestrator", () => {
       alternateDate: null, startTime: null, guestCount: 120, details: "Outdoor ceremony", referralSource: null, extraAnswers: [],
     } as unknown as EventRequest
 
-    function renderInbox() {
+    function renderInbox(searchEnabled = false) {
       bodyMode = "inbox"
       pendingRequests = [request]
       render(
         <CalendarPageOrchastrator
           queryState={createQueryState(null).queryState as never}
           eventsHook={createEventsHook() as never}
-          searchController={createSearchController() as never}
+          searchController={createSearchController(searchEnabled) as never}
           onDeleteRequest={vi.fn()}
         />,
       )
@@ -335,6 +335,17 @@ describe("CalendarPageOrchestrator", () => {
       fireEvent.click(screen.getByRole("button", { name: "Dismiss" }))
       expect(dispatchMock).toHaveBeenCalledWith({ type: "OPEN_DEFAULT" })
       expect(dismissRequestMock).toHaveBeenCalledWith("req-1")
+    })
+
+    it("shows the Inbox over filters left in the URL, but shows results while searching", () => {
+      renderInbox(true)
+      expect(screen.getByText("Select a request to see what the client sent.")).toBeTruthy()
+      expect(screen.queryByTestId("events-table-view")).toBeNull()
+      cleanup()
+
+      ui = { selectedRequestId: null, sidebarMode: "search", reviewingRequest: null }
+      renderInbox(true)
+      expect(screen.getByTestId("events-table-view")).toBeTruthy()
     })
   })
 })
