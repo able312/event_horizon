@@ -9,10 +9,10 @@ type ContactDetailsListProps = {
   contact: Contact
 }
 
-/** Two columns: contact info/notes/roles on the left, event history on the right. */
+/** Contact info, notes and roles across the top, with full-width event history below. */
 export const ContactDetailsList: React.FC<ContactDetailsListProps> = ({ contact }) => (
-  <div className="grid gap-6 lg:grid-cols-[minmax(260px,1fr)_2fr]">
-    <div className="space-y-4">
+  <div className="space-y-8">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,240px),1fr))] items-stretch gap-4">
       <ContactSectionCard title="Contact info">
         <dl className="space-y-1.5">
           <ContactDetailRow label="Email" value={contact.email} />
@@ -22,7 +22,7 @@ export const ContactDetailsList: React.FC<ContactDetailsListProps> = ({ contact 
 
       {contact.notes ? (
         <ContactSectionCard title="Notes">
-          <p className="whitespace-pre-wrap text-sm text-muted-foreground">{contact.notes}</p>
+          <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{contact.notes}</p>
         </ContactSectionCard>
       ) : null}
 
