@@ -3,6 +3,7 @@ import { toast } from "sonner"
 import type { AssignContactTarget } from "~/definitions/contacts"
 import type { EventRequest, NewEvent } from "~/definitions/database"
 import { isContactsError } from "~/lib/contacts/contactsError"
+import { BackendError } from "~/lib/data/backend"
 import * as eventRequestsApi from "~/lib/data/eventRequests"
 import { eventRequestKeys, eventRequestQueries } from "~/lib/data/queries"
 
@@ -10,6 +11,11 @@ import { eventRequestKeys, eventRequestQueries } from "~/lib/data/queries"
 export const DISMISS_UNDO_MS = 10_000
 
 type AcceptVariables = { id: string; newEvent: NewEvent; client: AssignContactTarget }
+
+/** A teammate may have reviewed the request first; say so rather than show a generic failure. */
+function reviewErrorMessage(err: unknown, fallback: string): string {
+  return err instanceof BackendError && err.code === "AlreadyReviewed" ? err.message : fallback
+}
 
 /** Website requests waiting in the Inbox, newest first, with accept and dismiss. Shared by the Inbox and its header badge. */
 export function useEventRequests() {
@@ -21,7 +27,7 @@ export function useEventRequests() {
     onError: (err) => {
       // The review form shows a taken email next to the client fields.
       if (isContactsError(err) && err.code === "EmailTaken") return
-      toast.error("Failed to accept request")
+      toast.error(reviewErrorMessage(err, "Failed to accept request"))
     },
   })
 
@@ -42,9 +48,9 @@ export function useEventRequests() {
       queryClient.setQueryData<EventRequest[]>(eventRequestKeys.pending(), (old) => old?.filter((request) => request.id !== id))
       return { previous }
     },
-    onError: (_err, _id, context) => {
+    onError: (err, _id, context) => {
       queryClient.setQueryData(eventRequestKeys.pending(), context?.previous)
-      toast.error("Failed to dismiss request")
+      toast.error(reviewErrorMessage(err, "Failed to dismiss request"))
     },
     onSuccess: (_result, id) => {
       toast("Request dismissed", {

@@ -8,7 +8,6 @@ export type BodyMode = "calendar" | "inbox"
 
 export interface CalendarSidePanelState {
   sidebarMode: SidebarMode
-  bodyMode: BodyMode
   editingEvent: Event | null
   createPrefillIso: string | null
   /** Set while the create form is reviewing a website request; saving it accepts the request. */
@@ -49,7 +48,6 @@ export type CalendarSidePanelAction =
 
 export const initialCalendarSidePanelState: CalendarSidePanelState = {
   sidebarMode: "default",
-  bodyMode: "calendar",
   editingEvent: null,
   createPrefillIso: null,
   reviewingRequest: null,
@@ -128,17 +126,11 @@ export function calendarSidePanelReducer(
         editingEvent: action.event,
       }
 
+    // The body mode itself lives in the URL; the provider switches it.
     case ACTIONS.TOGGLE_INBOX_VIEW:
-      return {
-        ...state,
-        bodyMode: state.bodyMode === "calendar" ? "inbox" : "calendar",
-        selectedRequestId: null,
-      }
-
     case ACTIONS.OPEN_CALENDAR_VIEW:
       return {
         ...state,
-        bodyMode: "calendar",
         selectedRequestId: null,
       }
 

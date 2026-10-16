@@ -60,8 +60,10 @@ const EventDetailHeaderBar: React.FC<EventDetailHeaderBarProps> = ({ eventResour
         <ArrowLeft className="h-4 w-4" />
         {returnTo.startsWith("/preview/")
           ? "Back to Print Preview"
-          : returnTo.startsWith("/contacts")
+          : returnTo.startsWith("/contacts/")
           ? "Back to Contact"
+          : returnTo.startsWith("/contacts")
+          ? "Back to Contacts"
           : new URL(returnTo, "https://event-horizon.local").searchParams.get("view") === "inbox"
           ? "Back to Inbox"
           : "Back to Events"}

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { EventRequest, NewEvent } from "~/definitions/database"
 import { ContactsError } from "~/lib/contacts/contactsError"
+import { BackendError } from "~/lib/data/backend"
 import * as eventRequestsApi from "~/lib/data/eventRequests"
 import { eventRequestKeys } from "~/lib/data/queries"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
@@ -76,5 +77,19 @@ describe("useEventRequests", () => {
     await act(async () => { await expect(result.current.acceptRequest("req-1", newEvent, client)).rejects.toThrow() })
     expect(toast.error).toHaveBeenCalledWith("Failed to accept request")
     expect(eventRequestsApi.acceptEventRequest).toHaveBeenLastCalledWith("req-1", newEvent, client)
+  })
+
+  it("says when a teammate already reviewed the request", async () => {
+    vi.mocked(eventRequestsApi.getPendingEventRequests).mockResolvedValue([first])
+    const { result } = renderHookWithProviders(() => useEventRequests())
+    await waitFor(() => expect(result.current.requests).toHaveLength(1))
+
+    vi.mocked(eventRequestsApi.acceptEventRequest).mockRejectedValueOnce(new BackendError("AlreadyReviewed", "This request was already dismissed"))
+    await act(async () => { await expect(result.current.acceptRequest("req-1", newEvent, client)).rejects.toThrow() })
+    expect(toast.error).toHaveBeenLastCalledWith("This request was already dismissed")
+
+    vi.mocked(eventRequestsApi.dismissEventRequest).mockRejectedValueOnce(new BackendError("AlreadyReviewed", "This request was already accepted"))
+    act(() => result.current.dismissRequest("req-1"))
+    await waitFor(() => expect(toast.error).toHaveBeenLastCalledWith("This request was already accepted"))
   })
 })

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { ConvexError } from "convex/values"
 import { ContactsError } from "~/lib/contacts/contactsError"
-import { BackendAuthError, pickFields, pickItemFields, translateBackendError } from "./backend"
+import { BackendAuthError, BackendError, pickFields, pickItemFields, translateBackendError } from "./backend"
 import { resolveConvexUrl } from "./backendConfig"
 
 describe("backend errors", () => {
@@ -19,7 +19,9 @@ describe("backend errors", () => {
     for (const error of [new Error("Offline"), new ConvexError("Text"), new ConvexError({ code: "InvalidInput" }), new ConvexError(["array"])]) {
       expect(translateBackendError(error)).toBe(error)
     }
-    expect(translateBackendError(new ConvexError({ code: "Other", message: "Readable" }))).toEqual(new Error("Readable"))
+    const other = translateBackendError(new ConvexError({ code: "AlreadyReviewed", message: "Readable" }))
+    expect(other).toBeInstanceOf(BackendError)
+    expect(other).toMatchObject({ code: "AlreadyReviewed", message: "Readable" })
   })
 })
 
