@@ -32,4 +32,17 @@ describe("calendarSidePanelReducer", () => {
     expect(calendarSidePanelReducer(selected, { type: ACTIONS.TOGGLE_INBOX_VIEW }).selectedRequestId).toBeNull()
     expect(calendarSidePanelReducer(selected, { type: ACTIONS.OPEN_CALENDAR_VIEW }).selectedRequestId).toBeNull()
   })
+
+  it("ends a request review when leaving the Inbox, but keeps a plain create form", () => {
+    const reviewing = calendarSidePanelReducer(initialCalendarSidePanelState, {
+      type: ACTIONS.OPEN_REVIEW_REQUEST,
+      request: { id: "req-1" } as EventRequest,
+    })
+    for (const type of [ACTIONS.TOGGLE_INBOX_VIEW, ACTIONS.OPEN_CALENDAR_VIEW] as const) {
+      expect(calendarSidePanelReducer(reviewing, { type })).toMatchObject({ sidebarMode: "default", reviewingRequest: null, selectedRequestId: null })
+    }
+
+    const creating = calendarSidePanelReducer(initialCalendarSidePanelState, { type: ACTIONS.OPEN_CREATE, prefillIso: "2026-10-20" })
+    expect(calendarSidePanelReducer(creating, { type: ACTIONS.TOGGLE_INBOX_VIEW })).toMatchObject({ sidebarMode: "create", createPrefillIso: "2026-10-20" })
+  })
 })

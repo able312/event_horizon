@@ -127,11 +127,18 @@ export function calendarSidePanelReducer(
       }
 
     // The body mode itself lives in the URL; the provider switches it.
+    // A review only starts in the Inbox, so leaving the Inbox also ends it.
     case ACTIONS.TOGGLE_INBOX_VIEW:
     case ACTIONS.OPEN_CALENDAR_VIEW:
       return {
         ...state,
         selectedRequestId: null,
+        ...(state.reviewingRequest && {
+          sidebarMode: "default",
+          reviewingRequest: null,
+          createDraftPreview: null,
+          createPrefillIso: null,
+        }),
       }
 
     case ACTIONS.SET_CREATE_DRAFT_PREVIEW:
