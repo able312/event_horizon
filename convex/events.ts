@@ -51,7 +51,7 @@ export const getByCalendarIds = companyQuery({ args: { calendarIds: v.array(v.st
 } })
 // The bare contact shape is what installed builds released before the client picker send; drop it once they've all updated.
 const legacyClient = v.object(contactFields)
-const primaryClient = v.union(v.object({ contactId: v.id("contacts") }), v.object({ newContact: v.object(contactFields) }), legacyClient)
+export const primaryClient = v.union(v.object({ contactId: v.id("contacts") }), v.object({ newContact: v.object(contactFields) }), legacyClient)
 async function legacyClientTarget(ctx: MutationCtx, client: Infer<typeof legacyClient>) {
   const email = normalizeEmail(client.email)
   const existing = email ? (await ctx.db.query("contacts").withIndex("by_emailNormalized", q => q.eq("emailNormalized", email)).collect()).find(c => !c.archivedAt) : null

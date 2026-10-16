@@ -74,6 +74,8 @@ describe("POST /event-requests", () => {
   })
 })
 
+const ADA = { newContact: { firstName: "Ada", lastName: "Lovelace", email: "ada@example.com" } }
+
 describe("Convex eventRequests", () => {
   it("requires a company account to list or review requests", async () => {
     vi.stubEnv("EVENT_REQUEST_SECRET", SECRET)
@@ -82,7 +84,7 @@ describe("Convex eventRequests", () => {
     const [request] = await t.run(ctx => ctx.db.query("eventRequests").collect())
     await expect(t.query(api.eventRequests.listPending, {})).rejects.toMatchObject({ data: { code: "Unauthenticated" } })
     await expect(t.mutation(api.eventRequests.dismiss, { id: request!._id })).rejects.toMatchObject({ data: { code: "Unauthenticated" } })
-    await expect(t.mutation(api.eventRequests.accept, { id: request!._id, input: {} })).rejects.toMatchObject({ data: { code: "Unauthenticated" } })
+    await expect(t.mutation(api.eventRequests.accept, { id: request!._id, input: {}, client: ADA })).rejects.toMatchObject({ data: { code: "Unauthenticated" } })
   })
 
   it("lists only pending requests, newest first", async () => {
@@ -108,7 +110,7 @@ describe("Convex eventRequests", () => {
     expect(stored).toMatchObject({ status: "dismissed", eventId: null })
     expect(stored!.reviewedBy).not.toBeNull()
     await expect(staff.mutation(api.eventRequests.dismiss, { id: request!.id })).rejects.toMatchObject({ data: { code: "AlreadyReviewed" } })
-    await expect(staff.mutation(api.eventRequests.accept, { id: request!.id, input: {} })).rejects.toMatchObject({ data: { code: "AlreadyReviewed" } })
+    await expect(staff.mutation(api.eventRequests.accept, { id: request!.id, input: {}, client: ADA })).rejects.toMatchObject({ data: { code: "AlreadyReviewed" } })
   })
 
   it("accepts into an event with its primary client in one step", async () => {
@@ -128,7 +130,21 @@ describe("Convex eventRequests", () => {
     expect(stored).toMatchObject({ status: "accepted", eventId: event.id })
     expect(stored!.reviewedBy).toBe(event.createdBy)
     expect(await staff.query(api.eventRequests.listPending, {})).toHaveLength(0)
-    await expect(staff.mutation(api.eventRequests.accept, { id: request!.id, input: {} })).rejects.toMatchObject({ data: { code: "AlreadyReviewed" } })
+    await expect(staff.mutation(api.eventRequests.accept, { id: request!.id, input: {}, client: ADA })).rejects.toMatchObject({ data: { code: "AlreadyReviewed" } })
+  })
+
+  it("refuses to accept without a primary client", async () => {
+    vi.stubEnv("EVENT_REQUEST_SECRET", SECRET)
+    const t = newTest()
+    await submit(t)
+    const staff = t.withIdentity(companyIdentity)
+    const [request] = await staff.query(api.eventRequests.listPending, {})
+    // @ts-expect-error client is required
+    await expect(staff.mutation(api.eventRequests.accept, { id: request!.id, input: {} })).rejects.toThrow()
+    // @ts-expect-error client can't be null
+    await expect(staff.mutation(api.eventRequests.accept, { id: request!.id, input: {}, client: null })).rejects.toThrow()
+    expect(await staff.query(api.eventRequests.listPending, {})).toHaveLength(1)
+    expect(await t.run(ctx => ctx.db.query("events").collect())).toHaveLength(0)
   })
 
   it("leaves the request pending and creates nothing when the client's email is taken", async () => {
