@@ -1,3 +1,4 @@
+import { MemoryRouter } from "react-router"
 import { cleanup, render, screen, waitFor } from "@testing-library/react"
 import { useLayoutEffect, type ReactNode } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
@@ -70,7 +71,7 @@ function renderTimeline(options?: { hideSystemRows?: boolean }) {
     <TimelinePreview />
   )
 
-  return render(<PreviewPreferencesProvider>{body}</PreviewPreferencesProvider>)
+  return render(<MemoryRouter><PreviewPreferencesProvider>{body}</PreviewPreferencesProvider></MemoryRouter>)
 }
 
 afterEach(() => {

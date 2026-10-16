@@ -58,7 +58,9 @@ const EventDetailHeaderBar: React.FC<EventDetailHeaderBarProps> = ({ eventResour
     <div className="flex items-center justify-between gap-3 px-0 py-2 w-full">
       <Link to={returnTo} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
         <ArrowLeft className="h-4 w-4" />
-        {returnTo.startsWith("/contacts")
+        {returnTo.startsWith("/preview/")
+          ? "Back to Print Preview"
+          : returnTo.startsWith("/contacts")
           ? "Back to Contact"
           : new URL(returnTo, "https://event-horizon.local").searchParams.get("view") === "inbox"
           ? "Back to Inbox"

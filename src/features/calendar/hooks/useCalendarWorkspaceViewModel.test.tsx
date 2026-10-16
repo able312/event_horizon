@@ -26,7 +26,7 @@ const request: EventRequest = {
   guestCount: 120, details: null, referralSource: null, extraAnswers: [],
   status: "pending", eventId: null, reviewedBy: null, reviewedAt: null,
 }
-const event: NewEvent = { title: "Wedding", type: "wedding", status: "new_lead" }
+const event: NewEvent = { id: "new-event", createdAt: "2026-10-16T15:00:00.000Z", title: "Wedding", type: "wedding", status: "new_lead" }
 const client = { contactId: "contact-1" } as const
 const eventsHook = { createEvent: vi.fn(), updateEvent: vi.fn() } as unknown as UseEventsReturn
 const searchController = { reset: vi.fn() } as unknown as UseCalendarSearchControllerReturn

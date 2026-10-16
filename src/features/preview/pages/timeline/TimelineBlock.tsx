@@ -9,13 +9,14 @@ import { PreviewMarkdownContent } from "~/lib/markdown/PreviewMarkdownContent"
 
 type TimelineBlockProps = {
   timeblock: TimelineTimeblock
+  onOpen?: (scrollTop: number) => void
 }
 
-const TimelineBlock: React.FC<TimelineBlockProps> = ({ timeblock }) => {
+const TimelineBlock: React.FC<TimelineBlockProps> = ({ timeblock, onOpen }) => {
   if (!timeblock.time || timeblock.time.length === 0) return null
 
   return (
-    <GenericTimeblock timeblock={timeblock}>
+    <GenericTimeblock timeblock={timeblock} onOpen={onOpen}>
       {timeblock.sectionType === SECTION_TYPE.FOOD && (
         <>
           {timeblock.details ? (
@@ -102,9 +103,10 @@ export default TimelineBlock
 type GenericTimeblockProps = {
   timeblock: TimelineTimeblock
   children: React.ReactNode
+  onOpen?: (scrollTop: number) => void
 }
 
-const GenericTimeblock: React.FC<GenericTimeblockProps> = ({ timeblock, children }) => {
+const GenericTimeblock: React.FC<GenericTimeblockProps> = ({ timeblock, children, onOpen }) => {
   return (
     <div className="flex items-start gap-3 border-b-2 border-solid p-3">
       <div className="flex min-w-[80px] items-center gap-2">
@@ -113,9 +115,17 @@ const GenericTimeblock: React.FC<GenericTimeblockProps> = ({ timeblock, children
 
       <div className="flex-1">
         <div className="mb-1 flex items-center gap-2">
-          <span className="text-sm font-medium text-stone-800">
-            {timeblock.title || "Untitled"}
-          </span>
+          {onOpen ? (
+            <button
+              type="button"
+              className="text-left text-sm font-medium text-stone-800 hover:underline focus-visible:underline print:pointer-events-none print:no-underline"
+              onClick={(event) => onOpen(event.currentTarget.closest<HTMLElement>("[data-preview-scroll]")?.scrollTop ?? 0)}
+            >
+              {timeblock.title || "Untitled"}
+            </button>
+          ) : (
+            <span className="text-sm font-medium text-stone-800">{timeblock.title || "Untitled"}</span>
+          )}
           <span className={`rounded-full px-2 py-0.5 text-[10px] ${getTypeColor(timeblock.sectionType)}`}>
             {getTypeLabel(timeblock.sectionType)}
           </span>

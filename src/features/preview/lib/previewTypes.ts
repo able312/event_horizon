@@ -1,3 +1,5 @@
+import { normalizeReturnTo } from "~/features/event-detail/workspace/lib/eventDetailRouteState"
+
 import {
   CalendarClock,
   ClipboardList,
@@ -80,6 +82,12 @@ export function getPreviewTypesForEvent(
   )
 }
 
-export function buildPreviewPath(eventId: string, type: PreviewTypeId = DEFAULT_PREVIEW_TYPE): string {
-  return `/preview/${eventId}?type=${type}`
+export function buildPreviewPath(
+  eventId: string,
+  type: PreviewTypeId = DEFAULT_PREVIEW_TYPE,
+  returnTo?: string,
+): string {
+  const params = new URLSearchParams({ type })
+  if (returnTo) params.set("returnTo", normalizeReturnTo(returnTo))
+  return `/preview/${eventId}?${params.toString()}`
 }

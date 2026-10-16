@@ -1,5 +1,5 @@
 import React from "react"
-import { useNavigate } from "react-router"
+import { useLocation, useNavigate } from "react-router"
 
 import MenuOfChargeSection from "~/features/event-detail/sections/financial-workspace/MenuOfChargeSection"
 import PaymentsSection from "~/features/event-detail/sections/financial-workspace/PaymentsSection"
@@ -17,6 +17,7 @@ interface FinancialWorkspaceSectionProps {
 
 const FinancialWorkspaceSection: React.FC<FinancialWorkspaceSectionProps> = ({ eventId, onSelectWorkspaceNode }) => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { data: menuItems } = useMenuOfChargeItemsSection()
   const {
     data: foodTimeblocks,
@@ -37,7 +38,7 @@ const FinancialWorkspaceSection: React.FC<FinancialWorkspaceSectionProps> = ({ e
 
   const handleGenerateEstimate = () => {
     if (!eventId) return
-    navigate(buildPreviewPath(eventId, "financial-report"))
+    navigate(buildPreviewPath(eventId, "financial-report", `${location.pathname}${location.search}${location.hash}`))
   }
 
   return (

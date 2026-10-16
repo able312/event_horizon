@@ -18,6 +18,7 @@ vi.mock("react-router", async () => {
   return {
     ...actual,
     useNavigate: () => navigateMock,
+    useLocation: () => ({ pathname: "/events/event-1/financial", search: "?returnTo=%2Fcontacts%2Fcontact-1", hash: "" }),
   }
 })
 
@@ -117,6 +118,6 @@ describe("FinancialWorkspaceSection", () => {
     expect(onSelectWorkspaceNode).toHaveBeenCalledWith("category:beverage")
 
     screen.getByRole("button", { name: "Payments Table" }).click()
-    expect(navigateMock).toHaveBeenCalledWith("/preview/event-1?type=financial-report")
+    expect(navigateMock).toHaveBeenCalledWith("/preview/event-1?type=financial-report&returnTo=%2Fevents%2Fevent-1%2Ffinancial%3FreturnTo%3D%252Fcontacts%252Fcontact-1")
   })
 })
