@@ -63,6 +63,7 @@ Assumptions:
 - The renderer calls Convex directly. Convex functions never trust the client: each one checks for a signed-in company identity before touching data.
 - No remote content is loaded into the window. The renderer is bundled with the app; only Convex and WorkOS are contacted over the network.
 - One HTTP route runs without a signed-in user: `POST /event-requests` (`convex/http.ts`), which receives website event requests from the Google Form's Apps Script. It requires the `EVENT_REQUEST_SECRET` deployment env var as a bearer token (each deployment has its own; without one the route refuses everything), validates every field (`convex/lib/eventRequestPayload.ts`), and can only insert a pending request.
+- The caller is an Apps Script bound to the form's response Sheet (reference copy: `docs/apps-script/eventRequestIntake.gs`), owned by the shared company account. It keeps the URL, secret and team addresses in Script Properties, so anyone with edit access to that Sheet or script can read the secret; keep that list short. The client's confirmation email repeats only their first name and the form-constrained answers, so the form can't be used to send arbitrary text from the venue's account.
 
 Security priorities:
 
@@ -134,6 +135,7 @@ Each environment has its own isolated database, so branch work can't touch share
 - Create event
 - Move through statuses/phases
   - An event without a start date can only be New Lead or Lost; Tentative, Confirmed and Complete need a date (`src/lib/events/eventStatusRules.ts`, enforced in `convex/events.ts`). Removing the date from a dated-status event asks first, then moves it back to New Lead in the same update.
+- Receive website requests: a client submits the Google Form on the website. Apps Script emails the team and a confirmation to the client, then POSTs the answers to `POST /event-requests`, recording Synced / Failed per response on the Sheet's "Event Horizon sync" tab. Unfinished responses retry every 15 minutes and the owner is emailed if one keeps failing. The Sheet keeps every response even if Convex is unreachable.
 - Review website requests: the Inbox (`⌘L` / `Ctrl+L`) replaces the sidebar with pending requests and a search. Selecting a request shows everything the client sent in the body; Review (top right) opens the create form pre-filled from the request (`src/features/calendar/lib/eventRequestPrefill.ts`), and saving it accepts the request (a client is required). Dismiss sets it aside, with Undo for 10 seconds (`eventRequests.restore`).
 - Attach/track details and their attached timeblocks data
 - Generate PDFs (Estimate, BEO, Timeline)
