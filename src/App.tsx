@@ -8,6 +8,7 @@ import EventsRoute from '~/routes/Events'
 
 //Hook
 import { useIpcNavigation } from './hooks/useIpcNavigation'
+import { useEventRequestNotifications } from './hooks/useEventRequestNotifications'
 import { useGenerateMenuState } from './hooks/useGenerateMenuState'
 import { UpdaterProvider } from './features/updater/state/UpdaterProvider'
 
@@ -31,6 +32,7 @@ function RouteFallback() {
 
 function App() {
   useIpcNavigation()
+  useEventRequestNotifications()
   useGenerateMenuState()
 
   return (

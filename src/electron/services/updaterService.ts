@@ -20,6 +20,8 @@ export function createUpdaterService(
   nativeUpdater: NativeUpdater,
   enabled: boolean,
   logError: (error: unknown) => void,
+  /** Lets macOS windows close for the install instead of hiding (see windowClose.ts). */
+  setQuitting: (quitting: boolean) => void = () => {},
 ) {
   let snapshot: UpdaterSnapshot = { revision: 0, status: { phase: "idle" } }
   const subscribers = new Set<(snapshot: UpdaterSnapshot) => void>()
@@ -57,6 +59,7 @@ export function createUpdaterService(
     if (installing && status.phase === "preparing") {
       installing = false
       clearHandoff()
+      setQuitting(false)
       // The download is still on disk, so offer it again rather than hiding it until the next check.
       publish({ phase: "ready", version: status.version, installFailed: true })
     } else if (status.phase === "downloading") {
@@ -143,6 +146,8 @@ export function createUpdaterService(
     preparationTimer = setTimeout(() => fail(new Error("Native update preparation timed out")),
       INSTALL_PREPARATION_TIMEOUT_MS)
     const before = nativeUpdater.listeners("update-downloaded")
+    // Electron closes every window before it emits before-quit, so allow closing first.
+    setQuitting(true)
     try {
       updater.quitAndInstall()
     } catch (error) {
