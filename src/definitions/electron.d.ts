@@ -1,10 +1,11 @@
+import type { EventRequestNotificationsApi } from "./notifications"
 export {}
 import type { UpdaterApi } from "./updater"
 import type { AuthApi } from "./auth"
 
 declare global {
   interface Window {
-    api?: { updater: UpdaterApi; auth: AuthApi }
+    api?: { updater: UpdaterApi; auth: AuthApi; eventRequestNotifications?: EventRequestNotificationsApi }
     electron: {
       ipcRenderer: {
         invoke: (channel: string, ...args: unknown[]) => Promise<unknown>

@@ -13,6 +13,11 @@ import { resolveWorkOSClientId } from './services/authConfig.js';
 import { createWorkOSAuthClient, electronAuthPlatform, focusApp } from './services/authPlatform.js';
 import { registerAuthIpcHandlers } from './ipcRoutes/authHandler.js';
 
+import { registerEventRequestNotificationHandlers } from './ipcRoutes/eventRequestNotificationHandler.js';
+
+// Must match electron-builder.json so Windows associates toasts with the installed shortcut.
+if (process.platform === 'win32') app.setAppUserModelId('com.latenightcreation.event-horizon')
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
@@ -28,7 +33,7 @@ const resolveRendererUrl = () => isDev()
     ? "http://localhost:42069/"
     : pathToFileURL(path.join(app.getAppPath(), "dist-react/index.html")).href
 
-const createWindow = () => {
+const createWindow = (initialRoute = "") => {
     const iconPath = resolveWindowIconPath()
     const windowIcon = nativeImage.createFromPath(iconPath)
 
@@ -51,7 +56,7 @@ const createWindow = () => {
 
     mainWindow.maximize()
 
-    const rendererUrl = resolveRendererUrl()
+    const rendererUrl = resolveRendererUrl() + (initialRoute ? `#${initialRoute}` : "")
     console.log("Loading", rendererUrl)
     mainWindow.loadURL(rendererUrl).then(
         () => console.log("Renderer loaded:", rendererUrl),
@@ -93,6 +98,10 @@ app.on("second-instance", focusApp)
 
 app.on("ready", () => {
     registerAllIpcHandlers()
+    const unregisterNotifications = registerEventRequestNotificationHandlers(
+        resolveRendererUrl(), process.platform, () => createWindow("/events?view=inbox"),
+    )
+    app.once("will-quit", unregisterNotifications)
 
     const updater = setupUpdater()
     setupAuth()

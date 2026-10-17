@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron"
 import type { UpdaterApi, UpdaterSnapshot } from "../definitions/updater.js"
+import type { EventRequestNotificationsApi } from "../definitions/notifications.js"
 import type { AuthApi, AuthSnapshot } from "../definitions/auth.js"
 
 const updaterApi: UpdaterApi = {
@@ -24,7 +25,12 @@ const authApi: AuthApi = {
   },
 }
 
-contextBridge.exposeInMainWorld("api", { updater: updaterApi, auth: authApi })
+const eventRequestNotifications: EventRequestNotificationsApi = {
+  notifyNewEventRequest: () => ipcRenderer.invoke("event-requests:notify-new"),
+  setPendingCount: count => ipcRenderer.invoke("event-requests:set-pending-count", count),
+}
+
+contextBridge.exposeInMainWorld("api", { updater: updaterApi, auth: authApi, eventRequestNotifications })
 
 const ALLOWED_INVOKE_CHANNELS = new Set([
   "generate-pdf",

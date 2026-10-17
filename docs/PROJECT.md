@@ -135,6 +135,7 @@ Each environment has its own isolated database, so branch work can't touch share
 - Move through statuses/phases
   - An event without a start date can only be New Lead or Lost; Tentative, Confirmed and Complete need a date (`src/lib/events/eventStatusRules.ts`, enforced in `convex/events.ts`). Removing the date from a dated-status event asks first, then moves it back to New Lead in the same update.
 - Review website requests: the Inbox (`⌘L` / `Ctrl+L`) replaces the sidebar with pending requests and a search. Selecting a request shows everything the client sent in the body; Review (top right) opens the create form pre-filled from the request (`src/features/calendar/lib/eventRequestPrefill.ts`), and saving it accepts the request (a client is required). Dismiss sets it aside, with Undo for 10 seconds (`eventRequests.restore`).
+- Desktop request alerts: while signed in, new pending request IDs trigger a native notification; clicking focuses the app and opens the Inbox. Existing requests at startup are silent. The macOS dock badge shows the pending count; Windows flashes the taskbar for new requests while unfocused (cleared on focus or an empty Inbox). The listener runs across all routes, tracks seen IDs for the session, and uses explicit preload methods with sender and argument validation.
 - Attach/track details and their attached timeblocks data
 - Generate PDFs (Estimate, BEO, Timeline)
 - Confirm persistence across restarts, and that edits appear live in a second signed-in window
@@ -145,6 +146,11 @@ Each environment has its own isolated database, so branch work can't touch share
 - Lint: `npm run lint`
 - Dependencies: `npm audit` & `npm audit --omit=dev`
 - Tests: `npm run test`
+- Notification smoke test (signed packaged macOS / installed Windows build, with OS notifications allowed):
+  - Start with pending requests: badge count appears on macOS, without a startup alert.
+  - Leave the app on Contacts, put it in the background, and submit a new dev website request: a native alert appears and Windows flashes its taskbar.
+  - Click the alert: the app restores/focuses and opens the Inbox. Windows flashing stops on focus.
+  - Dismiss then Undo: badge updates without a second alert. Accept/dismiss all requests or sign out: badge clears.
 - Basic smoke test:
   - Launch app and sign in with a company account
   - [Open main screen, create a record, restart app, confirm record persists]
