@@ -72,7 +72,10 @@ const SYNC_FROM_PROPERTY = 'SYNC_FROM';
 /** First owner alert after this many failed runs (~45 minutes), then once a day. */
 const ALERT_AFTER_ATTEMPTS = 3;
 const ALERT_REPEAT_EVERY = 96;
-/** Stay well inside Apps Script's 6-minute limit; the next run picks up the rest. */
+/**
+ * Stay well inside Apps Script's 6-minute limit; the next run picks up the rest.
+ * Counted from the start of the run, so time spent waiting for the lock is included.
+ */
 const RUN_BUDGET_MS = 4.5 * 60 * 1000;
 const LOCK_WAIT_MS = 2 * 60 * 1000;
 
@@ -142,6 +145,7 @@ function checkSetup() {
 // ── Processing ──────────────────────────────────────────────────────────────
 
 function processResponses_() {
+  const startedAt = Date.now();
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(LOCK_WAIT_MS)) {
     console.warn('Another run is still working; the next retry will pick these up.');
@@ -151,7 +155,6 @@ function processResponses_() {
     const syncFrom = PropertiesService.getScriptProperties().getProperty(SYNC_FROM_PROPERTY);
     if (!syncFrom) throw new Error('Run setup first.');
 
-    const startedAt = Date.now();
     const config = readConfig_();
     const sheet = getSyncSheet_();
     const rows = readSyncRows_(sheet);
@@ -243,9 +246,16 @@ function processResponse_(config, response, values) {
  */
 function readResponse_(response) {
   const answers = {};
+  const seen = new Map();
   for (const itemResponse of response.getItemResponses()) {
     const value = answerValue_(itemResponse.getResponse());
-    if (value !== null) answers[itemResponse.getItem().getTitle().trim()] = value;
+    if (value === null) continue;
+    // Two questions with the same title would overwrite each other. The first keeps the
+    // title Event Horizon reads; later ones arrive as "Title (2)" (checkSetup flags them).
+    const title = itemResponse.getItem().getTitle().trim();
+    const count = (seen.get(title) || 0) + 1;
+    seen.set(title, count);
+    answers[count === 1 ? title : `${title} (${count})`] = value;
   }
   const respondentEmail = String(response.getRespondentEmail() || answers.Email || '').trim();
   const text = (key) => (typeof answers[QUESTIONS[key]] === 'string' ? answers[QUESTIONS[key]] : '');
@@ -442,7 +452,8 @@ function readConfig_() {
   const problems = [];
 
   let convexUrl = get('CONVEX_URL');
-  if (!/^https:\/\/[^\s/]+\/event-requests$/.test(convexUrl)) {
+  // Only a Convex HTTP host gets the secret, so a typo can't send it somewhere else.
+  if (!/^https:\/\/[a-z0-9-]+\.convex\.site\/event-requests$/i.test(convexUrl)) {
     problems.push('CONVEX_URL must look like https://<deployment>.convex.site/event-requests');
     convexUrl = '';
   }
@@ -451,6 +462,17 @@ function readConfig_() {
   const teamEmails = get('TEAM_EMAILS').split(',').map((email) => email.trim()).filter(Boolean);
   if (!teamEmails.length) problems.push('TEAM_EMAILS is not set');
   teamEmails.filter((email) => !looksLikeEmail_(email)).forEach((email) => problems.push(`TEAM_EMAILS has an invalid address: ${email}`));
+  // A bad optional address falls back to its default rather than breaking every send.
+  const optionalEmail = (key) => {
+    const value = get(key);
+    if (value && !looksLikeEmail_(value)) {
+      problems.push(`${key} is not a valid address: ${value}`);
+      return '';
+    }
+    return value;
+  };
+  const clientReplyTo = optionalEmail('CLIENT_REPLY_TO');
+  const alertEmail = optionalEmail('ALERT_EMAIL');
 
   return {
     problems,
@@ -458,8 +480,8 @@ function readConfig_() {
     secret,
     teamEmails,
     venueName: get('VENUE_NAME') || 'Westlinks',
-    clientReplyTo: get('CLIENT_REPLY_TO') || teamEmails[0] || '',
-    alertEmail: get('ALERT_EMAIL'),
+    clientReplyTo: clientReplyTo || teamEmails.find(looksLikeEmail_) || '',
+    alertEmail,
   };
 }
 
@@ -471,13 +493,25 @@ function getForm_() {
 
 function checkForm_(form) {
   const problems = [];
-  const items = new Map(form.getItems().map((item) => [item.getTitle().trim(), item]));
+  const items = new Map();
+  for (const item of form.getItems()) {
+    if (!asQuestion_(item)) continue;
+    const title = item.getTitle().trim();
+    if (items.has(title)) {
+      problems.push(`Two questions are titled "${title}"; give each a different title`);
+    } else {
+      items.set(title, item);
+    }
+  }
 
   for (const key of Object.keys(QUESTIONS)) {
     const item = items.get(QUESTIONS[key]);
     if (!item) {
       if (REQUIRED_QUESTIONS.includes(key)) problems.push(`Required question "${QUESTIONS[key]}" is missing from the form`);
       continue;
+    }
+    if (REQUIRED_QUESTIONS.includes(key) && !asQuestion_(item).isRequired()) {
+      problems.push(`"${QUESTIONS[key]}" must be a required question (turn on Required)`);
     }
     if (item.getType() === FormApp.ItemType.DATE && !item.asDateItem().includesYear()) {
       problems.push(`"${QUESTIONS[key]}" must include the year (question settings → Include year)`);
@@ -498,6 +532,26 @@ function checkForm_(form) {
     : form.collectsEmail();
   if (!collectsEmail) problems.push('The form does not collect email addresses (Settings → Responses → Collect email addresses)');
   return problems;
+}
+
+/** The typed item for questions that take an answer; null for headers, images and page breaks. */
+function asQuestion_(item) {
+  const cast = {
+    CHECKBOX: 'asCheckboxItem',
+    CHECKBOX_GRID: 'asCheckboxGridItem',
+    DATE: 'asDateItem',
+    DATETIME: 'asDateTimeItem',
+    DURATION: 'asDurationItem',
+    GRID: 'asGridItem',
+    LIST: 'asListItem',
+    MULTIPLE_CHOICE: 'asMultipleChoiceItem',
+    PARAGRAPH_TEXT: 'asParagraphTextItem',
+    RATING: 'asRatingItem',
+    SCALE: 'asScaleItem',
+    TEXT: 'asTextItem',
+    TIME: 'asTimeItem',
+  }[String(item.getType())];
+  return cast && typeof item[cast] === 'function' ? item[cast]() : null;
 }
 
 // ── Small helpers ───────────────────────────────────────────────────────────
