@@ -41,7 +41,7 @@
  * - The sync tab shows each response's Status: Synced, Failed: <reason> (retried),
  *   or Rejected: <reason>.
  * - Rejected means Event Horizon refused the answers themselves (e.g. a guest count
- *   that isn't a number), so retrying can't help: the owner is emailed at once and
+ *   that isn't a number, or answers too long to accept), so retrying can't help: the owner is emailed at once and
  *   it isn't retried. The team email still went out, so add the request by hand if
  *   needed. If the cause was the form (see below), fix it and clear the Status to
  *   send it again.
@@ -90,6 +90,11 @@ const SYNC_FROM_PROPERTY = 'SYNC_FROM';
  */
 const ALERT_AFTER_ATTEMPTS = 3;
 const ALERT_REPEAT_MS = 24 * 60 * 60 * 1000;
+/**
+ * Event Horizon refused the request body itself (malformed, too large, or answers
+ * that fail validation). The same answers would be refused again, so these aren't retried.
+ */
+const REJECTED_CODES = [400, 413, 422];
 /**
  * Stay well inside Apps Script's 6-minute limit; the next run picks up the rest.
  * Counted from the start of the run, so time spent waiting for the lock is included.
@@ -250,8 +255,7 @@ function processResponse_(config, response, values) {
     const result = postToEventHorizon_(config, request.payload);
     if (result.ok) {
       values[COL.status] = 'Synced';
-    } else if (result.code === 422) {
-      // The answers failed validation; sending the same answers again can't succeed.
+    } else if (REJECTED_CODES.includes(result.code)) {
       // It only becomes Rejected (no more retries) once the owner has been told.
       rejectedReason = result.reason;
       values[COL.status] = cellText_(`Failed: ${result.reason} (owner not alerted yet)`);
@@ -359,6 +363,7 @@ function postToEventHorizon_(config, payload) {
   const hint = {
     401: ' (EVENT_REQUEST_SECRET does not match the deployment)',
     404: ' (check CONVEX_URL: it should end in .convex.site/event-requests)',
+    413: ' (the answers are too long for Event Horizon)',
     503: ' (the secret is not set on this Convex deployment)',
   }[code] || '';
   return { ok: false, code, reason: truncate_(`HTTP ${code}${hint}${detail ? `: ${detail}` : ''}`, 450) };

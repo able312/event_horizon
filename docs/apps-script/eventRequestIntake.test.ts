@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import vm from "node:vm"
 import { describe, expect, it } from "vitest"
-import { EVENT_TYPE_CHOICES, QUESTIONS, parseEventRequestPayload } from "../../convex/lib/eventRequestPayload"
+import { EVENT_TYPE_CHOICES, MAX_BODY_BYTES, QUESTIONS, parseEventRequestPayload } from "../../convex/lib/eventRequestPayload"
 
 // eventRequestIntake.gs runs in Google Apps Script, not here. These tests load it into
 // a sandbox with small in-memory fakes of the Apps Script services it uses.
@@ -66,7 +66,7 @@ function createScript(options: { props?: Record<string, string>; items?: FakeIte
   const mails: Mail[] = []
   const posts: Post[] = []
   const logs: string[] = []
-  // With no fallback set, answers like the Convex route: 200, or 422 with its problems.
+  // With no fallback set, answers like the Convex route: 200, 413 if too large, or 422 with its problems.
   const http = { replies: [] as HttpReply[], fallback: null as HttpReply | null, msPerPost: 0 }
   const lock = { available: true, waitMs: 0 }
   const failMailTo = new Set<string>()
@@ -181,7 +181,11 @@ function createScript(options: { props?: Record<string, string>; items?: FakeIte
         const parsed = parseEventRequestPayload(JSON.parse(request.payload))
         const reply = http.replies.shift() ??
           http.fallback ??
-          (parsed.ok ? { code: 200, body: { status: "created" } } : { code: 422, body: { error: "Invalid event request", problems: parsed.problems } })
+          (new TextEncoder().encode(request.payload).length > MAX_BODY_BYTES
+            ? { code: 413, body: { error: "Request body is too large" } }
+            : parsed.ok
+              ? { code: 200, body: { status: "created" } }
+              : { code: 422, body: { error: "Invalid event request", problems: parsed.problems } })
         return { getResponseCode: () => reply.code, getContentText: () => JSON.stringify(reply.body ?? {}) }
       },
     },
@@ -379,6 +383,16 @@ describe("eventRequestIntake.gs", () => {
 
     script.run()
     expect(script.posts).toHaveLength(2)
+  })
+
+  it("rejects answers too large for Event Horizon instead of retrying them", () => {
+    const script = createScript()
+    script.setup()
+    script.submit({ ...VALID_ANSWERS, "Tell us about your event": "x".repeat(MAX_BODY_BYTES) })
+    script.run()
+    script.run()
+    expect(script.posts).toHaveLength(1)
+    expect(script.rows()[0].Status).toBe("Rejected: HTTP 413 (the answers are too long for Event Horizon): Request body is too large")
   })
 
   it("retries only the email that failed", () => {
