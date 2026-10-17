@@ -64,6 +64,12 @@ const QUESTIONS = {
 };
 const REQUIRED_QUESTIONS = ['firstName', 'lastName', 'phone', 'eventType', 'guestCount'];
 const EVENT_TYPE_CHOICES = ['Golf Tournament', 'Wedding', 'Other Event'];
+/**
+ * Event Horizon only accepts yyyy-MM-dd dates and HH:mm times, which Forms produces
+ * only for these question types. Anything else lets respondents type free text.
+ */
+const QUESTION_TYPES = { preferredDate: 'DATE', alternateDate: 'DATE', startTime: 'TIME' };
+const QUESTION_TYPE_NAMES = { DATE: 'Date', TIME: 'Time' };
 
 const SYNC_SHEET_NAME = 'Event Horizon sync';
 const SYNC_HEADERS = ['Response ID', 'Submitted', 'Client', 'Team emailed', 'Client emailed', 'Status', 'Attempts', 'Last attempt'];
@@ -512,6 +518,11 @@ function checkForm_(form) {
     }
     if (REQUIRED_QUESTIONS.includes(key) && !asQuestion_(item).isRequired()) {
       problems.push(`"${QUESTIONS[key]}" must be a required question (turn on Required)`);
+    }
+    const expectedType = QUESTION_TYPES[key];
+    if (expectedType && String(item.getType()) !== expectedType) {
+      problems.push(`"${QUESTIONS[key]}" must be a ${QUESTION_TYPE_NAMES[expectedType]} question`);
+      continue;
     }
     if (item.getType() === FormApp.ItemType.DATE && !item.asDateItem().includesYear()) {
       problems.push(`"${QUESTIONS[key]}" must include the year (question settings → Include year)`);

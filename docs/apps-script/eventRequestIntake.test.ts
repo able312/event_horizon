@@ -30,10 +30,17 @@ const VALID_ANSWERS: Answers = {
 
 const REQUIRED_TITLES: string[] = [QUESTIONS.firstName, QUESTIONS.lastName, QUESTIONS.phone, QUESTIONS.eventType, QUESTIONS.guestCount]
 
+const QUESTION_TYPES: Record<string, string> = {
+  [QUESTIONS.eventType]: "MULTIPLE_CHOICE",
+  [QUESTIONS.preferredDate]: "DATE",
+  [QUESTIONS.alternateDate]: "DATE",
+  [QUESTIONS.startTime]: "TIME",
+}
+
 const FORM_ITEMS: FakeItem[] = [
   ...Object.values(QUESTIONS).map((title): FakeItem => ({
     title,
-    type: title.endsWith("date") ? "DATE" : title === QUESTIONS.eventType ? "MULTIPLE_CHOICE" : "TEXT",
+    type: QUESTION_TYPES[title] ?? "TEXT",
     required: REQUIRED_TITLES.includes(title),
     includesYear: true,
     choices: Object.keys(EVENT_TYPE_CHOICES),
@@ -98,6 +105,8 @@ function createScript(options: { props?: Record<string, string>; items?: FakeIte
       getType: () => item.type,
       asTextItem: () => typed,
       asDateItem: () => typed,
+      asTimeItem: () => typed,
+      asDateTimeItem: () => typed,
       asMultipleChoiceItem: () => typed,
     }
   })
@@ -420,6 +429,8 @@ describe("eventRequestIntake.gs", () => {
       const items = FORM_ITEMS.filter((item) => item.title !== QUESTIONS.lastName).map((item) => {
         if (item.title === QUESTIONS.phone) return { ...item, required: false }
         if (item.title === QUESTIONS.preferredDate) return { ...item, includesYear: false }
+        if (item.title === QUESTIONS.alternateDate) return { ...item, type: "TEXT" }
+        if (item.title === QUESTIONS.startTime) return { ...item, type: "DATETIME" }
         if (item.title === QUESTIONS.eventType) return { ...item, choices: ["Wedding", "Birthday"] }
         return item
       })
@@ -433,6 +444,8 @@ describe("eventRequestIntake.gs", () => {
       expect(log).toContain(`Required question "${QUESTIONS.lastName}" is missing`)
       expect(log).toContain(`"${QUESTIONS.phone}" must be a required question`)
       expect(log).toContain(`"${QUESTIONS.preferredDate}" must include the year`)
+      expect(log).toContain(`"${QUESTIONS.alternateDate}" must be a Date question`)
+      expect(log).toContain(`"${QUESTIONS.startTime}" must be a Time question`)
       expect(log).toContain("options Event Horizon won't accept: Birthday")
       expect(log).toContain("does not collect email addresses")
     })
