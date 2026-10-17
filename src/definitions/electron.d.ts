@@ -1,7 +1,7 @@
-import type { EventRequestNotificationsApi } from "./notifications"
 export {}
 import type { UpdaterApi } from "./updater"
 import type { AuthApi } from "./auth"
+import type { EventRequestNotificationsApi } from "./notifications"
 
 declare global {
   interface Window {

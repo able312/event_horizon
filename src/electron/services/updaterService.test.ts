@@ -23,8 +23,9 @@ function setup(enabled = true) {
   const updater = new FakeUpdater()
   const native = new EventEmitter()
   const log = vi.fn()
-  const service = createUpdaterService(updater, native, enabled, log)
-  return { updater, native, log, service }
+  const setQuitting = vi.fn()
+  const service = createUpdaterService(updater, native, enabled, log, setQuitting)
+  return { updater, native, log, setQuitting, service }
 }
 
 afterEach(() => { vi.useRealTimers() })
@@ -197,6 +198,24 @@ describe("updater service", () => {
     expect(install).not.toHaveBeenCalled()
     service.restartAndInstall()
     expect(updater.quitAndInstall).toHaveBeenCalledTimes(3)
+    service.stop()
+  })
+
+  it("allows windows to close before handing off, and keeps them hidden-on-close again if it fails", () => {
+    const { updater, service, setQuitting } = setup()
+    service.start()
+    updater.emit("update-downloaded", { version: "0.1.1" })
+    updater.quitAndInstall.mockImplementationOnce(() => {
+      expect(setQuitting).toHaveBeenLastCalledWith(true)
+    })
+    service.restartAndInstall()
+    expect(updater.quitAndInstall).toHaveBeenCalledOnce()
+    expect(setQuitting).toHaveBeenLastCalledWith(true)
+    updater.emit("error", new Error("signature verification failed"))
+    expect(setQuitting).toHaveBeenLastCalledWith(false)
+    updater.quitAndInstall.mockImplementationOnce(() => { throw new Error("native unavailable") })
+    expect(() => service.restartAndInstall()).toThrow("Could not prepare")
+    expect(setQuitting).toHaveBeenLastCalledWith(false)
     service.stop()
   })
 

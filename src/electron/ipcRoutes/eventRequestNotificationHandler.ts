@@ -64,13 +64,19 @@ export function registerEventRequestNotificationHandlers(rendererUrl: string, pl
       }
     }
   }
+  // Only the renderer keeps the badge current, so it must not outlive the last window.
+  const clearBadge = () => {
+    if (platform === "darwin") app.dock?.setBadge("")
+  }
   app.on("browser-window-focus", stopFlashing)
+  app.on("window-all-closed", clearBadge)
   return () => {
     ipcMain.removeHandler(NOTIFY)
     ipcMain.removeHandler(COUNT)
     app.removeListener("browser-window-focus", stopFlashing)
+    app.removeListener("window-all-closed", clearBadge)
     for (const notification of notifications) notification.close()
     notifications.clear()
-    if (platform === "darwin") app.dock?.setBadge("")
+    clearBadge()
   }
 }

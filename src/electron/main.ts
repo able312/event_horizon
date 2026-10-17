@@ -12,8 +12,8 @@ import { createAuthService } from './services/authService.js';
 import { resolveWorkOSClientId } from './services/authConfig.js';
 import { createWorkOSAuthClient, electronAuthPlatform, focusApp } from './services/authPlatform.js';
 import { registerAuthIpcHandlers } from './ipcRoutes/authHandler.js';
-
 import { registerEventRequestNotificationHandlers } from './ipcRoutes/eventRequestNotificationHandler.js';
+import { hideOnClose } from './windowClose.js';
 
 // Must match electron-builder.json so Windows associates toasts with the installed shortcut.
 if (process.platform === 'win32') app.setAppUserModelId('com.latenightcreation.event-horizon')
@@ -27,6 +27,10 @@ const resolveWindowIconPath = () => {
     }
     return path.join(app.getAppPath(), 'dist-react/icon-512.png')
 }
+
+// Set once the app is really quitting, so hidden-on-close macOS windows are allowed to close.
+let isQuitting = false
+app.on("before-quit", () => { isQuitting = true })
 
 // Single source for the page the window loads and the origin updater and auth IPC accept.
 const resolveRendererUrl = () => isDev()
@@ -54,6 +58,7 @@ const createWindow = (initialRoute = "") => {
             : { trafficLightPosition: { x: 15, y: 12 } }),
     });
 
+    hideOnClose(mainWindow, process.platform, () => isQuitting)
     mainWindow.maximize()
 
     const rendererUrl = resolveRendererUrl() + (initialRoute ? `#${initialRoute}` : "")
@@ -69,7 +74,8 @@ const setupUpdater = () => {
     const logger = createUpdaterLogger(path.join(app.getPath("logs"), "updater.log"))
     autoUpdater.logger = logger
     const updater = createUpdaterService(autoUpdater, nativeUpdater,
-        isUpdaterEnabled(app.isPackaged, process.platform, process.arch), logger.error)
+        isUpdaterEnabled(app.isPackaged, process.platform, process.arch), logger.error,
+        quitting => { isQuitting = quitting })
     const unregisterUpdater = registerUpdaterIpcHandlers(updater, resolveRendererUrl())
     app.once("will-quit", () => {
         unregisterUpdater()

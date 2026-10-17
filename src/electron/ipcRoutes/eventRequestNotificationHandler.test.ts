@@ -85,6 +85,14 @@ describe("event request notification IPC", () => {
     cleanup()
     expect(mocks.removeHandler).toHaveBeenCalledTimes(2)
     expect(mocks.off).toHaveBeenCalledWith("browser-window-focus", expect.any(Function))
+    expect(mocks.off).toHaveBeenCalledWith("window-all-closed", expect.any(Function))
+  })
+  it("clears the macOS badge once no window is left to keep it current", () => {
+    registerEventRequestNotificationHandlers(rendererUrl, "darwin")
+    handler("event-requests:set-pending-count")(event(), 4)
+    const allClosed = mocks.on.mock.calls.find(call => call[0] === "window-all-closed")![1] as () => void
+    allClosed()
+    expect(mocks.badge).toHaveBeenLastCalledWith("")
   })
   it("flashes Windows in the background even without notification support, stopping on focus or zero pending", () => {
     registerEventRequestNotificationHandlers(rendererUrl, "win32")
@@ -92,7 +100,7 @@ describe("event request notification IPC", () => {
     handler("event-requests:notify-new")(event())
     expect(mocks.window.flashFrame).toHaveBeenLastCalledWith(true)
     expect(mocks.show).not.toHaveBeenCalled()
-    const focus = mocks.on.mock.calls[0][1] as () => void
+    const focus = mocks.on.mock.calls.find(call => call[0] === "browser-window-focus")![1] as () => void
     focus()
     expect(mocks.window.flashFrame).toHaveBeenLastCalledWith(false)
     handler("event-requests:set-pending-count")(event(), 0)

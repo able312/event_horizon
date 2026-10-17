@@ -1,5 +1,4 @@
 import './App.css'
-import { useEventRequestNotifications } from './hooks/useEventRequestNotifications'
 import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router'
 import { Toaster } from './components/atoms/sonner'
@@ -9,6 +8,7 @@ import EventsRoute from '~/routes/Events'
 
 //Hook
 import { useIpcNavigation } from './hooks/useIpcNavigation'
+import { useEventRequestNotifications } from './hooks/useEventRequestNotifications'
 import { useGenerateMenuState } from './hooks/useGenerateMenuState'
 import { UpdaterProvider } from './features/updater/state/UpdaterProvider'
 
