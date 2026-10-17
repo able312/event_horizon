@@ -66,7 +66,8 @@ function createScript(options: { props?: Record<string, string>; items?: FakeIte
   const mails: Mail[] = []
   const posts: Post[] = []
   const logs: string[] = []
-  const http = { replies: [] as HttpReply[], fallback: { code: 200, body: { status: "created" } } as HttpReply, msPerPost: 0 }
+  // With no fallback set, answers like the Convex route: 200, or 422 with its problems.
+  const http = { replies: [] as HttpReply[], fallback: null as HttpReply | null, msPerPost: 0 }
   const lock = { available: true, waitMs: 0 }
   const failMailTo = new Set<string>()
   let syncRows: unknown[][] | null = null
@@ -176,7 +177,10 @@ function createScript(options: { props?: Record<string, string>; items?: FakeIte
       fetch: (url: string, request: { headers: { Authorization: string }; payload: string }) => {
         now += http.msPerPost
         posts.push({ url, authorization: request.headers.Authorization, payload: JSON.parse(request.payload) })
-        const reply = http.replies.shift() ?? http.fallback
+        const parsed = parseEventRequestPayload(JSON.parse(request.payload))
+        const reply = http.replies.shift() ??
+          http.fallback ??
+          (parsed.ok ? { code: 200, body: { status: "created" } } : { code: 422, body: { error: "Invalid event request", problems: parsed.problems } })
         return { getResponseCode: () => reply.code, getContentText: () => JSON.stringify(reply.body ?? {}) }
       },
     },
@@ -299,12 +303,38 @@ describe("eventRequestIntake.gs", () => {
     expect(alerts[0].body).toContain("failed 3 times")
     expect(script.mails).toHaveLength(3)
 
-    script.http.fallback = { code: 200, body: { status: "created" } }
+    script.http.fallback = null
     script.run()
     script.run()
     expect(script.rows()[0].Status).toBe("Synced")
     expect(script.posts).toHaveLength(5)
     expect(script.mails).toHaveLength(3)
+  })
+
+  it("alerts the owner at once and stops retrying when Event Horizon rejects the answers", () => {
+    const script = createScript()
+    script.setup()
+    script.submit({ ...VALID_ANSWERS, "Estimated guests": "about 50" })
+    script.run()
+
+    const row = script.rows()[0]
+    expect(row.Status).toBe('Rejected: HTTP 422: "Estimated guests" must be a whole number from 1 to 10000')
+    expect(isDate(row["Team emailed"])).toBe(true)
+    const alerts = script.mails.filter((mail) => mail.to === "owner@westlinks.test")
+    expect(alerts).toHaveLength(1)
+    expect(alerts[0].body).toContain("will not be retried")
+
+    script.http.fallback = null
+    for (let run = 0; run < 4; run++) script.run()
+    expect(script.posts).toHaveLength(1)
+    expect(script.mails).toHaveLength(3)
+
+    // Clearing the Status sends it again, e.g. after fixing a renamed question.
+    script.http.fallback = { code: 200, body: { status: "created" } }
+    script.setStatus(0, "")
+    script.run()
+    expect(script.posts).toHaveLength(2)
+    expect(script.rows()[0].Status).toBe("Synced")
   })
 
   it("retries only the email that failed", () => {
@@ -419,7 +449,6 @@ describe("eventRequestIntake.gs", () => {
   describe("checkSetup", () => {
     it("passes when the form, properties and connection are right", () => {
       const script = createScript()
-      script.http.fallback = { code: 422, body: { problems: ["missing"] } }
       script.checkSetup()
       expect(script.posts[0].payload).toEqual({})
       expect(script.logs).toEqual(["All checks passed: properties, form questions, and the Event Horizon connection."])

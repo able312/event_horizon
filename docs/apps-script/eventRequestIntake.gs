@@ -27,19 +27,28 @@
  *      VENUE_NAME            sender name on emails (default "Westlinks")
  *      CLIENT_REPLY_TO       where client replies go (default: first TEAM_EMAILS address)
  *      ALERT_EMAIL           who gets failure alerts (default: the owner account)
- * 3. Run `checkSetup` and read the log. It checks the properties, the form's
+ * 3. In the form, give "Estimated guests" Response validation → Number → Whole
+ *    number, between 1 and 10000 (or make it a list of whole numbers). Event Horizon
+ *    rejects anything else, and Apps Script can't read that setting to check it.
+ * 4. Run `checkSetup` and read the log. It checks the properties, the form's
  *    questions, and that Event Horizon accepts the secret (it sends an empty test
  *    body, which creates nothing).
- * 4. Run `setup`. Approve Google's permission prompt ("unverified app" is expected
+ * 5. Run `setup`. Approve Google's permission prompt ("unverified app" is expected
  *    for your own script: Advanced → Go to project). It creates the sync tab and
  *    the two triggers. Only responses submitted after the first `setup` are sent.
  *
  * ── Day to day ───────────────────────────────────────────────────────────────
- * - The sync tab shows each response's Status: Synced, or Failed: <reason>.
- * - To stop retrying a response, change its Status to "Skip".
+ * - The sync tab shows each response's Status: Synced, Failed: <reason> (retried),
+ *   or Rejected: <reason>.
+ * - Rejected means Event Horizon refused the answers themselves (e.g. a guest count
+ *   that isn't a number), so retrying can't help: the owner is emailed at once and
+ *   it isn't retried. The team email still went out, so add the request by hand if
+ *   needed. If the cause was the form (see below), fix it and clear the Status to
+ *   send it again.
+ * - To stop retrying a Failed response, change its Status to "Skip".
  * - Renaming or removing a question in QUESTIONS below breaks the mapping, and
- *   Event Horizon rejects the response (Failed). Adding a question is safe: it
- *   arrives as an extra answer.
+ *   Event Horizon rejects the response. Adding a question is safe: it arrives as an
+ *   extra answer.
  * - Changing the secret: update Convex and EVENT_REQUEST_SECRET together. Rows that
  *   fail in between are retried.
  */
@@ -192,7 +201,12 @@ function processResponses_() {
 function isFinished_(values) {
   const status = String(values[COL.status]);
   if (/^skip/i.test(status)) return true;
-  return status === 'Synced' && values[COL.teamEmailed] instanceof Date && isClientEmailDone_(values[COL.clientEmailed]);
+  return isDelivered_(status) && values[COL.teamEmailed] instanceof Date && isClientEmailDone_(values[COL.clientEmailed]);
+}
+
+/** Event Horizon has answered for good: stored it, or refused the answers themselves. */
+function isDelivered_(status) {
+  return status === 'Synced' || /^Rejected/.test(String(status));
 }
 
 function isClientEmailDone_(value) {
@@ -228,18 +242,28 @@ function processResponse_(config, response, values) {
     }
   }
 
-  if (values[COL.status] !== 'Synced') {
+  let rejected = false;
+  if (!isDelivered_(values[COL.status])) {
     const result = postToEventHorizon_(config, request.payload);
-    values[COL.status] = cellText_(result.ok ? 'Synced' : `Failed: ${result.reason}`);
-    if (!result.ok) failures.push(`Event Horizon: ${result.reason}`);
+    if (result.ok) {
+      values[COL.status] = 'Synced';
+    } else if (result.code === 422) {
+      // The answers failed validation; sending the same answers again can't succeed.
+      rejected = true;
+      values[COL.status] = cellText_(`Rejected: ${result.reason}`);
+      failures.push(`Event Horizon rejected the answers: ${result.reason}`);
+    } else {
+      values[COL.status] = cellText_(`Failed: ${result.reason}`);
+      failures.push(`Event Horizon: ${result.reason}`);
+    }
   }
 
   values[COL.lastAttempt] = new Date();
   if (!failures.length) return;
   const attempts = Number(values[COL.attempts] || 0) + 1;
   values[COL.attempts] = attempts;
-  if (attempts === ALERT_AFTER_ATTEMPTS || (attempts > ALERT_AFTER_ATTEMPTS && (attempts - ALERT_AFTER_ATTEMPTS) % ALERT_REPEAT_EVERY === 0)) {
-    sendOwnerAlert_(config, request, attempts, failures);
+  if (rejected || attempts === ALERT_AFTER_ATTEMPTS || (attempts > ALERT_AFTER_ATTEMPTS && (attempts - ALERT_AFTER_ATTEMPTS) % ALERT_REPEAT_EVERY === 0)) {
+    sendOwnerAlert_(config, request, attempts, failures, rejected);
   }
 }
 
@@ -392,20 +416,26 @@ function sendClientConfirmation_(config, request) {
   MailApp.sendEmail(options);
 }
 
-function sendOwnerAlert_(config, request, attempts, failures) {
+function sendOwnerAlert_(config, request, attempts, failures, rejected) {
   try {
     const to = config.alertEmail || Session.getEffectiveUser().getEmail();
     const url = SpreadsheetApp.getActiveSpreadsheet().getUrl();
+    const intro = rejected
+      ? 'Event Horizon rejected the answers to a website event request, so it is not in the Inbox and will not be retried.'
+      : `A website event request has failed ${attempts} times. It is retried every 15 minutes.`;
+    const next = rejected
+      ? 'The team email still went out, so add the request in Event Horizon by hand if needed. If the form caused it ' +
+        '(a renamed question, or no number validation on the guest count), fix the form and clear its Status to send it again.'
+      : 'Fix the cause (Script Properties, the Convex secret, or the form question titles) and the next retry ' +
+        'will send it. To stop retrying, set its Status to "Skip".';
     MailApp.sendEmail({
       to,
       subject: singleLine_(`Event request not delivered: ${request.title || request.clientName}`, 200),
       name: 'Event Horizon intake',
       body:
-        `A website event request has failed ${attempts} times. It is retried every 15 minutes.\n\n` +
+        `${intro}\n\n` +
         `Client: ${request.clientName} <${request.respondentEmail}>\nResponse ID: ${request.payload.responseId}\n\n` +
-        `${failures.join('\n')}\n\nSync tab: ${url}\n\n` +
-        `Fix the cause (Script Properties, the Convex secret, or the form question titles) and the next retry ` +
-        `will send it. To stop retrying, set its Status to "Skip".`,
+        `${failures.join('\n')}\n\nSync tab: ${url}\n\n${next}`,
     });
   } catch (error) {
     console.error(`Could not send the failure alert: ${errorMessage_(error)}`);
