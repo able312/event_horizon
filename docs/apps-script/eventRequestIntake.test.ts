@@ -16,7 +16,7 @@ type FakeResponse = { id: string; timestamp: Date; email: string; answers: Answe
 type Mail = { to: string; subject: string; body: string; replyTo?: string }
 type Post = { url: string; authorization: string; payload: Record<string, unknown> }
 type HttpReply = { code: number; body?: unknown }
-type FakeItem = { title: string; type: string; required?: boolean; includesYear?: boolean; choices?: string[] }
+type FakeItem = { title: string; type: string; required?: boolean; includesYear?: boolean; choices?: string[]; otherOption?: boolean }
 
 const VALID_ANSWERS: Answers = {
   "First name": "Sarah",
@@ -75,7 +75,7 @@ function createScript(options: { props?: Record<string, string>; items?: FakeIte
   const range = (rows: unknown[][], row: number, col: number, numRows: number, numCols: number) => {
     const value = {
       getValues: () =>
-        rows.slice(row - 1, row - 1 + numRows).map((r) => Array.from({ length: numCols }, (_, i) => r[col - 1 + i] ?? "")),
+        Array.from({ length: numRows }, (_, r) => Array.from({ length: numCols }, (_, c) => rows[row - 1 + r]?.[col - 1 + c] ?? "")),
       setValues: (values: unknown[][]) => {
         values.forEach((v, i) => {
           rows[row - 1 + i] = [...v]
@@ -100,6 +100,7 @@ function createScript(options: { props?: Record<string, string>; items?: FakeIte
       isRequired: () => item.required ?? false,
       includesYear: () => item.includesYear ?? true,
       getChoices: () => (item.choices ?? []).map((choice) => ({ getValue: () => choice })),
+      hasOtherOption: () => item.otherOption ?? false,
     }
     return {
       getTitle: () => item.title,
@@ -337,6 +338,31 @@ describe("eventRequestIntake.gs", () => {
     expect(script.rows()[0].Status).toBe("Synced")
   })
 
+  it("retries a failed owner alert on the next run, then repeats it daily", () => {
+    const script = createScript()
+    script.setup()
+    script.submit()
+    script.http.fallback = { code: 503 }
+    const alerts = () => script.mails.filter((mail) => mail.to === "owner@westlinks.test")
+
+    script.failMailTo.add("owner@westlinks.test")
+    for (let run = 0; run < 3; run++) script.run()
+    expect(script.rows()[0]["Owner alerted"]).toBe("")
+
+    script.failMailTo.clear()
+    script.run()
+    expect(alerts()).toHaveLength(1)
+    expect(alerts()[0].body).toContain("failed 4 times")
+    expect(isDate(script.rows()[0]["Owner alerted"])).toBe(true)
+
+    script.advance(23 * 60 * MINUTE)
+    script.run()
+    expect(alerts()).toHaveLength(1)
+    script.advance(60 * MINUTE)
+    script.run()
+    expect(alerts()).toHaveLength(2)
+  })
+
   it("keeps retrying a rejected request until the owner alert is sent", () => {
     const script = createScript()
     script.setup()
@@ -478,7 +504,7 @@ describe("eventRequestIntake.gs", () => {
         if (item.title === QUESTIONS.preferredDate) return { ...item, includesYear: false }
         if (item.title === QUESTIONS.alternateDate) return { ...item, type: "TEXT" }
         if (item.title === QUESTIONS.startTime) return { ...item, type: "DATETIME" }
-        if (item.title === QUESTIONS.eventType) return { ...item, choices: ["Wedding", "Birthday"] }
+        if (item.title === QUESTIONS.eventType) return { ...item, choices: ["Wedding", "Birthday"], otherOption: true }
         return item
       })
       items.push({ title: QUESTIONS.guestCount, type: "TEXT", required: true }, { title: "About you", type: "SECTION_HEADER" })
@@ -494,6 +520,7 @@ describe("eventRequestIntake.gs", () => {
       expect(log).toContain(`"${QUESTIONS.alternateDate}" must be a Date question`)
       expect(log).toContain(`"${QUESTIONS.startTime}" must be a Time question`)
       expect(log).toContain("options Event Horizon won't accept: Birthday")
+      expect(log).toContain('must not have an "Other" option')
       expect(log).toContain("does not collect email addresses")
     })
 

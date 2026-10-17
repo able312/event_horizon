@@ -81,12 +81,15 @@ const QUESTION_TYPES = { preferredDate: 'DATE', alternateDate: 'DATE', startTime
 const QUESTION_TYPE_NAMES = { DATE: 'Date', TIME: 'Time' };
 
 const SYNC_SHEET_NAME = 'Event Horizon sync';
-const SYNC_HEADERS = ['Response ID', 'Submitted', 'Client', 'Team emailed', 'Client emailed', 'Status', 'Attempts', 'Last attempt'];
-const COL = { id: 0, submitted: 1, client: 2, teamEmailed: 3, clientEmailed: 4, status: 5, attempts: 6, lastAttempt: 7 };
+const SYNC_HEADERS = ['Response ID', 'Submitted', 'Client', 'Team emailed', 'Client emailed', 'Status', 'Attempts', 'Last attempt', 'Owner alerted'];
+const COL = { id: 0, submitted: 1, client: 2, teamEmailed: 3, clientEmailed: 4, status: 5, attempts: 6, lastAttempt: 7, ownerAlerted: 8 };
 const SYNC_FROM_PROPERTY = 'SYNC_FROM';
-/** First owner alert after this many failed runs (~45 minutes), then once a day. */
+/**
+ * First owner alert after this many failed runs (~45 minutes), then once a day. An
+ * alert that fails to send is tried again on the next run.
+ */
 const ALERT_AFTER_ATTEMPTS = 3;
-const ALERT_REPEAT_EVERY = 96;
+const ALERT_REPEAT_MS = 24 * 60 * 60 * 1000;
 /**
  * Stay well inside Apps Script's 6-minute limit; the next run picks up the rest.
  * Counted from the start of the run, so time spent waiting for the lock is included.
@@ -263,11 +266,12 @@ function processResponse_(config, response, values) {
   if (!failures.length) return;
   const attempts = Number(values[COL.attempts] || 0) + 1;
   values[COL.attempts] = attempts;
-  if (rejectedReason !== null) {
-    if (sendOwnerAlert_(config, request, attempts, failures, true)) values[COL.status] = cellText_(`Rejected: ${rejectedReason}`);
-  } else if (attempts === ALERT_AFTER_ATTEMPTS || (attempts > ALERT_AFTER_ATTEMPTS && (attempts - ALERT_AFTER_ATTEMPTS) % ALERT_REPEAT_EVERY === 0)) {
-    sendOwnerAlert_(config, request, attempts, failures, false);
-  }
+  const lastAlert = values[COL.ownerAlerted];
+  const alertDue = attempts >= ALERT_AFTER_ATTEMPTS && !(lastAlert instanceof Date && Date.now() - lastAlert.getTime() < ALERT_REPEAT_MS);
+  if (rejectedReason === null && !alertDue) return;
+  if (!sendOwnerAlert_(config, request, attempts, failures, rejectedReason !== null)) return;
+  values[COL.ownerAlerted] = new Date();
+  if (rejectedReason !== null) values[COL.status] = cellText_(`Rejected: ${rejectedReason}`);
 }
 
 // ── Reading a form response ─────────────────────────────────────────────────
@@ -455,8 +459,12 @@ function getSyncSheet_() {
   let sheet = ss.getSheetByName(SYNC_SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(SYNC_SHEET_NAME);
-    sheet.getRange(1, 1, 1, SYNC_HEADERS.length).setValues([SYNC_HEADERS]).setFontWeight('bold');
     sheet.setFrozenRows(1);
+  }
+  const headers = sheet.getRange(1, 1, 1, SYNC_HEADERS.length);
+  if (headers.getValues()[0].join('\u0000') !== SYNC_HEADERS.join('\u0000')) {
+    // New tab, or one made by an older copy of this script with fewer columns.
+    headers.setValues([SYNC_HEADERS]).setFontWeight('bold');
   }
   return sheet;
 }
@@ -477,7 +485,7 @@ function readSyncRows_(sheet) {
 
 function appendSyncRow_(sheet, response) {
   const request = readResponse_(response);
-  const values = [response.getId(), response.getTimestamp(), cellText_(request.clientName), '', '', 'Pending', 0, ''];
+  const values = [response.getId(), response.getTimestamp(), cellText_(request.clientName), '', '', 'Pending', 0, '', ''];
   sheet.appendRow(values);
   return { rowNumber: sheet.getLastRow(), values };
 }
@@ -570,6 +578,9 @@ function checkForm_(form) {
     const choices = eventType.asMultipleChoiceItem().getChoices().map((choice) => choice.getValue());
     const unknown = choices.filter((choice) => !EVENT_TYPE_CHOICES.includes(choice));
     if (unknown.length) problems.push(`"${QUESTIONS.eventType}" has options Event Horizon won't accept: ${unknown.join(', ')}`);
+    if (eventType.asMultipleChoiceItem().hasOtherOption()) {
+      problems.push(`"${QUESTIONS.eventType}" must not have an "Other" option (respondents could type any event type)`);
+    }
   } else if (eventType) {
     problems.push(`"${QUESTIONS.eventType}" should be a multiple choice question`);
   }
