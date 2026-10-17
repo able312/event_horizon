@@ -337,6 +337,24 @@ describe("eventRequestIntake.gs", () => {
     expect(script.rows()[0].Status).toBe("Synced")
   })
 
+  it("keeps retrying a rejected request until the owner alert is sent", () => {
+    const script = createScript()
+    script.setup()
+    script.submit({ ...VALID_ANSWERS, "Estimated guests": "about 50" })
+    script.failMailTo.add("owner@westlinks.test")
+    script.run()
+    expect(script.rows()[0].Status).toMatch(/^Failed: HTTP 422: .*\(owner not alerted yet\)$/)
+
+    script.failMailTo.clear()
+    script.run()
+    expect(script.rows()[0].Status).toMatch(/^Rejected: HTTP 422/)
+    expect(script.mails.filter((mail) => mail.to === "owner@westlinks.test")).toHaveLength(1)
+    expect(script.mails.filter((mail) => mail.to === "sarah@client.test")).toHaveLength(1)
+
+    script.run()
+    expect(script.posts).toHaveLength(2)
+  })
+
   it("retries only the email that failed", () => {
     const script = createScript()
     script.setup()

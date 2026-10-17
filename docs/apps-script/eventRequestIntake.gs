@@ -242,15 +242,16 @@ function processResponse_(config, response, values) {
     }
   }
 
-  let rejected = false;
+  let rejectedReason = null;
   if (!isDelivered_(values[COL.status])) {
     const result = postToEventHorizon_(config, request.payload);
     if (result.ok) {
       values[COL.status] = 'Synced';
     } else if (result.code === 422) {
       // The answers failed validation; sending the same answers again can't succeed.
-      rejected = true;
-      values[COL.status] = cellText_(`Rejected: ${result.reason}`);
+      // It only becomes Rejected (no more retries) once the owner has been told.
+      rejectedReason = result.reason;
+      values[COL.status] = cellText_(`Failed: ${result.reason} (owner not alerted yet)`);
       failures.push(`Event Horizon rejected the answers: ${result.reason}`);
     } else {
       values[COL.status] = cellText_(`Failed: ${result.reason}`);
@@ -262,8 +263,10 @@ function processResponse_(config, response, values) {
   if (!failures.length) return;
   const attempts = Number(values[COL.attempts] || 0) + 1;
   values[COL.attempts] = attempts;
-  if (rejected || attempts === ALERT_AFTER_ATTEMPTS || (attempts > ALERT_AFTER_ATTEMPTS && (attempts - ALERT_AFTER_ATTEMPTS) % ALERT_REPEAT_EVERY === 0)) {
-    sendOwnerAlert_(config, request, attempts, failures, rejected);
+  if (rejectedReason !== null) {
+    if (sendOwnerAlert_(config, request, attempts, failures, true)) values[COL.status] = cellText_(`Rejected: ${rejectedReason}`);
+  } else if (attempts === ALERT_AFTER_ATTEMPTS || (attempts > ALERT_AFTER_ATTEMPTS && (attempts - ALERT_AFTER_ATTEMPTS) % ALERT_REPEAT_EVERY === 0)) {
+    sendOwnerAlert_(config, request, attempts, failures, false);
   }
 }
 
@@ -416,6 +419,7 @@ function sendClientConfirmation_(config, request) {
   MailApp.sendEmail(options);
 }
 
+/** Returns whether the alert was sent. */
 function sendOwnerAlert_(config, request, attempts, failures, rejected) {
   try {
     const to = config.alertEmail || Session.getEffectiveUser().getEmail();
@@ -437,8 +441,10 @@ function sendOwnerAlert_(config, request, attempts, failures, rejected) {
         `Client: ${request.clientName} <${request.respondentEmail}>\nResponse ID: ${request.payload.responseId}\n\n` +
         `${failures.join('\n')}\n\nSync tab: ${url}\n\n${next}`,
     });
+    return true;
   } catch (error) {
     console.error(`Could not send the failure alert: ${errorMessage_(error)}`);
+    return false;
   }
 }
 
