@@ -11,6 +11,7 @@
  */
 
 import React, { useCallback, useMemo, useState } from "react"
+import { labelDayButton, type Modifiers } from "react-day-picker"
 
 import { Button } from "~/components/atoms/button"
 import { Calendar, CalendarDayButton } from "~/components/atoms/calendar"
@@ -39,6 +40,15 @@ function getRequestDayLabel(modifiers: Record<string, boolean>): string | null {
   if (modifiers.alternate) return "Alternate date"
   return null
 }
+
+// The rings are visual, so screen readers hear which day was requested from its label.
+function getRequestDayButtonLabel(date: Date, modifiers: Modifiers): string {
+  const label = labelDayButton(date, modifiers)
+  const requestLabel = getRequestDayLabel(modifiers)
+  return requestLabel ? `${label}, ${requestLabel}` : label
+}
+
+const DAY_BUTTON_LABELS = { labelDayButton: getRequestDayButtonLabel }
 
 type LegendItemProps = {
   swatchClassName: string
@@ -105,6 +115,7 @@ const RequestMiniCalendar: React.FC<RequestMiniCalendarProps> = ({ request }) =>
         month={monthDate}
         onMonthChange={handleMonthChange}
         onDayClick={ignoreDayClick}
+        labels={DAY_BUTTON_LABELS}
         modifiers={{
           preferred: dates.preferred ?? [],
           alternate: dates.alternate ?? [],

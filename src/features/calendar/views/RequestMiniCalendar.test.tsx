@@ -51,6 +51,9 @@ describe("RequestMiniCalendar", () => {
     expect(getDay("2027-06-20")?.getAttribute("data-request-day")).toBe("preferred")
     expect(getDay("2027-06-27")?.getAttribute("data-request-day")).toBe("alternate")
     expect(getDay("2027-06-21")?.hasAttribute("data-request-day")).toBe(false)
+    expect(getDay("2027-06-20")?.getAttribute("aria-label")).toMatch(/June 20th, 2027, Preferred date$/)
+    expect(getDay("2027-06-27")?.getAttribute("aria-label")).toMatch(/June 27th, 2027, Alternate date$/)
+    expect(getDay("2027-06-21")?.getAttribute("aria-label")).not.toMatch(/date$/)
   })
 
   it("marks booked events, including on neighbouring months' days, but not lost ones", () => {
