@@ -36,6 +36,8 @@ const ALTERNATE_DAY_CLASS = "outline-2 outline-dashed -outline-offset-2 outline-
 const ignoreDayClick = () => {}
 
 function getRequestDayLabel(modifiers: Record<string, boolean>): string | null {
+  // A client can give the same day for both.
+  if (modifiers.preferred && modifiers.alternate) return "Preferred and alternate date"
   if (modifiers.preferred) return "Preferred date"
   if (modifiers.alternate) return "Alternate date"
   return null

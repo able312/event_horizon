@@ -83,6 +83,12 @@ describe("RequestMiniCalendar", () => {
     expect(screen.queryByRole("button", { name: "Back to requested date" })).toBeNull()
   })
 
+  it("names both roles when the preferred and alternate dates are the same day", () => {
+    render(<RequestMiniCalendar request={{ preferredDate: "2027-06-20", alternateDate: "2027-06-20" }} />)
+
+    expect(getDay("2027-06-20")?.getAttribute("aria-label")).toMatch(/, Preferred and alternate date$/)
+  })
+
   it("explains an empty calendar when the client gave no date", () => {
     render(<RequestMiniCalendar request={{ preferredDate: null, alternateDate: null }} />)
 
