@@ -61,7 +61,7 @@ const RequestMiniCalendar: React.FC<RequestMiniCalendarProps> = ({ request }) =>
   const [visibleMonth, setVisibleMonth] = useState(requestMonth)
   const monthDate = useMemo(() => toMonthStartDate(visibleMonth), [visibleMonth])
 
-  const events = useAdjacentMonthsEvents(visibleMonth)
+  const { events, status: bookingsStatus, retry: retryBookings } = useAdjacentMonthsEvents(visibleMonth)
   const eventsByDay = useMemo(() => groupEventsByDay(getBookedEvents(events)), [events])
 
   const hasRequestDate = dates.preferred !== null || dates.alternate !== null
@@ -100,7 +100,7 @@ const RequestMiniCalendar: React.FC<RequestMiniCalendarProps> = ({ request }) =>
   )
 
   return (
-    <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+    <section className="space-y-3 rounded-lg border border-border bg-card p-4" aria-busy={bookingsStatus === "loading"}>
       <Calendar
         month={monthDate}
         onMonthChange={handleMonthChange}
@@ -114,6 +114,19 @@ const RequestMiniCalendar: React.FC<RequestMiniCalendarProps> = ({ request }) =>
         components={{ DayButton }}
         className="w-full bg-transparent p-0"
       />
+      {bookingsStatus === "error" ? (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive"
+        >
+          <span>Couldn&apos;t load bookings, so this calendar may be missing events.</span>
+          <Button type="button" variant="outline" size="sm" className="h-6 shrink-0 px-2 text-xs" onClick={retryBookings}>
+            Retry
+          </Button>
+        </div>
+      ) : bookingsStatus === "loading" ? (
+        <p role="status" className="text-xs text-muted-foreground">Checking bookings…</p>
+      ) : null}
       <div className="flex min-h-6 items-center justify-between gap-2">
         {hasRequestDate ? (
           <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">

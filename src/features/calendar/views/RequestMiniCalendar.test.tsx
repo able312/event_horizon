@@ -5,12 +5,14 @@ import type { Event } from "~/definitions/database"
 import RequestMiniCalendar from "./RequestMiniCalendar"
 
 let monthEvents: Event[] = []
+let bookingsStatus: "loading" | "error" | "ready" = "ready"
+const retryBookings = vi.fn()
 const requestedMonths: string[] = []
 
 vi.mock("~/features/calendar/hooks/useAdjacentMonthsEvents", () => ({
   useAdjacentMonthsEvents: (month: string) => {
     requestedMonths.push(month)
-    return monthEvents
+    return { events: monthEvents, status: bookingsStatus, retry: retryBookings }
   },
 }))
 
@@ -34,6 +36,8 @@ function getDay(dayKey: string): HTMLElement | null {
 afterEach(() => {
   cleanup()
   monthEvents = []
+  bookingsStatus = "ready"
+  retryBookings.mockClear()
   requestedMonths.length = 0
 })
 
@@ -80,5 +84,22 @@ describe("RequestMiniCalendar", () => {
 
     expect(screen.getByText("The client didn't give a date.")).toBeTruthy()
     expect(document.querySelector("[data-request-day]")).toBeNull()
+  })
+
+  it("warns, and offers a retry, when bookings fail to load", () => {
+    bookingsStatus = "error"
+    render(<RequestMiniCalendar request={{ preferredDate: "2027-06-20", alternateDate: null }} />)
+
+    expect(screen.getByRole("alert").textContent).toContain("Couldn't load bookings")
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+    expect(retryBookings).toHaveBeenCalledTimes(1)
+  })
+
+  it("says it is still checking while bookings load", () => {
+    bookingsStatus = "loading"
+    render(<RequestMiniCalendar request={{ preferredDate: "2027-06-20", alternateDate: null }} />)
+
+    expect(screen.getByText("Checking bookings…").getAttribute("role")).toBe("status")
+    expect(screen.queryByRole("alert")).toBeNull()
   })
 })
