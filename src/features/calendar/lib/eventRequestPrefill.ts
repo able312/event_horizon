@@ -14,7 +14,7 @@ export type CreateEventPrefill = {
 }
 
 /** A yyyy-MM-dd form answer as a local calendar day (Date.parse would read it as UTC midnight). */
-function parseRequestDate(date: string): Date | null {
+export function parseRequestDate(date: string): Date | null {
   const [year, month, day] = date.split("-").map(Number)
   if (!year || !month || !day) return null
   const parsed = new Date(year, month - 1, day)

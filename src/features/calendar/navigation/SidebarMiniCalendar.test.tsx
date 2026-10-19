@@ -264,14 +264,14 @@ describe("SidebarMiniCalendar", () => {
     expect(outsideDay?.querySelector("[data-mini-marker-dot]")).toBeNull()
   })
 
-  it("uses a neutral marker color for unknown event types", () => {
+  it("uses a neutral marker color for unknown event statuses", () => {
     render(
       <SidebarMiniCalendar
         month="2026-04"
         events={[
           makeEvent({
-            id: "unknown-type",
-            type: "corporate" as unknown as Event["type"],
+            id: "unknown-status",
+            status: "archived" as unknown as Event["status"],
             startDateTime: "2026-04-10T12:00:00.000Z",
           }),
         ]}
