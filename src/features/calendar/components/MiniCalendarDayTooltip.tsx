@@ -8,7 +8,7 @@
  * Location: src/features/calendar/components/MiniCalendarDayTooltip.tsx
  */
 
-import type { ReactNode } from "react"
+import type { ReactElement } from "react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/atoms/tooltip"
 import type { Event } from "~/definitions/database"
 import { cn } from "~/lib/utils"
@@ -22,7 +22,8 @@ type MiniCalendarDayTooltipProps = {
   events: Event[]
   /** Names what the day is to the request, e.g. "Preferred date" */
   label?: string | null
-  children: ReactNode
+  /** The day's button. It becomes the trigger, so it must accept a ref and spread its props. */
+  children: ReactElement
 }
 
 function formatTooltipDate(date: Date): string {
@@ -34,9 +35,7 @@ function MiniCalendarDayTooltip({ date, events, label, children }: MiniCalendarD
 
   return (
     <Tooltip delayDuration={OPEN_DELAY_MS}>
-      <TooltipTrigger asChild>
-        <div className="flex size-full">{children}</div>
-      </TooltipTrigger>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
       <TooltipContent
         side="right"
         sideOffset={6}

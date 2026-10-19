@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Event } from "~/definitions/database"
@@ -35,6 +35,7 @@ function getDay(dayKey: string): HTMLElement | null {
 
 afterEach(() => {
   cleanup()
+  vi.unstubAllGlobals()
   monthEvents = []
   bookingsStatus = "ready"
   retryBookings.mockClear()
@@ -101,5 +102,23 @@ describe("RequestMiniCalendar", () => {
 
     expect(screen.getByText("Checking bookings…").getAttribute("role")).toBe("status")
     expect(screen.queryByRole("alert")).toBeNull()
+  })
+
+  it("describes a focused day by its bookings", async () => {
+    // The tooltip's positioning measures its trigger.
+    vi.stubGlobal("ResizeObserver", class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    })
+    monthEvents = [makeEvent({ id: "booked", title: "Smith wedding", startDateTime: "2027-06-12T12:00:00" })]
+    render(<RequestMiniCalendar request={{ preferredDate: "2027-06-20", alternateDate: null }} />)
+
+    const day = getDay("2027-06-12")!
+    fireEvent.focus(day)
+
+    await waitFor(() => expect(day.getAttribute("aria-describedby")).toBeTruthy())
+    const description = document.getElementById(day.getAttribute("aria-describedby")!)
+    expect(description?.textContent).toContain("Smith wedding")
   })
 })

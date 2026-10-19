@@ -187,8 +187,9 @@ function CalendarDayButton({
   className,
   day,
   modifiers,
+  ref: forwardedRef,
   ...props
-}: React.ComponentProps<typeof DayButton>) {
+}: React.ComponentProps<typeof DayButton> & { ref?: React.Ref<HTMLButtonElement> }) {
   const defaultClassNames = getDefaultClassNames()
 
   const ref = React.useRef<HTMLButtonElement>(null)
@@ -196,9 +197,19 @@ function CalendarDayButton({
     if (modifiers.focused) ref.current?.focus()
   }, [modifiers.focused])
 
+  // Keeps the focus ref working when a wrapper (e.g. a tooltip trigger) also needs the button.
+  const setRef = React.useCallback(
+    (node: HTMLButtonElement | null) => {
+      ref.current = node
+      if (typeof forwardedRef === "function") forwardedRef(node)
+      else if (forwardedRef) forwardedRef.current = node
+    },
+    [forwardedRef],
+  )
+
   return (
     <Button
-      ref={ref}
+      ref={setRef}
       variant="ghost"
       size="icon"
       data-day={day.date.toLocaleDateString()}
