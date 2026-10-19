@@ -13,12 +13,11 @@ import { EVENT_STATUS_LABELS } from "~/definitions/events/ui"
 import { cn } from "~/lib/utils"
 import {
   buildEventCardAccessibleName,
-  formatGuestCount,
   getGuestCountRange,
   isMissingGoogleCalendarId,
 } from "../lib/eventCardContent"
+import CompactEventChipContent from "./CompactEventChipContent"
 import CompactEventPopoverContent from "./CompactEventPopoverContent"
-import CompactStatusGlyph from "./CompactStatusGlyph"
 import { COMPACT_EVENT_STATUS_STYLES } from "./compactEventStatus"
 
 type CompactEventLineProps = {
@@ -53,15 +52,7 @@ function CompactEventLine({ event, clientName, onOpenEvent, onStatusChange }: Co
           })}
           data-testid="calendar-compact-line"
         >
-          <CompactStatusGlyph shape={style.glyph} className={style.glyphClassName} />
-          <span className={cn("min-w-0 flex-1 truncate text-xs leading-none", style.titleClassName)}>
-            {event.title}
-          </span>
-          {guestCount ? (
-            <span className={cn("shrink-0 text-[11px] font-medium leading-none tabular-nums", style.countClassName)}>
-              {formatGuestCount(guestCount)}
-            </span>
-          ) : null}
+          <CompactEventChipContent event={event} />
         </button>
       </PopoverTrigger>
       <CompactEventPopoverContent

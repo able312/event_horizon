@@ -4,6 +4,7 @@ import type { EventRequest } from "~/definitions/database"
 import { EVENT_TYPE_COLORS, EVENT_TYPE_LABELS } from "~/definitions/events/ui"
 import { ContactSectionCard } from "~/features/contacts-directory/components/ContactSectionCard"
 import { formatRequestDate, formatRequestTime, requestClientName, requestTitle } from "~/features/calendar/lib/eventRequestPrefill"
+import RequestMiniCalendar from "~/features/calendar/views/RequestMiniCalendar"
 
 type RequestDetailViewProps = {
   request: EventRequest
@@ -48,46 +49,50 @@ const RequestDetailView: React.FC<RequestDetailViewProps> = ({ request }) => {
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <ContactSectionCard title="Event">
-          <dl className="space-y-2">
-            <Field label="Preferred date">{request.preferredDate ? formatRequestDate(request.preferredDate) : null}</Field>
-            <Field label="Alternate date">{request.alternateDate ? formatRequestDate(request.alternateDate) : null}</Field>
-            <Field label="Start time">{request.startTime ? formatRequestTime(request.startTime) : null}</Field>
-            <Field label="Guests">{request.guestCount}</Field>
-          </dl>
-        </ContactSectionCard>
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
+          <ContactSectionCard title="Event">
+            <dl className="space-y-2">
+              <Field label="Preferred date">{request.preferredDate ? formatRequestDate(request.preferredDate) : null}</Field>
+              <Field label="Alternate date">{request.alternateDate ? formatRequestDate(request.alternateDate) : null}</Field>
+              <Field label="Start time">{request.startTime ? formatRequestTime(request.startTime) : null}</Field>
+              <Field label="Guests">{request.guestCount}</Field>
+            </dl>
+          </ContactSectionCard>
 
-        <ContactSectionCard title="Client">
-          <dl className="space-y-2">
-            <Field label="Name">{requestClientName(request)}</Field>
-            <Field label="Organization">{request.organizationName}</Field>
-            <Field label="Email">{request.email}</Field>
-            <Field label="Phone">{request.phone}</Field>
-          </dl>
-        </ContactSectionCard>
+          <ContactSectionCard title="Client">
+            <dl className="space-y-2">
+              <Field label="Name">{requestClientName(request)}</Field>
+              <Field label="Organization">{request.organizationName}</Field>
+              <Field label="Email">{request.email}</Field>
+              <Field label="Phone">{request.phone}</Field>
+            </dl>
+          </ContactSectionCard>
+
+          <ContactSectionCard title="About the event">
+            {request.details ? (
+              <p className="whitespace-pre-wrap text-sm select-text">{request.details}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">No description given.</p>
+            )}
+          </ContactSectionCard>
+
+          {otherAnswers.length > 0 ? (
+            <ContactSectionCard title="Other answers">
+              <dl className="space-y-3">
+                {otherAnswers.map(({ question, answer }) => (
+                  <div key={question}>
+                    <dt className="text-xs text-muted-foreground">{question}</dt>
+                    <dd className="whitespace-pre-wrap text-sm select-text">{answer}</dd>
+                  </div>
+                ))}
+              </dl>
+            </ContactSectionCard>
+          ) : null}
+        </div>
+
+        <RequestMiniCalendar request={request} />
       </div>
-
-      <ContactSectionCard title="About the event">
-        {request.details ? (
-          <p className="whitespace-pre-wrap text-sm select-text">{request.details}</p>
-        ) : (
-          <p className="text-sm text-muted-foreground">No description given.</p>
-        )}
-      </ContactSectionCard>
-
-      {otherAnswers.length > 0 ? (
-        <ContactSectionCard title="Other answers">
-          <dl className="space-y-3">
-            {otherAnswers.map(({ question, answer }) => (
-              <div key={question}>
-                <dt className="text-xs text-muted-foreground">{question}</dt>
-                <dd className="whitespace-pre-wrap text-sm select-text">{answer}</dd>
-              </div>
-            ))}
-          </dl>
-        </ContactSectionCard>
-      ) : null}
     </div>
   )
 }

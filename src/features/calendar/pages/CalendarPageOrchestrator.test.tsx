@@ -51,6 +51,10 @@ vi.mock("~/hooks/useEventRequests", () => ({
   useEventRequests: () => ({ requests: pendingRequests, dismissRequest: dismissRequestMock }),
 }))
 
+vi.mock("~/features/calendar/views/RequestMiniCalendar", () => ({
+  default: () => <div data-testid="request-mini-calendar" />,
+}))
+
 vi.mock("~/hooks/useEventContacts", () => ({
   usePrimaryClients: () => ({ data: {} }),
 }))
