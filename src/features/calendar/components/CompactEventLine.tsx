@@ -3,6 +3,7 @@
  *
  * One event as a single line (status glyph, title, guest count) for when the
  * grid is too tight for full cards. Clicking it toggles a popover with the details.
+ * The open state is owned by the grid so only one popover is open at a time.
  *
  * Location: src/features/calendar/components/CompactEventLine.tsx
  */
@@ -11,6 +12,7 @@ import { Popover, PopoverTrigger } from "~/components/atoms/popover"
 import type { Event, EventStatus } from "~/definitions/database"
 import { EVENT_STATUS_LABELS } from "~/definitions/events/ui"
 import { cn } from "~/lib/utils"
+import { useReleaseOpenOnUnmount } from "../hooks/useReleaseOpenOnUnmount"
 import {
   buildEventCardAccessibleName,
   getGuestCountRange,
@@ -23,18 +25,31 @@ import { COMPACT_EVENT_STATUS_STYLES } from "./compactEventStatus"
 type CompactEventLineProps = {
   event: Event
   clientName?: string | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
   onOpenEvent: () => void
   onStatusChange?: (status: EventStatus) => void
+  onCloseAutoFocus?: (event: globalThis.Event) => void
 }
 
-function CompactEventLine({ event, clientName, onOpenEvent, onStatusChange }: CompactEventLineProps) {
+function CompactEventLine({
+  event,
+  clientName,
+  open,
+  onOpenChange,
+  onOpenEvent,
+  onStatusChange,
+  onCloseAutoFocus,
+}: CompactEventLineProps) {
   const style = COMPACT_EVENT_STATUS_STYLES[event.status]
   const statusLabel = EVENT_STATUS_LABELS[event.status]
   const guestCount = getGuestCountRange(event)
   const showUploadWarning = isMissingGoogleCalendarId(event)
+  // e.g. the row widens back to full cards or the event goes away while open
+  useReleaseOpenOnUnmount(open, onOpenChange)
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -61,6 +76,7 @@ function CompactEventLine({ event, clientName, onOpenEvent, onStatusChange }: Co
         showUploadWarning={showUploadWarning}
         onOpenEvent={onOpenEvent}
         onStatusChange={onStatusChange}
+        onCloseAutoFocus={onCloseAutoFocus}
       />
     </Popover>
   )

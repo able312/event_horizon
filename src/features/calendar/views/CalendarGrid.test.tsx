@@ -30,7 +30,7 @@ function makeEvent(day: number, index: number, overrides: Partial<Event> = {}): 
   } as Event
 }
 
-function renderGrid({
+function gridElement({
   events = [],
   clientsByEventId,
   year = 2026,
@@ -57,7 +57,7 @@ function renderGrid({
   onEventDelete?: (eventId: string) => void
   onEventStatusChange?: (eventId: string, status: EventStatus) => void
 } = {}) {
-  return render(
+  return (
     <MemoryRouter initialEntries={[route]}>
       <CalendarGrid
         events={events}
@@ -72,8 +72,12 @@ function renderGrid({
         onEventDelete={onEventDelete}
         onEventStatusChange={onEventStatusChange}
       />
-    </MemoryRouter>,
+    </MemoryRouter>
   )
+}
+
+function renderGrid(props: Parameters<typeof gridElement>[0] = {}) {
+  return render(gridElement(props))
 }
 
 afterEach(() => {
@@ -501,6 +505,127 @@ describe("CalendarGrid compact lines", () => {
 
     expect(screen.queryByRole("dialog")).toBeNull()
     expect(screen.getByTestId("calendar-compact-line").getAttribute("data-state")).toBe("closed")
+  })
+
+  it("closes an open popover on a click on empty calendar space without opening the day", async () => {
+    mockGridSize(NARROW_GRID_WIDTH, 5000)
+    const onDayCellClick = vi.fn()
+    renderGrid({ events: [makeEvent(10, 1)], onDayCellClick })
+
+    fireEvent.click(screen.getByTestId("calendar-compact-line"))
+    expect(screen.getByRole("dialog")).toBeTruthy()
+    // Radix registers its outside-pointer listener on the next tick.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const emptyDay = screen.getByTestId("calendar-day-events-12")
+    fireEvent.pointerDown(emptyDay)
+    fireEvent.click(emptyDay)
+
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(onDayCellClick).not.toHaveBeenCalled()
+
+    fireEvent.pointerDown(emptyDay)
+    fireEvent.click(emptyDay)
+    expect(onDayCellClick).toHaveBeenCalledTimes(1)
+  })
+
+  it("swaps to another compact line's popover when one is already open", async () => {
+    mockGridSize(NARROW_GRID_WIDTH, 5000)
+    const onDayCellClick = vi.fn()
+    renderGrid({ events: [makeEvent(10, 1), makeEvent(12, 1)], onDayCellClick })
+
+    const [first, second] = screen.getAllByTestId("calendar-compact-line")
+    fireEvent.click(first)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    fireEvent.pointerDown(second)
+    fireEvent.click(second)
+
+    const dialogs = screen.getAllByRole("dialog")
+    expect(dialogs).toHaveLength(1)
+    expect(dialogs[0].getAttribute("aria-label")).toBe("Event 12-1")
+    expect(first.getAttribute("data-state")).toBe("closed")
+    expect(second.getAttribute("data-state")).toBe("open")
+    expect(onDayCellClick).not.toHaveBeenCalled()
+
+    // The replaced popover must not hand focus back to its trigger as it unmounts:
+    // Radix would read that as a focus-outside and dismiss the new popover too.
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(screen.getAllByRole("dialog")).toHaveLength(1)
+    expect(second.getAttribute("data-state")).toBe("open")
+  })
+
+  it("opens a full card normally while a compact line's popover is open", async () => {
+    mockGridSize(WIDE_GRID_WIDTH, ONE_CARD_GRID_HEIGHT)
+    const onDayCellClick = vi.fn()
+    renderGrid({
+      events: [makeEvent(10, 1), makeEvent(10, 2), makeEvent(10, 3), makeEvent(20, 1)],
+      onDayCellClick,
+    })
+
+    fireEvent.click(within(screen.getByTestId("calendar-day-events-10")).getAllByTestId("calendar-compact-line")[0])
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const card = screen.getByTitle("Event 20-1")
+    fireEvent.pointerDown(card)
+    fireEvent.click(card)
+
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(navigateMock).toHaveBeenCalledWith(
+      "/events/event-20-1?returnTo=%2Fevents%3Fview%3Dcalendar%26date%3D2026-04",
+    )
+    expect(onDayCellClick).not.toHaveBeenCalled()
+  })
+
+  it("lets the day open again when an open popover's event goes away", async () => {
+    mockGridSize(NARROW_GRID_WIDTH, 5000)
+    const onDayCellClick = vi.fn()
+    const { rerender } = renderGrid({ events: [makeEvent(10, 1)], onDayCellClick })
+
+    fireEvent.click(screen.getByTestId("calendar-compact-line"))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    rerender(gridElement({ events: [], onDayCellClick }))
+    expect(screen.queryByRole("dialog")).toBeNull()
+
+    const emptyDay = screen.getByTestId("calendar-day-events-12")
+    fireEvent.pointerDown(emptyDay)
+    fireEvent.click(emptyDay)
+    expect(onDayCellClick).toHaveBeenCalledTimes(1)
+
+    rerender(gridElement({ events: [makeEvent(10, 1)], onDayCellClick }))
+    expect(screen.getByTestId("calendar-compact-line").getAttribute("data-state")).toBe("closed")
+  })
+
+  it("doesn't carry an open popover over to another month", async () => {
+    mockGridSize(NARROW_GRID_WIDTH, 5000)
+    const onDayCellClick = vi.fn()
+    const { rerender } = renderGrid({ events: [makeEvent(10, 1)], onDayCellClick })
+
+    fireEvent.click(screen.getByTestId("calendar-compact-line"))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    rerender(gridElement({ events: [], month: 4, startingDay: 5, daysInMonth: 31, onDayCellClick }))
+
+    const emptyDay = screen.getByTestId("calendar-day-events-12")
+    fireEvent.pointerDown(emptyDay)
+    fireEvent.click(emptyDay)
+    expect(onDayCellClick).toHaveBeenCalledTimes(1)
+  })
+
+  it("doesn't reopen a +N more popover after leaving its month and coming back", () => {
+    const aprilEvents = Array.from({ length: 5 }, (_, i) => makeEvent(10, i + 1))
+    const mayEvents = Array.from({ length: 5 }, (_, i) =>
+      makeEvent(10, i + 1, { id: `may-10-${i + 1}`, startDateTime: "2026-05-10T12:00:00.000Z" }),
+    )
+    const { rerender } = renderGrid({ events: aprilEvents })
+
+    fireEvent.click(screen.getByRole("button", { name: "+2 more events" }))
+    expect(screen.getByRole("dialog")).toBeTruthy()
+
+    rerender(gridElement({ events: mayEvents, month: 4, startingDay: 5, daysInMonth: 31 }))
+    expect(screen.queryByRole("dialog")).toBeNull()
+
+    rerender(gridElement({ events: aprilEvents }))
+    expect(screen.queryByRole("dialog")).toBeNull()
   })
 
   it("only offers Change status when a handler is wired", () => {

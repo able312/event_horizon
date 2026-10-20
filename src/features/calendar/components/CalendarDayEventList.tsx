@@ -12,11 +12,12 @@
  * Location: src/features/calendar/components/CalendarDayEventList.tsx
  */
 
-import { useRef } from "react"
+import { useRef, type ReactNode } from "react"
 import type { PrimaryClient } from "~/definitions/contacts"
 import type { Event, EventStatus } from "~/definitions/database"
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/atoms/popover"
 import { useFittingItemCount } from "../hooks/useFittingItemCount"
+import { useReleaseOpenOnUnmount } from "../hooks/useReleaseOpenOnUnmount"
 import EventItemContextMenu from "../interactions/EventItemContextMenu"
 import CalendarEventCard from "./CalendarEventCard"
 import CompactEventLine from "./CompactEventLine"
@@ -29,6 +30,9 @@ type CalendarDayEventListProps = {
   /** Show single compact lines instead of full cards */
   compact?: boolean
   clientsByEventId?: Record<string, PrimaryClient>
+  /** Key of the grid's one open popover, or null */
+  openPopoverKey: string | null
+  onPopoverOpenChange: (key: string, open: boolean) => void
   onEventClick: (eventId: string) => void
   onEventEdit?: (event: Event) => void
   onEventDelete?: (eventId: string) => void
@@ -41,6 +45,8 @@ function CalendarDayEventList({
   maxVisible,
   compact = false,
   clientsByEventId,
+  openPopoverKey,
+  onPopoverOpenChange,
   onEventClick,
   onEventEdit,
   onEventDelete,
@@ -50,6 +56,12 @@ function CalendarDayEventList({
   const candidateEvents = compact ? events : events.slice(0, maxVisible)
   const fittingCount = useFittingItemCount(listRef, candidateEvents.length)
   const hiddenCount = events.length - fittingCount
+  const morePopoverKey = `more-${day}`
+  // A popover that closes because another opened must not pull focus back to its
+  // trigger: Radix would read that as a focus-outside and dismiss the new one.
+  const handleCloseAutoFocus = (event: globalThis.Event) => {
+    if (openPopoverKey !== null) event.preventDefault()
+  }
 
   const renderCard = (event: Event) => (
     <EventItemContextMenu event={event} onEdit={onEventEdit} onDelete={onEventDelete}>
@@ -66,7 +78,10 @@ function CalendarDayEventList({
       <CompactEventLine
         event={event}
         clientName={clientsByEventId?.[event.id]?.displayName}
+        open={openPopoverKey === `event-${event.id}`}
+        onOpenChange={(open) => onPopoverOpenChange(`event-${event.id}`, open)}
         onOpenEvent={() => onEventClick(event.id)}
+        onCloseAutoFocus={handleCloseAutoFocus}
         onStatusChange={
           onEventStatusChange ? (status) => onEventStatusChange(event.id, status) : undefined
         }
@@ -89,35 +104,58 @@ function CalendarDayEventList({
         ))}
       </div>
       {hiddenCount > 0 ? (
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-              }}
-              className="absolute right-1 top-1 h-5 rounded px-1 text-[10px] leading-5 text-muted-foreground hover:bg-stone-100 hover:text-foreground"
-              aria-label={`+${hiddenCount} more events`}
-            >
-              +{hiddenCount} more
-            </button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="w-72 p-2"
-            align="end"
-            onClick={(e) => {
-              e.stopPropagation()
-            }}
-          >
-            <div className="max-h-96 space-y-1.5 overflow-y-auto">
-              {events.map((event) => (
-                <div key={`more-${day}-${event.id}`}>{renderCard(event)}</div>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
+        <MoreEventsPopover
+          hiddenCount={hiddenCount}
+          open={openPopoverKey === morePopoverKey}
+          onOpenChange={(open) => onPopoverOpenChange(morePopoverKey, open)}
+          onCloseAutoFocus={handleCloseAutoFocus}
+        >
+          {events.map((event) => (
+            <div key={`more-${day}-${event.id}`}>{renderCard(event)}</div>
+          ))}
+        </MoreEventsPopover>
       ) : null}
     </>
+  )
+}
+
+type MoreEventsPopoverProps = {
+  hiddenCount: number
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onCloseAutoFocus: (event: globalThis.Event) => void
+  children: ReactNode
+}
+
+function MoreEventsPopover({ hiddenCount, open, onOpenChange, onCloseAutoFocus, children }: MoreEventsPopoverProps) {
+  // The trigger disappears once every event fits, which Radix doesn't report as a close.
+  useReleaseOpenOnUnmount(open, onOpenChange)
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+          }}
+          className="absolute right-1 top-1 h-5 rounded px-1 text-[10px] leading-5 text-muted-foreground hover:bg-stone-100 hover:text-foreground"
+          aria-label={`+${hiddenCount} more events`}
+        >
+          +{hiddenCount} more
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-72 p-2"
+        align="end"
+        onCloseAutoFocus={onCloseAutoFocus}
+        onClick={(e) => {
+          e.stopPropagation()
+        }}
+      >
+        <div className="max-h-96 space-y-1.5 overflow-y-auto">{children}</div>
+      </PopoverContent>
+    </Popover>
   )
 }
 
