@@ -12,6 +12,7 @@ import { Popover, PopoverTrigger } from "~/components/atoms/popover"
 import type { Event, EventStatus } from "~/definitions/database"
 import { EVENT_STATUS_LABELS } from "~/definitions/events/ui"
 import { cn } from "~/lib/utils"
+import { useReleaseOpenOnUnmount } from "../hooks/useReleaseOpenOnUnmount"
 import {
   buildEventCardAccessibleName,
   getGuestCountRange,
@@ -35,6 +36,8 @@ function CompactEventLine({ event, clientName, open, onOpenChange, onOpenEvent, 
   const statusLabel = EVENT_STATUS_LABELS[event.status]
   const guestCount = getGuestCountRange(event)
   const showUploadWarning = isMissingGoogleCalendarId(event)
+  // e.g. the row widens back to full cards or the event goes away while open
+  useReleaseOpenOnUnmount(open, onOpenChange)
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>

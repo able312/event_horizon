@@ -12,11 +12,12 @@
  * Location: src/features/calendar/components/CalendarDayEventList.tsx
  */
 
-import { useRef } from "react"
+import { useRef, type ReactNode } from "react"
 import type { PrimaryClient } from "~/definitions/contacts"
 import type { Event, EventStatus } from "~/definitions/database"
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/atoms/popover"
 import { useFittingItemCount } from "../hooks/useFittingItemCount"
+import { useReleaseOpenOnUnmount } from "../hooks/useReleaseOpenOnUnmount"
 import EventItemContextMenu from "../interactions/EventItemContextMenu"
 import CalendarEventCard from "./CalendarEventCard"
 import CompactEventLine from "./CompactEventLine"
@@ -97,38 +98,55 @@ function CalendarDayEventList({
         ))}
       </div>
       {hiddenCount > 0 ? (
-        <Popover
+        <MoreEventsPopover
+          hiddenCount={hiddenCount}
           open={openPopoverKey === morePopoverKey}
           onOpenChange={(open) => onPopoverOpenChange(morePopoverKey, open)}
         >
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-              }}
-              className="absolute right-1 top-1 h-5 rounded px-1 text-[10px] leading-5 text-muted-foreground hover:bg-stone-100 hover:text-foreground"
-              aria-label={`+${hiddenCount} more events`}
-            >
-              +{hiddenCount} more
-            </button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="w-72 p-2"
-            align="end"
-            onClick={(e) => {
-              e.stopPropagation()
-            }}
-          >
-            <div className="max-h-96 space-y-1.5 overflow-y-auto">
-              {events.map((event) => (
-                <div key={`more-${day}-${event.id}`}>{renderCard(event)}</div>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
+          {events.map((event) => (
+            <div key={`more-${day}-${event.id}`}>{renderCard(event)}</div>
+          ))}
+        </MoreEventsPopover>
       ) : null}
     </>
+  )
+}
+
+type MoreEventsPopoverProps = {
+  hiddenCount: number
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  children: ReactNode
+}
+
+function MoreEventsPopover({ hiddenCount, open, onOpenChange, children }: MoreEventsPopoverProps) {
+  // The trigger disappears once every event fits, which Radix doesn't report as a close.
+  useReleaseOpenOnUnmount(open, onOpenChange)
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+          }}
+          className="absolute right-1 top-1 h-5 rounded px-1 text-[10px] leading-5 text-muted-foreground hover:bg-stone-100 hover:text-foreground"
+          aria-label={`+${hiddenCount} more events`}
+        >
+          +{hiddenCount} more
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-72 p-2"
+        align="end"
+        onClick={(e) => {
+          e.stopPropagation()
+        }}
+      >
+        <div className="max-h-96 space-y-1.5 overflow-y-auto">{children}</div>
+      </PopoverContent>
+    </Popover>
   )
 }
 

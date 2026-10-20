@@ -127,7 +127,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   )
 
   const gridRef = useRef<HTMLDivElement>(null)
-  const [openPopoverKey, setOpenPopoverKey] = useState<string | null>(null)
+  // Scoped to the month so a popover left open doesn't carry over (day keys repeat)
+  const monthKey = `${year}-${month}`
+  const [openPopover, setOpenPopover] = useState<{ monthKey: string; key: string } | null>(null)
+  const openPopoverKey = openPopover?.monthKey === monthKey ? openPopover.key : null
   // Set on pointerdown when a popover is open, so that click only dismisses it
   const skipNextDayClickRef = useRef(false)
   const eventsByDay = useMemo(
@@ -151,7 +154,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       ),
     [eventsByDay, startingDay, draftDay, todayDay],
   )
-  const density = useCalendarDensity(gridRef, `${year}-${month}`, dayHeightsByRow)
+  const density = useCalendarDensity(gridRef, monthKey, dayHeightsByRow)
   const isDayCompact = (day: number): boolean => {
     const row = Math.floor((startingDay + day - 1) / 7)
     return density.isNarrow || density.compactRows[row] === true
@@ -167,7 +170,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
    */
   const handleEventClick = (eventId: string) => {
     // Cards stop click propagation, which stops Radix dismissing on its own.
-    setOpenPopoverKey(null)
+    setOpenPopover(null)
     navigate(buildEventDetailEntryPath(eventId, returnTo))
   }
 
@@ -180,10 +183,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   }
 
   const handlePopoverOpenChange = (key: string, open: boolean) => {
-    setOpenPopoverKey((current) => {
-      if (open) return key
+    setOpenPopover((current) => {
+      if (open) return { monthKey, key }
       // A closing popover mustn't clear one that has just replaced it.
-      return current === key ? null : current
+      return current?.monthKey === monthKey && current.key === key ? null : current
     })
   }
 

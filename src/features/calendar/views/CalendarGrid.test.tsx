@@ -30,7 +30,7 @@ function makeEvent(day: number, index: number, overrides: Partial<Event> = {}): 
   } as Event
 }
 
-function renderGrid({
+function gridElement({
   events = [],
   clientsByEventId,
   year = 2026,
@@ -57,7 +57,7 @@ function renderGrid({
   onEventDelete?: (eventId: string) => void
   onEventStatusChange?: (eventId: string, status: EventStatus) => void
 } = {}) {
-  return render(
+  return (
     <MemoryRouter initialEntries={[route]}>
       <CalendarGrid
         events={events}
@@ -72,8 +72,12 @@ function renderGrid({
         onEventDelete={onEventDelete}
         onEventStatusChange={onEventStatusChange}
       />
-    </MemoryRouter>,
+    </MemoryRouter>
   )
+}
+
+function renderGrid(props: Parameters<typeof gridElement>[0] = {}) {
+  return render(gridElement(props))
 }
 
 afterEach(() => {
@@ -565,6 +569,40 @@ describe("CalendarGrid compact lines", () => {
       "/events/event-20-1?returnTo=%2Fevents%3Fview%3Dcalendar%26date%3D2026-04",
     )
     expect(onDayCellClick).not.toHaveBeenCalled()
+  })
+
+  it("lets the day open again when an open popover's event goes away", async () => {
+    mockGridSize(NARROW_GRID_WIDTH, 5000)
+    const onDayCellClick = vi.fn()
+    const { rerender } = renderGrid({ events: [makeEvent(10, 1)], onDayCellClick })
+
+    fireEvent.click(screen.getByTestId("calendar-compact-line"))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    rerender(gridElement({ events: [], onDayCellClick }))
+    expect(screen.queryByRole("dialog")).toBeNull()
+
+    const emptyDay = screen.getByTestId("calendar-day-events-12")
+    fireEvent.pointerDown(emptyDay)
+    fireEvent.click(emptyDay)
+    expect(onDayCellClick).toHaveBeenCalledTimes(1)
+
+    rerender(gridElement({ events: [makeEvent(10, 1)], onDayCellClick }))
+    expect(screen.getByTestId("calendar-compact-line").getAttribute("data-state")).toBe("closed")
+  })
+
+  it("doesn't carry an open popover over to another month", async () => {
+    mockGridSize(NARROW_GRID_WIDTH, 5000)
+    const onDayCellClick = vi.fn()
+    const { rerender } = renderGrid({ events: [makeEvent(10, 1)], onDayCellClick })
+
+    fireEvent.click(screen.getByTestId("calendar-compact-line"))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    rerender(gridElement({ events: [], month: 4, startingDay: 5, daysInMonth: 31, onDayCellClick }))
+
+    const emptyDay = screen.getByTestId("calendar-day-events-12")
+    fireEvent.pointerDown(emptyDay)
+    fireEvent.click(emptyDay)
+    expect(onDayCellClick).toHaveBeenCalledTimes(1)
   })
 
   it("only offers Change status when a handler is wired", () => {
