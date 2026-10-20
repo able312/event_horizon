@@ -57,6 +57,11 @@ function CalendarDayEventList({
   const fittingCount = useFittingItemCount(listRef, candidateEvents.length)
   const hiddenCount = events.length - fittingCount
   const morePopoverKey = `more-${day}`
+  // A popover that closes because another opened must not pull focus back to its
+  // trigger: Radix would read that as a focus-outside and dismiss the new one.
+  const handleCloseAutoFocus = (event: globalThis.Event) => {
+    if (openPopoverKey !== null) event.preventDefault()
+  }
 
   const renderCard = (event: Event) => (
     <EventItemContextMenu event={event} onEdit={onEventEdit} onDelete={onEventDelete}>
@@ -76,6 +81,7 @@ function CalendarDayEventList({
         open={openPopoverKey === `event-${event.id}`}
         onOpenChange={(open) => onPopoverOpenChange(`event-${event.id}`, open)}
         onOpenEvent={() => onEventClick(event.id)}
+        onCloseAutoFocus={handleCloseAutoFocus}
         onStatusChange={
           onEventStatusChange ? (status) => onEventStatusChange(event.id, status) : undefined
         }
@@ -102,6 +108,7 @@ function CalendarDayEventList({
           hiddenCount={hiddenCount}
           open={openPopoverKey === morePopoverKey}
           onOpenChange={(open) => onPopoverOpenChange(morePopoverKey, open)}
+          onCloseAutoFocus={handleCloseAutoFocus}
         >
           {events.map((event) => (
             <div key={`more-${day}-${event.id}`}>{renderCard(event)}</div>
@@ -116,10 +123,11 @@ type MoreEventsPopoverProps = {
   hiddenCount: number
   open: boolean
   onOpenChange: (open: boolean) => void
+  onCloseAutoFocus: (event: globalThis.Event) => void
   children: ReactNode
 }
 
-function MoreEventsPopover({ hiddenCount, open, onOpenChange, children }: MoreEventsPopoverProps) {
+function MoreEventsPopover({ hiddenCount, open, onOpenChange, onCloseAutoFocus, children }: MoreEventsPopoverProps) {
   // The trigger disappears once every event fits, which Radix doesn't report as a close.
   useReleaseOpenOnUnmount(open, onOpenChange)
 
@@ -140,6 +148,7 @@ function MoreEventsPopover({ hiddenCount, open, onOpenChange, children }: MoreEv
       <PopoverContent
         className="w-72 p-2"
         align="end"
+        onCloseAutoFocus={onCloseAutoFocus}
         onClick={(e) => {
           e.stopPropagation()
         }}

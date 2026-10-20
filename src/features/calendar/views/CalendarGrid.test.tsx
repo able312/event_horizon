@@ -547,6 +547,12 @@ describe("CalendarGrid compact lines", () => {
     expect(first.getAttribute("data-state")).toBe("closed")
     expect(second.getAttribute("data-state")).toBe("open")
     expect(onDayCellClick).not.toHaveBeenCalled()
+
+    // The replaced popover must not hand focus back to its trigger as it unmounts:
+    // Radix would read that as a focus-outside and dismiss the new popover too.
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(screen.getAllByRole("dialog")).toHaveLength(1)
+    expect(second.getAttribute("data-state")).toBe("open")
   })
 
   it("opens a full card normally while a compact line's popover is open", async () => {

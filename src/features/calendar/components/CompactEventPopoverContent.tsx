@@ -23,6 +23,8 @@ type CompactEventPopoverContentProps = {
   showUploadWarning: boolean
   onOpenEvent: () => void
   onStatusChange?: (status: EventStatus) => void
+  /** Radix's close-focus event; the domain `Event` type shadows the DOM one here */
+  onCloseAutoFocus?: (event: globalThis.Event) => void
 }
 
 function DetailRow({ icon, children }: { icon: ReactNode; children: ReactNode }) {
@@ -40,6 +42,7 @@ function CompactEventPopoverContent({
   showUploadWarning,
   onOpenEvent,
   onStatusChange,
+  onCloseAutoFocus,
 }: CompactEventPopoverContentProps) {
   const { Icon: StatusIcon, className: statusIconClassName } = EVENT_STATUS_ICONS[event.status]
   const date = formatEventPopoverDate(event.startDateTime)
@@ -53,6 +56,7 @@ function CompactEventPopoverContent({
       alignOffset={-12}
       collisionPadding={8}
       aria-label={event.title}
+      onCloseAutoFocus={onCloseAutoFocus}
       className="flex flex-col gap-2 px-4 pt-3.5 pb-4 shadow-lg"
       // The popover is portalled, but React still bubbles its clicks to the day cell.
       onClick={(clickEvent) => clickEvent.stopPropagation()}

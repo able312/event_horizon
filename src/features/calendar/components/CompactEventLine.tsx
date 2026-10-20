@@ -29,9 +29,18 @@ type CompactEventLineProps = {
   onOpenChange: (open: boolean) => void
   onOpenEvent: () => void
   onStatusChange?: (status: EventStatus) => void
+  onCloseAutoFocus?: (event: globalThis.Event) => void
 }
 
-function CompactEventLine({ event, clientName, open, onOpenChange, onOpenEvent, onStatusChange }: CompactEventLineProps) {
+function CompactEventLine({
+  event,
+  clientName,
+  open,
+  onOpenChange,
+  onOpenEvent,
+  onStatusChange,
+  onCloseAutoFocus,
+}: CompactEventLineProps) {
   const style = COMPACT_EVENT_STATUS_STYLES[event.status]
   const statusLabel = EVENT_STATUS_LABELS[event.status]
   const guestCount = getGuestCountRange(event)
@@ -67,6 +76,7 @@ function CompactEventLine({ event, clientName, open, onOpenChange, onOpenEvent, 
         showUploadWarning={showUploadWarning}
         onOpenEvent={onOpenEvent}
         onStatusChange={onStatusChange}
+        onCloseAutoFocus={onCloseAutoFocus}
       />
     </Popover>
   )
