@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useReducer, type ReactNode } from "react"
-import { ACTIONS, calendarSidePanelReducer, initialCalendarSidePanelState, type BodyMode, type CalendarSidePanelAction } from "./calendarSidePanelReducer"
+import { ACTIONS, calendarSidePanelReducer, createInitialCalendarSidePanelState, type BodyMode, type CalendarSidePanelAction } from "./calendarSidePanelReducer"
 import { CalendarPanelStateContext } from "./useCalendarPanelState"
 
 
@@ -7,10 +7,16 @@ import { CalendarPanelStateContext } from "./useCalendarPanelState"
 export const CalendarPanelStateProvider:React.FC<{
   children: ReactNode
   bodyMode: BodyMode
+  /** Whether the URL carries a search or filter on mount; only read once. */
+  hasActiveSearch: boolean
   onBodyModeChange: (mode: BodyMode) => void
-}> = ({ children, bodyMode, onBodyModeChange }) => {
+}> = ({ children, bodyMode, hasActiveSearch, onBodyModeChange }) => {
  
-  const [state, reducerDispatch] = useReducer(calendarSidePanelReducer, initialCalendarSidePanelState)
+  const [state, reducerDispatch] = useReducer(
+    calendarSidePanelReducer,
+    { hasActiveSearch, bodyMode },
+    createInitialCalendarSidePanelState,
+  )
   // Keep the body destination in the URL so event Back links and reloads restore it.
   const dispatch = useCallback((action: CalendarSidePanelAction) => {
     if (action.type === ACTIONS.TOGGLE_INBOX_VIEW) {

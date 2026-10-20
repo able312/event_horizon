@@ -57,6 +57,19 @@ export const initialCalendarSidePanelState: CalendarSidePanelState = {
   searchFocusVersion: 0,
 }
 
+/**
+ * The panel state is lost when the user leaves for an event and comes back, but the
+ * search lives in the URL. Reopen the search panel so the restored results can be cleared.
+ * The Inbox keeps its own panel: filters left in the URL there must not hide it.
+ */
+export function createInitialCalendarSidePanelState(options: {
+  hasActiveSearch: boolean
+  bodyMode: BodyMode
+}): CalendarSidePanelState {
+  if (!options.hasActiveSearch || options.bodyMode === "inbox") return initialCalendarSidePanelState
+  return { ...initialCalendarSidePanelState, sidebarMode: "search" }
+}
+
 export function calendarSidePanelReducer(
   state: CalendarSidePanelState,
   action: CalendarSidePanelAction,

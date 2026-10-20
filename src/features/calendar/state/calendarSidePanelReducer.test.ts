@@ -4,6 +4,7 @@ import type { EventRequest } from "~/definitions/database"
 import {
   ACTIONS,
   calendarSidePanelReducer,
+  createInitialCalendarSidePanelState,
   initialCalendarSidePanelState,
 } from "./calendarSidePanelReducer"
 
@@ -44,5 +45,16 @@ describe("calendarSidePanelReducer", () => {
 
     const creating = calendarSidePanelReducer(initialCalendarSidePanelState, { type: ACTIONS.OPEN_CREATE, prefillIso: "2026-10-20" })
     expect(calendarSidePanelReducer(creating, { type: ACTIONS.TOGGLE_INBOX_VIEW })).toMatchObject({ sidebarMode: "create", createPrefillIso: "2026-10-20" })
+  })
+})
+
+describe("createInitialCalendarSidePanelState", () => {
+  it("reopens the search panel when the calendar mounts with a search in the URL", () => {
+    expect(createInitialCalendarSidePanelState({ hasActiveSearch: true, bodyMode: "calendar" }).sidebarMode).toBe("search")
+  })
+
+  it("keeps the default panel without a search, or in the Inbox", () => {
+    expect(createInitialCalendarSidePanelState({ hasActiveSearch: false, bodyMode: "calendar" })).toBe(initialCalendarSidePanelState)
+    expect(createInitialCalendarSidePanelState({ hasActiveSearch: true, bodyMode: "inbox" })).toBe(initialCalendarSidePanelState)
   })
 })

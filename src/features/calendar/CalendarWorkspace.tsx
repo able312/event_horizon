@@ -43,6 +43,7 @@ const CalendarWorkspace: React.FC = () => {
             <SplitLayout>
                 <CalendarPanelStateProvider
                     bodyMode={QueryState.state.view === "inbox" ? "inbox" : "calendar"}
+                    hasActiveSearch={Boolean(QueryState.state.search) || searchController.searchQuery.enabled}
                     onBodyModeChange={QueryState.setView}
                 >
 

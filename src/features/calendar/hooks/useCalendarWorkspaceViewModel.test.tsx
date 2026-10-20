@@ -37,6 +37,7 @@ function PanelProvider({ children }: { children: ReactNode }) {
   return (
     <CalendarPanelStateProvider
       bodyMode={queryState.state.view === "inbox" ? "inbox" : "calendar"}
+      hasActiveSearch={false}
       onBodyModeChange={queryState.setView}
     >
       {children}
