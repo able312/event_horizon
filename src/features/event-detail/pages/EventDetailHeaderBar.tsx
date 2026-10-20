@@ -103,7 +103,14 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
   const hasCalendarId = Boolean(event.calendarId && event.calendarId.trim().length > 0) // event already linked to a Google Calendar event
   const canPushToCalendar = Boolean(event.startDateTime && event.endDateTime) // requires both start and end date/time
 
-  const actionLabel = hasCalendarId ? "Update" : <CalendarPlus />
+  const actionLabel = hasCalendarId ? (
+    "Update"
+  ) : (
+    <>
+      <CalendarPlus />
+      Google Cal
+    </>
+  )
 
   // Opens create or update URL; after create, prompts for ID paste.
   const openGoogleCalendar = async () => {
