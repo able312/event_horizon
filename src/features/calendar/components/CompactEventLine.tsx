@@ -3,6 +3,7 @@
  *
  * One event as a single line (status glyph, title, guest count) for when the
  * grid is too tight for full cards. Clicking it toggles a popover with the details.
+ * The open state is owned by the grid so only one popover is open at a time.
  *
  * Location: src/features/calendar/components/CompactEventLine.tsx
  */
@@ -23,18 +24,20 @@ import { COMPACT_EVENT_STATUS_STYLES } from "./compactEventStatus"
 type CompactEventLineProps = {
   event: Event
   clientName?: string | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
   onOpenEvent: () => void
   onStatusChange?: (status: EventStatus) => void
 }
 
-function CompactEventLine({ event, clientName, onOpenEvent, onStatusChange }: CompactEventLineProps) {
+function CompactEventLine({ event, clientName, open, onOpenChange, onOpenEvent, onStatusChange }: CompactEventLineProps) {
   const style = COMPACT_EVENT_STATUS_STYLES[event.status]
   const statusLabel = EVENT_STATUS_LABELS[event.status]
   const guestCount = getGuestCountRange(event)
   const showUploadWarning = isMissingGoogleCalendarId(event)
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
         <button
           type="button"

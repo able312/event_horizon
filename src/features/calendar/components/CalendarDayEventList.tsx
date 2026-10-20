@@ -29,6 +29,9 @@ type CalendarDayEventListProps = {
   /** Show single compact lines instead of full cards */
   compact?: boolean
   clientsByEventId?: Record<string, PrimaryClient>
+  /** Key of the grid's one open popover, or null */
+  openPopoverKey: string | null
+  onPopoverOpenChange: (key: string, open: boolean) => void
   onEventClick: (eventId: string) => void
   onEventEdit?: (event: Event) => void
   onEventDelete?: (eventId: string) => void
@@ -41,6 +44,8 @@ function CalendarDayEventList({
   maxVisible,
   compact = false,
   clientsByEventId,
+  openPopoverKey,
+  onPopoverOpenChange,
   onEventClick,
   onEventEdit,
   onEventDelete,
@@ -50,6 +55,7 @@ function CalendarDayEventList({
   const candidateEvents = compact ? events : events.slice(0, maxVisible)
   const fittingCount = useFittingItemCount(listRef, candidateEvents.length)
   const hiddenCount = events.length - fittingCount
+  const morePopoverKey = `more-${day}`
 
   const renderCard = (event: Event) => (
     <EventItemContextMenu event={event} onEdit={onEventEdit} onDelete={onEventDelete}>
@@ -66,6 +72,8 @@ function CalendarDayEventList({
       <CompactEventLine
         event={event}
         clientName={clientsByEventId?.[event.id]?.displayName}
+        open={openPopoverKey === `event-${event.id}`}
+        onOpenChange={(open) => onPopoverOpenChange(`event-${event.id}`, open)}
         onOpenEvent={() => onEventClick(event.id)}
         onStatusChange={
           onEventStatusChange ? (status) => onEventStatusChange(event.id, status) : undefined
@@ -89,7 +97,10 @@ function CalendarDayEventList({
         ))}
       </div>
       {hiddenCount > 0 ? (
-        <Popover>
+        <Popover
+          open={openPopoverKey === morePopoverKey}
+          onOpenChange={(open) => onPopoverOpenChange(morePopoverKey, open)}
+        >
           <PopoverTrigger asChild>
             <button
               type="button"

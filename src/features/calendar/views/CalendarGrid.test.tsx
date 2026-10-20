@@ -503,6 +503,70 @@ describe("CalendarGrid compact lines", () => {
     expect(screen.getByTestId("calendar-compact-line").getAttribute("data-state")).toBe("closed")
   })
 
+  it("closes an open popover on a click on empty calendar space without opening the day", async () => {
+    mockGridSize(NARROW_GRID_WIDTH, 5000)
+    const onDayCellClick = vi.fn()
+    renderGrid({ events: [makeEvent(10, 1)], onDayCellClick })
+
+    fireEvent.click(screen.getByTestId("calendar-compact-line"))
+    expect(screen.getByRole("dialog")).toBeTruthy()
+    // Radix registers its outside-pointer listener on the next tick.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const emptyDay = screen.getByTestId("calendar-day-events-12")
+    fireEvent.pointerDown(emptyDay)
+    fireEvent.click(emptyDay)
+
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(onDayCellClick).not.toHaveBeenCalled()
+
+    fireEvent.pointerDown(emptyDay)
+    fireEvent.click(emptyDay)
+    expect(onDayCellClick).toHaveBeenCalledTimes(1)
+  })
+
+  it("swaps to another compact line's popover when one is already open", async () => {
+    mockGridSize(NARROW_GRID_WIDTH, 5000)
+    const onDayCellClick = vi.fn()
+    renderGrid({ events: [makeEvent(10, 1), makeEvent(12, 1)], onDayCellClick })
+
+    const [first, second] = screen.getAllByTestId("calendar-compact-line")
+    fireEvent.click(first)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    fireEvent.pointerDown(second)
+    fireEvent.click(second)
+
+    const dialogs = screen.getAllByRole("dialog")
+    expect(dialogs).toHaveLength(1)
+    expect(dialogs[0].getAttribute("aria-label")).toBe("Event 12-1")
+    expect(first.getAttribute("data-state")).toBe("closed")
+    expect(second.getAttribute("data-state")).toBe("open")
+    expect(onDayCellClick).not.toHaveBeenCalled()
+  })
+
+  it("opens a full card normally while a compact line's popover is open", async () => {
+    mockGridSize(WIDE_GRID_WIDTH, ONE_CARD_GRID_HEIGHT)
+    const onDayCellClick = vi.fn()
+    renderGrid({
+      events: [makeEvent(10, 1), makeEvent(10, 2), makeEvent(10, 3), makeEvent(20, 1)],
+      onDayCellClick,
+    })
+
+    fireEvent.click(within(screen.getByTestId("calendar-day-events-10")).getAllByTestId("calendar-compact-line")[0])
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const card = screen.getByTitle("Event 20-1")
+    fireEvent.pointerDown(card)
+    fireEvent.click(card)
+
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(navigateMock).toHaveBeenCalledWith(
+      "/events/event-20-1?returnTo=%2Fevents%3Fview%3Dcalendar%26date%3D2026-04",
+    )
+    expect(onDayCellClick).not.toHaveBeenCalled()
+  })
+
   it("only offers Change status when a handler is wired", () => {
     mockGridSize(NARROW_GRID_WIDTH, 5000)
     renderGrid({ events: [makeEvent(10, 1)] })
