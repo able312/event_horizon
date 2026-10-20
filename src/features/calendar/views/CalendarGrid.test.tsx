@@ -605,6 +605,23 @@ describe("CalendarGrid compact lines", () => {
     expect(onDayCellClick).toHaveBeenCalledTimes(1)
   })
 
+  it("doesn't reopen a +N more popover after leaving its month and coming back", () => {
+    const aprilEvents = Array.from({ length: 5 }, (_, i) => makeEvent(10, i + 1))
+    const mayEvents = Array.from({ length: 5 }, (_, i) =>
+      makeEvent(10, i + 1, { id: `may-10-${i + 1}`, startDateTime: "2026-05-10T12:00:00.000Z" }),
+    )
+    const { rerender } = renderGrid({ events: aprilEvents })
+
+    fireEvent.click(screen.getByRole("button", { name: "+2 more events" }))
+    expect(screen.getByRole("dialog")).toBeTruthy()
+
+    rerender(gridElement({ events: mayEvents, month: 4, startingDay: 5, daysInMonth: 31 }))
+    expect(screen.queryByRole("dialog")).toBeNull()
+
+    rerender(gridElement({ events: aprilEvents }))
+    expect(screen.queryByRole("dialog")).toBeNull()
+  })
+
   it("only offers Change status when a handler is wired", () => {
     mockGridSize(NARROW_GRID_WIDTH, 5000)
     renderGrid({ events: [makeEvent(10, 1)] })

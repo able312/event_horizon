@@ -130,6 +130,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   // Scoped to the month so a popover left open doesn't carry over (day keys repeat)
   const monthKey = `${year}-${month}`
   const [openPopover, setOpenPopover] = useState<{ monthKey: string; key: string } | null>(null)
+  if (openPopover !== null && openPopover.monthKey !== monthKey) {
+    // Forget it rather than just hiding it, or coming back to the month reopens it.
+    setOpenPopover(null)
+  }
   const openPopoverKey = openPopover?.monthKey === monthKey ? openPopover.key : null
   // Set on pointerdown when a popover is open, so that click only dismisses it
   const skipNextDayClickRef = useRef(false)
