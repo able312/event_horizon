@@ -86,7 +86,7 @@ describe("CalendarWorkspace", () => {
       monthQuery: { refetch: monthRefetch },
       deleteEvent: vi.fn(),
     })
-    useCalendarSearchControllerMock.mockReturnValue({})
+    useCalendarSearchControllerMock.mockReturnValue({ searchQuery: { enabled: false } })
     useIcsImportControllerMock.mockReturnValue({
       phase: "idle",
       reviewPayload: null,
@@ -146,7 +146,7 @@ describe("CalendarWorkspace", () => {
       deleteEvent: vi.fn(),
       monthQuery: { refetch: vi.fn() },
     })
-    useCalendarSearchControllerMock.mockReturnValue({})
+    useCalendarSearchControllerMock.mockReturnValue({ searchQuery: { enabled: false } })
     useIcsImportControllerMock.mockReturnValue({
       phase: "review",
       reviewPayload,
