@@ -15,14 +15,7 @@ import {
   type ClientSelection,
 } from "./clientPickerForm"
 import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
-
-/** Initial values accepted by the create form, including client details and notes. */
-export type CreateEventPrefill = {
-  values: EventFormValues
-  client: ClientSelection
-  /** Not shown in the form; saved with the event so nothing the client sent is lost. */
-  notes: Pick<NewEvent, "clientNotes" | "internalNotes">
-}
+import type { CreateEventPrefill } from "./createEventPrefill"
 
 interface CreateEventSidebarFormProps {
   initialStartDateTime?: string

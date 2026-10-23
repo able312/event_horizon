@@ -2,7 +2,7 @@ import { combineDateWithTime } from "~/components/atoms/dateTimeInput.lib"
 import type { EventRequest } from "~/definitions/database"
 import { EVENT_TYPE_LABELS } from "~/definitions/events/ui"
 import { formatDate } from "~/lib/formatters"
-import type { CreateEventPrefill } from "~/features/calendar/forms/CreateEventSidebarForm"
+import type { CreateEventPrefill } from "~/features/calendar/forms/createEventPrefill"
 
 /** A yyyy-MM-dd form answer as a local calendar day (Date.parse would read it as UTC midnight). */
 export function parseRequestDate(date: string): Date | null {

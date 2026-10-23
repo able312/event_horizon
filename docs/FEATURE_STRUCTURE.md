@@ -31,7 +31,7 @@ To add another Inbox item type, compose its list section, selected content and a
 - `lib/requestCalendar.ts`: requested dates and booking rules.
 - `lib/newRequestDetection.ts`: session tracking that suppresses startup and repeat alerts.
 
-The availability calendar reuses calendar day markers, tooltips, date grouping and adjacent-month queries. The prefill adapter uses the create form's exported input type. These are explicit dependencies on existing calendar functionality.
+The availability calendar reuses calendar day markers, tooltips, date grouping and adjacent-month queries. The prefill adapter uses the create form's input type from `calendar/forms/createEventPrefill.ts`, a type-only module, so it does not depend on the form component. These are explicit dependencies on existing calendar functionality.
 
 ## Backend and desktop boundaries
 
