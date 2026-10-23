@@ -8,7 +8,7 @@ import EventsRoute from '~/routes/Events'
 
 //Hook
 import { useIpcNavigation } from './hooks/useIpcNavigation'
-import { useEventRequestNotifications } from './hooks/useEventRequestNotifications'
+import { useEventRequestNotifications } from '~/features/event-requests/hooks/useEventRequestNotifications'
 import { useGenerateMenuState } from './hooks/useGenerateMenuState'
 import { UpdaterProvider } from './features/updater/state/UpdaterProvider'
 

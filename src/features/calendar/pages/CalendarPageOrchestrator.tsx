@@ -12,9 +12,7 @@ import { getCurrentMonthParam } from "~/lib/months"
 import EventsTable from "~/features/calendar/views/EventsTable"
 import type { Event } from "~/definitions/database"
 import { useCalendarPanelState } from "../state/useCalendarPanelState"
-import { useEventRequests } from "~/hooks/useEventRequests"
-import InboxBodyHeader from "~/features/calendar/views/InboxBodyHeader"
-import RequestDetailView from "~/features/calendar/views/RequestDetailView"
+import InboxBody from "~/features/inbox/InboxBody"
 import type { UseCalendarSearchControllerReturn } from "../hooks/useCalendarSearchController"
 
 
@@ -35,7 +33,6 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
     const { state, setDate } = queryState
     const { isLoading } = eventsHook
     const { dispatch, ui } = useCalendarPanelState()
-    const { requests, dismissRequest } = useEventRequests()
     const { searchQuery } = searchController
     const { result: searchResult, isFetching: isSearchFetching, enabled: isSearchEnabled, invalidDateRange } = searchQuery
     const hasSearchQuery = Boolean(state.search && state.search.length > 0)
@@ -60,26 +57,21 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
         dispatch({ type: "OPEN_EDIT", event })
     }
 
-    const selectedRequest = requests.find((request) => request.id === ui.selectedRequestId) ?? null
-    const isReviewingSelected = ui.sidebarMode === "create" && ui.reviewingRequest?.id === selectedRequest?.id
-
     const handleDismissRequest = (requestId: string) => {
         // The review form would otherwise try to accept a dismissed request
         if (ui.reviewingRequest?.id === requestId) dispatch({ type: "OPEN_DEFAULT" })
         dispatch({ type: "SELECT_REQUEST", requestId: null })
-        dismissRequest(requestId)
     }
 
     return (
         <>
             {bodyView === "inbox" ? (
-                <InboxBodyHeader
+                <InboxBody
+                    selectedRequestId={ui.selectedRequestId}
+                    reviewingRequestId={ui.sidebarMode === "create" ? ui.reviewingRequest?.id ?? null : null}
                     onBack={() => dispatch({ type: "OPEN_CALENDAR_VIEW" })}
-                    requestActions={selectedRequest ? {
-                        isReviewing: isReviewingSelected,
-                        onReview: () => dispatch({ type: "OPEN_REVIEW_REQUEST", request: selectedRequest }),
-                        onDismiss: () => handleDismissRequest(selectedRequest.id),
-                    } : null}
+                    onReviewRequest={(request) => dispatch({ type: "OPEN_REVIEW_REQUEST", request })}
+                    onDismissRequest={handleDismissRequest}
                 />
             ) : (
                 <Body.Header>
@@ -98,18 +90,6 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
                         eventsHook={ eventsHook }
                         onDeleteRequest={onDeleteRequest}
                     />
-                </Body.Content>
-            </>}
-
-            {bodyView === "inbox" && <>
-                <Body.Content>
-                    {selectedRequest ? (
-                        <RequestDetailView key={selectedRequest.id} request={selectedRequest} />
-                    ) : (
-                        <div className="flex flex-1 items-center justify-center p-4">
-                            <p className="text-sm text-muted-foreground">Select a request to see what the client sent.</p>
-                        </div>
-                    )}
                 </Body.Content>
             </>}
 

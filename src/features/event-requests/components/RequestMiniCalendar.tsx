@@ -7,7 +7,7 @@
  * Hovering a day with events lists them as compact chips. Days aren't
  * selectable; the arrows flip months to look for other dates.
  *
- * Location: src/features/calendar/views/RequestMiniCalendar.tsx
+ * Location: src/features/event-requests/components/RequestMiniCalendar.tsx
  */
 
 import React, { useCallback, useMemo, useState } from "react"
@@ -20,7 +20,7 @@ import MiniCalendarDayMarkers from "~/features/calendar/components/MiniCalendarD
 import MiniCalendarDayTooltip from "~/features/calendar/components/MiniCalendarDayTooltip"
 import { useAdjacentMonthsEvents } from "~/features/calendar/hooks/useAdjacentMonthsEvents"
 import { getDayKey, groupEventsByDay } from "~/features/calendar/lib/miniCalendarDays"
-import { getBookedEvents, getRequestCalendarDates, getRequestCalendarMonth } from "~/features/calendar/lib/requestCalendar"
+import { getBookedEvents, getRequestCalendarDates, getRequestCalendarMonth } from "~/features/event-requests/lib/requestCalendar"
 import { getCurrentMonthParam, toMonthStartDate } from "~/lib/months"
 import { cn } from "~/lib/utils"
 

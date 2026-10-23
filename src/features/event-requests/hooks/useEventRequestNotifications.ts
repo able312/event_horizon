@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { eventRequestQueries } from "~/lib/data/queries"
-import { detectNewRequestIds } from "~/lib/eventRequests/newRequestDetection"
+import { detectNewRequestIds } from "~/features/event-requests/lib/newRequestDetection"
 import { notifyNewEventRequest, setPendingRequestCount } from "~/lib/ipc/eventRequestNotifications"
 
 /** Mounted once in the signed-in app, across every route. */

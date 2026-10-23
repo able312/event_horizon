@@ -1,17 +1,8 @@
 import { combineDateWithTime } from "~/components/atoms/dateTimeInput.lib"
-import type { EventRequest, NewEvent } from "~/definitions/database"
+import type { EventRequest } from "~/definitions/database"
 import { EVENT_TYPE_LABELS } from "~/definitions/events/ui"
 import { formatDate } from "~/lib/formatters"
-import type { EventFormValues } from "~/features/calendar/forms/EventFormFields"
-import type { ClientSelection } from "~/features/calendar/forms/clientPickerForm"
-
-/** What the create-event form starts with when reviewing a website request. */
-export type CreateEventPrefill = {
-  values: EventFormValues
-  client: ClientSelection
-  /** Not shown in the form; saved with the event so nothing the client sent is lost. */
-  notes: Pick<NewEvent, "clientNotes" | "internalNotes">
-}
+import type { CreateEventPrefill } from "~/features/calendar/forms/CreateEventSidebarForm"
 
 /** A yyyy-MM-dd form answer as a local calendar day (Date.parse would read it as UTC midnight). */
 export function parseRequestDate(date: string): Date | null {

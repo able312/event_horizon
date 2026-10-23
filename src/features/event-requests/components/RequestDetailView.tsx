@@ -3,8 +3,8 @@ import type { ReactNode } from "react"
 import type { EventRequest } from "~/definitions/database"
 import { EVENT_TYPE_COLORS, EVENT_TYPE_LABELS } from "~/definitions/events/ui"
 import { ContactSectionCard } from "~/features/contacts-directory/components/ContactSectionCard"
-import { formatRequestDate, formatRequestTime, requestClientName, requestTitle } from "~/features/calendar/lib/eventRequestPrefill"
-import RequestMiniCalendar from "~/features/calendar/views/RequestMiniCalendar"
+import { formatRequestDate, formatRequestTime, requestClientName, requestTitle } from "~/features/event-requests/lib/eventRequestPrefill"
+import RequestMiniCalendar from "~/features/event-requests/components/RequestMiniCalendar"
 
 type RequestDetailViewProps = {
   request: EventRequest
