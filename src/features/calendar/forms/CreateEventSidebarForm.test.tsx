@@ -2,8 +2,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { ContactWithRoles } from "~/definitions/contacts"
 import { ContactsError } from "~/lib/contacts/contactsError"
-import type { CreateEventPrefill } from "~/features/calendar/lib/eventRequestPrefill"
 import CreateEventSidebarForm from "./CreateEventSidebarForm"
+import type { CreateEventPrefill } from "./createEventPrefill"
 
 const searchResults = vi.hoisted(() => ({ items: [] as ContactWithRoles[] }))
 

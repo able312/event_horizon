@@ -15,7 +15,7 @@ import {
   type ClientSelection,
 } from "./clientPickerForm"
 import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
-import type { CreateEventPrefill } from "~/features/calendar/lib/eventRequestPrefill"
+import type { CreateEventPrefill } from "./createEventPrefill"
 
 interface CreateEventSidebarFormProps {
   initialStartDateTime?: string

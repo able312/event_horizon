@@ -5,7 +5,7 @@ import { buildEventDetailEntryPath } from "~/features/event-detail/workspace/lib
 import type { AssignContactTarget } from "~/definitions/contacts"
 import type { Event, EventRequest, NewEvent, UpdateEvent } from "~/definitions/database"
 import type { UseEventsReturn } from "~/hooks/useEvents"
-import { useEventRequests } from "~/hooks/useEventRequests"
+import { useEventRequests } from "~/features/event-requests/hooks/useEventRequests"
 import type { UseEventsQueryStateReturn } from "~/hooks/useEventsQueryState"
 import { useHotkey } from "~/lib/hotKeys"
 

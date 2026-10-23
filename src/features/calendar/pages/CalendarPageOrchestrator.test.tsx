@@ -47,11 +47,11 @@ vi.mock("./CalendarPage", () => ({
 
 const dismissRequestMock = vi.fn()
 let pendingRequests: EventRequest[] = []
-vi.mock("~/hooks/useEventRequests", () => ({
+vi.mock("~/features/event-requests/hooks/useEventRequests", () => ({
   useEventRequests: () => ({ requests: pendingRequests, dismissRequest: dismissRequestMock }),
 }))
 
-vi.mock("~/features/calendar/views/RequestMiniCalendar", () => ({
+vi.mock("~/features/event-requests/components/RequestMiniCalendar", () => ({
   default: () => <div data-testid="request-mini-calendar" />,
 }))
 

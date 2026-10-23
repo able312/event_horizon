@@ -17,7 +17,7 @@ vi.mock("react-router", async (importOriginal) => ({
   ...await importOriginal<typeof import("react-router")>(),
   useNavigate: () => navigate,
 }))
-vi.mock("~/hooks/useEventRequests", () => ({ useEventRequests: () => ({ acceptRequest }) }))
+vi.mock("~/features/event-requests/hooks/useEventRequests", () => ({ useEventRequests: () => ({ acceptRequest }) }))
 vi.mock("~/lib/hotKeys", () => ({ useHotkey: vi.fn() }))
 
 const request: EventRequest = {

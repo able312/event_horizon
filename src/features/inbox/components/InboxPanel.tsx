@@ -2,8 +2,8 @@ import { Search } from "lucide-react"
 import { useState, type ReactNode } from "react"
 
 import type { EventRequest } from "~/definitions/database"
-import { InboxRequestCard } from "~/features/calendar/components/InboxRequestCard"
-import { filterInboxRequests } from "~/features/calendar/lib/inboxList"
+import { InboxRequestCard } from "~/features/inbox/components/InboxRequestCard"
+import { filterInboxRequests } from "~/features/inbox/lib/inboxList"
 import { InlineQueryError } from "~/features/contacts/components/InlineQueryError"
 
 type QueryStatus = { isLoading: boolean; isError: boolean; isFetching: boolean; refetch: () => Promise<unknown> }

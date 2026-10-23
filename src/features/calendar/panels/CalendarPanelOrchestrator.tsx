@@ -13,9 +13,9 @@ import type { UseEventsReturn } from "~/hooks/useEvents"
 import EditEventSidebarForm from "~/features/calendar/forms/EditEventSidebarForm"
 import type { UseCalendarSearchControllerReturn } from "../hooks/useCalendarSearchController"
 import { useCalendarWorkspaceViewModel } from "../hooks/useCalendarWorkspaceViewModel"
-import { useEventRequests } from "~/hooks/useEventRequests"
-import { eventRequestToPrefill } from "~/features/calendar/lib/eventRequestPrefill"
-import InboxPanel from "./content/InboxPanel"
+import { useEventRequests } from "~/features/event-requests/hooks/useEventRequests"
+import { eventRequestToPrefill } from "~/features/event-requests/lib/eventRequestPrefill"
+import InboxPanel from "~/features/inbox/components/InboxPanel"
 
 interface CalendarPanelOrchastratorProps {
     queryState: UseEventsQueryStateReturn

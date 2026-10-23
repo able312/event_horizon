@@ -1,7 +1,7 @@
 import type { EventRequest } from "~/definitions/database"
 import { EVENT_TYPE_LABELS } from "~/definitions/events/ui"
-import { formatRequestDate, requestClientName, requestTitle } from "~/features/calendar/lib/eventRequestPrefill"
-import { formatReceivedAt } from "~/features/calendar/lib/inboxList"
+import { formatRequestDate, requestClientName, requestTitle } from "~/features/event-requests/lib/eventRequestPrefill"
+import { formatReceivedAt } from "~/features/inbox/lib/inboxList"
 import { cn } from "~/lib/utils"
 
 type InboxRequestCardProps = {

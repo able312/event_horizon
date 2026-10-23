@@ -50,11 +50,11 @@ vi.mock("./headers/ClosePanelHeader", () => ({
   default: () => <div data-testid="close-header-mock" />,
 }))
 
-vi.mock("./content/InboxPanel", () => ({
+vi.mock("~/features/inbox/components/InboxPanel", () => ({
   default: () => <div data-testid="inbox-panel-mock" />,
 }))
 
-vi.mock("~/hooks/useEventRequests", () => ({
+vi.mock("~/features/event-requests/hooks/useEventRequests", () => ({
   useEventRequests: () => ({ requests: [], requestsQuery: {} }),
 }))
 

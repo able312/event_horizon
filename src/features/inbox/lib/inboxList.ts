@@ -1,7 +1,7 @@
 import type { EventRequest } from "~/definitions/database"
 import { EVENT_TYPE_LABELS } from "~/definitions/events/ui"
 
-import { requestClientName, requestTitle } from "./eventRequestPrefill"
+import { requestClientName, requestTitle } from "~/features/event-requests/lib/eventRequestPrefill"
 
 /** Lowercased words of the query; every one must appear somewhere in the item. */
 function searchWords(query: string): string[] {
