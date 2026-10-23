@@ -29,6 +29,9 @@ import {
 } from "../workspace/lib/eventDetailRouteState"
 import type { EventResource } from "../types"
 
+// Orange accent so the not-yet-uploaded Create action stands out in the header.
+const CREATE_BUTTON_ACCENT_CLASS = "bg-orange-500 text-white hover:bg-orange-400"
+
 interface EventDetailHeaderBarProps {
   eventResource: EventResource
 }
@@ -249,9 +252,9 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
       ) : canPushToCalendar ? (
         /* Mode 3: Unlinked + dates set — single Create button */
         <Button
-          variant="outline"
           size="sm"
           onClick={() => void openGoogleCalendar()}
+          className={CREATE_BUTTON_ACCENT_CLASS}
           aria-label="Create Event in Google Calendar"
         >
           {actionLabel}
@@ -265,9 +268,9 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
           <TooltipTrigger asChild>
             <span tabIndex={0}>
               <Button
-                variant="outline"
                 size="sm"
                 disabled
+                className={CREATE_BUTTON_ACCENT_CLASS}
                 aria-label="Create Event in Google Calendar"
               >
                 {actionLabel}
