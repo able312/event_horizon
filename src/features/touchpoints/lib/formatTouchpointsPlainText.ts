@@ -1,6 +1,6 @@
 import type { TouchpointPlainItem } from "../types"
 
-import { parseStoredDueDate } from "./touchpointStatus"
+import { parseStoredDueDate } from "./storedDueDate"
 
 function formatDueDate(dueDate: string | null): string | null {
   const parsed = parseStoredDueDate(dueDate)

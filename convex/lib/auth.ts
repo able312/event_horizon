@@ -2,7 +2,7 @@ import { ConvexError, type PropertyValidators, type ObjectType } from "convex/va
 import type { UserIdentity } from "convex/server"
 
 import type { Id } from "../_generated/dataModel"
-import { mutation, query, type MutationCtx, type QueryCtx } from "../_generated/server"
+import { action, mutation, query, type ActionCtx, type MutationCtx, type QueryCtx } from "../_generated/server"
 import { auditedWriter } from "./audit"
 import { upsertUser } from "./users"
 
@@ -68,6 +68,23 @@ export function companyMutation<Args extends PropertyValidators, Returns>(defini
       const identity = await requireCompanyUser(ctx)
       const userId = await upsertUser(ctx, identity)
       return definition.handler({ ...ctx, db: auditedWriter(ctx.db, userId), userId }, args)
+    },
+  })
+}
+
+/**
+ * A public action that requires a company identity before its handler runs. Queries and
+ * mutations it runs through `api` see the same caller, so their checks and audit stamps apply.
+ */
+export function companyAction<Args extends PropertyValidators, Returns>(definition: {
+  args: Args
+  handler: (ctx: ActionCtx, args: ObjectType<Args>) => Returns | Promise<Returns>
+}) {
+  return action({
+    args: definition.args,
+    handler: async (ctx, args: ObjectType<Args>): Promise<Returns> => {
+      await requireCompanyUser(ctx)
+      return definition.handler(ctx, args)
     },
   })
 }

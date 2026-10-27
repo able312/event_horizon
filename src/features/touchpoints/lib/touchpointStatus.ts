@@ -1,24 +1,12 @@
 import { AlertCircle, Circle } from "lucide-react"
 
 import type { StatusStyle, TouchpointUrgency } from "../types"
+import { parseStoredDueDate } from "./storedDueDate"
+
+export { parseStoredDueDate }
 
 export function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate())
-}
-
-/** Stored due dates are UTC-midnight ISO; map to a local calendar day for urgency. */
-export function parseStoredDueDate(iso: string | null | undefined): Date | null {
-  if (!iso) return null
-  const parsed = new Date(iso)
-  if (Number.isNaN(parsed.getTime())) return null
-  return new Date(
-    parsed.getUTCFullYear(),
-    parsed.getUTCMonth(),
-    parsed.getUTCDate(),
-    12,
-    0,
-    0,
-  )
 }
 
 export function daysFromToday(dueDate: Date, now = new Date()): number {

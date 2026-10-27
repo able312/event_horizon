@@ -1,10 +1,12 @@
-import type { PrimaryClient } from "~/definitions/contacts"
-import type { Event } from "~/definitions/database"
-import { EVENT_STATUS_LABELS, EVENT_TYPE_LABELS } from "~/definitions/events/ui"
-import { formatTouchpointsPlainText } from "~/features/touchpoints/lib/formatTouchpointsPlainText"
-import type { TouchpointPlainItem } from "~/features/touchpoints/types"
+import type { PrimaryClient } from "../definitions/contacts.js"
+import type { Event } from "../definitions/database.js"
+import { EVENT_STATUS_LABELS, EVENT_TYPE_LABELS } from "../definitions/events/labels.js"
+import { formatTouchpointsPlainText } from "../features/touchpoints/lib/formatTouchpointsPlainText.js"
+import type { TouchpointPlainItem } from "../features/touchpoints/types.js"
 
-const GOOGLE_CREATE_URL = "https://calendar.google.com/calendar/u/0/r/eventedit"
+// Builds the shared Google Calendar event for an Event Horizon event. Convex sends it
+// (convex/googleCalendar.ts), so this module avoids the renderer-only "~" imports.
+
 const MISSING_PLACEHOLDER = "Not set"
 
 export type GoogleCalendarEventInput = Pick<
@@ -18,7 +20,6 @@ export type GoogleCalendarEventInput = Pick<
   | "minGuests"
   | "maxGuests"
   | "guestCountFinal"
-  | "calendarId"
 >
 
 function toValidDate(dateValue: string): Date {
@@ -29,28 +30,10 @@ function toValidDate(dateValue: string): Date {
   return date
 }
 
-function toDateDigits(date: Date): string {
-  return `${date.getUTCFullYear()}${String(date.getUTCMonth() + 1).padStart(2, "0")}${String(
-    date.getUTCDate(),
-  ).padStart(2, "0")}`
-}
-
-function toTimeDigits(date: Date): string {
-  return `${String(date.getUTCHours()).padStart(2, "0")}${String(date.getUTCMinutes()).padStart(
-    2,
-    "0",
-  )}${String(date.getUTCSeconds()).padStart(2, "0")}`
-}
-
 function cleanText(value: string | null | undefined): string | null {
   if (!value) return null
   const trimmed = value.trim()
   return trimmed.length > 0 ? trimmed : null
-}
-
-function formatGoogleCalendarDateUtc(isoDate: string): string {
-  const date = toValidDate(isoDate)
-  return `${toDateDigits(date)}T${toTimeDigits(date)}Z`
 }
 
 export type GoogleCalendarDescriptionOptions = {
@@ -98,42 +81,26 @@ function buildGoogleCalendarDescription(
   return lines.join("\n")
 }
 
-function buildBaseGoogleCalendarUrl(
+/** The Calendar API fields Event Horizon owns; anything else set in Google is left alone. */
+export type GoogleCalendarEventBody = {
+  summary: string
+  description: string
+  start: { dateTime: string }
+  end: { dateTime: string }
+}
+
+export function buildGoogleCalendarEventBody(
   event: GoogleCalendarEventInput,
-  baseUrl: string,
   options: GoogleCalendarDescriptionOptions = {},
-): string {
+): GoogleCalendarEventBody {
   if (!event.startDateTime || !event.endDateTime) {
     throw new Error("Event startDateTime and endDateTime are required")
   }
 
-  const url = new URL(baseUrl)
-  const title = cleanText(event.title) ?? "Untitled Event"
-  url.searchParams.set("text", title)
-  url.searchParams.set(
-    "dates",
-    `${formatGoogleCalendarDateUtc(event.startDateTime)}/${formatGoogleCalendarDateUtc(event.endDateTime)}`,
-  )
-  url.searchParams.set("details", buildGoogleCalendarDescription(event, options))
-  return url.toString()
-}
-
-export function buildGoogleCalendarCreateUrl(
-  event: GoogleCalendarEventInput,
-  options: GoogleCalendarDescriptionOptions = {},
-): string {
-  return buildBaseGoogleCalendarUrl(event, GOOGLE_CREATE_URL, options)
-}
-
-export function buildGoogleCalendarUpdateUrl(
-  event: GoogleCalendarEventInput,
-  options: GoogleCalendarDescriptionOptions = {},
-): string {
-  const calendarId = cleanText(event.calendarId)
-  if (!calendarId) {
-    throw new Error("calendarId is required for update URL")
+  return {
+    summary: cleanText(event.title) ?? "Untitled Event",
+    description: buildGoogleCalendarDescription(event, options),
+    start: { dateTime: toValidDate(event.startDateTime).toISOString() },
+    end: { dateTime: toValidDate(event.endDateTime).toISOString() },
   }
-
-  const baseUrl = `https://calendar.google.com/calendar/u/0/r/eventedit/${encodeURIComponent(calendarId)}`
-  return buildBaseGoogleCalendarUrl(event, baseUrl, options)
 }

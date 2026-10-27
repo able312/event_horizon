@@ -13,15 +13,8 @@ import {
 import { Input } from "~/components/atoms/input"
 import { LastEditedBy } from "~/components/molecules/LastEditedBy"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/atoms/tooltip"
-import type { UpdateEvent } from "~/definitions/database"
-import { selectPrimaryClient } from "~/features/contacts/lib/eventContactsPanel"
-import {
-  buildGoogleCalendarCreateUrl,
-  buildGoogleCalendarUpdateUrl,
-  type GoogleCalendarEventInput,
-} from "~/lib/googleCalendar"
-import { getEventContactsPanel } from "~/lib/data/eventContacts"
-import { getIncompleteTouchpointsByEventId } from "~/lib/data/touchpoints"
+import type { Event, UpdateEvent } from "~/definitions/database"
+import { pushEventToGoogleCalendar } from "~/lib/data/googleCalendar"
 import { openExternalUrl } from "~/lib/ipc/system"
 import {
   DEFAULT_EVENT_DETAIL_RETURN_TO,
@@ -29,7 +22,7 @@ import {
 } from "../workspace/lib/eventDetailRouteState"
 import type { EventResource } from "../types"
 
-const MISSING_DATES_MESSAGE = "Set both start and end date/time to push to Google Calendar."
+const MISSING_DATES_MESSAGE = "Set both start and end date/time to add the event to Google Calendar."
 
 // Orange accent so the not-yet-uploaded Create action stands out in the header.
 const CREATE_BUTTON_ACCENT_CLASS = "bg-orange-500 text-white hover:bg-orange-400"
@@ -90,52 +83,44 @@ const EventDetailHeaderBar: React.FC<EventDetailHeaderBarProps> = ({ eventResour
 
 type GoogleCalendarHeaderActionProps = {
   eventId: string
-  event: GoogleCalendarEventInput
+  event: Pick<Event, "calendarId" | "startDateTime" | "endDateTime">
   onSaveCalendarId: (updates: UpdateEvent) => Promise<unknown>
 }
 
 // Google Calendar integration for the event header.
-// Flow: Create opens Google Calendar pre-filled → user pastes returned event ID → future clicks Update.
-// Alternatively, Link existing skips the browser and goes straight to pasting an existing event ID.
+// Add/Update writes the event to the shared Google Calendar from Convex (googleCalendar.pushEvent),
+// which also saves the link. Link existing pastes the ID or link of an event already in Google.
 const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
   eventId,
   event,
   onSaveCalendarId,
 }) => {
   // UI mode flags
-  const [showCalendarIdInput, setShowCalendarIdInput] = useState(false) // true after first Create, or when editing ID
+  const [showCalendarIdInput, setShowCalendarIdInput] = useState(false) // true when linking or editing the ID
   const [calendarIdDraft, setCalendarIdDraft] = useState(event.calendarId ?? "")
   const [isSavingCalendarId, setIsSavingCalendarId] = useState(false)
+  const [isPushing, setIsPushing] = useState(false)
   const hasCalendarId = Boolean(event.calendarId && event.calendarId.trim().length > 0) // event already linked to a Google Calendar event
   const canPushToCalendar = Boolean(event.startDateTime && event.endDateTime) // requires both start and end date/time
 
-  // Opens create or update URL; after create, prompts for ID paste.
-  const openGoogleCalendar = async () => {
-    if (!canPushToCalendar) return
+  // Creates or updates the shared calendar event; the saved link arrives through the live event query.
+  const pushToGoogleCalendar = async () => {
+    if (!canPushToCalendar || isPushing) return
 
     try {
-      const [incomplete, contactsPanel] = await Promise.all([
-        getIncompleteTouchpointsByEventId(eventId),
-        getEventContactsPanel(eventId),
-      ])
-      const options = {
-        incompleteTouchpoints: (incomplete ?? []).map((row) => ({
-          title: row.title,
-          dueDate: row.dueDate,
-        })),
-        client: selectPrimaryClient(contactsPanel),
-      }
-      const url = hasCalendarId
-        ? buildGoogleCalendarUpdateUrl(event, options)
-        : buildGoogleCalendarCreateUrl(event, options)
-
-      await openExternalUrl(url)
-      if (!hasCalendarId) {
-        setShowCalendarIdInput(true)
-      }
+      setIsPushing(true)
+      const { eventUrl } = await pushEventToGoogleCalendar(eventId)
+      toast.success(hasCalendarId ? "Google Calendar event updated" : "Added to Google Calendar", {
+        action: {
+          label: "Open",
+          onClick: () => void openExternalUrl(eventUrl).catch(() => toast.error("Couldn't open Google Calendar")),
+        },
+      })
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to open Google Calendar"
+      const message = err instanceof Error ? err.message : "Failed to update Google Calendar"
       toast.error(message)
+    } finally {
+      setIsPushing(false)
     }
   }
 
@@ -159,16 +144,16 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
     }
   }
 
-  // Clears link so user can create a new calendar event.
+  // Clears the link only; the Google event stays on the shared calendar.
   const removeCalendarId = async () => {
     try {
       setIsSavingCalendarId(true)
       await onSaveCalendarId({ calendarId: null })
       setCalendarIdDraft("")
       setShowCalendarIdInput(false)
-      toast.success("Calendar ID removed")
+      toast.success("Unlinked from Google Calendar")
     } catch {
-      toast.error("Failed to remove calendar ID")
+      toast.error("Failed to unlink Google Calendar event")
     } finally {
       setIsSavingCalendarId(false)
     }
@@ -188,7 +173,7 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
           <Input
             value={calendarIdDraft}
             onChange={(e) => setCalendarIdDraft(e.target.value)}
-            placeholder="Paste Google Calendar ID"
+            placeholder="Paste Google Calendar event ID or link"
             className="h-8 w-64"
           />
           <Button size="sm" onClick={() => void saveCalendarId()} disabled={isSavingCalendarId}>
@@ -204,10 +189,14 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
           </Button>
         </div>
       ) : hasCalendarId ? (
-        /* Mode 2: Linked event — Update button + Edit/Remove dropdown */
+        /* Mode 2: Linked event — Update button + Edit/Unlink dropdown */
         <div className="flex items-center">
-          <UpdateGoogleCalendarButton canUpdate={canPushToCalendar} onUpdate={() => void openGoogleCalendar()} />
-          {/* Split button: primary action (Update) + chevron menu (Edit/Remove ID) */}
+          <UpdateGoogleCalendarButton
+            canUpdate={canPushToCalendar}
+            isUpdating={isPushing}
+            onUpdate={() => void pushToGoogleCalendar()}
+          />
+          {/* Split button: primary action (Update) + chevron menu (Edit/Unlink) */}
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button
@@ -215,6 +204,7 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
                 size="sm"
                 aria-label="Calendar ID actions"
                 className="rounded-l-none border-l px-2"
+                disabled={isPushing}
               >
                 <ChevronDown className="h-4 w-4" />
               </Button>
@@ -222,16 +212,17 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={startEditingCalendarId}>Edit Calendar ID</DropdownMenuItem>
               <DropdownMenuItem variant="destructive" onClick={() => void removeCalendarId()}>
-                Remove Calendar ID
+                Unlink (keeps the Google event)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       ) : (
-        /* Mode 3: Unlinked — choose between creating a new Google event or linking an existing one */
+        /* Mode 3: Unlinked — add to the shared calendar or link an existing Google event */
         <UnlinkedGoogleCalendarMenu
           canCreate={canPushToCalendar}
-          onCreate={() => void openGoogleCalendar()}
+          isCreating={isPushing}
+          onCreate={() => void pushToGoogleCalendar()}
           onLinkExisting={startEditingCalendarId}
         />
       )}
@@ -241,21 +232,22 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
 
 type UpdateGoogleCalendarButtonProps = {
   canUpdate: boolean
+  isUpdating: boolean
   onUpdate: () => void
 }
 
 // Primary half of the linked-event split button; explains itself via tooltip when dates are missing.
-const UpdateGoogleCalendarButton: React.FC<UpdateGoogleCalendarButtonProps> = ({ canUpdate, onUpdate }) => {
+const UpdateGoogleCalendarButton: React.FC<UpdateGoogleCalendarButtonProps> = ({ canUpdate, isUpdating, onUpdate }) => {
   const button = (
     <Button
       variant="outline"
       size="sm"
       onClick={onUpdate}
-      disabled={!canUpdate}
+      disabled={!canUpdate || isUpdating}
       className="rounded-r-none border-r-0"
       aria-label="Update Event in Google Calendar"
     >
-      Update
+      {isUpdating ? "Updating…" : "Update"}
     </Button>
   )
 
@@ -274,6 +266,7 @@ const UpdateGoogleCalendarButton: React.FC<UpdateGoogleCalendarButtonProps> = ({
 
 type UnlinkedGoogleCalendarMenuProps = {
   canCreate: boolean
+  isCreating: boolean
   onCreate: () => void
   onLinkExisting: () => void
 }
@@ -282,20 +275,21 @@ type UnlinkedGoogleCalendarMenuProps = {
 // Linking doesn't need dates, so only the Create option is gated on start/end being set.
 const UnlinkedGoogleCalendarMenu: React.FC<UnlinkedGoogleCalendarMenuProps> = ({
   canCreate,
+  isCreating,
   onCreate,
   onLinkExisting,
 }) => (
   <DropdownMenu modal={false}>
     <DropdownMenuTrigger asChild>
-      <Button size="sm" className={CREATE_BUTTON_ACCENT_CLASS} aria-label="Google Calendar options">
+      <Button size="sm" className={CREATE_BUTTON_ACCENT_CLASS} aria-label="Google Calendar options" disabled={isCreating}>
         <CalendarPlus />
-        Google Cal
+        {isCreating ? "Adding…" : "Google Cal"}
         <ChevronDown className="h-4 w-4" />
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">
       <DropdownMenuItem onClick={onCreate} disabled={!canCreate} className="flex-col items-start gap-0">
-        Create new event
+        Add to Google Calendar
         {!canCreate ? (
           <span className="text-xs text-muted-foreground">{MISSING_DATES_MESSAGE}</span>
         ) : null}
