@@ -29,6 +29,8 @@ import {
 } from "../workspace/lib/eventDetailRouteState"
 import type { EventResource } from "../types"
 
+const MISSING_DATES_MESSAGE = "Set both start and end date/time to push to Google Calendar."
+
 // Orange accent so the not-yet-uploaded Create action stands out in the header.
 const CREATE_BUTTON_ACCENT_CLASS = "bg-orange-500 text-white hover:bg-orange-400"
 
@@ -94,6 +96,7 @@ type GoogleCalendarHeaderActionProps = {
 
 // Google Calendar integration for the event header.
 // Flow: Create opens Google Calendar pre-filled → user pastes returned event ID → future clicks Update.
+// Alternatively, Link existing skips the browser and goes straight to pasting an existing event ID.
 const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
   eventId,
   event,
@@ -105,15 +108,6 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
   const [isSavingCalendarId, setIsSavingCalendarId] = useState(false)
   const hasCalendarId = Boolean(event.calendarId && event.calendarId.trim().length > 0) // event already linked to a Google Calendar event
   const canPushToCalendar = Boolean(event.startDateTime && event.endDateTime) // requires both start and end date/time
-
-  const actionLabel = hasCalendarId ? (
-    "Update"
-  ) : (
-    <>
-      <CalendarPlus />
-      Google Cal
-    </>
-  )
 
   // Opens create or update URL; after create, prompts for ID paste.
   const openGoogleCalendar = async () => {
@@ -180,7 +174,7 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
     }
   }
 
-  // Opens inline input pre-filled with current ID.
+  // Opens inline input pre-filled with current ID (empty when linking an existing event).
   const startEditingCalendarId = () => {
     setCalendarIdDraft(event.calendarId ?? "")
     setShowCalendarIdInput(true)
@@ -200,35 +194,19 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
           <Button size="sm" onClick={() => void saveCalendarId()} disabled={isSavingCalendarId}>
             Save
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowCalendarIdInput(false)}
+            disabled={isSavingCalendarId}
+          >
+            Cancel
+          </Button>
         </div>
       ) : hasCalendarId ? (
         /* Mode 2: Linked event — Update button + Edit/Remove dropdown */
         <div className="flex items-center">
-          {canPushToCalendar ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void openGoogleCalendar()}
-              className="rounded-r-none border-r-0"
-              aria-label="Update Event in Google Calendar"
-            >
-              {actionLabel}
-            </Button>
-          ) : (
-            /* Tooltip needs a focusable wrapper because disabled buttons don't receive pointer events */
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span tabIndex={0}>
-                  <Button variant="outline" size="sm" disabled className="rounded-r-none border-r-0" aria-label="Update Event in Google Calendar">
-                    {actionLabel}
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent sideOffset={8}>
-                Set both start and end date/time to push to Google Calendar.
-              </TooltipContent>
-            </Tooltip>
-          )}
+          <UpdateGoogleCalendarButton canUpdate={canPushToCalendar} onUpdate={() => void openGoogleCalendar()} />
           {/* Split button: primary action (Update) + chevron menu (Edit/Remove ID) */}
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
@@ -249,41 +227,82 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      ) : canPushToCalendar ? (
-        /* Mode 3: Unlinked + dates set — single Create button */
-        <Button
-          size="sm"
-          onClick={() => void openGoogleCalendar()}
-          className={CREATE_BUTTON_ACCENT_CLASS}
-          aria-label="Create Event in Google Calendar"
-        >
-          {actionLabel}
-        </Button>
-      ) : null}
-
-      {/* Mode 4: Unlinked + missing dates — disabled Create with tooltip (separate from ternary above) */}
-      {!hasCalendarId && !showCalendarIdInput && !canPushToCalendar ? (
-        /* Tooltip needs a focusable wrapper because disabled buttons don't receive pointer events */
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span tabIndex={0}>
-              <Button
-                size="sm"
-                disabled
-                className={CREATE_BUTTON_ACCENT_CLASS}
-                aria-label="Create Event in Google Calendar"
-              >
-                {actionLabel}
-              </Button>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent sideOffset={8}>
-            Set both start and end date/time to push to Google Calendar.
-          </TooltipContent>
-        </Tooltip>
-      ) : null}
+      ) : (
+        /* Mode 3: Unlinked — choose between creating a new Google event or linking an existing one */
+        <UnlinkedGoogleCalendarMenu
+          canCreate={canPushToCalendar}
+          onCreate={() => void openGoogleCalendar()}
+          onLinkExisting={startEditingCalendarId}
+        />
+      )}
     </div>
   )
 }
+
+type UpdateGoogleCalendarButtonProps = {
+  canUpdate: boolean
+  onUpdate: () => void
+}
+
+// Primary half of the linked-event split button; explains itself via tooltip when dates are missing.
+const UpdateGoogleCalendarButton: React.FC<UpdateGoogleCalendarButtonProps> = ({ canUpdate, onUpdate }) => {
+  const button = (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={onUpdate}
+      disabled={!canUpdate}
+      className="rounded-r-none border-r-0"
+      aria-label="Update Event in Google Calendar"
+    >
+      Update
+    </Button>
+  )
+
+  if (canUpdate) return button
+
+  return (
+    /* Tooltip needs a focusable wrapper because disabled buttons don't receive pointer events */
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={0}>{button}</span>
+      </TooltipTrigger>
+      <TooltipContent sideOffset={8}>{MISSING_DATES_MESSAGE}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+type UnlinkedGoogleCalendarMenuProps = {
+  canCreate: boolean
+  onCreate: () => void
+  onLinkExisting: () => void
+}
+
+// Entry point for an event with no linked Google Calendar event.
+// Linking doesn't need dates, so only the Create option is gated on start/end being set.
+const UnlinkedGoogleCalendarMenu: React.FC<UnlinkedGoogleCalendarMenuProps> = ({
+  canCreate,
+  onCreate,
+  onLinkExisting,
+}) => (
+  <DropdownMenu modal={false}>
+    <DropdownMenuTrigger asChild>
+      <Button size="sm" className={CREATE_BUTTON_ACCENT_CLASS} aria-label="Google Calendar options">
+        <CalendarPlus />
+        Google Cal
+        <ChevronDown className="h-4 w-4" />
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end">
+      <DropdownMenuItem onClick={onCreate} disabled={!canCreate} className="flex-col items-start gap-0">
+        Create new event
+        {!canCreate ? (
+          <span className="text-xs text-muted-foreground">{MISSING_DATES_MESSAGE}</span>
+        ) : null}
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={onLinkExisting}>Link existing event</DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>
+)
 
 export default EventDetailHeaderBar
