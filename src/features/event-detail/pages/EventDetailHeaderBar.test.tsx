@@ -72,6 +72,11 @@ const contactsPanel: EventContactsPanel = {
   ],
 }
 
+async function chooseGoogleCalendarOption(name: string) {
+  fireEvent.pointerDown(screen.getByRole("button", { name: "Google Calendar options" }))
+  fireEvent.click(await screen.findByRole("menuitem", { name: new RegExp(`^${name}`) }))
+}
+
 describe("EventDetailHeaderBar", () => {
   beforeEach(() => {
     vi.mocked(window.electron.ipcRenderer.invoke).mockImplementation(async (channel: string) => {
@@ -133,9 +138,7 @@ describe("EventDetailHeaderBar", () => {
       </MemoryRouter>,
     )
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Create Event in Google Calendar" }),
-    )
+    await chooseGoogleCalendarOption("Create new event")
 
     await waitFor(() => {
       expect(window.electron.ipcRenderer.invoke).toHaveBeenCalledWith(
@@ -148,9 +151,7 @@ describe("EventDetailHeaderBar", () => {
       .mock.calls.find(([channel]) => channel === "system:open-external")?.[1] as string
     expect(new URL(openedUrl).searchParams.get("details")).toContain("Name: Example Name")
     expect(screen.getByPlaceholderText("Paste Google Calendar ID")).toBeTruthy()
-    expect(
-      screen.queryByRole("button", { name: "Create Event in Google Calendar" }),
-    ).toBeNull()
+    expect(screen.queryByRole("button", { name: "Google Calendar options" })).toBeNull()
   })
 
   it("shows an error and does not save a blank calendar id", async () => {
@@ -163,9 +164,7 @@ describe("EventDetailHeaderBar", () => {
       </MemoryRouter>,
     )
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Create Event in Google Calendar" }),
-    )
+    await chooseGoogleCalendarOption("Create new event")
     await screen.findByPlaceholderText("Paste Google Calendar ID")
 
     fireEvent.change(screen.getByPlaceholderText("Paste Google Calendar ID"), {
@@ -176,9 +175,7 @@ describe("EventDetailHeaderBar", () => {
     expect(toast.error).toHaveBeenCalledWith("Calendar ID is required")
     expect(updateEvent).not.toHaveBeenCalled()
     expect(screen.getByPlaceholderText("Paste Google Calendar ID")).toBeTruthy()
-    expect(
-      screen.queryByRole("button", { name: "Create Event in Google Calendar" }),
-    ).toBeNull()
+    expect(screen.queryByRole("button", { name: "Google Calendar options" })).toBeNull()
   })
 
   it("saves a trimmed calendar id", async () => {
@@ -191,9 +188,7 @@ describe("EventDetailHeaderBar", () => {
       </MemoryRouter>,
     )
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Create Event in Google Calendar" }),
-    )
+    await chooseGoogleCalendarOption("Create new event")
     await screen.findByPlaceholderText("Paste Google Calendar ID")
 
     fireEvent.change(screen.getByPlaceholderText("Paste Google Calendar ID"), {
@@ -247,5 +242,59 @@ describe("EventDetailHeaderBar", () => {
     expect(input.value).toBe("abc123")
     expect(screen.queryByRole("button", { name: "Update" })).toBeNull()
     expect(screen.queryByRole("button", { name: "Calendar ID actions" })).toBeNull()
+  })
+  it("links an existing calendar event without opening the browser", async () => {
+    const updateEvent = vi.fn(async (updates) => ({ ...makeEvent(), ...updates }))
+
+    render(
+      <MemoryRouter>
+        <EventDetailHeaderBar eventResource={makeEventResource({ updateEvent })} />
+      </MemoryRouter>,
+    )
+
+    await chooseGoogleCalendarOption("Link existing event")
+
+    const input = screen.getByPlaceholderText("Paste Google Calendar ID") as HTMLInputElement
+    expect(input.value).toBe("")
+    expect(window.electron.ipcRenderer.invoke).not.toHaveBeenCalledWith(
+      "system:open-external",
+      expect.anything(),
+    )
+
+    fireEvent.change(input, { target: { value: "existing-id" } })
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+
+    await waitFor(() => {
+      expect(updateEvent).toHaveBeenCalledWith({ calendarId: "existing-id" })
+    })
+  })
+
+  it("returns to the menu when linking is cancelled", async () => {
+    render(
+      <MemoryRouter>
+        <EventDetailHeaderBar eventResource={makeEventResource()} />
+      </MemoryRouter>,
+    )
+
+    await chooseGoogleCalendarOption("Link existing event")
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+
+    expect(screen.queryByPlaceholderText("Paste Google Calendar ID")).toBeNull()
+    expect(screen.getByRole("button", { name: "Google Calendar options" })).toBeTruthy()
+  })
+
+  it("disables create but still allows linking when dates are missing", async () => {
+    render(
+      <MemoryRouter>
+        <EventDetailHeaderBar eventResource={makeEventResource({ event: makeEvent({ endDateTime: null }) })} />
+      </MemoryRouter>,
+    )
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Google Calendar options" }))
+    const createItem = await screen.findByRole("menuitem", { name: /^Create new event/ })
+    expect(createItem.getAttribute("data-disabled")).not.toBeNull()
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "Link existing event" }))
+    expect(screen.getByPlaceholderText("Paste Google Calendar ID")).toBeTruthy()
   })
 })
