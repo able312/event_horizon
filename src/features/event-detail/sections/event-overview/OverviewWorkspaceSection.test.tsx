@@ -16,6 +16,10 @@ vi.mock("~/features/contacts/components/ContactsList", () => ({
   default: () => null,
 }))
 
+vi.mock("./components/GoogleCalendarCard", () => ({
+  GoogleCalendarCard: () => null,
+}))
+
 function stubTouchpointsSection() {
   useTouchpointsSectionMock.mockReturnValue({
     data: [],

@@ -21,7 +21,8 @@ async function userIdFor(t: Pick<ReturnType<ReturnType<typeof newTest>["withIden
 
 describe("audit fields", () => {
   it("covers every business table, so a new table can't silently skip auditing", () => {
-    const unaudited = ["users", "beverageItemTimeblocks", "eventRequests"]
+    // googleCalendarSyncs is bookkeeping written by pushEvent, which stamps the event link itself through events.update
+    const unaudited = ["users", "beverageItemTimeblocks", "eventRequests", "googleCalendarSyncs"]
     expect([...AUDITED_TABLES].sort()).toEqual(Object.keys(schema.tables).filter((table) => !unaudited.includes(table)).sort())
     for (const table of STAMPED_UPDATED_AT_TABLES) expect(AUDITED_TABLES).toContain(table)
   })

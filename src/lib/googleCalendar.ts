@@ -104,3 +104,27 @@ export function buildGoogleCalendarEventBody(
     end: { dateTime: toValidDate(event.endDateTime).toISOString() },
   }
 }
+
+/**
+ * A short, stable fingerprint of a body. Convex keeps the fingerprint of the last body sent
+ * to Google, so the app can tell when the event has changed since without storing a copy.
+ */
+export function googleCalendarBodyFingerprint(body: GoogleCalendarEventBody): string {
+  const text = JSON.stringify([body.summary, body.description, body.start.dateTime, body.end.dateTime])
+  // 32-bit FNV-1a: plenty to tell one revision of an event from the next
+  let hash = 0x811c9dc5
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i)
+    hash = Math.imul(hash, 0x01000193) >>> 0
+  }
+  return hash.toString(16).padStart(8, "0")
+}
+
+/**
+ * How the linked Google event compares with Event Horizon:
+ * - `synced`: Google has the latest details.
+ * - `out_of_date`: the details changed after the last update.
+ * - `unknown`: linked, but no update from Event Horizon is on record for that link
+ *   (linked by hand, or last updated before changes were tracked), or the event has no dates.
+ */
+export type GoogleCalendarSyncStatus = "not_linked" | "synced" | "out_of_date" | "unknown"

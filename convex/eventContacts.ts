@@ -24,11 +24,16 @@ async function panelRows(ctx: QueryCtx, eventId: Id<"events">) {
   return rows.sort((a,b) => PANEL_ROLE_ORDER.indexOf(a.role) - PANEL_ROLE_ORDER.indexOf(b.role) || Number(b.item.isPrimary) - Number(a.item.isPrimary) || a.sortOrder - b.sortOrder || a.categoryOrder - b.categoryOrder || a.item.displayName.toLowerCase().localeCompare(b.item.displayName.toLowerCase()))
 }
 export const getPanel = companyQuery({ args: { eventId: v.id("events") }, handler: (ctx, { eventId }) => contactOperation(async () => ({ eventId, groups: groupPanelItems(await panelRows(ctx, eventId)) })) })
+/** The client listed first on the event's contacts panel, if it has one. */
+export async function primaryClientOf(ctx: QueryCtx, eventId: Id<"events">): Promise<PrimaryClient | null> {
+  const client = (await panelRows(ctx, eventId)).find(r => r.role === "client")?.item
+  return client ? { contactId: client.contactId, displayName: client.displayName, email: client.email, phone: client.phone } : null
+}
 export const getPrimaryClients = companyQuery({ args: { eventIds: v.array(v.id("events")) }, handler: (ctx, { eventIds }) => contactOperation(async () => {
   const result: Record<string, PrimaryClient> = {}
   for (const eventId of new Set(eventIds)) {
-    const client = (await panelRows(ctx, eventId)).find(r => r.role === "client")?.item
-    if (client) result[eventId] = { contactId: client.contactId, displayName: client.displayName, email: client.email, phone: client.phone }
+    const client = await primaryClientOf(ctx, eventId)
+    if (client) result[eventId] = client
   }
   return result
 }) })

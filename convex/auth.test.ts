@@ -36,12 +36,15 @@ async function registeredFunctions(): Promise<[string, RegisteredFunction][]> {
 }
 
 /**
- * Internal functions: run through the Convex CLI with admin access, or by the
- * secret-checked HTTP route in http.ts (website event requests).
+ * Internal functions: run through the Convex CLI with admin access, by the
+ * secret-checked HTTP route in http.ts (website event requests), or by
+ * googleCalendar.pushEvent once it has checked the caller.
  */
 const INTERNAL_FUNCTIONS = new Set([
   "./developmentSeed.ts:seed",
   "./eventRequests.ts:receive",
+  "./googleCalendar.ts:getPushContent",
+  "./googleCalendar.ts:recordSync",
 ])
 
 /**

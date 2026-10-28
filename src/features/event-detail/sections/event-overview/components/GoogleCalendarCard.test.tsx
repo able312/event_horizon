@@ -1,3 +1,4 @@
+import { QueryClientProvider } from "@tanstack/react-query"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { toast } from "sonner"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -6,15 +7,18 @@ import { GoogleCalendarCard } from "./GoogleCalendarCard"
 import { BackendError } from "~/lib/data/backend"
 import {
   getGoogleCalendarEventUrl,
+  getGoogleCalendarSyncStatus,
   pushEventToGoogleCalendar,
   removeEventFromGoogleCalendar,
 } from "~/lib/data/googleCalendar"
+import { createTestQueryClient } from "~/test/renderHookWithProviders"
 
 const EVENT_URL = "https://calendar.google.com/calendar/event?eid=abc"
 const AUTH_MESSAGE = "Event Horizon's access to Google Calendar has expired or was removed."
 const LINK_PLACEHOLDER = "Paste Google Calendar event ID or link"
 vi.mock("~/lib/data/googleCalendar", () => ({
   getGoogleCalendarEventUrl: vi.fn(),
+  getGoogleCalendarSyncStatus: vi.fn(),
   pushEventToGoogleCalendar: vi.fn(),
   removeEventFromGoogleCalendar: vi.fn(),
 }))
@@ -34,7 +38,11 @@ function makeEvent(overrides: Partial<CardEvent> = {}): CardEvent {
 const linked = makeEvent({ calendarId: "abc123@google.com" })
 
 function renderCard(event: CardEvent = makeEvent(), onSaveCalendarId = vi.fn(async () => undefined)) {
-  render(<GoogleCalendarCard event={event} onSaveCalendarId={onSaveCalendarId} />)
+  render(
+    <QueryClientProvider client={createTestQueryClient()}>
+      <GoogleCalendarCard event={event} onSaveCalendarId={onSaveCalendarId} />
+    </QueryClientProvider>,
+  )
   return { onSaveCalendarId }
 }
 
@@ -47,6 +55,7 @@ describe("GoogleCalendarCard", () => {
   beforeEach(() => {
     vi.mocked(pushEventToGoogleCalendar).mockResolvedValue({ eventUrl: EVENT_URL })
     vi.mocked(getGoogleCalendarEventUrl).mockResolvedValue({ eventUrl: EVENT_URL })
+    vi.mocked(getGoogleCalendarSyncStatus).mockResolvedValue("unknown")
     vi.mocked(removeEventFromGoogleCalendar).mockResolvedValue({ deletedFromGoogle: true })
     vi.mocked(window.electron.ipcRenderer.invoke).mockResolvedValue(undefined)
   })
@@ -80,7 +89,7 @@ describe("GoogleCalendarCard", () => {
 
   it("updates the linked Google event", async () => {
     renderCard(linked)
-    expect(screen.getByText("On the shared calendar")).toBeTruthy()
+    expect(await screen.findByText("On the shared calendar. Update to track changes")).toBeTruthy()
 
     fireEvent.click(screen.getByRole("button", { name: "Update Google Calendar event" }))
 
@@ -88,6 +97,31 @@ describe("GoogleCalendarCard", () => {
       expect(toast.success).toHaveBeenCalledWith("Google Calendar event updated", expect.anything())
     })
     expect(pushEventToGoogleCalendar).toHaveBeenCalledWith("event-1")
+  })
+
+  it("calls out changes Google doesn't have yet", async () => {
+    vi.mocked(getGoogleCalendarSyncStatus).mockResolvedValue("out_of_date")
+    renderCard(linked)
+
+    expect(await screen.findByText("Has changes not on Google Calendar yet")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Update Google Calendar event" }))
+
+    await waitFor(() => {
+      expect(pushEventToGoogleCalendar).toHaveBeenCalledWith("event-1")
+    })
+  })
+
+  it("hides Update once Google is up to date, keeping it in the menu", async () => {
+    vi.mocked(getGoogleCalendarSyncStatus).mockResolvedValue("synced")
+    renderCard(linked)
+
+    expect(await screen.findByText("Up to date on the shared calendar")).toBeTruthy()
+    expect(screen.queryByRole("button", { name: "Update Google Calendar event" })).toBeNull()
+
+    await chooseMenuItem("Update anyway")
+    await waitFor(() => {
+      expect(pushEventToGoogleCalendar).toHaveBeenCalledWith("event-1")
+    })
   })
 
   it("shows the server's explanation when Google Calendar refuses", async () => {

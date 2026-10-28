@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { CalendarDays, CalendarPlus, ExternalLink, MoreVertical, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 
@@ -11,6 +12,8 @@ import {
 } from "~/components/atoms/dropdown-menu"
 import { Input } from "~/components/atoms/input"
 import type { Event, UpdateEvent } from "~/definitions/database"
+import { googleCalendarQueries } from "~/lib/data/queries"
+import type { GoogleCalendarSyncStatus } from "~/lib/googleCalendar"
 import { cn } from "~/lib/utils"
 
 import GoogleCalendarRemoveConfirmDialog from "~/features/event-detail/components/GoogleCalendarRemoveConfirmDialog"
@@ -23,20 +26,38 @@ type GoogleCalendarCardProps = {
   onSaveCalendarId: (updates: UpdateEvent) => Promise<unknown>
 }
 
-function statusText(isLinked: boolean, hasDates: boolean): string {
-  if (!hasDates) return `Set a start and end time to ${isLinked ? "update" : "add"} it`
-  return isLinked ? "On the shared calendar" : "Not on the shared calendar yet"
+type StatusTone = "ok" | "attention" | "neutral"
+
+const STATUS_DOT_CLASS: Record<StatusTone, string> = {
+  ok: "bg-emerald-500",
+  attention: "bg-amber-500",
+  neutral: "bg-stone-400",
+}
+
+// `syncStatus` is undefined while it loads; the card then shows Update as it would for an unknown state.
+function cardStatus(isLinked: boolean, hasDates: boolean, syncStatus: GoogleCalendarSyncStatus | undefined): { text: string; tone: StatusTone } {
+  if (!hasDates) return { text: `Set a start and end time to ${isLinked ? "update" : "add"} it`, tone: "attention" }
+  if (!isLinked) return { text: "Not on the shared calendar yet", tone: "attention" }
+  if (syncStatus === "synced") return { text: "Up to date on the shared calendar", tone: "ok" }
+  if (syncStatus === "out_of_date") return { text: "Has changes not on Google Calendar yet", tone: "attention" }
+  return { text: "On the shared calendar. Update to track changes", tone: "neutral" }
 }
 
 /**
  * The event's place on the shared Google Calendar.
  * Add/Update writes it from Convex (googleCalendar.pushEvent), which also saves the link.
+ * Update stands out while the event has changes Google doesn't have, and moves to the menu
+ * once Google is up to date (googleCalendar.getSyncStatus).
  * Linking pastes the ID or link of an event already in Google; Remove deletes the Google event and clears the link.
  */
 export const GoogleCalendarCard: React.FC<GoogleCalendarCardProps> = ({ event, onSaveCalendarId }) => {
   const isLinked = Boolean(event.calendarId?.trim())
   const hasDates = Boolean(event.startDateTime && event.endDateTime) // pushing needs both start and end
   const actions = useGoogleCalendarActions(event.id, isLinked)
+  const { data: syncStatus } = useQuery(googleCalendarQueries.syncStatus(event.id))
+  const status = cardStatus(isLinked, hasDates, syncStatus)
+  const isSynced = isLinked && syncStatus === "synced"
+  const isOutOfDate = isLinked && syncStatus === "out_of_date"
   const [isEditingLink, setIsEditingLink] = useState(false)
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false)
 
@@ -47,19 +68,23 @@ export const GoogleCalendarCard: React.FC<GoogleCalendarCardProps> = ({ event, o
   return (
     <section
       aria-label="Google Calendar"
-      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xs border border-border bg-background px-3 py-2 shadow-sm"
+      className={cn(
+        "flex items-center justify-between gap-x-3 gap-y-2 rounded-xs border px-3 py-2 shadow-sm",
+        // One row, with the status truncating as the actions widen; only the link form takes its own row
+        isEditingLink && "flex-wrap",
+        isOutOfDate ? "border-amber-300 bg-amber-50" : "border-border bg-background",
+      )}
     >
-      <div className="flex min-w-0 items-center gap-2.5">
+      <div className="flex min-w-0 flex-1 items-center gap-2.5">
         <CalendarDays className="size-4 shrink-0 text-stone-500" aria-hidden="true" />
         <div className="min-w-0">
           <h3 className="text-sm font-semibold tracking-wide">Google Calendar</h3>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            {/* Green once on the shared calendar; amber while it still needs adding */}
-            <span
-              aria-hidden="true"
-              className={cn("size-1.5 shrink-0 rounded-full", isLinked ? "bg-emerald-500" : "bg-amber-500")}
-            />
-            <span className="truncate">{statusText(isLinked, hasDates)}</span>
+            {/* Green when Google is up to date; amber while it needs adding or updating */}
+            <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", STATUS_DOT_CLASS[status.tone])} />
+            <span title={status.text} className={cn("truncate", isOutOfDate && "font-medium text-amber-800")}>
+              {status.text}
+            </span>
           </p>
         </div>
       </div>
@@ -88,17 +113,19 @@ export const GoogleCalendarCard: React.FC<GoogleCalendarCardProps> = ({ event, o
                 <ExternalLink className="size-3.5" />
                 {actions.isOpening ? "Opening…" : "Open"}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className={ACTION_BUTTON_CLASS}
-                aria-label="Update Google Calendar event"
-                disabled={!hasDates || actions.isBusy}
-                onClick={() => void actions.push()}
-              >
-                <RefreshCw className={cn("size-3.5", actions.isPushing && "animate-spin")} />
-                {actions.isPushing ? "Updating…" : "Update"}
-              </Button>
+              {isSynced && !actions.isPushing ? null : (
+                <Button
+                  type="button"
+                  variant={isOutOfDate ? "default" : "outline"}
+                  className={cn(ACTION_BUTTON_CLASS, isOutOfDate && "bg-amber-500 text-white hover:bg-amber-600")}
+                  aria-label="Update Google Calendar event"
+                  disabled={!hasDates || actions.isBusy}
+                  onClick={() => void actions.push()}
+                >
+                  <RefreshCw className={cn("size-3.5", actions.isPushing && "animate-spin")} />
+                  {actions.isPushing ? "Updating…" : "Update"}
+                </Button>
+              )}
             </>
           ) : (
             <Button
@@ -128,6 +155,10 @@ export const GoogleCalendarCard: React.FC<GoogleCalendarCardProps> = ({ event, o
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              {/* Google edits aren't tracked, so an up-to-date event can still be sent again */}
+              {isSynced ? (
+                <DropdownMenuItem onClick={() => void actions.push()}>Update anyway</DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem onClick={() => setIsEditingLink(true)}>
                 {isLinked ? "Change linked event…" : "Link existing event…"}
               </DropdownMenuItem>

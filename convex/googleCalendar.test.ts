@@ -1,6 +1,7 @@
 import { convexTest } from "convex-test"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { api } from "./_generated/api"
+import type { Id } from "./_generated/dataModel"
 import { googleEventIdFor } from "./lib/googleCalendar"
 import { companyIdentity } from "./lib/testIdentity"
 import schema from "./schema"
@@ -80,6 +81,74 @@ describe("googleCalendar.pushEvent", () => {
     const event = await t.mutation(api.events.create, { input: dated })
     await expect(convexTest(schema, modules).action(api.googleCalendar.pushEvent, { eventId: event.id })).rejects.toThrow("Sign in")
     await expect(t.withIdentity({ ...companyIdentity, email: "someone@gmail.com" }).action(api.googleCalendar.pushEvent, { eventId: event.id })).rejects.toThrow("Only @westlinks.ca")
+  })
+})
+
+describe("googleCalendar.getSyncStatus", () => {
+  const status = (t: ReturnType<typeof setup>, eventId: Id<"events">) => t.query(api.googleCalendar.getSyncStatus, { eventId })
+
+  it("is synced after a push, and out of date once anything sent to Google changes", async () => {
+    const t = setup()
+    fakeGoogle()
+    const event = await t.mutation(api.events.create, { input: dated, client: { newContact: { firstName: "Ada", email: "ada@example.com" } } })
+    expect(await status(t, event.id)).toBe("not_linked")
+
+    await t.action(api.googleCalendar.pushEvent, { eventId: event.id })
+    expect(await status(t, event.id)).toBe("synced")
+
+    await t.mutation(api.events.update, { id: event.id, updates: { title: "Renamed dinner" } })
+    expect(await status(t, event.id)).toBe("out_of_date")
+    await t.action(api.googleCalendar.pushEvent, { eventId: event.id })
+    expect(await status(t, event.id)).toBe("synced")
+
+    // Open touchpoints are in the description
+    const touchpoint = await t.mutation(api.touchpoints.create, { eventId: event.id, values: { title: "Final guest count", dueDate: null } })
+    expect(await status(t, event.id)).toBe("out_of_date")
+    await t.mutation(api.touchpoints.remove, { id: touchpoint.id })
+    expect(await status(t, event.id)).toBe("synced")
+  })
+
+  it("ignores edits that don't reach Google", async () => {
+    const t = setup()
+    fakeGoogle()
+    const event = await t.mutation(api.events.create, { input: dated })
+    await t.action(api.googleCalendar.pushEvent, { eventId: event.id })
+
+    await t.mutation(api.events.update, { id: event.id, updates: { clientNotes: "Prefers the patio" } })
+    expect(await status(t, event.id)).toBe("synced")
+  })
+
+  it("is unknown for a link with no recorded update, until it is pushed", async () => {
+    const t = setup()
+    fakeGoogle()
+    const event = await t.mutation(api.events.create, { input: { ...dated, calendarId: "abc123def@google.com" } })
+    expect(await status(t, event.id)).toBe("unknown")
+
+    await t.action(api.googleCalendar.pushEvent, { eventId: event.id })
+    expect(await status(t, event.id)).toBe("synced")
+
+    await t.mutation(api.events.update, { id: event.id, updates: { calendarId: "other12345@google.com" } })
+    expect(await status(t, event.id)).toBe("unknown")
+  })
+
+  it("is unknown while a linked event has no dates", async () => {
+    const t = setup()
+    fakeGoogle()
+    const event = await t.mutation(api.events.create, { input: dated })
+    await t.action(api.googleCalendar.pushEvent, { eventId: event.id })
+
+    await t.mutation(api.events.update, { id: event.id, updates: { startDateTime: null, endDateTime: null } })
+    expect(await status(t, event.id)).toBe("unknown")
+  })
+
+  it("is removed with the event", async () => {
+    const t = setup()
+    fakeGoogle()
+    const event = await t.mutation(api.events.create, { input: dated })
+    await t.action(api.googleCalendar.pushEvent, { eventId: event.id })
+
+    await t.mutation(api.events.remove, { id: event.id })
+    expect(await t.run(ctx => ctx.db.query("googleCalendarSyncs").collect())).toEqual([])
   })
 })
 

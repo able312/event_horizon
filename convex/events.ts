@@ -103,7 +103,7 @@ export const remove = companyMutation({ args: { id: v.id("events") }, handler: a
     for (const link of await ctx.db.query("beverageItemTimeblocks").withIndex("by_item", q => q.eq("beverageItemId", item._id)).collect()) await ctx.db.delete("beverageItemTimeblocks", link._id)
     await ctx.db.delete("beverageItems", item._id)
   }
-  for (const table of ["payments", "touchpoints", "menuOfChargeItems", "cartDetails", "tournamentDetails", "eventContacts"] as const) {
+  for (const table of ["payments", "touchpoints", "menuOfChargeItems", "cartDetails", "tournamentDetails", "eventContacts", "googleCalendarSyncs"] as const) {
     for (const row of await ctx.db.query(table).withIndex("by_event", q => q.eq("eventId", id)).collect()) await ctx.db.delete(table, row._id)
   }
   await ctx.db.delete("events", id)
