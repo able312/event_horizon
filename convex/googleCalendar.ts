@@ -58,9 +58,11 @@ export const getPushContent = internalQuery({
 
 /**
  * Saves the link to the Google event that was just written and records what was sent to
- * it, in one transaction so getSyncStatus never sees one without the other. Refuses if
- * someone changed the link while the push was in flight, rather than overwriting theirs,
- * or deleted the event or removed its date, so pushEvent can take the Google event off again.
+ * it, in one transaction so getSyncStatus never sees one without the other. Refuses if,
+ * while the push was in flight, someone linked another Google event (rather than
+ * overwriting their link), deleted the event or removed its date, so pushEvent can take
+ * back a Google event it just created. A link already pointing at the pushed event, as
+ * after two people add the event at once, is no conflict.
  */
 export const recordPush = companyInternalMutation({
   args: { eventId: v.id("events"), sentToCalendarId: nullable(v.string()), calendarId: v.string(), fingerprint: v.string() },
@@ -78,7 +80,8 @@ export const recordPush = companyInternalMutation({
         message: "The event's date was removed while it was being sent to Google Calendar, so it was taken off Google Calendar again.",
       })
     }
-    if ((event.calendarId?.trim() || null) !== (sentToCalendarId?.trim() || null)) {
+    const linked = event.calendarId?.trim() || null
+    if (linked !== (sentToCalendarId?.trim() || null) && linked !== calendarId) {
       throw new ConvexError({
         code: "LinkChanged",
         message: "The linked Google Calendar event was changed while this update was being sent. Check the link and update again.",
@@ -114,22 +117,39 @@ export const recordRemoval = companyInternalMutation({
   },
 })
 
+type PushConflict = "EventDeleted" | "DateRemoved" | "LinkChanged"
+
+const PUSH_CONFLICTS: Record<PushConflict, string> = {
+  EventDeleted: "The event was deleted",
+  DateRemoved: "The event's date was removed",
+  LinkChanged: "Another Google Calendar event was linked",
+}
+
+function pushConflictOf(error: unknown): PushConflict | null {
+  const code: unknown = error instanceof ConvexError ? error.data?.code : undefined
+  return typeof code === "string" && code in PUSH_CONFLICTS ? (code as PushConflict) : null
+}
+
 /**
- * Deletes the Google event a push just wrote after the event was deleted or its date
- * removed during it, since neither could delete a Google event they didn't know about yet
- * (or one the push restored). Clears the link if it still points there; keeps any other link.
+ * Deletes the Google event a first push just created when recordPush refused it, so it
+ * isn't left on the shared calendar with nothing linking to it: the event was deleted or
+ * its date removed (neither could delete a Google event they didn't know about yet), or
+ * someone linked another Google event. Clears the link only if it still points there.
+ * A push that updated an already-linked event isn't taken back for a new link, since that
+ * Google event was there before; for the others it is, as its PATCH may have restored the
+ * Google event the deletion or date removal had just deleted.
  */
-async function takeBackPush(ctx: ActionCtx, eventId: Id<"events">, pushedLink: string, eventDeleted: boolean): Promise<void> {
+async function takeBackPush(ctx: ActionCtx, eventId: Id<"events">, pushedLink: string, conflict: PushConflict, wasFirstPush: boolean): Promise<void> {
+  if (conflict === "LinkChanged" && !wasFirstPush) return
   try {
-    if (eventDeleted) await deleteGoogleCalendarEvent(readGoogleCalendarConfig(), pushedLink)
-    else await removeLinkedGoogleEvent(ctx, eventId, pushedLink)
+    if (conflict === "DateRemoved") await removeLinkedGoogleEvent(ctx, eventId, pushedLink)
+    else await deleteGoogleCalendarEvent(readGoogleCalendarConfig(), pushedLink)
   } catch (error) {
-    if (error instanceof ConvexError && error.data?.code === "LinkChanged") return
+    if (pushConflictOf(error) === "LinkChanged") return
     const reason = error instanceof ConvexError && typeof error.data?.message === "string" ? ` ${error.data.message}` : ""
-    const change = eventDeleted ? "The event was deleted" : "The event's date was removed"
     throw new ConvexError({
       code: "PushNotTakenBack",
-      message: `${change} while it was being sent to Google Calendar, and it couldn't be taken off again.${reason}`,
+      message: `${PUSH_CONFLICTS[conflict]} while the event was being sent to Google Calendar, and the copy just sent couldn't be taken off again.${reason}`,
     })
   }
 }
@@ -161,8 +181,8 @@ export const pushEvent = companyAction({
         fingerprint: googleCalendarBodyFingerprint(body),
       })
     } catch (error) {
-      const code = error instanceof ConvexError ? error.data?.code : undefined
-      if (code === "DateRemoved" || code === "EventDeleted") await takeBackPush(ctx, eventId, saved.link, code === "EventDeleted")
+      const conflict = pushConflictOf(error)
+      if (conflict) await takeBackPush(ctx, eventId, saved.link, conflict, !calendarId?.trim())
       throw error
     }
     return { eventUrl: saved.eventUrl }

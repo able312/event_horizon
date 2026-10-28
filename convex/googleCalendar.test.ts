@@ -66,15 +66,53 @@ describe("googleCalendar.pushEvent", () => {
     expect(sent[1]!.url.endsWith(`/events/${googleId}`)).toBe(true)
   })
 
-  it("keeps a link someone else saved while the push was in flight", async () => {
+  it("keeps a link someone else saved while the first push was in flight, and takes the new copy off", async () => {
     const t = setup()
     let eventId: Id<"events"> | null = null
-    fakeGoogle(() => t.mutation(api.events.update, { id: eventId!, updates: { calendarId: "other12345@google.com" } }))
+    let linked = false
+    const sent = fakeGoogle(async () => {
+      if (linked) return
+      linked = true
+      await t.mutation(api.events.update, { id: eventId!, updates: { calendarId: "other12345@google.com" } })
+    })
     eventId = (await t.mutation(api.events.create, { input: dated })).id
 
     await expect(t.action(api.googleCalendar.pushEvent, { eventId })).rejects.toThrow("was changed while this update was being sent")
+    expect(sent.map(call => call.method)).toEqual(["POST", "DELETE"])
+    expect(sent.at(-1)!.url.endsWith(`/events/${googleEventIdFor(eventId)}`)).toBe(true)
     expect((await t.query(api.events.getById, { id: eventId })).calendarId).toBe("other12345@google.com")
     expect(await t.run(ctx => ctx.db.query("googleCalendarSyncs").collect())).toEqual([])
+  })
+
+  it("leaves the previously linked Google event alone when the link changes during an update", async () => {
+    const t = setup()
+    let linked = false
+    const event = await t.mutation(api.events.create, { input: { ...dated, calendarId: "abc123def@google.com" } })
+    const sent = fakeGoogle(async () => {
+      if (linked) return
+      linked = true
+      await t.mutation(api.events.update, { id: event.id, updates: { calendarId: "other12345@google.com" } })
+    })
+
+    await expect(t.action(api.googleCalendar.pushEvent, { eventId: event.id })).rejects.toThrow("was changed while this update was being sent")
+    expect(sent.map(call => call.method)).toEqual(["PATCH"])
+    expect((await t.query(api.events.getById, { id: event.id })).calendarId).toBe("other12345@google.com")
+  })
+
+  it("succeeds when someone else adds the same event at the same time", async () => {
+    const t = setup()
+    let eventId: Id<"events"> | null = null
+    let linked = false
+    const sent = fakeGoogle(async () => {
+      if (linked) return
+      linked = true
+      await t.mutation(api.events.update, { id: eventId!, updates: { calendarId: `${googleEventIdFor(eventId!)}@google.com` } })
+    })
+    eventId = (await t.mutation(api.events.create, { input: dated })).id
+
+    await t.action(api.googleCalendar.pushEvent, { eventId })
+    expect(sent.map(call => call.method)).toEqual(["POST"])
+    expect(await t.query(api.googleCalendar.getSyncStatus, { eventId })).toBe("synced")
   })
 
   it("takes the new Google event off again when the date is removed while it's added", async () => {
