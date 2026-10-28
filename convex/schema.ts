@@ -13,6 +13,7 @@ import {
   eventStatus,
   eventType,
   foodServiceStyle,
+  holidayEntry,
   nullable,
   playFormat,
   startFormat,
@@ -255,4 +256,26 @@ export default defineSchema({
     .index("by_responseId", ["responseId"])
     // Inbox: pending requests
     .index("by_status", ["status", "submittedAt"]),
+
+  // Shared holiday layer (convex/holidays.ts). Both tables hold one document per
+  // source and are independent of every other table, so an empty deployment simply
+  // has no holidays yet. The cache only changes when the feed's entries change.
+  holidayCache: defineTable({
+    source: v.string(),
+    entries: v.array(holidayEntry),
+    firstYear: v.number(),
+    lastYear: v.number(),
+    /** When the entries last changed (ISO). */
+    updatedAt: v.string(),
+  }).index("by_source", ["source"]),
+
+  holidaySync: defineTable({
+    source: v.string(),
+    /** Start time (ISO) of the newest refresh that finished; older finishers are ignored. */
+    lastAttemptAt: v.string(),
+    /** Start time (ISO) of the newest refresh that confirmed the cache. */
+    lastSuccessAt: nullable(v.string()),
+    /** Set while the newest refresh failed; the cache keeps its last good entries. */
+    lastError: nullable(v.object({ at: v.string(), message: v.string() })),
+  }).index("by_source", ["source"]),
 })

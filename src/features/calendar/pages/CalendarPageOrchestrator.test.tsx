@@ -46,6 +46,11 @@ vi.mock("./CalendarPage", () => ({
 }))
 
 const dismissRequestMock = vi.fn()
+const holidayRetryMock = vi.fn()
+let holidayNotice: { message: string; canRetry: boolean } | null = null
+vi.mock("../hooks/useMonthHolidays", () => ({
+  useMonthHolidays: () => ({ holidays: [], notice: holidayNotice, retry: holidayRetryMock, isRetrying: false }),
+}))
 let pendingRequests: EventRequest[] = []
 vi.mock("~/features/event-requests/hooks/useEventRequests", () => ({
   useEventRequests: () => ({ requests: pendingRequests, dismissRequest: dismissRequestMock }),
@@ -174,6 +179,8 @@ describe("CalendarPageOrchestrator", () => {
     bodyMode = "calendar"
     ui = { selectedRequestId: null, sidebarMode: "default", reviewingRequest: null }
     pendingRequests = []
+    holidayNotice = null
+    holidayRetryMock.mockReset()
   })
   afterEach(() => {
     cleanup()
@@ -195,6 +202,24 @@ describe("CalendarPageOrchestrator", () => {
     expect(screen.getByTestId("month-nav")).toBeTruthy()
     expect(screen.getByTestId("calendar-month-view")).toBeTruthy()
     expect(screen.queryByTestId("events-table-view")).toBeNull()
+    expect(screen.queryByTestId("calendar-holiday-notice")).toBeNull()
+  })
+
+  it("notes unavailable holidays beside the month controls without blocking the calendar", () => {
+    holidayNotice = { message: "Holidays couldn't be loaded.", canRetry: true }
+    render(
+      <CalendarPageOrchastrator
+        queryState={createQueryState(null).queryState as never}
+        eventsHook={createEventsHook() as never}
+        searchController={createSearchController() as never}
+        onDeleteRequest={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByTestId("calendar-holiday-notice").textContent).toContain("Holidays couldn't be loaded.")
+    expect(screen.getByTestId("calendar-month-view")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+    expect(holidayRetryMock).toHaveBeenCalledTimes(1)
   })
 
   it("shows filter-only results and returns to the calendar when filters are cleared", () => {

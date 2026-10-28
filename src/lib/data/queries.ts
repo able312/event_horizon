@@ -11,6 +11,7 @@ import * as eventContactsApi from "./eventContacts"
 import * as eventRequestsApi from "./eventRequests"
 import * as eventsApi from "./events"
 import * as foodItemsApi from "./foodItems"
+import * as holidaysApi from "./holidays"
 import * as menuOfChargeItemsApi from "./menuOfChargeItems"
 import * as paymentsApi from "./payments"
 import * as timeblocksApi from "./timeblocks"
@@ -94,6 +95,23 @@ export const eventRequestQueries = {
     queryKey: eventRequestKeys.pending(),
     queryFn: () => eventRequestsApi.getPendingEventRequests(),
     ...liveMeta(sources.eventRequests.pending()),
+  }),
+}
+
+// ============================================================================
+// Holidays (shared and read-only; written only by the backend's weekly refresh)
+// ============================================================================
+
+export const holidayKeys = {
+  /** `month` must already be normalized to YYYY-MM. */
+  month: (month: string) => ["holidays", "month", month] as const,
+}
+
+export const holidayQueries = {
+  month: (month: string) => queryOptions({
+    queryKey: holidayKeys.month(month),
+    queryFn: () => holidaysApi.getHolidaysForMonth(month),
+    ...liveMeta(sources.holidays.month(month)),
   }),
 }
 

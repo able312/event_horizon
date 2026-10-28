@@ -1,11 +1,12 @@
 /**
  * CalendarDayEventList
  *
- * The event cards inside one calendar day cell. Shows as many cards as fit
- * (up to maxVisible) and moves the rest behind a "+N more" popover.
- * The "+N more" trigger is absolutely positioned into the top-right corner of
- * the day cell (the parent cell must be `relative`), across from the date, so
- * it doesn't take vertical space away from the cards.
+ * The header and event cards inside one calendar day cell. Shows as many cards
+ * as fit (up to maxVisible) and moves the rest behind a "+N more" popover.
+ * The header is one line: the caller's `header` (date, holiday marker) on the
+ * left and the "+N more" trigger on the right, so neither overlaps the other and
+ * the trigger takes no vertical space away from the cards. In narrow cells the
+ * trigger shortens to "+N".
  * In compact mode each visible event is a single CompactEventLine instead of
  * a card, and maxVisible doesn't apply: lines fill whatever height the cell has.
  *
@@ -24,6 +25,10 @@ import CompactEventLine from "./CompactEventLine"
 
 type CalendarDayEventListProps = {
   day: number
+  /** Left side of the header line: the day number and any markers beside it */
+  header: ReactNode
+  /** Shown above the events without counting towards them, e.g. the draft chip */
+  leadingItem?: ReactNode
   events: Event[]
   /** Most full cards to show; compact lines are limited only by height */
   maxVisible: number
@@ -41,6 +46,8 @@ type CalendarDayEventListProps = {
 
 function CalendarDayEventList({
   day,
+  header,
+  leadingItem,
   events,
   maxVisible,
   compact = false,
@@ -91,30 +98,38 @@ function CalendarDayEventList({
 
   return (
     <>
-      {/* Items that don't fit stay in layout (invisible) so they can still be measured */}
-      <div
-        ref={listRef}
-        className={`min-h-0 flex-1 overflow-hidden ${compact ? "space-y-0.5" : "space-y-1"}`}
-        data-density={compact ? "compact" : "full"}
-      >
-        {candidateEvents.map((event, index) => (
-          <div key={event.id} className={index >= fittingCount ? "invisible" : undefined}>
-            {compact ? renderCompactLine(event) : renderCard(event)}
-          </div>
-        ))}
+      {/* A container, so the trigger can shorten when the cell is narrow */}
+      <div className="@container mb-1 flex min-h-5 shrink-0 items-center gap-1" data-day-header>
+        <div className="flex shrink-0 items-center gap-0.5">{header}</div>
+        {hiddenCount > 0 ? (
+          <MoreEventsPopover
+            hiddenCount={hiddenCount}
+            open={openPopoverKey === morePopoverKey}
+            onOpenChange={(open) => onPopoverOpenChange(morePopoverKey, open)}
+            onCloseAutoFocus={handleCloseAutoFocus}
+          >
+            {events.map((event) => (
+              <div key={`more-${day}-${event.id}`}>{renderCard(event)}</div>
+            ))}
+          </MoreEventsPopover>
+        ) : null}
       </div>
-      {hiddenCount > 0 ? (
-        <MoreEventsPopover
-          hiddenCount={hiddenCount}
-          open={openPopoverKey === morePopoverKey}
-          onOpenChange={(open) => onPopoverOpenChange(morePopoverKey, open)}
-          onCloseAutoFocus={handleCloseAutoFocus}
+
+      <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden" data-testid={`calendar-day-events-${day}`}>
+        {leadingItem}
+        {/* Items that don't fit stay in layout (invisible) so they can still be measured */}
+        <div
+          ref={listRef}
+          className={`min-h-0 flex-1 overflow-hidden ${compact ? "space-y-0.5" : "space-y-1"}`}
+          data-density={compact ? "compact" : "full"}
         >
-          {events.map((event) => (
-            <div key={`more-${day}-${event.id}`}>{renderCard(event)}</div>
+          {candidateEvents.map((event, index) => (
+            <div key={event.id} className={index >= fittingCount ? "invisible" : undefined}>
+              {compact ? renderCompactLine(event) : renderCard(event)}
+            </div>
           ))}
-        </MoreEventsPopover>
-      ) : null}
+        </div>
+      </div>
     </>
   )
 }
@@ -139,10 +154,11 @@ function MoreEventsPopover({ hiddenCount, open, onOpenChange, onCloseAutoFocus, 
           onClick={(e) => {
             e.stopPropagation()
           }}
-          className="absolute right-1 top-1 h-5 rounded px-1 text-[10px] leading-5 text-muted-foreground hover:bg-stone-100 hover:text-foreground"
+          className="ml-auto h-5 shrink-0 whitespace-nowrap rounded px-1 text-[10px] leading-5 text-muted-foreground hover:bg-stone-100 hover:text-foreground"
           aria-label={`+${hiddenCount} more events`}
         >
-          +{hiddenCount} more
+          +{hiddenCount}
+          <span className="hidden @min-[7.5rem]:inline"> more</span>
         </button>
       </PopoverTrigger>
       <PopoverContent

@@ -62,6 +62,12 @@ async function main(): Promise<void> {
     run(["env", "set", "WORKOS_CLIENT_ID", clientId])
     run(["env", "set", "EVENT_HORIZON_LOCAL_SEED", "enabled"])
     run(["run", "developmentSeed:seed", "{}"])
+    // Holidays are supplementary: without network access the weekly cron fills them later.
+    try {
+      run(["run", "holidays:bootstrap", "{}"])
+    } catch {
+      console.warn("Couldn't load Canadian holidays now; run `npx convex run holidays:bootstrap` later.")
+    }
     writeFileSync(marker, "ready")
     return
   }

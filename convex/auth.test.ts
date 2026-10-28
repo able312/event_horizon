@@ -36,12 +36,22 @@ async function registeredFunctions(): Promise<[string, RegisteredFunction][]> {
 }
 
 /**
- * Internal functions: run through the Convex CLI with admin access, or by the
- * secret-checked HTTP route in http.ts (website event requests).
+ * Internal functions: run through the Convex CLI with admin access, by the
+ * secret-checked HTTP route in http.ts (website event requests), or by the
+ * holiday cron (crons.ts).
  */
 const INTERNAL_FUNCTIONS = new Set([
   "./developmentSeed.ts:seed",
   "./eventRequests.ts:receive",
+  "./holidays.ts:cachedEntryCount",
+  "./holidays.ts:recordRefresh",
+  "./holidays.ts:refresh",
+  "./holidays.ts:bootstrap",
+])
+/** The only actions: internal, because they download the fixed holiday feed. */
+const INTERNAL_ACTIONS = new Set([
+  "./holidays.ts:refresh",
+  "./holidays.ts:bootstrap",
 ])
 
 function authCode(error: unknown): unknown {
@@ -80,12 +90,12 @@ describe("auth enforcement on every function", () => {
     expect((await registeredFunctions()).length).toBeGreaterThan(70)
   })
 
-  it("exposes only public queries and mutations, except the internal seed and event request functions", async () => {
+  it("exposes only public queries and mutations, except the internal seed, event request and holiday functions", async () => {
     for (const [name, fn] of await registeredFunctions()) {
       if (INTERNAL_FUNCTIONS.has(name)) {
         expect(fn.isInternal).toBe(true)
         expect(fn.isPublic).not.toBe(true)
-        expect(fn.isAction).not.toBe(true)
+        expect(fn.isAction === true).toBe(INTERNAL_ACTIONS.has(name))
         continue
       }
       expect({ name, isPublic: fn.isPublic === true, isAction: fn.isAction === true }).toEqual({ name, isPublic: true, isAction: false })

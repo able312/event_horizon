@@ -15,6 +15,8 @@
  * - Click events to navigate to event detail
  * - Keeps at most one event popover open; a click that closes one doesn't
  *   also open the day
+ * - Flags shared holidays with a marker beside the day number (names on
+ *   hover/focus); holidays are never events and never open the day
  * 
  * Location: src/features/calendar/views/CalendarGrid.tsx
  */
@@ -23,9 +25,11 @@ import React, { useMemo, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router"
 import type { PrimaryClient } from "~/definitions/contacts"
 import type { Event, EventStatus } from "~/definitions/database"
+import type { HolidayEntry } from "~/definitions/holidays"
 import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
 import { buildEventDetailEntryPath } from "~/features/event-detail/workspace/lib/eventDetailRouteState"
 import CalendarDayEventList from "../components/CalendarDayEventList"
+import CalendarHolidayMarker from "../components/CalendarHolidayMarker"
 import { useCalendarDensity } from "../hooks/useCalendarDensity"
 import {
   buildDayHeightsByRow,
@@ -33,6 +37,7 @@ import {
   sortEventsByCompactStatus,
   TODAY_MARKER_EXTRA_HEIGHT,
 } from "../lib/calendarDensity"
+import { getHolidayTitlesByDay } from "../lib/calendarHolidays"
 
 const MAX_VISIBLE_DAY_EVENTS = 3
 
@@ -90,6 +95,8 @@ interface CalendarGridProps {
   onEventDelete?: (eventId: string) => void
   /** Callback when changing status from a compact line's popover */
   onEventStatusChange?: (eventId: string, status: EventStatus) => void
+  /** Shared holidays touching this month; read-only, shown beside the day number */
+  holidays?: HolidayEntry[]
 }
 
 /**
@@ -110,6 +117,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onEventEdit,
   onEventDelete,
   onEventStatusChange,
+  holidays,
 }) => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -140,6 +148,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   const eventsByDay = useMemo(
     () => Array.from({ length: daysInMonth }, (_, i) => getEventsForDay(events, year, month, i + 1)),
     [events, year, month, daysInMonth],
+  )
+  const holidayTitlesByDay = useMemo(
+    () => getHolidayTitlesByDay(holidays ?? [], year, month, daysInMonth),
+    [holidays, year, month, daysInMonth],
   )
   const draftDay = getDraftDay(draftPreview, year, month)
   const now = new Date()
@@ -245,11 +257,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         const compact = isDayCompact(day)
         const dayEvents = compact ? sortEventsByCompactStatus(eventsByDay[i]) : eventsByDay[i]
         const draftForDay = getDraftPreviewForDay(day)
+        const holidayTitles = holidayTitlesByDay.get(day)
 
         return (
           <div
             key={day}
-            className={`relative min-h-0 overflow-hidden border-b border-r py-1 px-2 flex flex-col ${
+            className={`min-h-0 overflow-hidden border-b border-r py-1 px-2 flex flex-col ${
               isToday(day) ? 'bg-orange-50/50' : ''
             }`}
             onClick={() => handleDayCellClick(day)}
@@ -257,47 +270,56 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             data-cell-kind="day"
             data-day-of-month={day}
           >
-            {/* Day number */}
-            <div
-              className={`text-sm mb-1 shrink-0 ${
-              isToday(day) ? 'font-bold text-primary flex justify-center items-center text-white bg-orange-500 w-6 h-6 rounded-full m-1' : 'text-muted-foreground'
-            }`}
-              data-day-number
-            >
-              {day}
-            </div>
-
-            {/* Events for this day */}
-            <div
-              className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden"
-              data-testid={`calendar-day-events-${day}`}
-            >
-              {draftForDay ? (
-                <div
-                  onClick={(e) => {
-                    e.stopPropagation()
-                  }}
-                  className="w-full shrink-0 truncate rounded border border-dashed border-stone-400 bg-stone-100/80 px-1 py-0.5 text-[10px] text-stone-600"
-                  title={draftForDay.title}
-                  data-testid={`calendar-draft-chip-${day}`}
-                >
-                  {draftForDay.title}
-                </div>
-              ) : null}
-              <CalendarDayEventList
-                day={day}
-                events={dayEvents}
-                maxVisible={MAX_VISIBLE_DAY_EVENTS}
-                compact={compact}
-                clientsByEventId={clientsByEventId}
-                openPopoverKey={openPopoverKey}
-                onPopoverOpenChange={handlePopoverOpenChange}
-                onEventClick={handleEventClick}
-                onEventEdit={onEventEdit}
-                onEventDelete={onEventDelete}
-                onEventStatusChange={onEventStatusChange}
-              />
-            </div>
+            <CalendarDayEventList
+              day={day}
+              header={
+                <>
+                  <div
+                    className={`shrink-0 text-sm ${
+                      isToday(day)
+                        ? 'mx-1 my-0.5 flex size-6 items-center justify-center rounded-full bg-orange-500 font-bold text-white'
+                        : 'leading-5 text-muted-foreground'
+                    }`}
+                    data-day-number
+                  >
+                    {day}
+                  </div>
+                  {holidayTitles ? (
+                    // Keyed by month so an open tooltip doesn't carry over to the same day of another month
+                    <CalendarHolidayMarker
+                      key={monthKey}
+                      titles={holidayTitles}
+                      suppressed={openPopoverKey !== null}
+                      onClickOpen={() => setOpenPopover(null)}
+                    />
+                  ) : null}
+                </>
+              }
+              leadingItem={
+                draftForDay ? (
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation()
+                    }}
+                    className="w-full shrink-0 truncate rounded border border-dashed border-stone-400 bg-stone-100/80 px-1 py-0.5 text-[10px] text-stone-600"
+                    title={draftForDay.title}
+                    data-testid={`calendar-draft-chip-${day}`}
+                  >
+                    {draftForDay.title}
+                  </div>
+                ) : null
+              }
+              events={dayEvents}
+              maxVisible={MAX_VISIBLE_DAY_EVENTS}
+              compact={compact}
+              clientsByEventId={clientsByEventId}
+              openPopoverKey={openPopoverKey}
+              onPopoverOpenChange={handlePopoverOpenChange}
+              onEventClick={handleEventClick}
+              onEventEdit={onEventEdit}
+              onEventDelete={onEventDelete}
+              onEventStatusChange={onEventStatusChange}
+            />
           </div>
         )
       })}

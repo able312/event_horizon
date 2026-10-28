@@ -20,6 +20,10 @@ vi.mock("~/hooks/useEventContacts", () => ({
   usePrimaryClients: () => ({ data: {} }),
 }))
 
+vi.mock("../hooks/useMonthHolidays", () => ({
+  useMonthHolidays: () => ({ holidays: [], notice: null, retry: vi.fn(), isRetrying: false }),
+}))
+
 vi.mock("../views/EventsCalendar", () => ({
   default: ({
     onDayCellClick,

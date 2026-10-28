@@ -45,3 +45,11 @@ export const cartGrid = v.array(v.array(v.union(v.number(), v.string(), v.null()
 
 /** IANA time zone of the person using the app, e.g. "America/Toronto". */
 export const timeZone = v.string()
+
+/** A cached holiday (src/definitions/holidays.ts); dates are YYYY-MM-DD, end exclusive. */
+export const holidayEntry = v.object({
+  id: v.string(),
+  title: v.string(),
+  startDate: v.string(),
+  endDate: v.string(),
+})

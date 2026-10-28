@@ -6,6 +6,8 @@ Keep code with the feature whose behavior it implements. Tests live beside their
 
 `src/features/calendar/` owns the event calendar and table, calendar navigation and search, ICS import, event create/edit forms, and workspace panel state. `CalendarWorkspace` still hosts the existing calendar and Inbox views at `/events`; the URL and shortcuts stay the same.
 
+The shared holiday layer is calendar-owned too: `hooks/useMonthHolidays.ts` reads the month through `src/lib/data/holidays.ts`, `lib/calendarHolidays.ts` maps holidays to days and words the coverage notice, `components/CalendarHolidayMarker.tsx` is the flag and tooltip beside the day number, and `navigation/CalendarHolidayNotice.tsx` sits beside the month controls. Only the main month grid shows holidays; the sidebar and request mini calendars don't. See [HOLIDAYS.md](HOLIDAYS.md).
+
 The page and panel orchestrators connect the Inbox to workspace navigation and the create-event review form. That integration stays here because it coordinates shared panels, draft previews and event navigation.
 
 ## Inbox

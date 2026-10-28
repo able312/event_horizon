@@ -2,6 +2,8 @@ import { Body } from "~/components/layouts/SplitLayout"
 
 import type { UseEventsQueryStateReturn } from "~/hooks/useEventsQueryState"
 import MonthNavigator from "~/features/calendar/navigation/MonthNavigator"
+import CalendarHolidayNotice from "~/features/calendar/navigation/CalendarHolidayNotice"
+import { useMonthHolidays } from "../hooks/useMonthHolidays"
 import CalendarPage from "./CalendarPage"
 import type { UseEventsReturn } from "~/hooks/useEvents"
 import { usePrimaryClients } from "~/hooks/useEventContacts"
@@ -47,6 +49,7 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
     const tableEvents = bodyView === "search-results" ? searchEvents : []
     const primaryClients = usePrimaryClients(tableEvents.map((event) => event.id))
     const clientsByEventId = primaryClients.data
+    const monthHolidays = useMonthHolidays(state.date)
 
     const handleGoToToday = useCallback(() => {
         const todayMonth = getCurrentMonthParam()
@@ -75,11 +78,20 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
                 />
             ) : (
                 <Body.Header>
-                    <MonthNavigator 
-                        month={ state.date }
-                        onGoToToday={ handleGoToToday }
-                        onMonthChange={setDate}
-                    />
+                    <div className="flex min-w-0 items-center gap-4">
+                        <MonthNavigator 
+                            month={ state.date }
+                            onGoToToday={ handleGoToToday }
+                            onMonthChange={setDate}
+                        />
+                        {bodyView === "calendar-month" && (
+                            <CalendarHolidayNotice
+                                notice={monthHolidays.notice}
+                                onRetry={monthHolidays.retry}
+                                isRetrying={monthHolidays.isRetrying}
+                            />
+                        )}
+                    </div>
                 </Body.Header>
             )}
 

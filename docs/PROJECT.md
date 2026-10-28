@@ -62,6 +62,7 @@ Assumptions:
 - The renderer should be treated as _untrusted_ compared to the main process in order to gaurd the privilege boundary.
 - The renderer calls Convex directly. Convex functions never trust the client: each one checks for a signed-in company identity before touching data.
 - No remote content is loaded into the window. The renderer is bundled with the app; only Convex and WorkOS are contacted over the network.
+- The Convex backend makes one outbound request: a weekly cron downloads Google's public Canadian holiday calendar from a fixed URL (`convex/lib/holidayFeed.ts`), with a timeout and a size limit. It sends no credentials or user data, and no caller can change the URL. See [HOLIDAYS.md](HOLIDAYS.md).
 - One HTTP route runs without a signed-in user: `POST /event-requests` (`convex/http.ts`), which receives website event requests from the Google Form's Apps Script. It requires the `EVENT_REQUEST_SECRET` deployment env var as a bearer token (each deployment has its own; without one the route refuses everything), validates every field (`convex/lib/eventRequestPayload.ts`), and can only insert a pending request.
 - The caller is an Apps Script bound to the form's response Sheet (reference copy: `docs/apps-script/eventRequestIntake.gs`), owned by the shared company account. It keeps the URL, secret and team addresses in Script Properties, so anyone with edit access to that Sheet or script can read the secret; keep that list short. The client's confirmation email repeats only their first name and the form-constrained answers, so the form can't be used to send arbitrary text from the venue's account.
 
@@ -115,6 +116,7 @@ Security priorities:
   - `schema.ts` defines the tables and indexes. Each public function is a `companyQuery` / `companyMutation` (`convex/lib/auth.ts`), which rejects callers who aren't signed in with a company account.
   - Every write records who created and last edited the record (`convex/lib/audit.ts`).
   - Each mutation runs as one transaction, so multi-step writes belong in a single mutation.
+  - `holidayCache` / `holidaySync` hold the shared Canadian holiday layer. Only internal functions write them (the weekly cron in `convex/crons.ts`, plus a one-time bootstrap); the calendar reads them through `holidays.forMonth`. See [HOLIDAYS.md](HOLIDAYS.md).
   - `eventRequests` holds website requests waiting for review. They aren't events until someone accepts one; `eventRequests.accept` creates the event and client contact and marks the request in one transaction.
 
 ### Renderer feature structure
@@ -143,6 +145,7 @@ Each environment has its own isolated database, so branch work can't touch share
 - Review website requests: the Inbox (`⌘L` / `Ctrl+L`) replaces the sidebar with pending requests and a search. Selecting a request shows everything the client sent in the body, beside a mini calendar (`src/features/event-requests/components/RequestMiniCalendar.tsx`) that opens on the requested month, rings the preferred (solid) and alternate (dashed) dates, and dots the events already booked there, coloured by status like the sidebar mini calendar (lost events left out); hovering a day lists its events as read-only compact chips; Review (top right) opens the create form pre-filled from the request (`src/features/event-requests/lib/eventRequestPrefill.ts`), and saving it accepts the request (a client is required). Dismiss sets it aside, with Undo for 10 seconds (`eventRequests.restore`).
 - Desktop request alerts: while signed in, new pending request IDs trigger a native notification; clicking focuses the app and opens the Inbox. Existing requests at startup are silent. The macOS dock badge shows the pending count; Windows flashes the taskbar for new requests while unfocused (cleared on focus or an empty Inbox). The listener runs across all routes, tracks seen IDs for the session, and uses explicit preload methods with sender and argument validation. On macOS, closing the window hides it (`src/electron/windowClose.ts`) so alerts and the badge keep working from the dock; quitting, including an update install, still closes it.
 - Attach/track details and their attached timeblocks data
+- See holidays while booking: the main month calendar flags dates in Google's public Canadian holiday calendar, with the names on hover/focus. Holidays are read-only and never become events. After deploying the feature, run the bootstrap once ([HOLIDAYS.md](HOLIDAYS.md)).
 - Generate PDFs (Estimate, BEO, Timeline)
 - Confirm persistence across restarts, and that edits appear live in a second signed-in window
 
