@@ -33,7 +33,7 @@ function CalendarHolidayMarker({ titles, suppressed = false, onClickOpen }: Cale
         <button
           type="button"
           aria-label={`Holidays and observances: ${titles.join("; ")}`}
-          className="flex size-5 shrink-0 items-center justify-center rounded text-sky-700 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600"
+          className="flex size-5 shrink-0 items-center justify-center rounded-md bg-sky-100 text-sky-700 hover:bg-sky-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600"
           // Radix closes a tooltip when its trigger is pressed; keep it open instead.
           onPointerDown={(event) => event.preventDefault()}
           onClick={(event) => {
@@ -44,7 +44,7 @@ function CalendarHolidayMarker({ titles, suppressed = false, onClickOpen }: Cale
           }}
           data-holiday-marker
         >
-          <Flag aria-hidden="true" className="size-3.5" strokeWidth={2} />
+          <Flag aria-hidden="true" className="size-3.5 fill-sky-700/30" strokeWidth={2.25} />
         </button>
       </TooltipTrigger>
       <TooltipContent

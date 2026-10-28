@@ -100,7 +100,7 @@ function CalendarDayEventList({
     <>
       {/* A container, so the trigger can shorten when the cell is narrow */}
       <div className="@container mb-1 flex min-h-5 shrink-0 items-center gap-1" data-day-header>
-        <div className="flex shrink-0 items-center gap-0.5">{header}</div>
+        <div className="flex shrink-0 items-center gap-1">{header}</div>
         {hiddenCount > 0 ? (
           <MoreEventsPopover
             hiddenCount={hiddenCount}
