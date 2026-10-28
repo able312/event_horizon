@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { getAccessToken, googleEventIdFor, parseGoogleCalendarLink, readGoogleCalendarConfig, saveGoogleCalendarEvent, type GoogleCalendarConfig } from "./googleCalendar"
+import { deleteGoogleCalendarEvent, getAccessToken, googleEventIdFor, parseGoogleCalendarLink, readGoogleCalendarConfig, saveGoogleCalendarEvent, type GoogleCalendarConfig } from "./googleCalendar"
 
 const config: GoogleCalendarConfig = { clientId: "client", clientSecret: "secret", refreshToken: "refresh", calendarId: "venue@group.calendar.google.com" }
 const body = { summary: "Dinner", description: "EVENT TYPE: Function", start: { dateTime: "2026-05-12T18:30:00.000Z" }, end: { dateTime: "2026-05-12T21:00:00.000Z" } }
@@ -16,7 +16,7 @@ function fakeGoogle(routes: Record<string, Reply>) {
     const isCalendarCall = url.startsWith(eventsUrl) && typeof init.body === "string"
     calls.push({ method, url, body: isCalendarCall ? JSON.parse(init.body as string) : init.body })
     const reply = routes[`${method} ${url}`] ?? (url.startsWith("https://oauth2") ? { status: 200, json: { access_token: "token" } } : { status: 500, json: { error: { message: `unexpected ${method} ${url}` } } })
-    return new Response(JSON.stringify(reply.json), { status: reply.status })
+    return new Response(reply.status === 204 ? null : JSON.stringify(reply.json), { status: reply.status })
   }))
   return calls
 }
@@ -136,5 +136,42 @@ describe("saveGoogleCalendarEvent", () => {
     fakeGoogle({ [`POST ${eventsUrl}`]: { status: 503, json: {} } })
     await expect(saveGoogleCalendarEvent(config, { linkedCalendarId: null, newEventId: "ehnew", body })).rejects.toThrow("Try again in a minute")
     expect(console.error).toHaveBeenCalledWith("Google Calendar create failed (403): Forbidden")
+  })
+})
+
+describe("deleteGoogleCalendarEvent", () => {
+  it("deletes a linked Google event by its ID", async () => {
+    const calls = fakeGoogle({ [`DELETE ${eventsUrl}/abc123def`]: { status: 204, json: {} } })
+    expect(await deleteGoogleCalendarEvent(config, "abc123def@google.com")).toBe(true)
+    expect(calls.map(call => call.method)).toEqual(["POST", "DELETE"])
+  })
+
+  it("finds an imported iCalUID before deleting", async () => {
+    fakeGoogle({
+      [`GET ${eventsUrl}?iCalUID=imported%40example.com&showDeleted=true&maxResults=1`]: { status: 200, json: { items: [{ id: "importedid" }] } },
+      [`DELETE ${eventsUrl}/importedid`]: { status: 204, json: {} },
+    })
+    expect(await deleteGoogleCalendarEvent(config, "imported@example.com")).toBe(true)
+  })
+
+  it("reports nothing deleted when the event is already gone or the link is unreadable", async () => {
+    const calls = fakeGoogle({
+      [`DELETE ${eventsUrl}/gone12345`]: { status: 404, json: {} },
+      [`DELETE ${eventsUrl}/deleted123`]: { status: 410, json: {} },
+      [`GET ${eventsUrl}?iCalUID=missing%40example.com&showDeleted=true&maxResults=1`]: { status: 200, json: { items: [] } },
+    })
+    expect(await deleteGoogleCalendarEvent(config, "gone12345")).toBe(false)
+    expect(await deleteGoogleCalendarEvent(config, "deleted123")).toBe(false)
+    expect(await deleteGoogleCalendarEvent(config, "missing@example.com")).toBe(false)
+    const before = calls.length
+    expect(await deleteGoogleCalendarEvent(config, "not an id")).toBe(false)
+    expect(calls).toHaveLength(before)
+  })
+
+  it("maps Google refusals to messages for the user", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    fakeGoogle({ [`DELETE ${eventsUrl}/abc123def`]: { status: 403, json: { error: { message: "Forbidden" } } } })
+    await expect(deleteGoogleCalendarEvent(config, "abc123def")).rejects.toThrow("make changes to events")
+    expect(console.error).toHaveBeenCalledWith("Google Calendar delete failed (403): Forbidden")
   })
 })

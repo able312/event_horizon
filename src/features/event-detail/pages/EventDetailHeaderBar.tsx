@@ -14,12 +14,13 @@ import { Input } from "~/components/atoms/input"
 import { LastEditedBy } from "~/components/molecules/LastEditedBy"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/atoms/tooltip"
 import type { Event, UpdateEvent } from "~/definitions/database"
-import { pushEventToGoogleCalendar } from "~/lib/data/googleCalendar"
+import { pushEventToGoogleCalendar, removeEventFromGoogleCalendar } from "~/lib/data/googleCalendar"
 import { openExternalUrl } from "~/lib/ipc/system"
 import {
   DEFAULT_EVENT_DETAIL_RETURN_TO,
   normalizeReturnTo,
 } from "../workspace/lib/eventDetailRouteState"
+import GoogleCalendarRemoveConfirmDialog from "../components/GoogleCalendarRemoveConfirmDialog"
 import type { EventResource } from "../types"
 
 const MISSING_DATES_MESSAGE = "Set both start and end date/time to add the event to Google Calendar."
@@ -90,6 +91,7 @@ type GoogleCalendarHeaderActionProps = {
 // Google Calendar integration for the event header.
 // Add/Update writes the event to the shared Google Calendar from Convex (googleCalendar.pushEvent),
 // which also saves the link. Link existing pastes the ID or link of an event already in Google.
+// Remove deletes the Google event and clears the link (googleCalendar.removeEvent).
 const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
   eventId,
   event,
@@ -100,6 +102,8 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
   const [calendarIdDraft, setCalendarIdDraft] = useState(event.calendarId ?? "")
   const [isSavingCalendarId, setIsSavingCalendarId] = useState(false)
   const [isPushing, setIsPushing] = useState(false)
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false)
+  const [isRemoving, setIsRemoving] = useState(false)
   const hasCalendarId = Boolean(event.calendarId && event.calendarId.trim().length > 0) // event already linked to a Google Calendar event
   const canPushToCalendar = Boolean(event.startDateTime && event.endDateTime) // requires both start and end date/time
 
@@ -144,18 +148,25 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
     }
   }
 
-  // Clears the link only; the Google event stays on the shared calendar.
-  const removeCalendarId = async () => {
+  // Deletes the Google event and clears the link; the cleared link arrives through the live event query.
+  const removeFromGoogleCalendar = async () => {
+    if (isRemoving) return
+
     try {
-      setIsSavingCalendarId(true)
-      await onSaveCalendarId({ calendarId: null })
+      setIsRemoving(true)
+      const { deletedFromGoogle } = await removeEventFromGoogleCalendar(eventId)
       setCalendarIdDraft("")
-      setShowCalendarIdInput(false)
-      toast.success("Unlinked from Google Calendar")
-    } catch {
-      toast.error("Failed to unlink Google Calendar event")
+      setShowRemoveConfirm(false)
+      toast.success(
+        deletedFromGoogle
+          ? "Removed from Google Calendar"
+          : "Unlinked. The Google event was already gone",
+      )
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to remove the Google Calendar event"
+      toast.error(message)
     } finally {
-      setIsSavingCalendarId(false)
+      setIsRemoving(false)
     }
   }
 
@@ -194,6 +205,7 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
           <UpdateGoogleCalendarButton
             canUpdate={canPushToCalendar}
             isUpdating={isPushing}
+            isDisabled={isRemoving}
             onUpdate={() => void pushToGoogleCalendar()}
           />
           {/* Split button: primary action (Update) + chevron menu (Edit/Unlink) */}
@@ -204,18 +216,24 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
                 size="sm"
                 aria-label="Calendar ID actions"
                 className="rounded-l-none border-l px-2"
-                disabled={isPushing}
+                disabled={isPushing || isRemoving}
               >
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={startEditingCalendarId}>Edit Calendar ID</DropdownMenuItem>
-              <DropdownMenuItem variant="destructive" onClick={() => void removeCalendarId()}>
-                Unlink (keeps the Google event)
+              <DropdownMenuItem variant="destructive" onClick={() => setShowRemoveConfirm(true)}>
+                Remove from Google Calendar
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <GoogleCalendarRemoveConfirmDialog
+            open={showRemoveConfirm}
+            isRemoving={isRemoving}
+            onCancel={() => setShowRemoveConfirm(false)}
+            onConfirm={() => void removeFromGoogleCalendar()}
+          />
         </div>
       ) : (
         /* Mode 3: Unlinked — add to the shared calendar or link an existing Google event */
@@ -233,17 +251,18 @@ const GoogleCalendarHeaderAction: React.FC<GoogleCalendarHeaderActionProps> = ({
 type UpdateGoogleCalendarButtonProps = {
   canUpdate: boolean
   isUpdating: boolean
+  isDisabled: boolean
   onUpdate: () => void
 }
 
 // Primary half of the linked-event split button; explains itself via tooltip when dates are missing.
-const UpdateGoogleCalendarButton: React.FC<UpdateGoogleCalendarButtonProps> = ({ canUpdate, isUpdating, onUpdate }) => {
+const UpdateGoogleCalendarButton: React.FC<UpdateGoogleCalendarButtonProps> = ({ canUpdate, isUpdating, isDisabled, onUpdate }) => {
   const button = (
     <Button
       variant="outline"
       size="sm"
       onClick={onUpdate}
-      disabled={!canUpdate || isUpdating}
+      disabled={!canUpdate || isUpdating || isDisabled}
       className="rounded-r-none border-r-0"
       aria-label="Update Event in Google Calendar"
     >

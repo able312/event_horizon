@@ -3,7 +3,7 @@ import type { NewEvent, Event, UpdateEvent } from "~/definitions/database"
 import type { EventSearchRequest, EventSearchResponse } from "~/definitions/ipc"
 import type { IcsImportEventInput, IcsImportInsertResult } from "~/definitions/events/icsImport"
 import { api } from "../../../convex/_generated/api"
-import { fetchSource, pickFields, runMutation, runQuery } from "./backend"
+import { fetchSource, pickFields, runAction, runMutation, runQuery } from "./backend"
 import { toContactTargetArgs } from "./eventContacts"
 import { toId } from "./ids"
 import { sources } from "./sources"
@@ -48,8 +48,9 @@ export function updateEvent(id: string, updates: UpdateEvent): Promise<Event> {
   return runMutation(api.events.update, { id: toId<"events">(id), updates: pickFields(updates, EVENT_FIELDS) })
 }
 
+/** Also deletes the event's linked Google Calendar event (googleCalendar.deleteEvent). */
 export function deleteEvent(id: string): Promise<boolean> {
-  return runMutation(api.events.remove, { id: toId<"events">(id) })
+  return runAction(api.googleCalendar.deleteEvent, { eventId: toId<"events">(id) })
 }
 
 export function getEventsByCalendarIds(calendarIds: string[]): Promise<Event[]> {

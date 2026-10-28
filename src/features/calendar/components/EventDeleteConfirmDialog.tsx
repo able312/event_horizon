@@ -27,7 +27,8 @@ const EventDeleteConfirmDialog: React.FC<EventDeleteConfirmDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Delete event?</DialogTitle>
           <DialogDescription>
-            This action cannot be undone. The event and its details will be permanently removed.
+            This action cannot be undone. The event and its details will be permanently removed,
+            along with its event on the shared Google Calendar if it has one.
           </DialogDescription>
         </DialogHeader>
 

@@ -7,10 +7,10 @@ import EventDetailHeaderBar from "./EventDetailHeaderBar"
 import type { EventResource } from "../types"
 import type { Event } from "~/definitions/database"
 import { BackendError } from "~/lib/data/backend"
-import { pushEventToGoogleCalendar } from "~/lib/data/googleCalendar"
+import { pushEventToGoogleCalendar, removeEventFromGoogleCalendar } from "~/lib/data/googleCalendar"
 
 const EVENT_URL = "https://calendar.google.com/calendar/event?eid=abc"
-vi.mock("~/lib/data/googleCalendar", () => ({ pushEventToGoogleCalendar: vi.fn() }))
+vi.mock("~/lib/data/googleCalendar", () => ({ pushEventToGoogleCalendar: vi.fn(), removeEventFromGoogleCalendar: vi.fn() }))
 vi.mock("~/hooks/useUsers", () => ({
   useUsers: () => ({ data: [{ id: "user-1", name: "Sam Staff", email: "sam@westlinks.ca" }] }),
 }))
@@ -55,6 +55,7 @@ async function chooseGoogleCalendarOption(name: string) {
 describe("EventDetailHeaderBar", () => {
   beforeEach(() => {
     vi.mocked(pushEventToGoogleCalendar).mockResolvedValue({ eventUrl: EVENT_URL })
+    vi.mocked(removeEventFromGoogleCalendar).mockResolvedValue({ deletedFromGoogle: true })
     vi.mocked(window.electron.ipcRenderer.invoke).mockImplementation(async (channel: string) => {
       if (channel === "system:open-external") return undefined
       return undefined
@@ -205,26 +206,61 @@ describe("EventDetailHeaderBar", () => {
     expect(toast.success).toHaveBeenCalledWith("Calendar ID saved")
   })
 
-  it("removes the stored calendar id", async () => {
+  it("removes the event from Google Calendar after confirming", async () => {
     const updateEvent = vi.fn(async (updates) => ({ ...makeEvent(), ...updates }))
-    const eventResource = makeEventResource({
-      event: makeEvent({ calendarId: "abc123" }),
-      updateEvent,
-    })
-
     render(
       <MemoryRouter>
-        <EventDetailHeaderBar eventResource={eventResource} />
+        <EventDetailHeaderBar eventResource={makeEventResource({ event: makeEvent({ calendarId: "abc123" }), updateEvent })} />
       </MemoryRouter>,
     )
 
     fireEvent.pointerDown(screen.getByRole("button", { name: "Calendar ID actions" }))
-    fireEvent.click(await screen.findByRole("menuitem", { name: "Unlink (keeps the Google event)" }))
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Remove from Google Calendar" }))
+    expect(removeEventFromGoogleCalendar).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove from Google Calendar" }))
 
     await waitFor(() => {
-      expect(updateEvent).toHaveBeenCalledWith({ calendarId: null })
+      expect(toast.success).toHaveBeenCalledWith("Removed from Google Calendar")
     })
-    expect(toast.success).toHaveBeenCalledWith("Unlinked from Google Calendar")
+    expect(removeEventFromGoogleCalendar).toHaveBeenCalledWith("event-1")
+    expect(updateEvent).not.toHaveBeenCalled()
+    expect(screen.queryByRole("dialog")).toBeNull()
+  })
+
+  it("keeps the Google event when removal is cancelled", async () => {
+    render(
+      <MemoryRouter>
+        <EventDetailHeaderBar eventResource={makeEventResource({ event: makeEvent({ calendarId: "abc123" }) })} />
+      </MemoryRouter>,
+    )
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Calendar ID actions" }))
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Remove from Google Calendar" }))
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+
+    expect(removeEventFromGoogleCalendar).not.toHaveBeenCalled()
+    expect(screen.queryByRole("dialog")).toBeNull()
+  })
+
+  it("shows the server's explanation when removal fails, keeping the dialog open", async () => {
+    vi.mocked(removeEventFromGoogleCalendar).mockRejectedValue(
+      new BackendError("GoogleCalendarAuth", "Event Horizon's access to Google Calendar has expired or was removed."),
+    )
+    render(
+      <MemoryRouter>
+        <EventDetailHeaderBar eventResource={makeEventResource({ event: makeEvent({ calendarId: "abc123" }) })} />
+      </MemoryRouter>,
+    )
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Calendar ID actions" }))
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Remove from Google Calendar" }))
+    fireEvent.click(screen.getByRole("button", { name: "Remove from Google Calendar" }))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Event Horizon's access to Google Calendar has expired or was removed.")
+    })
+    expect(screen.getByRole("dialog")).toBeTruthy()
   })
 
   it("shows the inline editor when edit calendar id is clicked", async () => {

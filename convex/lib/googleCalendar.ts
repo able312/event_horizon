@@ -38,6 +38,11 @@ const CONFIG_ENV_VARS: Record<keyof GoogleCalendarConfig, string> = {
   calendarId: "GOOGLE_CALENDAR_ID",
 }
 
+/** False on deployments where Google Calendar hasn't been set up (e.g. local and worktree databases). */
+export function isGoogleCalendarConfigured(): boolean {
+  return Object.values(CONFIG_ENV_VARS).every(name => Boolean(process.env[name]?.trim()))
+}
+
 export function readGoogleCalendarConfig(): GoogleCalendarConfig {
   const config: GoogleCalendarConfig = {
     clientId: process.env[CONFIG_ENV_VARS.clientId]?.trim() ?? "",
@@ -116,7 +121,7 @@ export function parseGoogleCalendarLink(stored: string): GoogleCalendarLink {
   const fromEid = decodeEid(candidate)
   if (fromEid) return { eventId: fromEid }
   if (RAW_EVENT_ID.test(candidate)) return { eventId: candidate }
-  throw googleCalendarError("GoogleCalendarUnrecognizedLink", "The linked Google Calendar ID isn't one Event Horizon recognises. Edit or unlink it, then try again.")
+  throw googleCalendarError("GoogleCalendarUnrecognizedLink", "The linked Google Calendar ID isn't one Event Horizon recognises. Edit it, or remove it from Google Calendar, then try again.")
 }
 
 type JsonObject = Record<string, unknown>
@@ -182,7 +187,7 @@ function toCalendarEventUrl(htmlLink: string): string {
 }
 
 const EVENT_NOT_FOUND_MESSAGE =
-  "The linked Google Calendar event isn't on the shared calendar. It may have been deleted for good or be on another calendar. Unlink it, then add the event again."
+  "The linked Google Calendar event isn't on the shared calendar. It may have been deleted for good or be on another calendar. Remove it from Google Calendar, then add the event again."
 
 function calendarClient(config: GoogleCalendarConfig, accessToken: string) {
   const eventsUrl = `${CALENDAR_API_URL}/calendars/${encodeURIComponent(config.calendarId)}/events`
@@ -226,6 +231,13 @@ function calendarClient(config: GoogleCalendarConfig, accessToken: string) {
       if (!result.ok) throw requestFailed("update", result.status, result.data)
       return toSaved(result.data)
     },
+    /** False when the event was already gone (404) or already deleted (410). */
+    async remove(id: string): Promise<boolean> {
+      const result = await send("DELETE", `${eventsUrl}/${encodeURIComponent(id)}`)
+      if (result.status === 404 || result.status === 410) return false
+      if (!result.ok) throw requestFailed("delete", result.status, result.data)
+      return true
+    },
   }
 }
 
@@ -242,4 +254,30 @@ export async function saveGoogleCalendarEvent(
     return client.patch(eventId, request.body)
   }
   return (await client.insert(request.newEventId, request.body)) ?? client.patch(request.newEventId, request.body)
+}
+
+/**
+ * Deletes the linked Google event from the shared calendar. Returns false when there was
+ * nothing to delete: the event is already gone, or the stored link isn't one we can read.
+ */
+export async function deleteGoogleCalendarEvent(config: GoogleCalendarConfig, linkedCalendarId: string): Promise<boolean> {
+  let link: GoogleCalendarLink
+  try {
+    link = parseGoogleCalendarLink(linkedCalendarId)
+  } catch {
+    return false
+  }
+  const client = calendarClient(config, await getAccessToken(config))
+  let eventId: string
+  if ("eventId" in link) {
+    eventId = link.eventId
+  } else {
+    try {
+      eventId = await client.findEventId(link.iCalUID)
+    } catch (error) {
+      if (error instanceof ConvexError && (error.data as { code?: unknown }).code === "GoogleCalendarEventNotFound") return false
+      throw error
+    }
+  }
+  return client.remove(eventId)
 }

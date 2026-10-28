@@ -17,6 +17,7 @@ function fakeGoogle() {
     const method = init.method ?? "GET"
     const body = typeof init.body === "string" ? (JSON.parse(init.body) as Record<string, unknown>) : null
     sent.push({ method, url, body })
+    if (method === "DELETE") return new Response(null, { status: 204 })
     const id = method === "POST" ? String(body?.id) : decodeURIComponent(url.split("/").pop()!)
     return Response.json({ id, iCalUID: `${id}@google.com`, htmlLink: `https://www.google.com/calendar/event?eid=${id}` })
   }))
@@ -79,5 +80,103 @@ describe("googleCalendar.pushEvent", () => {
     const event = await t.mutation(api.events.create, { input: dated })
     await expect(convexTest(schema, modules).action(api.googleCalendar.pushEvent, { eventId: event.id })).rejects.toThrow("Sign in")
     await expect(t.withIdentity({ ...companyIdentity, email: "someone@gmail.com" }).action(api.googleCalendar.pushEvent, { eventId: event.id })).rejects.toThrow("Only @westlinks.ca")
+  })
+})
+
+describe("googleCalendar.removeEvent", () => {
+  it("deletes the linked Google event and clears the link", async () => {
+    const t = setup()
+    const sent = fakeGoogle()
+    const event = await t.mutation(api.events.create, { input: dated })
+    await t.action(api.googleCalendar.pushEvent, { eventId: event.id })
+
+    expect(await t.action(api.googleCalendar.removeEvent, { eventId: event.id })).toEqual({ deletedFromGoogle: true })
+    expect(sent[1]).toMatchObject({ method: "DELETE" })
+    expect(sent[1]!.url.endsWith(`/events/${googleEventIdFor(event.id)}`)).toBe(true)
+    expect((await t.query(api.events.getById, { id: event.id })).calendarId).toBeNull()
+  })
+
+  it("clears the link when the Google event is already gone", async () => {
+    const t = setup()
+    fakeGoogle()
+    vi.mocked(fetch).mockImplementation(async (url) =>
+      String(url).startsWith("https://oauth2.googleapis.com/") ? Response.json({ access_token: "token" }) : new Response(null, { status: 410 }))
+    const event = await t.mutation(api.events.create, { input: { ...dated, calendarId: "gone12345@google.com" } })
+
+    expect(await t.action(api.googleCalendar.removeEvent, { eventId: event.id })).toEqual({ deletedFromGoogle: false })
+    expect((await t.query(api.events.getById, { id: event.id })).calendarId).toBeNull()
+  })
+
+  it("does nothing for an unlinked event", async () => {
+    const t = setup()
+    const sent = fakeGoogle()
+    const event = await t.mutation(api.events.create, { input: dated })
+    expect(await t.action(api.googleCalendar.removeEvent, { eventId: event.id })).toEqual({ deletedFromGoogle: false })
+    expect(sent).toEqual([])
+  })
+
+  it("keeps the link when Google refuses the delete", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    const t = setup()
+    fakeGoogle()
+    vi.mocked(fetch).mockImplementation(async (url) =>
+      String(url).startsWith("https://oauth2.googleapis.com/") ? Response.json({ access_token: "token" }) : Response.json({ error: { message: "Forbidden" } }, { status: 403 }))
+    const event = await t.mutation(api.events.create, { input: { ...dated, calendarId: "abc123def@google.com" } })
+
+    await expect(t.action(api.googleCalendar.removeEvent, { eventId: event.id })).rejects.toThrow("make changes to events")
+    expect((await t.query(api.events.getById, { id: event.id })).calendarId).toBe("abc123def@google.com")
+  })
+})
+
+describe("googleCalendar.deleteEvent", () => {
+  it("deletes the linked Google event, then the event", async () => {
+    const t = setup()
+    const sent = fakeGoogle()
+    const event = await t.mutation(api.events.create, { input: dated })
+    await t.action(api.googleCalendar.pushEvent, { eventId: event.id })
+
+    expect(await t.action(api.googleCalendar.deleteEvent, { eventId: event.id })).toBe(true)
+    expect(sent[1]).toMatchObject({ method: "DELETE" })
+    expect(sent[1]!.url.endsWith(`/events/${googleEventIdFor(event.id)}`)).toBe(true)
+    await expect(t.query(api.events.getById, { id: event.id })).rejects.toThrow()
+  })
+
+  it("deletes an unlinked event without contacting Google", async () => {
+    const t = setup()
+    const sent = fakeGoogle()
+    const event = await t.mutation(api.events.create, { input: dated })
+    expect(await t.action(api.googleCalendar.deleteEvent, { eventId: event.id })).toBe(true)
+    expect(sent).toEqual([])
+    await expect(t.query(api.events.getById, { id: event.id })).rejects.toThrow()
+  })
+
+  it("still deletes when the Google event is already gone", async () => {
+    const t = setup()
+    fakeGoogle()
+    vi.mocked(fetch).mockImplementation(async (url) =>
+      String(url).startsWith("https://oauth2.googleapis.com/") ? Response.json({ access_token: "token" }) : new Response(null, { status: 404 }))
+    const event = await t.mutation(api.events.create, { input: { ...dated, calendarId: "gone12345@google.com" } })
+    expect(await t.action(api.googleCalendar.deleteEvent, { eventId: event.id })).toBe(true)
+  })
+
+  it("keeps the event when Google refuses the delete", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    const t = setup()
+    fakeGoogle()
+    vi.mocked(fetch).mockImplementation(async (url) =>
+      String(url).startsWith("https://oauth2.googleapis.com/") ? Response.json({ access_token: "token" }) : Response.json({ error: { message: "Forbidden" } }, { status: 403 }))
+    const event = await t.mutation(api.events.create, { input: { ...dated, calendarId: "abc123def@google.com" } })
+
+    await expect(t.action(api.googleCalendar.deleteEvent, { eventId: event.id })).rejects.toThrow("make changes to events")
+    expect((await t.query(api.events.getById, { id: event.id })).calendarId).toBe("abc123def@google.com")
+  })
+
+  it("deletes linked events on deployments without Google Calendar set up", async () => {
+    vi.stubEnv("GOOGLE_CALENDAR_REFRESH_TOKEN", undefined)
+    const t = setup()
+    const sent = fakeGoogle()
+    const event = await t.mutation(api.events.create, { input: { ...dated, calendarId: "abc123def@google.com" } })
+    expect(await t.action(api.googleCalendar.deleteEvent, { eventId: event.id })).toBe(true)
+    expect(sent).toEqual([])
   })
 })

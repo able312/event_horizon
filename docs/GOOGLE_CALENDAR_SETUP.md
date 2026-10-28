@@ -2,7 +2,7 @@
 
 How to connect Event Horizon's **Add to Google Calendar** button to the venue's shared Google Calendar. Do this once per Google account setup; steps 6–7 repeat per Convex deployment.
 
-**How it works.** The button calls a Convex action (`convex/googleCalendar.ts`). Convex signs in to Google as the **Clubhouse** account (`@westlinks.ca`) with a saved refresh token and creates or updates the event on the shared calendar. Nothing Google-related ships with the desktop app; the client ID, client secret, refresh token and calendar ID live only in Convex deployment env vars.
+**How it works.** The button calls a Convex action (`convex/googleCalendar.ts`). Convex signs in to Google as the **Clubhouse** account (`@westlinks.ca`) with a saved refresh token and creates or updates the event on the shared calendar. **Remove from Google Calendar** deletes the linked Google event and clears the link, and deleting an event in Event Horizon deletes its linked Google event first. If Google refuses, the event is kept. Deployments without these env vars (local and worktree databases) skip the Google step when deleting an event. Nothing Google-related ships with the desktop app; the client ID, client secret, refresh token and calendar ID live only in Convex deployment env vars.
 
 **Why not a service account?** The Workspace doesn't allow sharing calendars outside `westlinks.ca`, and a service account is outside the domain. So the app acts as a real in-domain account instead.
 

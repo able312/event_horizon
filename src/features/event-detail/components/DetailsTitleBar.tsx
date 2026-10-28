@@ -69,7 +69,10 @@ const DetailsTitleBar: React.FC<DetailsTitleBarProps> = ({ eventResource }) => {
       : false
 
   const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete this event?")) {
+    const message = event.calendarId
+      ? "Are you sure you want to delete this event? It will also be deleted from the shared Google Calendar."
+      : "Are you sure you want to delete this event?"
+    if (window.confirm(message)) {
       await deleteEvent()
     }
   }

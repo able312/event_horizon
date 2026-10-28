@@ -50,6 +50,8 @@ const INTERNAL_FUNCTIONS = new Set([
  */
 const PUBLIC_ACTIONS = new Set([
   "./googleCalendar.ts:pushEvent",
+  "./googleCalendar.ts:removeEvent",
+  "./googleCalendar.ts:deleteEvent",
 ])
 
 function authCode(error: unknown): unknown {
