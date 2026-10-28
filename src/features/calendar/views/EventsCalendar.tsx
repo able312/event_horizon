@@ -84,6 +84,9 @@ const EventsCalendar: React.FC<EventsCalendarProps> = ({
   const handleGridWheel = useCallback(
     (event: React.WheelEvent<HTMLDivElement>) => {
       if (event.deltaY === 0) return
+      // React bubbles events out of portals (e.g. the "+N more" popover), so ignore
+      // wheels that didn't happen inside the grid's own DOM and let them scroll normally.
+      if (!(event.target instanceof Node) || !event.currentTarget.contains(event.target)) return
 
       event.preventDefault()
 
