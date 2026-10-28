@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { CalendarDays, CalendarPlus, ExternalLink, MoreHorizontal, RefreshCw } from "lucide-react"
+import { CalendarDays, CalendarPlus, ExternalLink, MoreVertical, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "~/components/atoms/button"
@@ -124,7 +124,7 @@ export const GoogleCalendarCard: React.FC<GoogleCalendarCardProps> = ({ event, o
                 aria-label="More Google Calendar actions"
                 disabled={actions.isBusy}
               >
-                <MoreHorizontal className="size-4" />
+                <MoreVertical className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
