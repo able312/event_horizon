@@ -251,9 +251,13 @@ function calendarClient(config: GoogleCalendarConfig, accessToken: string) {
       if (!result.ok) throw requestFailed("create", result.status, result.data)
       return toSaved(result.data)
     },
-    /** Overwrites the fields Event Horizon owns; status "confirmed" restores a deleted event. */
+    /**
+     * Overwrites the fields Event Horizon owns; status "confirmed" restores a deleted event.
+     * PATCH keeps fields it isn't sent, so an all-day event's `date`s are cleared explicitly.
+     */
     async patch(id: string, body: GoogleCalendarEventBody): Promise<SavedGoogleEvent> {
-      const result = await send("PATCH", `${eventsUrl}/${encodeURIComponent(id)}`, { ...body, status: "confirmed" })
+      const timed = { ...body, start: { ...body.start, date: null }, end: { ...body.end, date: null } }
+      const result = await send("PATCH", `${eventsUrl}/${encodeURIComponent(id)}`, { ...timed, status: "confirmed" })
       if (result.status === 404 || result.status === 410) throw googleCalendarError("GoogleCalendarEventNotFound", EVENT_NOT_FOUND_MESSAGE)
       if (!result.ok) throw requestFailed("update", result.status, result.data)
       return toSaved(result.data)

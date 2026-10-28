@@ -333,6 +333,21 @@ describe("googleCalendar.deleteEvent", () => {
     await expect(t.query(api.events.getById, { id: event.id })).rejects.toThrow()
   })
 
+  it("keeps the event when another Google event is linked while the delete is in flight", async () => {
+    const t = setup()
+    let linked = false
+    const event = await t.mutation(api.events.create, { input: { ...dated, calendarId: "abc123def@google.com" } })
+    const sent = fakeGoogle(async () => {
+      if (linked) return
+      linked = true
+      await t.mutation(api.events.update, { id: event.id, updates: { calendarId: "other12345@google.com" } })
+    })
+
+    await expect(t.action(api.googleCalendar.deleteEvent, { eventId: event.id })).rejects.toThrow("the event and its new link were kept")
+    expect(sent.map(call => call.method)).toEqual(["DELETE"])
+    expect((await t.query(api.events.getById, { id: event.id })).calendarId).toBe("other12345@google.com")
+  })
+
   it("deletes an unlinked event without contacting Google", async () => {
     const t = setup()
     const sent = fakeGoogle()

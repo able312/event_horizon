@@ -239,12 +239,20 @@ export const deleteEvent = companyAction({
   handler: async (ctx, { eventId }): Promise<boolean> => {
     const event = await ctx.runQuery(api.events.getById, { id: eventId })
     const linked = event.calendarId?.trim()
-    if (!linked || !isGoogleCalendarConfigured()) return await ctx.runMutation(api.events.remove, { id: eventId })
+    if (!isGoogleCalendarConfigured()) return await ctx.runMutation(api.events.remove, { id: eventId })
+    // A link saved meanwhile refuses the delete, so its Google event isn't left behind
+    if (!linked) return await ctx.runMutation(api.events.remove, { id: eventId, expectedCalendarId: null })
 
     await deleteGoogleCalendarEvent(readGoogleCalendarConfig(), linked)
     try {
-      return await ctx.runMutation(api.events.remove, { id: eventId })
+      return await ctx.runMutation(api.events.remove, { id: eventId, expectedCalendarId: linked })
     } catch (error) {
+      if (error instanceof ConvexError && error.data?.code === "LinkChanged") {
+        throw new ConvexError({
+          code: "LinkChanged",
+          message: "Removed the previously linked event from Google Calendar, but the link was changed while it was being removed, so the event and its new link were kept.",
+        })
+      }
       console.error("Deleted the Google event but not the event", error)
       throw new ConvexError({
         code: "DeletePartlyDone",

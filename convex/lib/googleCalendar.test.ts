@@ -117,6 +117,12 @@ describe("saveGoogleCalendarEvent", () => {
     expect(calls.map(call => call.method)).toEqual(["POST", "PATCH"])
   })
 
+  it("clears an all-day event's dates, since PATCH keeps fields it isn't sent", async () => {
+    const calls = fakeGoogle({ [`PATCH ${eventsUrl}/abc123def`]: { status: 200, json: savedEvent("abc123def") } })
+    await saveGoogleCalendarEvent(config, { linkedCalendarId: eid("abc123def"), newEventId: "ehnew", body })
+    expect(calls[1]!.body).toMatchObject({ start: { dateTime: body.start.dateTime, date: null }, end: { dateTime: body.end.dateTime, date: null } })
+  })
+
   it("finds an imported iCalUID before updating", async () => {
     const lookup = `GET ${eventsUrl}?iCalUID=imported%40example.com&showDeleted=true&maxResults=1`
     fakeGoogle({
