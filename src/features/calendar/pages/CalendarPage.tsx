@@ -8,6 +8,7 @@ import { toIsoForDayUsingCurrentTime } from "~/lib/formatters"
 import type { UseEventsReturn } from "~/hooks/useEvents"
 import { usePrimaryClients } from "~/hooks/useEventContacts"
 import { ClientNamesError } from "../views/ClientNamesError"
+import { useMonthHolidays } from "../hooks/useMonthHolidays"
 
 interface CalendarPageProps {
     queryState: UseEventsQueryStateReturn
@@ -21,6 +22,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ queryState, eventsHook, onD
   const { state, setDate } = queryState
   const { monthEvents, updateEvent } = eventsHook
   const primaryClients = usePrimaryClients(monthEvents.map((event) => event.id))
+  const { holidays } = useMonthHolidays(state.date)
 
   const handleCalendarDayCellClick = (prefillIso: Date) => {
     dispatch({type: ACTIONS.OPEN_CREATE, prefillIso: toIsoForDayUsingCurrentTime(prefillIso) })
@@ -45,6 +47,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ queryState, eventsHook, onD
         onEventEdit={handleEditEvent}
         onEventDelete={onDeleteRequest}
         onEventStatusChange={handleEventStatusChange}
+        holidays={holidays}
       />
     </>
   )

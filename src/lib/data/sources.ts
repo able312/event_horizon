@@ -33,6 +33,10 @@ export const sources = {
   eventRequests: {
     pending: () => liveSource(api.eventRequests.listPending, {}),
   },
+  holidays: {
+    /** `month` is YYYY-MM; holidays are civil dates, so no time zone is involved. */
+    month: (month: string) => liveSource(api.holidays.forMonth, { month }),
+  },
   touchpoints: {
     byEvent: (eventId: string) => liveSource(api.touchpoints.getByEventId, { eventId: toId<"events">(eventId) }),
     incomplete: () => liveSource(api.touchpoints.getIncompleteWithEvent, {}),

@@ -15,6 +15,7 @@
 import React, { useCallback, useMemo, useRef } from "react"
 import type { PrimaryClient } from "~/definitions/contacts"
 import type { Event, EventStatus } from "~/definitions/database"
+import type { HolidayEntry } from "~/definitions/holidays"
 import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
 import { shiftMonthParam, toMonthStartDate } from "~/lib/months"
 
@@ -32,6 +33,8 @@ interface EventsCalendarProps {
   onEventEdit?: (event: Event) => void
   onEventDelete?: (eventId: string) => void
   onEventStatusChange?: (eventId: string, status: EventStatus) => void
+  /** Shared holidays touching the displayed month */
+  holidays?: HolidayEntry[]
 }
 
 /**
@@ -56,6 +59,7 @@ const EventsCalendar: React.FC<EventsCalendarProps> = ({
   onEventEdit,
   onEventDelete,
   onEventStatusChange,
+  holidays,
 }) => {
   const wheelDeltaAccumulatorRef = useRef(0)
   const wheelDirectionRef = useRef<1 | -1 | 0>(0)
@@ -145,6 +149,7 @@ const EventsCalendar: React.FC<EventsCalendarProps> = ({
           onEventEdit={onEventEdit}
           onEventDelete={onEventDelete}
           onEventStatusChange={onEventStatusChange}
+          holidays={holidays}
         />
       </div>
     </div>

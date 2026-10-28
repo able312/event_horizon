@@ -1,8 +1,9 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { PrimaryClient } from "~/definitions/contacts"
 import type { Event, EventStatus } from "~/definitions/database"
+import type { HolidayEntry } from "~/definitions/holidays"
 import type { CalendarDraftPreview } from "~/features/calendar/lib/calendarDraftPreview"
 import CalendarGrid from "./CalendarGrid"
 
@@ -43,6 +44,7 @@ function gridElement({
   onEventEdit,
   onEventDelete,
   onEventStatusChange,
+  holidays,
 }: {
   events?: Event[]
   clientsByEventId?: Record<string, PrimaryClient>
@@ -56,6 +58,7 @@ function gridElement({
   onEventEdit?: (event: Event) => void
   onEventDelete?: (eventId: string) => void
   onEventStatusChange?: (eventId: string, status: EventStatus) => void
+  holidays?: HolidayEntry[]
 } = {}) {
   return (
     <MemoryRouter initialEntries={[route]}>
@@ -71,6 +74,7 @@ function gridElement({
         onEventEdit={onEventEdit}
         onEventDelete={onEventDelete}
         onEventStatusChange={onEventStatusChange}
+        holidays={holidays}
       />
     </MemoryRouter>
   )
@@ -663,5 +667,124 @@ describe("CalendarGrid compact lines", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "Edit" }))
 
     expect(onEventEdit).toHaveBeenCalledWith(event)
+  })
+})
+
+describe("CalendarGrid holidays", () => {
+  const holiday = (title: string, startDate: string, endDate: string): HolidayEntry => ({ id: title, title, startDate, endDate })
+  const APRIL_HOLIDAYS = [
+    holiday("Good Friday (regional holiday)", "2026-04-03", "2026-04-04"),
+    holiday("Orthodox Good Friday", "2026-04-03", "2026-04-04"),
+    holiday("Easter Monday (regional holiday)", "2026-04-06", "2026-04-07"),
+  ]
+  const markerFor = (day: number) =>
+    document.querySelector<HTMLButtonElement>(`[data-day-of-month="${day}"] [data-holiday-marker]`)
+  const tick = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms))
+
+  beforeEach(() => {
+    // The tooltip's positioning measures its trigger.
+    vi.stubGlobal("ResizeObserver", class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it("puts one marker beside the date, naming every holiday that day", () => {
+    renderGrid({ holidays: APRIL_HOLIDAYS })
+
+    expect(document.querySelectorAll("[data-holiday-marker]")).toHaveLength(2)
+    const marker = markerFor(3)!
+    expect(marker.getAttribute("aria-label"))
+      .toBe("Holidays and observances: Good Friday (regional holiday); Orthodox Good Friday")
+    expect(marker.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true")
+    // Same header line as the date, not stacked under it.
+    expect(marker.closest("[data-day-header]")?.querySelector("[data-day-number]")?.textContent).toBe("3")
+    expect(markerFor(4)).toBeNull()
+  })
+
+  it("shows the names on keyboard focus and hover, and Escape closes them", async () => {
+    renderGrid({ holidays: APRIL_HOLIDAYS })
+
+    fireEvent.focus(markerFor(3)!)
+    const tooltip = await screen.findByRole("tooltip")
+    expect(tooltip.textContent).toContain("Good Friday (regional holiday)")
+    expect(tooltip.textContent).toContain("Orthodox Good Friday")
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" })
+    await waitFor(() => expect(screen.queryByRole("tooltip")).toBeNull())
+
+    fireEvent.pointerMove(markerFor(6)!)
+    expect((await screen.findByRole("tooltip")).textContent).toContain("Easter Monday (regional holiday)")
+  })
+
+  it("never opens the day or navigates when the marker or its names are clicked", async () => {
+    const onDayCellClick = vi.fn()
+    renderGrid({ holidays: APRIL_HOLIDAYS, onDayCellClick })
+
+    const marker = markerFor(3)!
+    fireEvent.pointerDown(marker)
+    fireEvent.click(marker)
+    const tooltip = await screen.findByRole("tooltip")
+    // A click keeps the names open rather than toggling them shut.
+    expect(markerFor(3)!.getAttribute("data-state")).not.toBe("closed")
+    fireEvent.click(tooltip.parentElement!)
+
+    expect(onDayCellClick).not.toHaveBeenCalled()
+    expect(navigateMock).not.toHaveBeenCalled()
+  })
+
+  it("dismisses an open event popover without swallowing the next day click", async () => {
+    mockGridSize(NARROW_GRID_WIDTH, 5000)
+    const onDayCellClick = vi.fn()
+    renderGrid({ events: [makeEvent(10, 1)], holidays: APRIL_HOLIDAYS, onDayCellClick })
+
+    fireEvent.click(screen.getByTestId("calendar-compact-line"))
+    expect(screen.getByRole("dialog")).toBeTruthy()
+    await tick()
+
+    // The marker stays quiet while the event popover is open, so it can't cover it.
+    fireEvent.focus(markerFor(3)!)
+    await tick(20)
+    expect(screen.queryByRole("tooltip")).toBeNull()
+
+    const marker = markerFor(3)!
+    fireEvent.pointerDown(marker)
+    fireEvent.click(marker)
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(onDayCellClick).not.toHaveBeenCalled()
+
+    const emptyDay = screen.getByTestId("calendar-day-events-12")
+    fireEvent.pointerDown(emptyDay)
+    fireEvent.click(emptyDay)
+    expect(onDayCellClick).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps the +N more trigger working on the same line as the marker", () => {
+    const onDayCellClick = vi.fn()
+    renderGrid({ events: Array.from({ length: 5 }, (_, i) => makeEvent(3, i + 1)), holidays: APRIL_HOLIDAYS, onDayCellClick })
+
+    const more = screen.getByRole("button", { name: "+2 more events" })
+    expect(more.closest("[data-day-header]")).toBe(markerFor(3)!.closest("[data-day-header]"))
+    expect(more.className).not.toContain("absolute")
+
+    fireEvent.click(more)
+    expect(screen.getByRole("button", { name: /Event 3-4/ })).toBeTruthy()
+    expect(onDayCellClick).not.toHaveBeenCalled()
+  })
+
+  it("closes the names when the month changes", async () => {
+    const may = [holiday("Victoria Day (regional holiday)", "2026-05-03", "2026-05-04")]
+    const { rerender } = renderGrid({ holidays: APRIL_HOLIDAYS })
+
+    fireEvent.focus(markerFor(3)!)
+    expect(await screen.findByRole("tooltip")).toBeTruthy()
+    rerender(gridElement({ month: 4, startingDay: 5, daysInMonth: 31, holidays: may }))
+
+    await waitFor(() => expect(screen.queryByRole("tooltip")).toBeNull())
+    expect(markerFor(3)!.getAttribute("aria-label")).toBe("Holidays and observances: Victoria Day (regional holiday)")
   })
 })
