@@ -16,15 +16,16 @@ import * as assignments from "./eventContacts"
 import * as roles from "./contactRoles"
 import * as categories from "./vendorCategories"
 import * as users from "./users"
+import * as googleCalendar from "./googleCalendar"
 import { desktopTimeZone } from "./sources"
 import { getMonthRangeUtcFromLocal } from "~/lib/months"
 
 vi.mock("./backend", async (original) => ({
   ...await original<typeof backend>(),
-  runMutation: vi.fn(), runQuery: vi.fn(), fetchSource: vi.fn(),
+  runMutation: vi.fn(), runQuery: vi.fn(), runAction: vi.fn(), fetchSource: vi.fn(),
 }))
 
-type Contract = { name: string; kind: "mutation" | "query" | "source"; call: () => Promise<unknown>; args: object; voidResult?: boolean }
+type Contract = { name: string; kind: "mutation" | "query" | "action" | "source"; call: () => Promise<unknown>; args: object; voidResult?: boolean }
 const eventId = "event-1", id = "record-1", timeblockId = "block-1"
 const month = getMonthRangeUtcFromLocal("2026-04")!
 const input = { title: "Dinner", type: "function" as const }
@@ -41,10 +42,15 @@ const contracts: Contract[] = [
   { name: "events.create", kind: "mutation", call: () => events.createEvent({ ...input, id, createdAt: "old" }), args: { input, client: null } },
   { name: "events.update", kind: "mutation", call: () => events.updateEvent(id, { title: "New", updatedAt: "old" }), args: { id, updates: { title: "New" } } },
   { name: "events.update", kind: "mutation", call: () => events.updateEvent(id, { title: "New", updatedBy: "forged" } as Parameters<typeof events.updateEvent>[1]), args: { id, updates: { title: "New" } } },
-  { name: "events.remove", kind: "mutation", call: () => events.deleteEvent(id), args: { id } },
+  { name: "googleCalendar.updateEvent", kind: "action", call: () => events.updateEvent(id, { startDateTime: null, status: "new_lead" }), args: { id, updates: { startDateTime: null, status: "new_lead" } } },
+  { name: "googleCalendar.deleteEvent", kind: "action", call: () => events.deleteEvent(id), args: { eventId: id } },
   { name: "events.getByCalendarIds", kind: "query", call: () => events.getEventsByCalendarIds(["uid"]), args: { calendarIds: ["uid"] } },
   { name: "events.getStartingBetween", kind: "query", call: () => events.getEventsStartingBetween("start", "end"), args: { startFrom: "start", startTo: "end" } },
   { name: "events.importFromCalendar", kind: "mutation", call: () => events.importCalendarEvents([]), args: { rows: [] } },
+  { name: "googleCalendar.pushEvent", kind: "action", call: () => googleCalendar.pushEventToGoogleCalendar(eventId), args: { eventId } },
+  { name: "googleCalendar.getEventUrl", kind: "action", call: () => googleCalendar.getGoogleCalendarEventUrl(eventId), args: { eventId } },
+  { name: "googleCalendar.getSyncStatus", kind: "source", call: () => googleCalendar.getGoogleCalendarSyncStatus(eventId), args: { eventId } },
+  { name: "googleCalendar.removeEvent", kind: "action", call: () => googleCalendar.removeEventFromGoogleCalendar(eventId), args: { eventId } },
   { name: "eventRequests.listPending", kind: "source", call: () => eventRequests.getPendingEventRequests(), args: {} },
   { name: "eventRequests.accept", kind: "mutation", call: () => eventRequests.acceptEventRequest(id, { ...input, id, createdAt: "old", clientNotes: "Notes" }, { newContact: person }), args: { id, input: { ...input, clientNotes: "Notes" }, client: { newContact: person } } },
   { name: "eventRequests.accept", kind: "mutation", call: () => eventRequests.acceptEventRequest(id, { ...input, id, createdAt: "old" }, { contactId: "contact-1" }), args: { id, input, client: { contactId: "contact-1" } } },
@@ -128,7 +134,7 @@ describe("Convex data contracts", () => {
   beforeEach(() => vi.resetAllMocks())
   it.each(contracts)("$name calls the correct backend with allowlisted arguments", async ({ name, kind, call, args, voidResult }) => {
     const result = { id: "server-id" }
-    const mock = vi.mocked(kind === "source" ? backend.fetchSource : kind === "query" ? backend.runQuery : backend.runMutation)
+    const mock = vi.mocked(kind === "source" ? backend.fetchSource : kind === "query" ? backend.runQuery : kind === "action" ? backend.runAction : backend.runMutation)
     mock.mockResolvedValue(result)
     expect(await call()).toEqual(voidResult ? undefined : result)
     expect(mock).toHaveBeenCalledTimes(1)
@@ -144,7 +150,7 @@ describe("Convex data contracts", () => {
   })
   it.each(contracts)("$name propagates backend failures", async ({ kind, call }) => {
     const error = new Error("Backend failed")
-    vi.mocked(kind === "source" ? backend.fetchSource : kind === "query" ? backend.runQuery : backend.runMutation).mockRejectedValue(error)
+    vi.mocked(kind === "source" ? backend.fetchSource : kind === "query" ? backend.runQuery : kind === "action" ? backend.runAction : backend.runMutation).mockRejectedValue(error)
     await expect(call()).rejects.toBe(error)
   })
 })

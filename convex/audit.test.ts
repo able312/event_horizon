@@ -22,7 +22,8 @@ async function userIdFor(t: Pick<ReturnType<ReturnType<typeof newTest>["withIden
 describe("audit fields", () => {
   it("covers every business table, so a new table can't silently skip auditing", () => {
     // Holidays are written only by the internal refresh, never by a signed-in user.
-    const unaudited = ["users", "beverageItemTimeblocks", "eventRequests", "holidayCache", "holidaySync"]
+    // googleCalendarSyncs is bookkeeping written by pushEvent, whose recordPush stamps the event link it saves
+    const unaudited = ["users", "beverageItemTimeblocks", "eventRequests", "holidayCache", "holidaySync", "googleCalendarSyncs"]
     expect([...AUDITED_TABLES].sort()).toEqual(Object.keys(schema.tables).filter((table) => !unaudited.includes(table)).sort())
     for (const table of STAMPED_UPDATED_AT_TABLES) expect(AUDITED_TABLES).toContain(table)
   })

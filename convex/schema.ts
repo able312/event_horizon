@@ -59,6 +59,17 @@ export default defineSchema({
     .index("by_status", ["status", "startDateTime", "createdAt"])
     .index("by_calendarId", ["calendarId"]),
 
+  // The last details Event Horizon sent to an event's Google Calendar copy, so the app can
+  // show when Google is behind (googleCalendar.getSyncStatus). Written only by pushEvent.
+  googleCalendarSyncs: defineTable({
+    eventId: v.id("events"),
+    // The event's calendarId when it was sent; a different link means nothing is known about it
+    calendarId: v.string(),
+    // googleCalendarBodyFingerprint of the body sent
+    fingerprint: v.string(),
+    syncedAt: v.string(),
+  }).index("by_event", ["eventId"]),
+
   tournamentDetails: defineTable({
     eventId: v.id("events"),
     time: nullable(v.string()),

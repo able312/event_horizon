@@ -37,21 +37,39 @@ async function registeredFunctions(): Promise<[string, RegisteredFunction][]> {
 
 /**
  * Internal functions: run through the Convex CLI with admin access, by the
- * secret-checked HTTP route in http.ts (website event requests), or by the
- * holiday cron (crons.ts).
+ * secret-checked HTTP route in http.ts (website event requests), by the
+ * holiday cron (crons.ts), or by googleCalendar.pushEvent / removeEvent /
+ * updateEvent once they have checked the caller (recordPush and recordRemoval
+ * check again, as companyInternalMutations, so their writes are stamped with
+ * that caller).
  */
 const INTERNAL_FUNCTIONS = new Set([
   "./developmentSeed.ts:seed",
   "./eventRequests.ts:receive",
+  "./googleCalendar.ts:getPushContent",
+  "./googleCalendar.ts:recordPush",
+  "./googleCalendar.ts:recordRemoval",
   "./holidays.ts:cachedEntryCount",
   "./holidays.ts:recordRefresh",
   "./holidays.ts:refresh",
   "./holidays.ts:bootstrap",
 ])
-/** The only actions: internal, because they download the fixed holiday feed. */
+/** The only internal actions: they download the fixed holiday feed. */
 const INTERNAL_ACTIONS = new Set([
   "./holidays.ts:refresh",
   "./holidays.ts:bootstrap",
+])
+
+/**
+ * Public actions: only where Convex has to call an outside service. Each one is a
+ * companyAction and reads or writes data only through checked functions.
+ */
+const PUBLIC_ACTIONS = new Set([
+  "./googleCalendar.ts:pushEvent",
+  "./googleCalendar.ts:getEventUrl",
+  "./googleCalendar.ts:removeEvent",
+  "./googleCalendar.ts:deleteEvent",
+  "./googleCalendar.ts:updateEvent",
 ])
 
 function authCode(error: unknown): unknown {
@@ -90,7 +108,7 @@ describe("auth enforcement on every function", () => {
     expect((await registeredFunctions()).length).toBeGreaterThan(70)
   })
 
-  it("exposes only public queries and mutations, except the internal seed, event request and holiday functions", async () => {
+  it("exposes only public queries and mutations, except the internal seed, event request and holiday functions and the listed actions", async () => {
     for (const [name, fn] of await registeredFunctions()) {
       if (INTERNAL_FUNCTIONS.has(name)) {
         expect(fn.isInternal).toBe(true)
@@ -98,7 +116,7 @@ describe("auth enforcement on every function", () => {
         expect(fn.isAction === true).toBe(INTERNAL_ACTIONS.has(name))
         continue
       }
-      expect({ name, isPublic: fn.isPublic === true, isAction: fn.isAction === true }).toEqual({ name, isPublic: true, isAction: false })
+      expect({ name, isPublic: fn.isPublic === true, isAction: fn.isAction === true }).toEqual({ name, isPublic: true, isAction: PUBLIC_ACTIONS.has(name) })
     }
   })
 

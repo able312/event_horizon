@@ -1,25 +1,15 @@
 import { Check, CircleCheck, CircleDashed, CircleX, Sparkle, type LucideIcon } from "lucide-react"
 import type { EventType, EventStatus } from "~/definitions/database"
+import { EVENT_STATUS_LABELS, EVENT_TYPE_LABELS } from "./labels"
 
-export const EVENT_TYPE_LABELS: Record<EventType, string> = {
-  tournament: "Tournament",
-  wedding: "Wedding",
-  function: "Function",
-}
+export { EVENT_STATUS_LABELS, EVENT_TYPE_LABELS }
+
 export const EVENT_TYPE_OPTIONS = Object.keys(EVENT_TYPE_LABELS) as EventType[]
 
 export const EVENT_TYPE_COLORS: Record<EventType, string> = {
   tournament: "bg-green-50 text-green-700 border border-green-200",
   wedding: "bg-purple-100 text-purple-700 border border-purple-200",
   function: "bg-yellow-100 text-yellow-700 border border-yellow-200",
-}
-
-export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
-  new_lead: "New Lead",
-  tentative: "Tentative",
-  confirmed: "Confirmed",
-  closed: "Complete",
-  lost: "Lost",
 }
 
 /** Status colours come from the --status-* theme tokens. New lead is the only solid dark fill so leads stand out. */

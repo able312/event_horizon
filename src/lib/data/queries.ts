@@ -11,6 +11,7 @@ import * as eventContactsApi from "./eventContacts"
 import * as eventRequestsApi from "./eventRequests"
 import * as eventsApi from "./events"
 import * as foodItemsApi from "./foodItems"
+import * as googleCalendarApi from "./googleCalendar"
 import * as holidaysApi from "./holidays"
 import * as menuOfChargeItemsApi from "./menuOfChargeItems"
 import * as paymentsApi from "./payments"
@@ -382,5 +383,21 @@ export const userQueries = {
     queryKey: userKeys.all(),
     queryFn: () => usersApi.getUsers(),
     ...liveMeta(sources.users.all()),
+  }),
+}
+
+// ============================================================================
+// Google Calendar
+// ============================================================================
+
+export const googleCalendarKeys = {
+  syncStatus: (eventId: string) => ["google-calendar", "sync-status", eventId] as const,
+}
+
+export const googleCalendarQueries = {
+  syncStatus: (eventId: string) => queryOptions({
+    queryKey: googleCalendarKeys.syncStatus(eventId),
+    queryFn: () => googleCalendarApi.getGoogleCalendarSyncStatus(eventId),
+    ...liveMeta(sources.googleCalendar.syncStatus(eventId)),
   }),
 }

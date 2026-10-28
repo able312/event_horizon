@@ -2,7 +2,7 @@
   "name": "event-horizon",
   "productName": "Event Horizon",
   "private": true,
-  "version": "0.2.6",
+  "version": "0.3.0",
   "type": "module",
   "main": "dist-electron/electron/main.js",
   "scripts": {
@@ -24,7 +24,8 @@
     "typecheck:release": "tsc --project scripts/tsconfig.json",
     "dist:win": "npm run transpile:electron && npm run build && electron-builder --win --publish never",
     "dist:release": "npm run transpile:electron && npm run build && electron-builder --mac --win --publish never",
-    "convex:worktree": "node --experimental-strip-types scripts/convex-worktree.ts"
+    "convex:worktree": "node --experimental-strip-types scripts/convex-worktree.ts",
+    "google-calendar:auth": "node --experimental-strip-types scripts/google-calendar-auth.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",

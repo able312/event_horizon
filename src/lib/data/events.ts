@@ -3,7 +3,7 @@ import type { NewEvent, Event, UpdateEvent } from "~/definitions/database"
 import type { EventSearchRequest, EventSearchResponse } from "~/definitions/ipc"
 import type { IcsImportEventInput, IcsImportInsertResult } from "~/definitions/events/icsImport"
 import { api } from "../../../convex/_generated/api"
-import { fetchSource, pickFields, runMutation, runQuery } from "./backend"
+import { fetchSource, pickFields, runAction, runMutation, runQuery } from "./backend"
 import { toContactTargetArgs } from "./eventContacts"
 import { toId } from "./ids"
 import { sources } from "./sources"
@@ -44,12 +44,15 @@ export function createEvent(newEvent: NewEvent, client?: AssignContactTarget | n
   })
 }
 
+/** An update that removes the date also deletes the linked Google Calendar event (googleCalendar.updateEvent). */
 export function updateEvent(id: string, updates: UpdateEvent): Promise<Event> {
-  return runMutation(api.events.update, { id: toId<"events">(id), updates: pickFields(updates, EVENT_FIELDS) })
+  const args = { id: toId<"events">(id), updates: pickFields(updates, EVENT_FIELDS) }
+  return updates.startDateTime === null ? runAction(api.googleCalendar.updateEvent, args) : runMutation(api.events.update, args)
 }
 
+/** Also deletes the event's linked Google Calendar event (googleCalendar.deleteEvent). */
 export function deleteEvent(id: string): Promise<boolean> {
-  return runMutation(api.events.remove, { id: toId<"events">(id) })
+  return runAction(api.googleCalendar.deleteEvent, { eventId: toId<"events">(id) })
 }
 
 export function getEventsByCalendarIds(calendarIds: string[]): Promise<Event[]> {

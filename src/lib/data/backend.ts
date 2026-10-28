@@ -137,6 +137,17 @@ export async function runMutation<Mutation extends FunctionReference<"mutation">
   }
 }
 
+export async function runAction<Action extends FunctionReference<"action">>(
+  action: Action,
+  args: FunctionArgs<Action>,
+): Promise<FunctionReturnType<Action>> {
+  try {
+    return await getConvexClient().action(action, args)
+  } catch (err) {
+    throw translateBackendError(err)
+  }
+}
+
 /** Copies only the listed fields that are set; Convex rejects fields its validators don't declare. */
 export function pickFields<Source extends object, Key extends keyof Source>(
   source: Source,

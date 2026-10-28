@@ -66,6 +66,9 @@ export const sources = {
     foodSection: (eventId: string) => liveSource(api.foodItems.getByEventId, { eventId: toId<"events">(eventId) }),
     beverageSection: (eventId: string) => liveSource(api.beverageItems.getByEventId, { eventId: toId<"events">(eventId) }),
   },
+  googleCalendar: {
+    syncStatus: (eventId: string) => liveSource(api.googleCalendar.getSyncStatus, { eventId: toId<"events">(eventId) }),
+  },
   eventContacts: {
     panel: (eventId: string) => liveSource(api.eventContacts.getPanel, { eventId: toId<"events">(eventId) }),
     primaryClients: (eventIds: string[]) => liveSource(api.eventContacts.getPrimaryClients, {

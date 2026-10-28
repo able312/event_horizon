@@ -211,4 +211,43 @@ describe("EditEventSidebarForm date removal", () => {
       expect(onSave).toHaveBeenCalledWith({ startDateTime: null })
     })
   })
+
+  it("asks before removing the date of a New Lead on Google Calendar, without changing its status", async () => {
+    const onSave = vi.fn(async () => undefined)
+    render(
+      <EditEventSidebarForm
+        event={makeEvent({ ...dated, status: "new_lead", calendarId: "abc123def@google.com" })}
+        onSave={onSave}
+        onCancel={vi.fn()}
+      />,
+    )
+
+    clearStartDate()
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+
+    expect(onSave).not.toHaveBeenCalled()
+    expect(await screen.findByText(/deletes it from the shared Google Calendar/)).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Remove date" }))
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith({ startDateTime: null })
+    })
+  })
+
+  it("warns about both effects for a Confirmed event on Google Calendar", async () => {
+    const onSave = vi.fn(async () => undefined)
+    render(
+      <EditEventSidebarForm event={makeEvent({ ...dated, calendarId: "abc123def@google.com" })} onSave={onSave} onCancel={vi.fn()} />,
+    )
+
+    clearStartDate()
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+
+    expect(await screen.findByText(/moves it back to New Lead and deletes it from the shared Google Calendar/)).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Remove date & move to New Lead" }))
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith({ startDateTime: null, status: "new_lead" })
+    })
+  })
 })
