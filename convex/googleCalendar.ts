@@ -101,7 +101,7 @@ export const pushEvent = companyAction({
     await ctx.runMutation(internal.googleCalendar.recordPush, {
       eventId,
       sentToCalendarId: calendarId ?? null,
-      calendarId: saved.iCalUID,
+      calendarId: saved.link,
       fingerprint: googleCalendarBodyFingerprint(body),
     })
     return { eventUrl: saved.eventUrl }

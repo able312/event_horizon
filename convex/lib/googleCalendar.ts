@@ -16,7 +16,6 @@ export type GoogleCalendarErrorCode =
   | "GoogleCalendarNotConfigured"
   | "GoogleCalendarAuth"
   | "GoogleCalendarEventNotFound"
-  | "GoogleCalendarUnrecognizedLink"
   | "GoogleCalendarFailed"
 
 /** A refusal whose message is written for the person who clicked the button. */
@@ -70,7 +69,12 @@ export function googleEventIdFor(eventId: string): string {
   return `eh${hex}`
 }
 
-export type GoogleCalendarLink = { eventId: string } | { iCalUID: string }
+/**
+ * How to find the linked Google event. `eventIdIfNoMatch` is for stored values that could
+ * be either: the iCalUID is looked up first, and the value is used as an event ID if no
+ * event has that iCalUID.
+ */
+export type GoogleCalendarLink = { eventId: string } | { iCalUID: string; eventIdIfNoMatch?: string }
 
 // Google's own events have an iCalUID of "<event ID>@google.com".
 const GOOGLE_ICAL_SUFFIX = "@google.com"
@@ -107,21 +111,19 @@ function eidFromUrl(value: string): string | null {
 }
 
 /**
- * An event's `calendarId` may hold an iCalUID (set by this sync or the ICS import),
- * or whatever was pasted by hand before it: an event ID, an `eid`, or a whole event link.
+ * An event's `calendarId` may hold an iCalUID (set by this sync or the ICS import, which
+ * keeps any UID as-is), the event ID of a single occurrence of a repeating event (set by
+ * this sync), or whatever was pasted by hand before it: an event ID, an `eid`, or a whole
+ * event link. Anything that isn't recognisably an event ID is treated as an iCalUID.
  */
 export function parseGoogleCalendarLink(stored: string): GoogleCalendarLink {
   const value = stored.trim()
   const candidate = eidFromUrl(value) ?? value
-  if (candidate.includes("@")) {
-    return candidate.endsWith(GOOGLE_ICAL_SUFFIX)
-      ? { eventId: candidate.slice(0, -GOOGLE_ICAL_SUFFIX.length) }
-      : { iCalUID: candidate }
-  }
+  if (candidate.endsWith(GOOGLE_ICAL_SUFFIX)) return { eventId: candidate.slice(0, -GOOGLE_ICAL_SUFFIX.length) }
+  if (candidate.includes("@")) return { iCalUID: candidate }
   const fromEid = decodeEid(candidate)
   if (fromEid) return { eventId: fromEid }
-  if (RAW_EVENT_ID.test(candidate)) return { eventId: candidate }
-  throw googleCalendarError("GoogleCalendarUnrecognizedLink", "The linked Google Calendar ID isn't one Event Horizon recognises. Edit it, or remove it from Google Calendar, then try again.")
+  return RAW_EVENT_ID.test(candidate) ? { iCalUID: candidate, eventIdIfNoMatch: candidate } : { iCalUID: candidate }
 }
 
 type JsonObject = Record<string, unknown>
@@ -174,8 +176,12 @@ export async function getAccessToken(config: GoogleCalendarConfig): Promise<stri
 }
 
 export type SavedGoogleEvent = {
-  /** Stored as the event's `calendarId`, which is also what the ICS import matches on. */
-  iCalUID: string
+  /**
+   * Stored as the event's `calendarId`. Usually the iCalUID, which is also what the ICS
+   * import matches on. A single occurrence of a repeating event shares its iCalUID with
+   * the whole series, so for those it's the occurrence's own event ID instead.
+   */
+  link: string
   /** On calendar.google.com, the only Google Calendar origin the desktop app opens. */
   eventUrl: string
 }
@@ -200,26 +206,30 @@ function calendarClient(config: GoogleCalendarConfig, accessToken: string) {
     return { status: response.status, ok: response.ok, data: await readJson(response) }
   }
   const toSaved = (data: JsonObject): SavedGoogleEvent => {
-    if (typeof data.iCalUID !== "string" || typeof data.htmlLink !== "string") {
-      throw requestFailed("response", 502, { error: "missing iCalUID or htmlLink" })
+    if (typeof data.id !== "string" || typeof data.iCalUID !== "string" || typeof data.htmlLink !== "string") {
+      throw requestFailed("response", 502, { error: "missing id, iCalUID or htmlLink" })
     }
-    return { iCalUID: data.iCalUID, eventUrl: toCalendarEventUrl(data.htmlLink) }
+    const isOccurrence = typeof data.recurringEventId === "string"
+    return { link: isOccurrence ? data.id : data.iCalUID, eventUrl: toCalendarEventUrl(data.htmlLink) }
   }
 
   const client = {
-    async findEventId(iCalUID: string): Promise<string> {
+    /** The ID of the event with this iCalUID; null when there isn't one. */
+    async findEventId(iCalUID: string): Promise<string | null> {
       // showDeleted so a deleted copy is restored rather than reported missing
       const query = new URLSearchParams({ iCalUID, showDeleted: "true", maxResults: "1" })
       const result = await send("GET", `${eventsUrl}?${query.toString()}`)
       if (!result.ok) throw requestFailed("lookup", result.status, result.data)
       const items = Array.isArray(result.data.items) ? (result.data.items as JsonObject[]) : []
       const id = items[0]?.id
-      if (typeof id !== "string") throw googleCalendarError("GoogleCalendarEventNotFound", EVENT_NOT_FOUND_MESSAGE)
-      return id
+      return typeof id === "string" ? id : null
     },
     /** The Google event ID for a stored link, looking up iCalUIDs. */
     async resolve(link: GoogleCalendarLink): Promise<string> {
-      return "eventId" in link ? link.eventId : client.findEventId(link.iCalUID)
+      if ("eventId" in link) return link.eventId
+      const id = (await client.findEventId(link.iCalUID)) ?? link.eventIdIfNoMatch
+      if (!id) throw googleCalendarError("GoogleCalendarEventNotFound", EVENT_NOT_FOUND_MESSAGE)
+      return id
     },
     /** Reads the event; a deleted ("cancelled") event counts as missing. */
     async get(id: string): Promise<SavedGoogleEvent> {
@@ -277,26 +287,11 @@ export async function findGoogleCalendarEventUrl(config: GoogleCalendarConfig, l
 
 /**
  * Deletes the linked Google event from the shared calendar. Returns false when there was
- * nothing to delete: the event is already gone, or the stored link isn't one we can read.
+ * nothing to delete: no event matches the stored link, or it's already gone.
  */
 export async function deleteGoogleCalendarEvent(config: GoogleCalendarConfig, linkedCalendarId: string): Promise<boolean> {
-  let link: GoogleCalendarLink
-  try {
-    link = parseGoogleCalendarLink(linkedCalendarId)
-  } catch {
-    return false
-  }
+  const link = parseGoogleCalendarLink(linkedCalendarId)
   const client = calendarClient(config, await getAccessToken(config))
-  let eventId: string
-  if ("eventId" in link) {
-    eventId = link.eventId
-  } else {
-    try {
-      eventId = await client.findEventId(link.iCalUID)
-    } catch (error) {
-      if (error instanceof ConvexError && (error.data as { code?: unknown }).code === "GoogleCalendarEventNotFound") return false
-      throw error
-    }
-  }
-  return client.remove(eventId)
+  const eventId = "eventId" in link ? link.eventId : (await client.findEventId(link.iCalUID)) ?? link.eventIdIfNoMatch
+  return eventId ? client.remove(eventId) : false
 }
