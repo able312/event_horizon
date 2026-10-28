@@ -273,27 +273,28 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             <CalendarDayEventList
               day={day}
               header={
-                <>
-                  <div
-                    className={`shrink-0 text-sm ${
-                      isToday(day)
-                        ? 'mx-1 my-0.5 flex size-6 items-center justify-center rounded-full bg-orange-500 font-bold text-white'
-                        : 'leading-5 text-muted-foreground'
-                    }`}
-                    data-day-number
-                  >
-                    {day}
-                  </div>
-                  {holidayTitles ? (
-                    // Keyed by month so an open tooltip doesn't carry over to the same day of another month
-                    <CalendarHolidayMarker
-                      key={monthKey}
-                      titles={holidayTitles}
-                      suppressed={openPopoverKey !== null}
-                      onClickOpen={() => setOpenPopover(null)}
-                    />
-                  ) : null}
-                </>
+                <div
+                  className={`shrink-0 text-sm ${
+                    isToday(day)
+                      ? 'mx-1 my-0.5 flex size-6 items-center justify-center rounded-full bg-orange-500 font-bold text-white'
+                      : 'leading-5 text-muted-foreground'
+                  }`}
+                  data-day-number
+                >
+                  {day}
+                </div>
+              }
+              headerTrailing={
+                holidayTitles ? (
+                  // Keyed by month so an open tooltip doesn't carry over to the same day of another month
+                  <CalendarHolidayMarker
+                    key={monthKey}
+                    titles={holidayTitles}
+                    label={holidayTitles.join(" · ")}
+                    suppressed={openPopoverKey !== null}
+                    onClickOpen={() => setOpenPopover(null)}
+                  />
+                ) : null
               }
               leadingItem={
                 draftForDay ? (

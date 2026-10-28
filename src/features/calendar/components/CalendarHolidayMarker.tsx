@@ -1,8 +1,9 @@
 /**
  * CalendarHolidayMarker
  *
- * One small flag beside a day number when the shared holiday feed lists that date.
- * Names show in a tooltip on hover or keyboard focus (all of them, one per line),
+ * One small flag beside a day number when the shared holiday feed lists that date,
+ * optionally with the name written out beside it. The flag and the name are one
+ * trigger. Names show in a tooltip on hover or keyboard focus (all of them, one per line),
  * and a click keeps it open. It's read-only: a click never reaches the day cell, so
  * it can't start a booking.
  *
@@ -15,6 +16,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/atoms/tool
 
 type CalendarHolidayMarkerProps = {
   titles: string[]
+  /** Written out beside the flag. Hovering or clicking the text opens the same names. */
+  label?: string
   /** Keep the tooltip shut, e.g. while an event popover is open, so it doesn't cover it. */
   suppressed?: boolean
   /**
@@ -24,7 +27,7 @@ type CalendarHolidayMarkerProps = {
   onClickOpen?: () => void
 }
 
-function CalendarHolidayMarker({ titles, suppressed = false, onClickOpen }: CalendarHolidayMarkerProps) {
+function CalendarHolidayMarker({ titles, label, suppressed = false, onClickOpen }: CalendarHolidayMarkerProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -33,7 +36,7 @@ function CalendarHolidayMarker({ titles, suppressed = false, onClickOpen }: Cale
         <button
           type="button"
           aria-label={`Holidays and observances: ${titles.join("; ")}`}
-          className="flex size-5 shrink-0 items-center justify-center rounded-md bg-sky-100 text-sky-700 hover:bg-sky-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600"
+          className={`flex h-5 min-w-5 max-w-full items-center justify-center gap-1 rounded text-stone-600 hover:bg-stone-100 hover:text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${label ? "px-1" : ""}`}
           // Radix closes a tooltip when its trigger is pressed; keep it open instead.
           onPointerDown={(event) => event.preventDefault()}
           onClick={(event) => {
@@ -44,7 +47,8 @@ function CalendarHolidayMarker({ titles, suppressed = false, onClickOpen }: Cale
           }}
           data-holiday-marker
         >
-          <Flag aria-hidden="true" className="size-3.5 fill-sky-700/30" strokeWidth={2.25} />
+          <Flag aria-hidden="true" className="size-3.5 shrink-0 fill-orange-400/60" strokeWidth={2} />
+          {label ? <span className="min-w-0 truncate text-[11px] leading-5">{label}</span> : null}
         </button>
       </TooltipTrigger>
       <TooltipContent
