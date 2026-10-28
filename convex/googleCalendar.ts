@@ -59,12 +59,19 @@ export const getPushContent = internalQuery({
 /**
  * Saves the link to the Google event that was just written and records what was sent to
  * it, in one transaction so getSyncStatus never sees one without the other. Refuses if
- * someone changed the link while the push was in flight, rather than overwriting theirs.
+ * someone changed the link while the push was in flight, rather than overwriting theirs,
+ * or removed the event's date, so pushEvent can take the Google event off again.
  */
 export const recordPush = companyInternalMutation({
   args: { eventId: v.id("events"), sentToCalendarId: nullable(v.string()), calendarId: v.string(), fingerprint: v.string() },
   handler: async (ctx, { eventId, sentToCalendarId, calendarId, fingerprint }) => {
     const event = await requireDocument(ctx, "events", eventId)
+    if (!event.startDateTime || !event.endDateTime) {
+      throw new ConvexError({
+        code: "DateRemoved",
+        message: "The event's date was removed while it was being sent to Google Calendar, so it was taken off Google Calendar again.",
+      })
+    }
     if ((event.calendarId?.trim() || null) !== (sentToCalendarId?.trim() || null)) {
       throw new ConvexError({
         code: "LinkChanged",
@@ -102,6 +109,24 @@ export const recordRemoval = companyInternalMutation({
 })
 
 /**
+ * Deletes the Google event a push just wrote after the event's date was removed during it,
+ * since the date removal couldn't delete a Google event it didn't know about yet (or one
+ * the push restored). Clears the link if it still points there; keeps any other link.
+ */
+async function takeBackPush(ctx: ActionCtx, eventId: Id<"events">, pushedLink: string): Promise<void> {
+  try {
+    await removeLinkedGoogleEvent(ctx, eventId, pushedLink)
+  } catch (error) {
+    if (error instanceof ConvexError && error.data?.code === "LinkChanged") return
+    const reason = error instanceof ConvexError && typeof error.data?.message === "string" ? ` ${error.data.message}` : ""
+    throw new ConvexError({
+      code: "DateRemovedGoogleKept",
+      message: `The event's date was removed while it was being sent to Google Calendar, and it couldn't be taken off again.${reason}`,
+    })
+  }
+}
+
+/**
  * Adds the event to the shared Google Calendar, or updates the Google event it's linked
  * to, as the Clubhouse account (lib/googleCalendar.ts). Then saves the link and what was
  * sent for getSyncStatus, as the signed-in caller.
@@ -120,12 +145,17 @@ export const pushEvent = companyAction({
       newEventId: googleEventIdFor(eventId),
       body,
     })
-    await ctx.runMutation(internal.googleCalendar.recordPush, {
-      eventId,
-      sentToCalendarId: calendarId ?? null,
-      calendarId: saved.link,
-      fingerprint: googleCalendarBodyFingerprint(body),
-    })
+    try {
+      await ctx.runMutation(internal.googleCalendar.recordPush, {
+        eventId,
+        sentToCalendarId: calendarId ?? null,
+        calendarId: saved.link,
+        fingerprint: googleCalendarBodyFingerprint(body),
+      })
+    } catch (error) {
+      if (error instanceof ConvexError && error.data?.code === "DateRemoved") await takeBackPush(ctx, eventId, saved.link)
+      throw error
+    }
     return { eventUrl: saved.eventUrl }
   },
 })

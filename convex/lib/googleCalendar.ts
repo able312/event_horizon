@@ -119,7 +119,11 @@ function eidFromUrl(value: string): string | null {
 export function parseGoogleCalendarLink(stored: string): GoogleCalendarLink {
   const value = stored.trim()
   const candidate = eidFromUrl(value) ?? value
-  if (candidate.endsWith(GOOGLE_ICAL_SUFFIX)) return { eventId: candidate.slice(0, -GOOGLE_ICAL_SUFFIX.length) }
+  // Usually the event ID plus the suffix, but an imported event keeps the UID it came with
+  if (candidate.endsWith(GOOGLE_ICAL_SUFFIX)) {
+    const eventId = candidate.slice(0, -GOOGLE_ICAL_SUFFIX.length)
+    return RAW_EVENT_ID.test(eventId) ? { iCalUID: candidate, eventIdIfNoMatch: eventId } : { iCalUID: candidate }
+  }
   if (candidate.includes("@")) return { iCalUID: candidate }
   const fromEid = decodeEid(candidate)
   if (fromEid) return { eventId: fromEid }

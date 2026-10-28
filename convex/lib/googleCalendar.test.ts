@@ -60,7 +60,7 @@ describe("googleEventIdFor", () => {
 
 describe("parseGoogleCalendarLink", () => {
   it("reads iCalUIDs, eids, event links and raw IDs", () => {
-    expect(parseGoogleCalendarLink("abc123def@google.com")).toEqual({ eventId: "abc123def" })
+    expect(parseGoogleCalendarLink("abc123def@google.com")).toEqual({ iCalUID: "abc123def@google.com", eventIdIfNoMatch: "abc123def" })
     expect(parseGoogleCalendarLink(" imported-uid@example.com ")).toEqual({ iCalUID: "imported-uid@example.com" })
     expect(parseGoogleCalendarLink(eid("abc123def"))).toEqual({ eventId: "abc123def" })
     expect(parseGoogleCalendarLink(eid("abc123def", "venue@g").replace(/\+/g, "-").replace(/\//g, "_"))).toEqual({ eventId: "abc123def" })
@@ -202,7 +202,15 @@ describe("deleteGoogleCalendarEvent", () => {
   it("deletes a linked Google event by its ID", async () => {
     const calls = fakeGoogle({ [`DELETE ${eventsUrl}/abc123def`]: { status: 204, json: {} } })
     expect(await deleteGoogleCalendarEvent(config, "abc123def@google.com")).toBe(true)
-    expect(calls.map(call => call.method)).toEqual(["POST", "DELETE"])
+    expect(calls.map(call => call.method)).toEqual(["POST", "GET", "DELETE"])
+  })
+
+  it("finds an imported Google iCalUID whose event ID differs from it", async () => {
+    fakeGoogle({
+      [`GET ${eventsUrl}?iCalUID=original123%40google.com&showDeleted=true&maxResults=1`]: { status: 200, json: { items: [{ id: "importedid" }] } },
+      [`DELETE ${eventsUrl}/importedid`]: { status: 204, json: {} },
+    })
+    expect(await deleteGoogleCalendarEvent(config, "original123@google.com")).toBe(true)
   })
 
   it("finds an imported iCalUID before deleting", async () => {

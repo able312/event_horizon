@@ -11,11 +11,15 @@ const setup = () => convexTest(schema, modules).withIdentity(companyIdentity)
 const dated = { title: "Dinner", startDateTime: "2026-05-12T18:30:00.000Z", endDateTime: "2026-05-12T21:00:00.000Z" }
 type Sent = { method: string; url: string; body: Record<string, unknown> | null }
 
-/** `whileWriting` runs before Google answers a create, update or delete, as another user's edit would. */
+/**
+ * `whileWriting` runs before Google answers a create, update or delete, as another user's edit would.
+ * iCalUID lookups find nothing and aren't recorded in `sent`.
+ */
 function fakeGoogle(whileWriting?: () => Promise<unknown>) {
   const sent: Sent[] = []
   vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit) => {
     if (url.startsWith("https://oauth2.googleapis.com/")) return Response.json({ access_token: "token" })
+    if (url.includes("?iCalUID=")) return Response.json({ items: [] })
     const method = init.method ?? "GET"
     const body = typeof init.body === "string" ? (JSON.parse(init.body) as Record<string, unknown>) : null
     sent.push({ method, url, body })
@@ -70,6 +74,24 @@ describe("googleCalendar.pushEvent", () => {
 
     await expect(t.action(api.googleCalendar.pushEvent, { eventId })).rejects.toThrow("was changed while this update was being sent")
     expect((await t.query(api.events.getById, { id: eventId })).calendarId).toBe("other12345@google.com")
+    expect(await t.run(ctx => ctx.db.query("googleCalendarSyncs").collect())).toEqual([])
+  })
+
+  it("takes the new Google event off again when the date is removed while it's added", async () => {
+    const t = setup()
+    let eventId: Id<"events"> | null = null
+    let removed = false
+    const sent = fakeGoogle(async () => {
+      if (removed) return
+      removed = true
+      await t.action(api.googleCalendar.updateEvent, { id: eventId!, updates: { startDateTime: null, endDateTime: null, status: "new_lead" } })
+    })
+    eventId = (await t.mutation(api.events.create, { input: dated })).id
+
+    await expect(t.action(api.googleCalendar.pushEvent, { eventId })).rejects.toThrow("date was removed while it was being sent")
+    expect(sent.map(call => call.method)).toEqual(["POST", "DELETE"])
+    expect(sent.at(-1)!.url.endsWith(`/events/${googleEventIdFor(eventId)}`)).toBe(true)
+    expect((await t.query(api.events.getById, { id: eventId })).calendarId).toBeNull()
     expect(await t.run(ctx => ctx.db.query("googleCalendarSyncs").collect())).toEqual([])
   })
 
@@ -204,7 +226,8 @@ describe("googleCalendar.removeEvent", () => {
     const t = setup()
     fakeGoogle()
     vi.mocked(fetch).mockImplementation(async (url) =>
-      String(url).startsWith("https://oauth2.googleapis.com/") ? Response.json({ access_token: "token" }) : new Response(null, { status: 410 }))
+      String(url).startsWith("https://oauth2.googleapis.com/") ? Response.json({ access_token: "token" })
+        : String(url).includes("?iCalUID=") ? Response.json({ items: [] }) : new Response(null, { status: 410 }))
     const event = await t.mutation(api.events.create, { input: { ...dated, calendarId: "gone12345@google.com" } })
 
     expect(await t.action(api.googleCalendar.removeEvent, { eventId: event.id })).toEqual({ deletedFromGoogle: false })
@@ -268,7 +291,8 @@ describe("googleCalendar.deleteEvent", () => {
     const t = setup()
     fakeGoogle()
     vi.mocked(fetch).mockImplementation(async (url) =>
-      String(url).startsWith("https://oauth2.googleapis.com/") ? Response.json({ access_token: "token" }) : new Response(null, { status: 404 }))
+      String(url).startsWith("https://oauth2.googleapis.com/") ? Response.json({ access_token: "token" })
+        : String(url).includes("?iCalUID=") ? Response.json({ items: [] }) : new Response(null, { status: 404 }))
     const event = await t.mutation(api.events.create, { input: { ...dated, calendarId: "gone12345@google.com" } })
     expect(await t.action(api.googleCalendar.deleteEvent, { eventId: event.id })).toBe(true)
   })
