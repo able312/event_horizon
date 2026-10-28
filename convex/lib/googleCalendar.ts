@@ -1,5 +1,5 @@
 import { ConvexError } from "convex/values"
-import type { GoogleCalendarEventBody } from "../../src/lib/googleCalendar"
+import type { GoogleCalendarEventBody } from "../../src/features/google-calendar/lib/googleCalendar"
 
 // Writes events to the venue's shared Google Calendar as the Clubhouse account. That
 // account signed in once (scripts/google-calendar-auth.ts); its refresh token and the

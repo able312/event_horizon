@@ -16,7 +16,7 @@ vi.mock("~/features/contacts/components/ContactsList", () => ({
   default: () => null,
 }))
 
-vi.mock("./components/GoogleCalendarCard", () => ({
+vi.mock("~/features/google-calendar", () => ({
   GoogleCalendarCard: () => null,
 }))
 

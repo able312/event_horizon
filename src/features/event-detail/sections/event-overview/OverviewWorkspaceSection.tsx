@@ -5,7 +5,7 @@ import type { EventResource } from "~/features/event-detail/types"
 
 import { TouchpointsCard } from "~/features/touchpoints"
 
-import { GoogleCalendarCard } from "./components/GoogleCalendarCard"
+import { GoogleCalendarCard } from "~/features/google-calendar"
 import { InternalNotesCard } from "./components/InternalNotesCard"
 import ContactsList from "~/features/contacts/components/ContactsList"
 

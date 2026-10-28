@@ -13,10 +13,10 @@ import {
 import { Input } from "~/components/atoms/input"
 import type { Event, UpdateEvent } from "~/definitions/database"
 import { googleCalendarQueries } from "~/lib/data/queries"
-import type { GoogleCalendarSyncStatus } from "~/lib/googleCalendar"
+import type { GoogleCalendarSyncStatus } from "../lib/googleCalendar"
 import { cn } from "~/lib/utils"
 
-import GoogleCalendarRemoveConfirmDialog from "~/features/event-detail/components/GoogleCalendarRemoveConfirmDialog"
+import GoogleCalendarRemoveConfirmDialog from "./GoogleCalendarRemoveConfirmDialog"
 import { useGoogleCalendarActions } from "../hooks/useGoogleCalendarActions"
 
 const ACTION_BUTTON_CLASS = "h-7 rounded-xs px-2 text-sm"

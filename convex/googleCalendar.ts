@@ -6,7 +6,7 @@ import { companyAction, companyQuery } from "./lib/auth"
 import { deleteGoogleCalendarEvent, findGoogleCalendarEventUrl, googleEventIdFor, isGoogleCalendarConfigured, readGoogleCalendarConfig, saveGoogleCalendarEvent } from "./lib/googleCalendar"
 import { requireDocument } from "./lib/records"
 import { primaryClientOf } from "./eventContacts"
-import { buildGoogleCalendarEventBody, googleCalendarBodyFingerprint, type GoogleCalendarEventBody, type GoogleCalendarSyncStatus } from "../src/lib/googleCalendar"
+import { buildGoogleCalendarEventBody, googleCalendarBodyFingerprint, type GoogleCalendarEventBody, type GoogleCalendarSyncStatus } from "../src/features/google-calendar/lib/googleCalendar"
 
 /** eventUrl is on calendar.google.com, the only Google Calendar origin the desktop app opens. */
 export type GoogleCalendarEventLink = { eventUrl: string }

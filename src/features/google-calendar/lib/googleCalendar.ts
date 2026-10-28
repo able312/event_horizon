@@ -1,8 +1,8 @@
-import type { PrimaryClient } from "../definitions/contacts.js"
-import type { Event } from "../definitions/database.js"
-import { EVENT_STATUS_LABELS, EVENT_TYPE_LABELS } from "../definitions/events/labels.js"
-import { formatTouchpointsPlainText } from "../features/touchpoints/lib/formatTouchpointsPlainText.js"
-import type { TouchpointPlainItem } from "../features/touchpoints/types.js"
+import type { PrimaryClient } from "../../../definitions/contacts.js"
+import type { Event } from "../../../definitions/database.js"
+import { EVENT_STATUS_LABELS, EVENT_TYPE_LABELS } from "../../../definitions/events/labels.js"
+import { formatTouchpointsPlainText } from "../../touchpoints/lib/formatTouchpointsPlainText.js"
+import type { TouchpointPlainItem } from "../../touchpoints/types.js"
 
 // Builds the shared Google Calendar event for an Event Horizon event. Convex sends it
 // (convex/googleCalendar.ts), so this module avoids the renderer-only "~" imports.

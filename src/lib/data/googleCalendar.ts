@@ -1,4 +1,4 @@
-import type { GoogleCalendarSyncStatus } from "~/lib/googleCalendar"
+import type { GoogleCalendarSyncStatus } from "~/features/google-calendar/lib/googleCalendar"
 import { api } from "../../../convex/_generated/api"
 import { fetchSource, runAction } from "./backend"
 import { toId } from "./ids"
