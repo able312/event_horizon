@@ -95,6 +95,23 @@ describe("googleCalendar.pushEvent", () => {
     expect(await t.run(ctx => ctx.db.query("googleCalendarSyncs").collect())).toEqual([])
   })
 
+  it("takes the new Google event off again when the event is deleted while it's added", async () => {
+    const t = setup()
+    let eventId: Id<"events"> | null = null
+    let deleted = false
+    const sent = fakeGoogle(async () => {
+      if (deleted) return
+      deleted = true
+      await t.action(api.googleCalendar.deleteEvent, { eventId: eventId! })
+    })
+    eventId = (await t.mutation(api.events.create, { input: dated })).id
+
+    await expect(t.action(api.googleCalendar.pushEvent, { eventId })).rejects.toThrow("event was deleted while it was being sent")
+    expect(sent.map(call => call.method)).toEqual(["POST", "DELETE"])
+    expect(sent.at(-1)!.url.endsWith(`/events/${googleEventIdFor(eventId)}`)).toBe(true)
+    expect(await t.run(ctx => ctx.db.query("googleCalendarSyncs").collect())).toEqual([])
+  })
+
   it("refuses events without dates, before contacting Google", async () => {
     const t = setup()
     const sent = fakeGoogle()
