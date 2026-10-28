@@ -84,7 +84,7 @@ describe("OverviewWorkspaceSection", () => {
     )
 
     expect(screen.queryByRole("textbox")).toBeNull()
-    expect(container.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(3)
+    expect(container.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(4)
   })
 
   it("renders saved internal notes when event data is loaded", () => {

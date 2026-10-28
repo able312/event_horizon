@@ -5,6 +5,7 @@ import type { EventResource } from "~/features/event-detail/types"
 
 import { TouchpointsCard } from "~/features/touchpoints"
 
+import { GoogleCalendarCard } from "./components/GoogleCalendarCard"
 import { InternalNotesCard } from "./components/InternalNotesCard"
 import ContactsList from "~/features/contacts/components/ContactsList"
 
@@ -38,6 +39,8 @@ const OverviewWorkspaceSection: React.FC<OverviewWorkspaceSectionProps> = ({ eve
         </div>
 
         <div className="min-w-0 space-y-4">
+          <GoogleCalendarCard event={eventDetails} onSaveCalendarId={eventResource.updateEvent} />
+
           <ContactsList
             eventId={eventDetails.id}
             eventTitle={eventDetails.title ?? "Untitled event"}
@@ -63,6 +66,7 @@ const LoadingSkeleton = () => {
           <Skeleton className="h-10 w-full" />
         </div>
         <div className="min-w-0 space-y-4">
+          <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
         </div>

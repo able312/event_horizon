@@ -86,7 +86,7 @@ The same client and refresh token work for both; only the calendar ID differs. C
 ## 7. Test it
 
 1. `npm run dev`, sign in, open an event that has a start and end date/time.
-2. In the event header, click **Google Cal** → **Add to Google Calendar**. The event appears on the **test** calendar, and the toast's **Open** button shows it in Google Calendar.
+2. On the event's **Overview**, click **Add** in the **Google Calendar** strip. The event appears on the **test** calendar, and the strip's **Open** button (or the toast's) shows it in Google Calendar.
 3. Change the event (e.g. the title) and click **Update**. The same Google event updates; no duplicate appears.
 4. Repeat once in the installed app against production, then delete that test event from the shared calendar if you don't want it there (and unlink it in Event Horizon).
 
@@ -101,8 +101,8 @@ Messages are what the app shows. Convex logs (dashboard → **Logs**) have Googl
 | "Google Calendar isn't set up on this deployment yet…" | One or more of the 4 env vars is missing on this deployment. The log names which. | Step 6 for that deployment (`--prod` for the installed app). |
 | "…access to Google Calendar has expired or was removed. Ask an admin to sign it in again." | The refresh token was revoked (Clubhouse removed the app's access, the token went unused for 6 months, the client secret was deleted/rotated) or the client ID/secret is wrong. | Re-run step 5 and set the new `GOOGLE_CALENDAR_REFRESH_TOKEN` on each deployment. If the client changed, set its ID and secret too. |
 | "Google Calendar refused the change. Check that the Clubhouse account can make changes to events…" | Clubhouse lost **Make changes to events** on that calendar, `GOOGLE_CALENDAR_ID` is wrong, or the Calendar API isn't enabled. | Step 1 (permission and calendar ID), step 2 (API enabled). |
-| "The linked Google Calendar event isn't on the shared calendar…" | The linked event was deleted for good, or it lives on a different calendar. | In the event header, open the menu next to **Update** → **Unlink**, then **Add to Google Calendar** again (or **Link existing event** with the right one). |
-| "The linked Google Calendar ID isn't one Event Horizon recognises…" | The stored link isn't an event ID, iCalUID, `eid` or event URL. | Open the menu next to **Update** → **Edit Calendar ID** or **Unlink**, then try again. |
+| "The linked Google Calendar event isn't on the shared calendar…" | The linked event was deleted for good, or it lives on a different calendar. | In the **Google Calendar** strip on the event's Overview, open **⋯** → **Remove from Google Calendar**, then **Add** again (or **⋯** → **Link existing event…** with the right one). |
+| "The linked Google Calendar ID isn't one Event Horizon recognises…" | The stored link isn't an event ID, iCalUID, `eid` or event URL. | In the **Google Calendar** strip, open **⋯** → **Change linked event…** or **Remove from Google Calendar**, then try again. |
 | "Set both start and end date/time…" | The event has no start or end. | Fill both in. |
 | "Google Calendar didn't accept the change. Try again in a minute." | Google error or rate limit. | Retry; check Convex logs if it persists. |
 

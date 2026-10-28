@@ -83,6 +83,28 @@ describe("googleCalendar.pushEvent", () => {
   })
 })
 
+describe("googleCalendar.getEventUrl", () => {
+  it("returns the linked Google event's link without changing it", async () => {
+    const t = setup()
+    const sent = fakeGoogle()
+    const event = await t.mutation(api.events.create, { input: dated })
+    await t.action(api.googleCalendar.pushEvent, { eventId: event.id })
+
+    const googleId = googleEventIdFor(event.id)
+    expect(await t.action(api.googleCalendar.getEventUrl, { eventId: event.id })).toEqual({ eventUrl: `https://calendar.google.com/calendar/event?eid=${googleId}` })
+    expect(sent[1]).toMatchObject({ method: "GET", body: null })
+    expect(sent[1]!.url.endsWith(`/events/${googleId}`)).toBe(true)
+  })
+
+  it("refuses an unlinked event, before contacting Google", async () => {
+    const t = setup()
+    const sent = fakeGoogle()
+    const event = await t.mutation(api.events.create, { input: dated })
+    await expect(t.action(api.googleCalendar.getEventUrl, { eventId: event.id })).rejects.toThrow("isn't on Google Calendar yet")
+    expect(sent).toEqual([])
+  })
+})
+
 describe("googleCalendar.removeEvent", () => {
   it("deletes the linked Google event and clears the link", async () => {
     const t = setup()

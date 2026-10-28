@@ -10,6 +10,11 @@ export function pushEventToGoogleCalendar(eventId: string): Promise<{ eventUrl: 
   return runAction(api.googleCalendar.pushEvent, { eventId: toId<"events">(eventId) })
 }
 
+/** The linked Google event's link on calendar.google.com, for opening it. */
+export function getGoogleCalendarEventUrl(eventId: string): Promise<{ eventUrl: string }> {
+  return runAction(api.googleCalendar.getEventUrl, { eventId: toId<"events">(eventId) })
+}
+
 /**
  * Deletes the linked Google event from the shared calendar and clears the link.
  * `deletedFromGoogle` is false when the Google event was already gone.

@@ -1,10 +1,11 @@
 import { ConvexError, v } from "convex/values"
 import { api } from "./_generated/api"
 import { companyAction } from "./lib/auth"
-import { deleteGoogleCalendarEvent, googleEventIdFor, isGoogleCalendarConfigured, readGoogleCalendarConfig, saveGoogleCalendarEvent } from "./lib/googleCalendar"
+import { deleteGoogleCalendarEvent, findGoogleCalendarEventUrl, googleEventIdFor, isGoogleCalendarConfigured, readGoogleCalendarConfig, saveGoogleCalendarEvent } from "./lib/googleCalendar"
 import { buildGoogleCalendarEventBody } from "../src/lib/googleCalendar"
 
-export type GoogleCalendarPushResult = { eventUrl: string }
+/** eventUrl is on calendar.google.com, the only Google Calendar origin the desktop app opens. */
+export type GoogleCalendarEventLink = { eventUrl: string }
 /** deletedFromGoogle is false when the linked Google event was already gone. */
 export type GoogleCalendarRemoveResult = { deletedFromGoogle: boolean }
 
@@ -15,7 +16,7 @@ export type GoogleCalendarRemoveResult = { deletedFromGoogle: boolean }
  */
 export const pushEvent = companyAction({
   args: { eventId: v.id("events") },
-  handler: async (ctx, { eventId }): Promise<GoogleCalendarPushResult> => {
+  handler: async (ctx, { eventId }): Promise<GoogleCalendarEventLink> => {
     const config = readGoogleCalendarConfig()
     const event = await ctx.runQuery(api.events.getById, { id: eventId })
     if (!event.startDateTime || !event.endDateTime) {
@@ -39,6 +40,17 @@ export const pushEvent = companyAction({
       await ctx.runMutation(api.events.update, { id: eventId, updates: { calendarId: saved.iCalUID } })
     }
     return { eventUrl: saved.eventUrl }
+  },
+})
+
+/** Finds the linked Google event's link, so it can be opened without pushing the event again. */
+export const getEventUrl = companyAction({
+  args: { eventId: v.id("events") },
+  handler: async (ctx, { eventId }): Promise<GoogleCalendarEventLink> => {
+    const event = await ctx.runQuery(api.events.getById, { id: eventId })
+    const linked = event.calendarId?.trim()
+    if (!linked) throw new ConvexError({ code: "NotLinked", message: "This event isn't on Google Calendar yet." })
+    return { eventUrl: await findGoogleCalendarEventUrl(readGoogleCalendarConfig(), linked) }
   },
 })
 

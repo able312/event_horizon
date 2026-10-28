@@ -47,6 +47,7 @@ const contracts: Contract[] = [
   { name: "events.getStartingBetween", kind: "query", call: () => events.getEventsStartingBetween("start", "end"), args: { startFrom: "start", startTo: "end" } },
   { name: "events.importFromCalendar", kind: "mutation", call: () => events.importCalendarEvents([]), args: { rows: [] } },
   { name: "googleCalendar.pushEvent", kind: "action", call: () => googleCalendar.pushEventToGoogleCalendar(eventId), args: { eventId } },
+  { name: "googleCalendar.getEventUrl", kind: "action", call: () => googleCalendar.getGoogleCalendarEventUrl(eventId), args: { eventId } },
   { name: "googleCalendar.removeEvent", kind: "action", call: () => googleCalendar.removeEventFromGoogleCalendar(eventId), args: { eventId } },
   { name: "eventRequests.listPending", kind: "source", call: () => eventRequests.getPendingEventRequests(), args: {} },
   { name: "eventRequests.accept", kind: "mutation", call: () => eventRequests.acceptEventRequest(id, { ...input, id, createdAt: "old", clientNotes: "Notes" }, { newContact: person }), args: { id, input: { ...input, clientNotes: "Notes" }, client: { newContact: person } } },

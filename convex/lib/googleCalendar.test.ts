@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { deleteGoogleCalendarEvent, getAccessToken, googleEventIdFor, parseGoogleCalendarLink, readGoogleCalendarConfig, saveGoogleCalendarEvent, type GoogleCalendarConfig } from "./googleCalendar"
+import { deleteGoogleCalendarEvent, findGoogleCalendarEventUrl, getAccessToken, googleEventIdFor, parseGoogleCalendarLink, readGoogleCalendarConfig, saveGoogleCalendarEvent, type GoogleCalendarConfig } from "./googleCalendar"
 
 const config: GoogleCalendarConfig = { clientId: "client", clientSecret: "secret", refreshToken: "refresh", calendarId: "venue@group.calendar.google.com" }
 const body = { summary: "Dinner", description: "EVENT TYPE: Function", start: { dateTime: "2026-05-12T18:30:00.000Z" }, end: { dateTime: "2026-05-12T21:00:00.000Z" } }
@@ -136,6 +136,27 @@ describe("saveGoogleCalendarEvent", () => {
     fakeGoogle({ [`POST ${eventsUrl}`]: { status: 503, json: {} } })
     await expect(saveGoogleCalendarEvent(config, { linkedCalendarId: null, newEventId: "ehnew", body })).rejects.toThrow("Try again in a minute")
     expect(console.error).toHaveBeenCalledWith("Google Calendar create failed (403): Forbidden")
+  })
+})
+
+describe("findGoogleCalendarEventUrl", () => {
+  it("reads the linked event's link, looking up imported iCalUIDs", async () => {
+    fakeGoogle({
+      [`GET ${eventsUrl}/abc123def`]: { status: 200, json: savedEvent("abc123def") },
+      [`GET ${eventsUrl}?iCalUID=imported%40example.com&showDeleted=true&maxResults=1`]: { status: 200, json: { items: [{ id: "importedid" }] } },
+      [`GET ${eventsUrl}/importedid`]: { status: 200, json: savedEvent("importedid") },
+    })
+    expect(await findGoogleCalendarEventUrl(config, "abc123def@google.com")).toBe("https://calendar.google.com/calendar/event?eid=abc123def")
+    expect(await findGoogleCalendarEventUrl(config, "imported@example.com")).toBe("https://calendar.google.com/calendar/event?eid=importedid")
+  })
+
+  it("explains a linked event that is gone or deleted", async () => {
+    fakeGoogle({
+      [`GET ${eventsUrl}/gone12345`]: { status: 404, json: {} },
+      [`GET ${eventsUrl}/deleted123`]: { status: 200, json: { ...savedEvent("deleted123"), status: "cancelled" } },
+    })
+    await expect(findGoogleCalendarEventUrl(config, "gone12345")).rejects.toThrow("isn't on the shared calendar")
+    await expect(findGoogleCalendarEventUrl(config, "deleted123")).rejects.toThrow("isn't on the shared calendar")
   })
 })
 

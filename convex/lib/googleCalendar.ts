@@ -206,7 +206,7 @@ function calendarClient(config: GoogleCalendarConfig, accessToken: string) {
     return { iCalUID: data.iCalUID, eventUrl: toCalendarEventUrl(data.htmlLink) }
   }
 
-  return {
+  const client = {
     async findEventId(iCalUID: string): Promise<string> {
       // showDeleted so a deleted copy is restored rather than reported missing
       const query = new URLSearchParams({ iCalUID, showDeleted: "true", maxResults: "1" })
@@ -216,6 +216,19 @@ function calendarClient(config: GoogleCalendarConfig, accessToken: string) {
       const id = items[0]?.id
       if (typeof id !== "string") throw googleCalendarError("GoogleCalendarEventNotFound", EVENT_NOT_FOUND_MESSAGE)
       return id
+    },
+    /** The Google event ID for a stored link, looking up iCalUIDs. */
+    async resolve(link: GoogleCalendarLink): Promise<string> {
+      return "eventId" in link ? link.eventId : client.findEventId(link.iCalUID)
+    },
+    /** Reads the event; a deleted ("cancelled") event counts as missing. */
+    async get(id: string): Promise<SavedGoogleEvent> {
+      const result = await send("GET", `${eventsUrl}/${encodeURIComponent(id)}`)
+      if (result.status === 404 || result.status === 410 || (result.ok && result.data.status === "cancelled")) {
+        throw googleCalendarError("GoogleCalendarEventNotFound", EVENT_NOT_FOUND_MESSAGE)
+      }
+      if (!result.ok) throw requestFailed("lookup", result.status, result.data)
+      return toSaved(result.data)
     },
     /** Insert with a chosen ID; null when that ID is already taken (even by a deleted event). */
     async insert(id: string, body: GoogleCalendarEventBody): Promise<SavedGoogleEvent | null> {
@@ -239,6 +252,7 @@ function calendarClient(config: GoogleCalendarConfig, accessToken: string) {
       return true
     },
   }
+  return client
 }
 
 /** Updates the linked Google event, or creates one with `newEventId` when nothing is linked yet. */
@@ -249,11 +263,16 @@ export async function saveGoogleCalendarEvent(
   const client = calendarClient(config, await getAccessToken(config))
   const linked = request.linkedCalendarId?.trim()
   if (linked) {
-    const link = parseGoogleCalendarLink(linked)
-    const eventId = "eventId" in link ? link.eventId : await client.findEventId(link.iCalUID)
-    return client.patch(eventId, request.body)
+    return client.patch(await client.resolve(parseGoogleCalendarLink(linked)), request.body)
   }
   return (await client.insert(request.newEventId, request.body)) ?? client.patch(request.newEventId, request.body)
+}
+
+/** The calendar.google.com link of the linked Google event, for opening it from the app. */
+export async function findGoogleCalendarEventUrl(config: GoogleCalendarConfig, linkedCalendarId: string): Promise<string> {
+  const link = parseGoogleCalendarLink(linkedCalendarId)
+  const client = calendarClient(config, await getAccessToken(config))
+  return (await client.get(await client.resolve(link))).eventUrl
 }
 
 /**

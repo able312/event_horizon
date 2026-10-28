@@ -15,6 +15,7 @@ interface EventDeleteConfirmDialogProps {
   onConfirm: () => Promise<void>
 }
 
+/** Cancel takes focus so Enter, or clicking through by habit, keeps the event. */
 const EventDeleteConfirmDialog: React.FC<EventDeleteConfirmDialogProps> = ({
   open,
   isDeleting,
@@ -33,7 +34,7 @@ const EventDeleteConfirmDialog: React.FC<EventDeleteConfirmDialogProps> = ({
         </DialogHeader>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onCancel} disabled={isDeleting}>
+          <Button variant="outline" onClick={onCancel} disabled={isDeleting} autoFocus>
             Cancel
           </Button>
           <Button variant="destructive" onClick={() => void onConfirm()} disabled={isDeleting}>
