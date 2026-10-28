@@ -48,12 +48,13 @@ function cardStatus(isLinked: boolean, hasDates: boolean, syncStatus: GoogleCale
  * Add/Update writes it from Convex (googleCalendar.pushEvent), which also saves the link.
  * Update stands out while the event has changes Google doesn't have, and moves to the menu
  * once Google is up to date (googleCalendar.getSyncStatus).
- * Linking pastes the ID or link of an event already in Google; Remove deletes the Google event and clears the link.
+ * Linking pastes the ID or link of an event already in Google; Disconnect clears the link and
+ * leaves the Google event, while Remove deletes the Google event and clears the link.
  */
 export const GoogleCalendarCard: React.FC<GoogleCalendarCardProps> = ({ event, onSaveCalendarId }) => {
   const isLinked = Boolean(event.calendarId?.trim())
   const hasDates = Boolean(event.startDateTime && event.endDateTime) // pushing needs both start and end
-  const actions = useGoogleCalendarActions(event.id, isLinked)
+  const actions = useGoogleCalendarActions(event.id, isLinked, () => onSaveCalendarId({ calendarId: null }))
   const { data: syncStatus } = useQuery(googleCalendarQueries.syncStatus(event.id))
   const status = cardStatus(isLinked, hasDates, syncStatus)
   const isSynced = isLinked && syncStatus === "synced"
@@ -163,9 +164,14 @@ export const GoogleCalendarCard: React.FC<GoogleCalendarCardProps> = ({ event, o
                 {isLinked ? "Change linked event…" : "Link existing event…"}
               </DropdownMenuItem>
               {isLinked ? (
-                <DropdownMenuItem variant="destructive" onClick={() => setShowRemoveConfirm(true)}>
-                  Remove from Google Calendar
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem onClick={() => void actions.disconnect()}>
+                    Disconnect (keep Google event)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem variant="destructive" onClick={() => setShowRemoveConfirm(true)}>
+                    Remove from Google Calendar
+                  </DropdownMenuItem>
+                </>
               ) : null}
             </DropdownMenuContent>
           </DropdownMenu>

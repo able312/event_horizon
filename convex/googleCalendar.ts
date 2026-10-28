@@ -1,10 +1,11 @@
 import { ConvexError, v } from "convex/values"
 import { api, internal } from "./_generated/api"
 import type { Doc, Id } from "./_generated/dataModel"
-import { internalMutation, internalQuery, type QueryCtx } from "./_generated/server"
-import { companyAction, companyQuery } from "./lib/auth"
+import { internalQuery, type QueryCtx } from "./_generated/server"
+import { companyAction, companyInternalMutation, companyQuery } from "./lib/auth"
 import { deleteGoogleCalendarEvent, findGoogleCalendarEventUrl, googleEventIdFor, isGoogleCalendarConfigured, readGoogleCalendarConfig, saveGoogleCalendarEvent } from "./lib/googleCalendar"
 import { requireDocument } from "./lib/records"
+import { nullable } from "./lib/validators"
 import { primaryClientOf } from "./eventContacts"
 import { buildGoogleCalendarEventBody, googleCalendarBodyFingerprint, type GoogleCalendarEventBody, type GoogleCalendarSyncStatus } from "../src/features/google-calendar/lib/googleCalendar"
 
@@ -53,10 +54,24 @@ export const getPushContent = internalQuery({
   },
 })
 
-/** Records what was just sent to the Google event linked as `calendarId`. */
-export const recordSync = internalMutation({
-  args: { eventId: v.id("events"), calendarId: v.string(), fingerprint: v.string() },
-  handler: async (ctx, { eventId, calendarId, fingerprint }) => {
+/**
+ * Saves the link to the Google event that was just written and records what was sent to
+ * it, in one transaction so getSyncStatus never sees one without the other. Refuses if
+ * someone changed the link while the push was in flight, rather than overwriting theirs.
+ */
+export const recordPush = companyInternalMutation({
+  args: { eventId: v.id("events"), sentToCalendarId: nullable(v.string()), calendarId: v.string(), fingerprint: v.string() },
+  handler: async (ctx, { eventId, sentToCalendarId, calendarId, fingerprint }) => {
+    const event = await requireDocument(ctx, "events", eventId)
+    if ((event.calendarId?.trim() || null) !== (sentToCalendarId?.trim() || null)) {
+      throw new ConvexError({
+        code: "LinkChanged",
+        message: "The linked Google Calendar event was changed while this update was being sent. Check the link and update again.",
+      })
+    }
+    if (event.calendarId !== calendarId) {
+      await ctx.db.patch("events", eventId, { calendarId, updatedAt: Date.now().toString() })
+    }
     const sync = { eventId, calendarId, fingerprint, syncedAt: new Date().toISOString() }
     const existing = await lastSync(ctx, eventId)
     if (existing) await ctx.db.patch("googleCalendarSyncs", existing._id, sync)
@@ -66,9 +81,8 @@ export const recordSync = internalMutation({
 
 /**
  * Adds the event to the shared Google Calendar, or updates the Google event it's linked
- * to, as the Clubhouse account (lib/googleCalendar.ts). The link is saved with
- * events.update, so it runs as the signed-in caller, then what was sent is recorded
- * for getSyncStatus.
+ * to, as the Clubhouse account (lib/googleCalendar.ts). Then saves the link and what was
+ * sent for getSyncStatus, as the signed-in caller.
  */
 export const pushEvent = companyAction({
   args: { eventId: v.id("events") },
@@ -84,11 +98,9 @@ export const pushEvent = companyAction({
       newEventId: googleEventIdFor(eventId),
       body,
     })
-    if (saved.iCalUID !== calendarId) {
-      await ctx.runMutation(api.events.update, { id: eventId, updates: { calendarId: saved.iCalUID } })
-    }
-    await ctx.runMutation(internal.googleCalendar.recordSync, {
+    await ctx.runMutation(internal.googleCalendar.recordPush, {
       eventId,
+      sentToCalendarId: calendarId ?? null,
       calendarId: saved.iCalUID,
       fingerprint: googleCalendarBodyFingerprint(body),
     })
@@ -127,17 +139,27 @@ export const removeEvent = companyAction({
 /**
  * Deletes the event from Event Horizon, first deleting its linked Google event so it
  * isn't left on the shared calendar. If Google refuses, the event is kept and the
- * refusal is shown. Deployments without Google Calendar set up skip that step, since
- * they can't reach the calendar and would otherwise never be able to delete linked events.
+ * refusal is shown. If the Google event goes but the event can't be deleted, deleting
+ * again finishes the job, since a Google event that's already gone counts as deleted.
+ * Deployments without Google Calendar set up skip that step, since they can't reach
+ * the calendar and would otherwise never be able to delete linked events.
  */
 export const deleteEvent = companyAction({
   args: { eventId: v.id("events") },
   handler: async (ctx, { eventId }): Promise<boolean> => {
     const event = await ctx.runQuery(api.events.getById, { id: eventId })
     const linked = event.calendarId?.trim()
-    if (linked && isGoogleCalendarConfigured()) {
-      await deleteGoogleCalendarEvent(readGoogleCalendarConfig(), linked)
+    if (!linked || !isGoogleCalendarConfigured()) return await ctx.runMutation(api.events.remove, { id: eventId })
+
+    await deleteGoogleCalendarEvent(readGoogleCalendarConfig(), linked)
+    try {
+      return await ctx.runMutation(api.events.remove, { id: eventId })
+    } catch (error) {
+      console.error("Deleted the Google event but not the event", error)
+      throw new ConvexError({
+        code: "DeletePartlyDone",
+        message: "Removed from Google Calendar, but the event couldn't be deleted. Try deleting it again.",
+      })
     }
-    return await ctx.runMutation(api.events.remove, { id: eventId })
   },
 })

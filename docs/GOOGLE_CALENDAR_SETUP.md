@@ -88,7 +88,7 @@ The same client and refresh token work for both; only the calendar ID differs. C
 1. `npm run dev`, sign in, open an event that has a start and end date/time.
 2. On the event's **Overview**, click **Add** in the **Google Calendar** strip. The event appears on the **test** calendar, and the strip's **Open** button (or the toast's) shows it in Google Calendar.
 3. Change the event (e.g. the title) and click **Update**. The same Google event updates; no duplicate appears.
-4. Repeat once in the installed app against production, then delete that test event from the shared calendar if you don't want it there (and unlink it in Event Horizon).
+4. Repeat once in the installed app against production, then use **Remove from Google Calendar** in the strip's menu if you don't want that test event on the shared calendar. **Disconnect** in the same menu unlinks an event and leaves the Google event in place.
 
 ---
 

@@ -2,7 +2,7 @@ import { ConvexError, type PropertyValidators, type ObjectType } from "convex/va
 import type { UserIdentity } from "convex/server"
 
 import type { Id } from "../_generated/dataModel"
-import { action, mutation, query, type ActionCtx, type MutationCtx, type QueryCtx } from "../_generated/server"
+import { action, internalMutation, mutation, query, type ActionCtx, type MutationCtx, type QueryCtx } from "../_generated/server"
 import { auditedWriter } from "./audit"
 import { upsertUser } from "./users"
 
@@ -62,14 +62,26 @@ export function companyMutation<Args extends PropertyValidators, Returns>(defini
   args: Args
   handler: (ctx: CompanyMutationCtx, args: ObjectType<Args>) => Returns | Promise<Returns>
 }) {
-  return mutation({
-    args: definition.args,
-    handler: async (ctx, args: ObjectType<Args>): Promise<Returns> => {
-      const identity = await requireCompanyUser(ctx)
-      const userId = await upsertUser(ctx, identity)
-      return definition.handler({ ...ctx, db: auditedWriter(ctx.db, userId), userId }, args)
-    },
-  })
+  return mutation({ args: definition.args, handler: companyMutationHandler(definition.handler) })
+}
+
+/**
+ * An internal mutation with the same company identity check and audit stamps, for writes
+ * only companyActions should make. Actions pass their caller on through runMutation.
+ */
+export function companyInternalMutation<Args extends PropertyValidators, Returns>(definition: {
+  args: Args
+  handler: (ctx: CompanyMutationCtx, args: ObjectType<Args>) => Returns | Promise<Returns>
+}) {
+  return internalMutation({ args: definition.args, handler: companyMutationHandler(definition.handler) })
+}
+
+function companyMutationHandler<Args, Returns>(handler: (ctx: CompanyMutationCtx, args: Args) => Returns | Promise<Returns>) {
+  return async (ctx: MutationCtx, args: Args): Promise<Returns> => {
+    const identity = await requireCompanyUser(ctx)
+    const userId = await upsertUser(ctx, identity)
+    return handler({ ...ctx, db: auditedWriter(ctx.db, userId), userId }, args)
+  }
 }
 
 /**

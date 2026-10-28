@@ -136,6 +136,17 @@ describe("GoogleCalendarCard", () => {
     expect(screen.getByRole("button", { name: "Update Google Calendar event" }).hasAttribute("disabled")).toBe(false)
   })
 
+  it("hides unexpected errors behind a friendly message", async () => {
+    vi.mocked(pushEventToGoogleCalendar).mockRejectedValue(new Error("[CONVEX A(googleCalendar:pushEvent)] Server Error"))
+    renderCard(linked)
+
+    fireEvent.click(screen.getByRole("button", { name: "Update Google Calendar event" }))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Failed to update Google Calendar")
+    })
+  })
+
   it("opens the linked Google event without updating it", async () => {
     renderCard(linked)
 
@@ -210,6 +221,18 @@ describe("GoogleCalendarCard", () => {
 
     expect(screen.queryByPlaceholderText(LINK_PLACEHOLDER)).toBeNull()
     expect(screen.getByRole("button", { name: "Add to Google Calendar" })).toBeTruthy()
+  })
+
+  it("disconnects the linked event without touching Google", async () => {
+    const { onSaveCalendarId } = renderCard(linked)
+
+    await chooseMenuItem("Disconnect (keep Google event)")
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("Disconnected. The Google event is still on the shared calendar")
+    })
+    expect(onSaveCalendarId).toHaveBeenCalledWith({ calendarId: null })
+    expect(removeEventFromGoogleCalendar).not.toHaveBeenCalled()
   })
 
   it("removes the event from Google Calendar after confirming", async () => {

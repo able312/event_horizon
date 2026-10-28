@@ -31,7 +31,8 @@ const GoogleCalendarRemoveConfirmDialog: React.FC<GoogleCalendarRemoveConfirmDia
         <DialogTitle>Remove from Google Calendar?</DialogTitle>
         <DialogDescription>
           This deletes the event from the shared Google Calendar for everyone and unlinks it. The
-          event stays in Event Horizon, and you can add it to Google Calendar again later.
+          event stays in Event Horizon, and you can add it to Google Calendar again later. To unlink
+          it and keep the Google event, use Disconnect instead.
         </DialogDescription>
       </DialogHeader>
 
