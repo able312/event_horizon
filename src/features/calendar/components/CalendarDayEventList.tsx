@@ -27,6 +27,8 @@ type CalendarDayEventListProps = {
   day: number
   /** Left side of the header line: the day number and any markers beside it */
   header: ReactNode
+  /** Right of the day number, e.g. the holiday marker. Takes the room left over before the "+N more" trigger. */
+  headerTrailing?: ReactNode
   /** Shown above the events without counting towards them, e.g. the draft chip */
   leadingItem?: ReactNode
   events: Event[]
@@ -47,6 +49,7 @@ type CalendarDayEventListProps = {
 function CalendarDayEventList({
   day,
   header,
+  headerTrailing,
   leadingItem,
   events,
   maxVisible,
@@ -101,6 +104,9 @@ function CalendarDayEventList({
       {/* A container, so the trigger can shorten when the cell is narrow */}
       <div className="@container mb-1 flex min-h-5 shrink-0 items-center gap-1" data-day-header>
         <div className="flex shrink-0 items-center gap-1">{header}</div>
+        {headerTrailing ? (
+          <div className="flex min-w-0 flex-1 items-center">{headerTrailing}</div>
+        ) : null}
         {hiddenCount > 0 ? (
           <MoreEventsPopover
             hiddenCount={hiddenCount}
