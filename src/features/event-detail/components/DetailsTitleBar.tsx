@@ -19,6 +19,8 @@ import {
   GuestCountDialog,
 } from "~/components/event-detail/EventDialogs"
 import { DetailsTitleBarSkeleton } from "~/features/event-detail/components/DetailsTitleBarSkeleton"
+import EventDeleteConfirmDialog from "~/features/calendar/components/EventDeleteConfirmDialog"
+import { useEventDeleteConfirmation } from "~/features/calendar/hooks/useEventDeleteConfirmation"
 import { formatDateMonthDay, formatTime, isSameDay } from "~/lib/formatters"
 import { cn } from "~/lib/utils"
 
@@ -43,6 +45,7 @@ const DetailsTitleBar: React.FC<DetailsTitleBarProps> = ({ eventResource }) => {
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [dateDialogOpen, setDateDialogOpen] = useState(false)
     const [guestsDialogOpen, setGuestsDialogOpen] = useState(false)
+    const deleteConfirmation = useEventDeleteConfirmation(() => deleteEvent())
     const { data: client } = usePrimaryClient(event?.id)
     const clientName = client?.displayName.trim()
 
@@ -67,12 +70,6 @@ const DetailsTitleBar: React.FC<DetailsTitleBarProps> = ({ eventResource }) => {
     event.startDateTime && event.endDateTime
       ? isSameDay(event.startDateTime, event.endDateTime)
       : false
-
-  const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete this event?")) {
-      await deleteEvent()
-    }
-  }
 
   const onStatusChange = (status: EventStatus) => {
     void updateEvent({ status })
@@ -203,7 +200,7 @@ const DetailsTitleBar: React.FC<DetailsTitleBarProps> = ({ eventResource }) => {
     
                 <EntityKebabMenu
                   onEdit={() => setEditDialogOpen(true)}
-                  onDelete={() => void handleDelete()}
+                  onDelete={() => deleteConfirmation.requestDelete(event.id)}
                   variant="ghost"
                   className="h-8 w-8"
                 />
@@ -215,6 +212,7 @@ const DetailsTitleBar: React.FC<DetailsTitleBarProps> = ({ eventResource }) => {
                 startDateTime={event.startDateTime ?? null}
                 endDateTime={event.endDateTime ?? null}
                 status={event.status}
+                calendarId={event.calendarId ?? null}
                 onSave={(updates) => {
                   void updateEvent(updates)
                 }}
@@ -235,6 +233,13 @@ const DetailsTitleBar: React.FC<DetailsTitleBarProps> = ({ eventResource }) => {
                 }}
               />
         
+              <EventDeleteConfirmDialog
+                open={deleteConfirmation.isOpen}
+                isDeleting={deleteConfirmation.isDeleting}
+                onCancel={deleteConfirmation.cancelDelete}
+                onConfirm={deleteConfirmation.confirmDelete}
+              />
+
               <EditEventDialog
                 open={editDialogOpen}
                 onOpenChange={setEditDialogOpen}

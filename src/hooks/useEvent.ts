@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { Event, UpdateEvent } from "~/definitions/database"
+import { BackendError } from "~/lib/data/backend"
 import { updateEvent, deleteEvent } from "~/lib/data/events"
 import { eventKeys, eventQueries } from "~/lib/data/queries"
 import { findCachedEventById } from "./eventsCache"
@@ -36,7 +37,8 @@ export function useEvent() {
       if (context?.previousEvent) {
         queryClient.setQueryData(eventQueryKey, context.previousEvent)
       }
-      toast.error("Failed to update event")
+      // BackendError messages are written for the user, e.g. why Google Calendar refused
+      toast.error(_err instanceof BackendError ? _err.message : "Failed to update event")
       console.error("Failed to update event: ", _err.message)
     },
   })
@@ -51,9 +53,10 @@ export function useEvent() {
       toast.success("Event deleted", { id: "delete-event" })
       navigate("/events")
     },
-    onError: (_err) => {
-      toast.error("Failed to delete event", { id: "delete-event" })
-      console.error("Failed to delete event: ", _err.message)
+    onError: (err) => {
+      // BackendError messages are written for the user, e.g. why Google Calendar refused
+      toast.error(err instanceof BackendError ? err.message : "Failed to delete event", { id: "delete-event" })
+      console.error("Failed to delete event: ", err.message)
     },
   })
 

@@ -36,12 +36,30 @@ async function registeredFunctions(): Promise<[string, RegisteredFunction][]> {
 }
 
 /**
- * Internal functions: run through the Convex CLI with admin access, or by the
- * secret-checked HTTP route in http.ts (website event requests).
+ * Internal functions: run through the Convex CLI with admin access, by the
+ * secret-checked HTTP route in http.ts (website event requests), or by
+ * googleCalendar.pushEvent / removeEvent / updateEvent once they have checked the caller (recordPush
+ * and recordRemoval check again, as companyInternalMutations, so their writes are
+ * stamped with that caller).
  */
 const INTERNAL_FUNCTIONS = new Set([
   "./developmentSeed.ts:seed",
   "./eventRequests.ts:receive",
+  "./googleCalendar.ts:getPushContent",
+  "./googleCalendar.ts:recordPush",
+  "./googleCalendar.ts:recordRemoval",
+])
+
+/**
+ * Public actions: only where Convex has to call an outside service. Each one is a
+ * companyAction and reads or writes data only through checked functions.
+ */
+const PUBLIC_ACTIONS = new Set([
+  "./googleCalendar.ts:pushEvent",
+  "./googleCalendar.ts:getEventUrl",
+  "./googleCalendar.ts:removeEvent",
+  "./googleCalendar.ts:deleteEvent",
+  "./googleCalendar.ts:updateEvent",
 ])
 
 function authCode(error: unknown): unknown {
@@ -80,7 +98,7 @@ describe("auth enforcement on every function", () => {
     expect((await registeredFunctions()).length).toBeGreaterThan(70)
   })
 
-  it("exposes only public queries and mutations, except the internal seed and event request functions", async () => {
+  it("exposes only public queries and mutations, except the internal seed and event request functions and the listed actions", async () => {
     for (const [name, fn] of await registeredFunctions()) {
       if (INTERNAL_FUNCTIONS.has(name)) {
         expect(fn.isInternal).toBe(true)
@@ -88,7 +106,7 @@ describe("auth enforcement on every function", () => {
         expect(fn.isAction).not.toBe(true)
         continue
       }
-      expect({ name, isPublic: fn.isPublic === true, isAction: fn.isAction === true }).toEqual({ name, isPublic: true, isAction: false })
+      expect({ name, isPublic: fn.isPublic === true, isAction: fn.isAction === true }).toEqual({ name, isPublic: true, isAction: PUBLIC_ACTIONS.has(name) })
     }
   })
 

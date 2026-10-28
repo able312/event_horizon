@@ -1,11 +1,15 @@
 import type { TouchpointPlainItem } from "../types"
 
-import { parseStoredDueDate } from "./touchpointStatus"
+import { parseStoredDueDate } from "./storedDueDate"
+
+// A fixed locale, not the machine's: the Google Calendar copy is built in Convex, and it
+// should match what anyone on the team gets from the clipboard copy
+const DUE_DATE_LOCALE = "en-CA"
 
 function formatDueDate(dueDate: string | null): string | null {
   const parsed = parseStoredDueDate(dueDate)
   if (!parsed) return null
-  return parsed.toLocaleDateString(undefined, {
+  return parsed.toLocaleDateString(DUE_DATE_LOCALE, {
     month: "short",
     day: "numeric",
     year: "numeric",

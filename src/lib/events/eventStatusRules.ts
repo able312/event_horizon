@@ -32,15 +32,3 @@ export function assertStatusAllowedForDate(
     throw new Error(EVENT_STATUS_REQUIRES_DATE_ERROR)
   }
 }
-
-/**
- * True when saving `nextStartDateTime` would remove the date from an event whose
- * current status needs one, so the user must confirm moving it back to New Lead.
- */
-export function isDateRemovalBlockedByStatus(
-  status: EventStatus,
-  currentStartDateTime: string | null | undefined,
-  nextStartDateTime: string | null | undefined,
-): boolean {
-  return Boolean(currentStartDateTime) && !nextStartDateTime && statusRequiresDate(status)
-}

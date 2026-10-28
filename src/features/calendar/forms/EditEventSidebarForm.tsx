@@ -5,7 +5,7 @@ import EventFormFields, {
   type EventFormValues,
 } from "./EventFormFields"
 import { isEventFormValid } from "./eventFormValidation"
-import { isStatusAllowedForDate } from "~/lib/events/eventStatusRules"
+import { dateRemovalEffects, type DateRemovalEffects } from "~/lib/events/eventDateRemoval"
 import RemoveEventDateConfirmDialog from "~/components/molecules/RemoveEventDateConfirmDialog"
 
 interface EditEventSidebarFormProps {
@@ -55,20 +55,27 @@ const EditEventFields: React.FC<EditEventSidebarFormProps & { event: Event }> = 
   const source = useMemo(() => createFormValuesFromEvent(event), [event])
   const { values: formValues, update } = useLiveDraft(source)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [confirmingDateRemoval, setConfirmingDateRemoval] = useState(false)
+  const [confirmingDateRemoval, setConfirmingDateRemoval] = useState<DateRemovalEffects | null>(null)
 
   const handleSave = async () => {
     if (!isEventFormValid(formValues) || isSubmitting) return
-    if (!isStatusAllowedForDate(formValues.status, formValues.startDateTime)) {
-      setConfirmingDateRemoval(true)
+    const effects = dateRemovalEffects({
+      status: formValues.status,
+      currentStartDateTime: event.startDateTime,
+      nextStartDateTime: formValues.startDateTime,
+      calendarId: event.calendarId,
+    })
+    if (effects) {
+      setConfirmingDateRemoval(effects)
       return
     }
     await saveValues(formValues)
   }
 
   const handleConfirmDateRemoval = async () => {
-    setConfirmingDateRemoval(false)
-    await saveValues({ ...formValues, status: "new_lead" })
+    const movesToNewLead = confirmingDateRemoval?.movesToNewLead
+    setConfirmingDateRemoval(null)
+    await saveValues(movesToNewLead ? { ...formValues, status: "new_lead" } : formValues)
   }
 
   const saveValues = async (values: EventFormValues) => {
@@ -121,9 +128,9 @@ const EditEventFields: React.FC<EditEventSidebarFormProps & { event: Event }> = 
       </div>
 
       <RemoveEventDateConfirmDialog
-        open={confirmingDateRemoval}
+        effects={confirmingDateRemoval}
         status={formValues.status}
-        onCancel={() => setConfirmingDateRemoval(false)}
+        onCancel={() => setConfirmingDateRemoval(null)}
         onConfirm={() => void handleConfirmDateRemoval()}
       />
     </div>

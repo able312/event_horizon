@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { AssignContactTarget } from "~/definitions/contacts"
 import type { Event, NewEvent, UpdateEvent } from "~/definitions/database"
+import { BackendError } from "~/lib/data/backend"
 import * as eventsApi from "~/lib/data/events"
 import { eventKeys, eventQueries } from "~/lib/data/queries"
 import {
@@ -186,7 +187,7 @@ export function useEvents(month: string) {
         previousEventById,
       }
     },
-    onError: (_err, _variables, context) => {
+    onError: (err, _variables, context) => {
       for (const snapshot of context?.snapshots ?? []) {
         queryClient.setQueryData(snapshot.key, snapshot.data)
       }
@@ -194,7 +195,8 @@ export function useEvents(month: string) {
       if (context?.eventQueryKey) {
         queryClient.setQueryData(context.eventQueryKey, context.previousEventById)
       }
-      toast.error("Failed to update event")
+      // BackendError messages are written for the user, e.g. why Google Calendar refused
+      toast.error(err instanceof BackendError ? err.message : "Failed to update event")
     },
   })
 
@@ -231,7 +233,7 @@ export function useEvents(month: string) {
 
       return { snapshots, eventQueryKey, previousEventById }
     },
-    onError: (_err, _id, context) => {
+    onError: (err, _id, context) => {
       for (const snapshot of context?.snapshots ?? []) {
         queryClient.setQueryData(snapshot.key, snapshot.data)
       }
@@ -239,7 +241,8 @@ export function useEvents(month: string) {
       if (context?.eventQueryKey && context.previousEventById) {
         queryClient.setQueryData(context.eventQueryKey, context.previousEventById)
       }
-      toast.error("Failed to delete event")
+      // BackendError messages are written for the user, e.g. why Google Calendar refused
+      toast.error(err instanceof BackendError ? err.message : "Failed to delete event")
     },
   })
 

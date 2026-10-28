@@ -1,4 +1,4 @@
-import { v, type Infer } from "convex/values"
+import { ConvexError, v, type Infer } from "convex/values"
 import { companyMutation, companyQuery } from "./lib/auth"
 import type { MutationCtx } from "./_generated/server"
 import { contactFields } from "./lib/contactValidators"
@@ -91,8 +91,15 @@ export const importFromCalendar = companyMutation({ args: { rows: v.array(v.obje
   }
   return { inserted, duplicateCalendarIds }
 } })
-export const remove = companyMutation({ args: { id: v.id("events") }, handler: async (ctx, { id }) => {
-  await requireDocument(ctx, "events", id)
+// expectedCalendarId: refuse if the Google Calendar link isn't this one (googleCalendar.deleteEvent)
+export const remove = companyMutation({ args: { id: v.id("events"), expectedCalendarId: v.optional(nullable(v.string())) }, handler: async (ctx, { id, expectedCalendarId }) => {
+  const event = await requireDocument(ctx, "events", id)
+  if (expectedCalendarId !== undefined && (event.calendarId?.trim() || null) !== (expectedCalendarId?.trim() || null)) {
+    throw new ConvexError({
+      code: "LinkChanged",
+      message: "The event's Google Calendar link was changed while it was being deleted, so the event was kept. Check the link and delete again.",
+    })
+  }
   const blocks = await ctx.db.query("timeblocks").withIndex("by_event_section", q => q.eq("eventId", id)).collect()
   for (const block of blocks) {
     for (const item of await ctx.db.query("foodItems").withIndex("by_timeblock", q => q.eq("timeblockId", block._id)).collect()) await ctx.db.delete("foodItems", item._id)
@@ -103,7 +110,7 @@ export const remove = companyMutation({ args: { id: v.id("events") }, handler: a
     for (const link of await ctx.db.query("beverageItemTimeblocks").withIndex("by_item", q => q.eq("beverageItemId", item._id)).collect()) await ctx.db.delete("beverageItemTimeblocks", link._id)
     await ctx.db.delete("beverageItems", item._id)
   }
-  for (const table of ["payments", "touchpoints", "menuOfChargeItems", "cartDetails", "tournamentDetails", "eventContacts"] as const) {
+  for (const table of ["payments", "touchpoints", "menuOfChargeItems", "cartDetails", "tournamentDetails", "eventContacts", "googleCalendarSyncs"] as const) {
     for (const row of await ctx.db.query(table).withIndex("by_event", q => q.eq("eventId", id)).collect()) await ctx.db.delete(table, row._id)
   }
   await ctx.db.delete("events", id)
