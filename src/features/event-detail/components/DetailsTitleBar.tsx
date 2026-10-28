@@ -212,6 +212,7 @@ const DetailsTitleBar: React.FC<DetailsTitleBarProps> = ({ eventResource }) => {
                 startDateTime={event.startDateTime ?? null}
                 endDateTime={event.endDateTime ?? null}
                 status={event.status}
+                calendarId={event.calendarId ?? null}
                 onSave={(updates) => {
                   void updateEvent(updates)
                 }}
