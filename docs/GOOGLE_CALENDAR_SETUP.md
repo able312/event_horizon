@@ -90,6 +90,13 @@ The same client and refresh token work for both; only the calendar ID differs. C
 3. Change the event (e.g. the title) and click **Update**. The same Google event updates; no duplicate appears.
 4. Repeat once in the installed app against production, then use **Remove from Google Calendar** in the strip's menu if you don't want that test event on the shared calendar. **Disconnect** in the same menu unlinks an event and leaves the Google event in place.
 
+### Known limitations and manual testing gaps
+
+- Event Horizon does not currently create repeating events. This is acceptable for the current scope; adding repeat-event creation is deferred.
+- For an existing, non-repeating, single-day Google Calendar event linked using its edit-event URL, **Open** works but **Update** does not. The cause has not been established; investigating this link/update issue is deferred.
+- During that attempt, no way to obtain the underlying, unencoded Google event ID was found in the Google Calendar UI.
+- Repeating-event behavior remains unverified end to end. Completing this manual test is a deferred follow-up, separate from the observed update issue with a non-repeating event.
+
 ---
 
 ## Troubleshooting
