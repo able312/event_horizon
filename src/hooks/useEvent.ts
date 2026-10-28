@@ -37,7 +37,8 @@ export function useEvent() {
       if (context?.previousEvent) {
         queryClient.setQueryData(eventQueryKey, context.previousEvent)
       }
-      toast.error("Failed to update event")
+      // BackendError messages are written for the user, e.g. why Google Calendar refused
+      toast.error(_err instanceof BackendError ? _err.message : "Failed to update event")
       console.error("Failed to update event: ", _err.message)
     },
   })

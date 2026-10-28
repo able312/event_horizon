@@ -305,3 +305,69 @@ describe("googleCalendar.deleteEvent", () => {
     expect(sent).toEqual([])
   })
 })
+
+describe("googleCalendar.updateEvent", () => {
+  const removeDate = { startDateTime: null, endDateTime: null, status: "new_lead" as const }
+
+  it("deletes the linked Google event when the date is removed, and can push again once dated", async () => {
+    const t = setup()
+    const sent = fakeGoogle()
+    const event = await t.mutation(api.events.create, { input: { ...dated, status: "confirmed" } })
+    await t.action(api.googleCalendar.pushEvent, { eventId: event.id })
+
+    const updated = await t.action(api.googleCalendar.updateEvent, { id: event.id, updates: removeDate })
+    expect(updated).toMatchObject({ startDateTime: null, status: "new_lead", calendarId: null })
+    expect(sent[1]).toMatchObject({ method: "DELETE" })
+    expect(sent[1]!.url.endsWith(`/events/${googleEventIdFor(event.id)}`)).toBe(true)
+    expect(await t.query(api.googleCalendar.getSyncStatus, { eventId: event.id })).toBe("not_linked")
+
+    await t.action(api.googleCalendar.updateEvent, { id: event.id, updates: { startDateTime: dated.startDateTime, endDateTime: dated.endDateTime } })
+    await t.action(api.googleCalendar.pushEvent, { eventId: event.id })
+    expect(sent[2]).toMatchObject({ method: "POST" })
+    expect(await t.query(api.googleCalendar.getSyncStatus, { eventId: event.id })).toBe("synced")
+  })
+
+  it("leaves Google alone for other updates and unlinked events", async () => {
+    const t = setup()
+    const sent = fakeGoogle()
+    const linked = await t.mutation(api.events.create, { input: { ...dated, calendarId: "abc123def@google.com" } })
+    const unlinked = await t.mutation(api.events.create, { input: dated })
+
+    await t.action(api.googleCalendar.updateEvent, { id: linked.id, updates: { title: "Renamed" } })
+    await t.action(api.googleCalendar.updateEvent, { id: unlinked.id, updates: removeDate })
+    expect(sent).toEqual([])
+    expect((await t.query(api.events.getById, { id: linked.id })).calendarId).toBe("abc123def@google.com")
+    expect((await t.query(api.events.getById, { id: unlinked.id })).startDateTime).toBeNull()
+  })
+
+  it("refuses an invalid update before contacting Google", async () => {
+    const t = setup()
+    const sent = fakeGoogle()
+    const event = await t.mutation(api.events.create, { input: { ...dated, status: "confirmed", calendarId: "abc123def@google.com" } })
+
+    await expect(t.action(api.googleCalendar.updateEvent, { id: event.id, updates: { startDateTime: null, endDateTime: null } })).rejects.toThrow("Set an event date")
+    expect(sent).toEqual([])
+  })
+
+  it("keeps the date removed and the link when Google refuses the delete", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    const t = setup()
+    fakeGoogle()
+    vi.mocked(fetch).mockImplementation(async (url) =>
+      String(url).startsWith("https://oauth2.googleapis.com/") ? Response.json({ access_token: "token" }) : Response.json({ error: { message: "Forbidden" } }, { status: 403 }))
+    const event = await t.mutation(api.events.create, { input: { ...dated, calendarId: "abc123def@google.com" } })
+
+    await expect(t.action(api.googleCalendar.updateEvent, { id: event.id, updates: removeDate })).rejects.toThrow("The date was removed, but the event is still on Google Calendar. Google Calendar refused")
+    expect(await t.query(api.events.getById, { id: event.id })).toMatchObject({ startDateTime: null, calendarId: "abc123def@google.com" })
+  })
+
+  it("only saves the update on deployments without Google Calendar set up", async () => {
+    vi.stubEnv("GOOGLE_CALENDAR_REFRESH_TOKEN", undefined)
+    const t = setup()
+    const sent = fakeGoogle()
+    const event = await t.mutation(api.events.create, { input: { ...dated, calendarId: "abc123def@google.com" } })
+
+    expect(await t.action(api.googleCalendar.updateEvent, { id: event.id, updates: removeDate })).toMatchObject({ startDateTime: null, calendarId: "abc123def@google.com" })
+    expect(sent).toEqual([])
+  })
+})

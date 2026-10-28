@@ -187,7 +187,7 @@ export function useEvents(month: string) {
         previousEventById,
       }
     },
-    onError: (_err, _variables, context) => {
+    onError: (err, _variables, context) => {
       for (const snapshot of context?.snapshots ?? []) {
         queryClient.setQueryData(snapshot.key, snapshot.data)
       }
@@ -195,7 +195,8 @@ export function useEvents(month: string) {
       if (context?.eventQueryKey) {
         queryClient.setQueryData(context.eventQueryKey, context.previousEventById)
       }
-      toast.error("Failed to update event")
+      // BackendError messages are written for the user, e.g. why Google Calendar refused
+      toast.error(err instanceof BackendError ? err.message : "Failed to update event")
     },
   })
 

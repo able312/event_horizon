@@ -42,6 +42,7 @@ const contracts: Contract[] = [
   { name: "events.create", kind: "mutation", call: () => events.createEvent({ ...input, id, createdAt: "old" }), args: { input, client: null } },
   { name: "events.update", kind: "mutation", call: () => events.updateEvent(id, { title: "New", updatedAt: "old" }), args: { id, updates: { title: "New" } } },
   { name: "events.update", kind: "mutation", call: () => events.updateEvent(id, { title: "New", updatedBy: "forged" } as Parameters<typeof events.updateEvent>[1]), args: { id, updates: { title: "New" } } },
+  { name: "googleCalendar.updateEvent", kind: "action", call: () => events.updateEvent(id, { startDateTime: null, status: "new_lead" }), args: { id, updates: { startDateTime: null, status: "new_lead" } } },
   { name: "googleCalendar.deleteEvent", kind: "action", call: () => events.deleteEvent(id), args: { eventId: id } },
   { name: "events.getByCalendarIds", kind: "query", call: () => events.getEventsByCalendarIds(["uid"]), args: { calendarIds: ["uid"] } },
   { name: "events.getStartingBetween", kind: "query", call: () => events.getEventsStartingBetween("start", "end"), args: { startFrom: "start", startTo: "end" } },

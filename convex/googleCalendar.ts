@@ -1,18 +1,20 @@
 import { ConvexError, v } from "convex/values"
 import { api, internal } from "./_generated/api"
 import type { Doc, Id } from "./_generated/dataModel"
-import { internalQuery, type QueryCtx } from "./_generated/server"
+import { internalQuery, type ActionCtx, type QueryCtx } from "./_generated/server"
 import { companyAction, companyInternalMutation, companyQuery } from "./lib/auth"
 import { deleteGoogleCalendarEvent, findGoogleCalendarEventUrl, googleEventIdFor, isGoogleCalendarConfigured, readGoogleCalendarConfig, saveGoogleCalendarEvent } from "./lib/googleCalendar"
-import { requireDocument } from "./lib/records"
+import { requireDocument, type toRecord } from "./lib/records"
 import { nullable } from "./lib/validators"
 import { primaryClientOf } from "./eventContacts"
+import { eventInput } from "./events"
 import { buildGoogleCalendarEventBody, googleCalendarBodyFingerprint, type GoogleCalendarEventBody, type GoogleCalendarSyncStatus } from "../src/features/google-calendar/lib/googleCalendar"
 
 /** eventUrl is on calendar.google.com, the only Google Calendar origin the desktop app opens. */
 export type GoogleCalendarEventLink = { eventUrl: string }
 /** deletedFromGoogle is false when the linked Google event was already gone. */
 export type GoogleCalendarRemoveResult = { deletedFromGoogle: boolean }
+type EventRecord = ReturnType<typeof toRecord<Doc<"events">>>
 
 /** The Google Calendar body for the event as it is now; null until it has a start and end. */
 async function currentBody(ctx: QueryCtx, event: Doc<"events">): Promise<GoogleCalendarEventBody | null> {
@@ -140,6 +142,16 @@ export const getEventUrl = companyAction({
 })
 
 /**
+ * Deletes the linked Google event, then clears the link (recordRemoval). False when the
+ * Google event was already gone. Shared by removeEvent and updateEvent.
+ */
+async function removeLinkedGoogleEvent(ctx: ActionCtx, eventId: Id<"events">, linked: string): Promise<boolean> {
+  const deletedFromGoogle = await deleteGoogleCalendarEvent(readGoogleCalendarConfig(), linked)
+  await ctx.runMutation(internal.googleCalendar.recordRemoval, { eventId, removedCalendarId: linked })
+  return deletedFromGoogle
+}
+
+/**
  * Deletes the linked Google event from the shared calendar, then clears the link.
  * The link is cleared even when the Google event was already gone, unless someone
  * changed it in the meantime (recordRemoval).
@@ -151,9 +163,7 @@ export const removeEvent = companyAction({
     const linked = event.calendarId?.trim()
     if (!linked) return { deletedFromGoogle: false }
 
-    const deletedFromGoogle = await deleteGoogleCalendarEvent(readGoogleCalendarConfig(), linked)
-    await ctx.runMutation(internal.googleCalendar.recordRemoval, { eventId, removedCalendarId: linked })
-    return { deletedFromGoogle }
+    return { deletedFromGoogle: await removeLinkedGoogleEvent(ctx, eventId, linked) }
   },
 })
 
@@ -182,5 +192,36 @@ export const deleteEvent = companyAction({
         message: "Removed from Google Calendar, but the event couldn't be deleted. Try deleting it again.",
       })
     }
+  },
+})
+
+/**
+ * Saves an event update. When it removes the event's date, the linked Google event is
+ * deleted and the link cleared too, so the shared calendar doesn't keep showing an event
+ * that no longer has a date; adding a date again lets it be pushed again. The update is
+ * saved first so its own checks run before Google is touched. If Google then refuses,
+ * the date stays removed and the link is kept so the event can be removed by hand.
+ * Deployments without Google Calendar set up only save the update.
+ */
+export const updateEvent = companyAction({
+  args: { id: v.id("events"), updates: eventInput },
+  handler: async (ctx, { id, updates }): Promise<EventRecord> => {
+    const updated = await ctx.runMutation(api.events.update, { id, updates })
+    const linked = updated.calendarId?.trim()
+    const removesDate = updates.startDateTime === null && updates.calendarId === undefined
+    if (!removesDate || !linked || !isGoogleCalendarConfigured()) return updated
+
+    try {
+      await removeLinkedGoogleEvent(ctx, id, linked)
+    } catch (error) {
+      // The Google event was deleted; only someone else's new link was kept
+      if (error instanceof ConvexError && error.data?.code === "LinkChanged") throw error
+      const reason = error instanceof ConvexError && typeof error.data?.message === "string" ? ` ${error.data.message}` : ""
+      throw new ConvexError({
+        code: "DateRemovedGoogleKept",
+        message: `The date was removed, but the event is still on Google Calendar.${reason}`,
+      })
+    }
+    return await ctx.runQuery(api.events.getById, { id })
   },
 })

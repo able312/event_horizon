@@ -44,8 +44,10 @@ export function createEvent(newEvent: NewEvent, client?: AssignContactTarget | n
   })
 }
 
+/** An update that removes the date also deletes the linked Google Calendar event (googleCalendar.updateEvent). */
 export function updateEvent(id: string, updates: UpdateEvent): Promise<Event> {
-  return runMutation(api.events.update, { id: toId<"events">(id), updates: pickFields(updates, EVENT_FIELDS) })
+  const args = { id: toId<"events">(id), updates: pickFields(updates, EVENT_FIELDS) }
+  return updates.startDateTime === null ? runAction(api.googleCalendar.updateEvent, args) : runMutation(api.events.update, args)
 }
 
 /** Also deletes the event's linked Google Calendar event (googleCalendar.deleteEvent). */

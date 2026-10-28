@@ -38,7 +38,7 @@ async function registeredFunctions(): Promise<[string, RegisteredFunction][]> {
 /**
  * Internal functions: run through the Convex CLI with admin access, by the
  * secret-checked HTTP route in http.ts (website event requests), or by
- * googleCalendar.pushEvent / removeEvent once they have checked the caller (recordPush
+ * googleCalendar.pushEvent / removeEvent / updateEvent once they have checked the caller (recordPush
  * and recordRemoval check again, as companyInternalMutations, so their writes are
  * stamped with that caller).
  */
@@ -59,6 +59,7 @@ const PUBLIC_ACTIONS = new Set([
   "./googleCalendar.ts:getEventUrl",
   "./googleCalendar.ts:removeEvent",
   "./googleCalendar.ts:deleteEvent",
+  "./googleCalendar.ts:updateEvent",
 ])
 
 function authCode(error: unknown): unknown {
