@@ -38,14 +38,16 @@ async function registeredFunctions(): Promise<[string, RegisteredFunction][]> {
 /**
  * Internal functions: run through the Convex CLI with admin access, by the
  * secret-checked HTTP route in http.ts (website event requests), or by
- * googleCalendar.pushEvent once it has checked the caller (recordPush checks again,
- * as a companyInternalMutation, so its writes are stamped with that caller).
+ * googleCalendar.pushEvent / removeEvent once they have checked the caller (recordPush
+ * and recordRemoval check again, as companyInternalMutations, so their writes are
+ * stamped with that caller).
  */
 const INTERNAL_FUNCTIONS = new Set([
   "./developmentSeed.ts:seed",
   "./eventRequests.ts:receive",
   "./googleCalendar.ts:getPushContent",
   "./googleCalendar.ts:recordPush",
+  "./googleCalendar.ts:recordRemoval",
 ])
 
 /**

@@ -80,6 +80,26 @@ export const recordPush = companyInternalMutation({
 })
 
 /**
+ * Clears the link to the Google event removeEvent just deleted. Keeps a different link
+ * someone saved while the delete was in flight, since that Google event wasn't touched.
+ */
+export const recordRemoval = companyInternalMutation({
+  args: { eventId: v.id("events"), removedCalendarId: v.string() },
+  handler: async (ctx, { eventId, removedCalendarId }) => {
+    const event = await requireDocument(ctx, "events", eventId)
+    const linked = event.calendarId?.trim() || null
+    if (!linked) return
+    if (linked !== removedCalendarId.trim()) {
+      throw new ConvexError({
+        code: "LinkChanged",
+        message: "Removed the previously linked Google Calendar event, but the link was changed while it was being removed. The new link was kept.",
+      })
+    }
+    await ctx.db.patch("events", eventId, { calendarId: null, updatedAt: Date.now().toString() })
+  },
+})
+
+/**
  * Adds the event to the shared Google Calendar, or updates the Google event it's linked
  * to, as the Clubhouse account (lib/googleCalendar.ts). Then saves the link and what was
  * sent for getSyncStatus, as the signed-in caller.
@@ -121,7 +141,8 @@ export const getEventUrl = companyAction({
 
 /**
  * Deletes the linked Google event from the shared calendar, then clears the link.
- * The link is cleared even when the Google event was already gone.
+ * The link is cleared even when the Google event was already gone, unless someone
+ * changed it in the meantime (recordRemoval).
  */
 export const removeEvent = companyAction({
   args: { eventId: v.id("events") },
@@ -131,7 +152,7 @@ export const removeEvent = companyAction({
     if (!linked) return { deletedFromGoogle: false }
 
     const deletedFromGoogle = await deleteGoogleCalendarEvent(readGoogleCalendarConfig(), linked)
-    await ctx.runMutation(api.events.update, { id: eventId, updates: { calendarId: null } })
+    await ctx.runMutation(internal.googleCalendar.recordRemoval, { eventId, removedCalendarId: linked })
     return { deletedFromGoogle }
   },
 })
