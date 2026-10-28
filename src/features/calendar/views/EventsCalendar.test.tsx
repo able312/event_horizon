@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { createPortal } from "react-dom"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Event } from "~/definitions/database"
@@ -8,6 +9,7 @@ vi.mock("~/features/calendar/views/CalendarGrid", () => ({
   default: () => (
     <div data-testid="calendar-grid-mock">
       <div data-testid="calendar-day-events-10">scroll-zone</div>
+      {createPortal(<div data-testid="portaled-popover">popover</div>, document.body)}
     </div>
   ),
 }))
@@ -73,5 +75,13 @@ describe("EventsCalendar wheel month snap", () => {
     fireEvent.wheel(screen.getByTestId("calendar-day-events-10"), { deltaY: 120 })
 
     expect(onDateChange).toHaveBeenCalledWith("2026-05")
+  })
+
+  it("ignores wheel events bubbling out of a portaled popover", () => {
+    const { onDateChange } = renderCalendar({ date: "2026-04" })
+
+    fireEvent.wheel(screen.getByTestId("portaled-popover"), { deltaY: 120 })
+
+    expect(onDateChange).not.toHaveBeenCalled()
   })
 })

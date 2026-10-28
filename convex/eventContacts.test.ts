@@ -67,6 +67,12 @@ describe("Convex event contacts", () => {
     await expect(t.mutation(api.eventContacts.update, { id: a.id, patch: {} })).rejects.toThrow()
     expect(await t.query(api.eventContacts.getPrimaryClients, { eventIds: [] })).toEqual({})
   })
+  it("skips deleted events in primary-client batches instead of failing them", async () => {
+    const { t, event, other } = await setup()
+    const client = await t.mutation(api.eventContacts.assign, { eventId: other.id, target: { newContact: { displayName: "Client" } }, role: "client" })
+    await t.mutation(api.events.remove, { id: event.id })
+    expect(await t.query(api.eventContacts.getPrimaryClients, { eventIds: [event.id, other.id] })).toEqual({ [other.id]: expect.objectContaining({ contactId: client.contactId }) })
+  })
   it("changes categories, rejects duplicate/category misuse and rolls back shared contact edits", async () => {
     const { t, event, category } = await setup()
     const next = await t.mutation(api.vendorCategories.create, { input: { key: "next", label: "Next", colorToken: "sky" } })

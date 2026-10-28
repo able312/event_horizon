@@ -32,6 +32,8 @@ export async function primaryClientOf(ctx: QueryCtx, eventId: Id<"events">): Pro
 export const getPrimaryClients = companyQuery({ args: { eventIds: v.array(v.id("events")) }, handler: (ctx, { eventIds }) => contactOperation(async () => {
   const result: Record<string, PrimaryClient> = {}
   for (const eventId of new Set(eventIds)) {
+    // A subscriber can still hold the ID of an event that was just deleted; skip it rather than fail the batch.
+    if (!await ctx.db.get("events", eventId)) continue
     const client = await primaryClientOf(ctx, eventId)
     if (client) result[eventId] = client
   }
