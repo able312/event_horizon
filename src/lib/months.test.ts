@@ -4,6 +4,8 @@ import {
   DROPDOWN_CALENDAR_YEARS_BACK,
   DROPDOWN_CALENDAR_YEARS_FORWARD,
   getDropdownMonthNavigationRange,
+  parseLocalDateKey,
+  toLocalDateKey,
 } from "~/lib/months"
 
 describe("getDropdownMonthNavigationRange", () => {
@@ -37,5 +39,35 @@ describe("getDropdownMonthNavigationRange", () => {
 
     expect(startMonth.getFullYear()).toBe(2025)
     expect(endMonth.getFullYear()).toBe(2028)
+  })
+})
+
+describe("parseLocalDateKey", () => {
+  it("parses a YYYY-MM-DD key as local midnight", () => {
+    expect(parseLocalDateKey("2026-03-09")).toEqual(new Date(2026, 2, 9))
+  })
+
+  it("returns null for blank or malformed keys", () => {
+    expect(parseLocalDateKey("")).toBeNull()
+    expect(parseLocalDateKey("2026-03")).toBeNull()
+    expect(parseLocalDateKey("not-a-date")).toBeNull()
+  })
+
+  it("rejects days that roll over into the next month", () => {
+    expect(parseLocalDateKey("2026-02-30")).toBeNull()
+  })
+})
+
+describe("toLocalDateKey", () => {
+  it("formats a date using local calendar parts with zero padding", () => {
+    expect(toLocalDateKey(new Date(2026, 0, 5, 23, 30))).toBe("2026-01-05")
+  })
+
+  it("returns an empty string for null", () => {
+    expect(toLocalDateKey(null)).toBe("")
+  })
+
+  it("round-trips with parseLocalDateKey", () => {
+    expect(toLocalDateKey(parseLocalDateKey("2026-12-31"))).toBe("2026-12-31")
   })
 })

@@ -96,6 +96,25 @@ export function formatMonthLabel(month: string, locale: string = "en-US"): strin
   })
 }
 
+/** Parses a local `YYYY-MM-DD` key into a local-midnight Date, or null when blank/invalid. */
+export function parseLocalDateKey(localDate: string): Date | null {
+  if (!localDate) return null
+  const [year, month, day] = localDate.split("-").map(Number)
+  if (!year || !month || !day) return null
+
+  const date = new Date(year, month - 1, day)
+  if (date.getMonth() !== month - 1 || date.getDate() !== day) return null
+  return date
+}
+
+/** Formats a Date as its local `YYYY-MM-DD` key, or "" when null. */
+export function toLocalDateKey(date: Date | null): string {
+  if (!date) return ""
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
 export function toLocalDateStartIso(localDate: string): string | null {
   if (!localDate) return null
   const [year, month, day] = localDate.split("-").map(Number)

@@ -29,7 +29,7 @@ const CalendarPanelOrchastrator: React.FC<CalendarPanelOrchastratorProps> = ({
     searchController,
 }) => {
 
-    const { state, setDate, searchInput, setSearchInput, setType, setStatus } = queryState
+    const { state, setDate, searchInput, setSearchInput, setType, setStatus, resetSearchAndFilters } = queryState
     const { ui, dispatch } = useCalendarPanelState()
     const workspaceVm = useCalendarWorkspaceViewModel(queryState, eventsHook, searchController)
     const { requests, requestsQuery } = useEventRequests()
@@ -99,6 +99,11 @@ const CalendarPanelOrchastrator: React.FC<CalendarPanelOrchastratorProps> = ({
                         onDateRangeChange={(next) => {
                             searchController.filters.setDateFrom(next.dateFrom)
                             searchController.filters.setDateTo(next.dateTo)
+                        }}
+                        onClearFilters={() => {
+                            resetSearchAndFilters()
+                            searchController.filters.setDateFrom("")
+                            searchController.filters.setDateTo("")
                         }}
                     />
                 </Panel.Content> 

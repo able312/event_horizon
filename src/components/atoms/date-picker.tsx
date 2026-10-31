@@ -4,6 +4,7 @@ import { Button } from "~/components/atoms/button"
 import { Calendar } from "~/components/atoms/calendar"
 import { Input } from "~/components/atoms/input"
 import { cn } from "~/lib/utils"
+import { parseTypedDate } from "./datePicker.lib"
 import {
   Popover,
   PopoverContent,
@@ -17,11 +18,6 @@ function formatDate(date: Date | null | undefined) {
     month: "long",
     year: "numeric",
   })
-}
-
-function isValidDate(date: Date | undefined): date is Date {
-  if (!date) return false
-  return !Number.isNaN(date.getTime())
 }
 
 function startOfDay(date: Date): Date {
@@ -81,6 +77,24 @@ export function DatePicker({
     setOpen(false)
   }
 
+  // Typed text stays a draft until blur/Enter: partial input like "2" parses
+  // as a real date, and emitting it would rewrite the text mid-typing
+  const commitTypedText = () => {
+    if (textValue.trim() === "") return
+
+    const parsed = parseTypedDate(textValue)
+    if (!parsed || isBeforeMinDate(parsed, minDate)) {
+      setTextValue(formatDate(value))
+      return
+    }
+
+    setMonth(parsed)
+    setTextValue(formatDate(parsed))
+    if (!value || startOfDay(parsed).getTime() !== startOfDay(value).getTime()) {
+      emitChange(parsed)
+    }
+  }
+
   const handleClear = (event: React.MouseEvent) => {
     event.preventDefault()
     event.stopPropagation()
@@ -102,23 +116,16 @@ export function DatePicker({
           const raw = e.target.value
           setTextValue(raw)
 
-          if (raw.trim() === "") {
-            emitChange(null)
+          if (raw.trim() === "") emitChange(null)
+        }}
+        onBlur={commitTypedText}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && textValue !== formatDate(value)) {
+            // Commit the draft first so a surrounding form can't submit the stale date
+            e.preventDefault()
+            commitTypedText()
             return
           }
-
-          const parsed = new Date(raw)
-          if (!isValidDate(parsed)) return
-          if (isBeforeMinDate(parsed, minDate)) return
-
-          setMonth(parsed)
-          emitChange(parsed)
-        }}
-        onBlur={() => {
-          // Revert typed text that didn't resolve to a valid/allowed date
-          setTextValue(formatDate(value))
-        }}
-        onKeyDown={(e) => {
           if (e.key === "ArrowDown") {
             e.preventDefault()
             setOpen(true)

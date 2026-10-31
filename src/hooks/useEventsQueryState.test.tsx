@@ -141,6 +141,20 @@ describe("useEventsQueryState", () => {
     expect(result.current.state.status).toBeNull()
   })
 
+  it("resets search, type and status together in one URL update", () => {
+    const { result } = renderHook(() => useEventsQueryState(), {
+      wrapper: createWrapper("/events?date=2026-04&search=vip&type=wedding&status=closed"),
+    })
+    expect(latestSearch).toBe("?date=2026-04&search=vip&type=wedding&status=closed")
+
+    act(() => result.current.resetSearchAndFilters())
+
+    expect(latestSearch).toBe("?date=2026-04")
+    expect(result.current.searchInput).toBe("")
+    expect(result.current.state.type).toBeNull()
+    expect(result.current.state.status).toBeNull()
+  })
+
   it("debounces search input before committing to URL", async () => {
     vi.useFakeTimers()
 

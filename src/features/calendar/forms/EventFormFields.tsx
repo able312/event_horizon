@@ -8,7 +8,12 @@ import {
   resolveEndDateTimeForStart,
 } from "~/lib/events/eventDateRange"
 import { isStatusAllowedForDate, statusRequiresDate } from "~/lib/events/eventStatusRules"
-import { formFieldClasses } from "./eventFormStyles"
+import {
+  formDateFieldClasses,
+  formFieldClasses,
+  formLabelClasses,
+  formOptionClasses,
+} from "./eventFormStyles"
 
 export interface EventFormValues {
   title: string
@@ -27,9 +32,6 @@ interface EventFormFieldsProps {
   /** Rendered between status and dates, e.g. the client picker on the create form */
   clientFields?: React.ReactNode
 }
-
-const dateTimeFieldClasses =
-  "border-white/15 bg-white/5 text-stone-100 placeholder:text-stone-400 focus-visible:border-white/30"
 
 const timeFieldClasses =
   "border-white/15 bg-white/5 text-stone-100 placeholder:text-stone-400 focus:border-white/30"
@@ -55,7 +57,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
   return (
     <div className="space-y-4">
       <div>
-        <label className="mb-1 block text-sm font-medium text-stone-100">Event Title *</label>
+        <label className={formLabelClasses}>Event Title *</label>
         <input
           type="text"
           value={values.title}
@@ -68,14 +70,14 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="mb-1 block text-sm font-medium text-stone-100">Type</label>
+          <label className={formLabelClasses}>Type</label>
           <select
             value={values.type}
             onChange={(e) => onChange({ type: e.target.value as EventType })}
             className={formFieldClasses}
           >
             {EVENT_TYPE_OPTIONS.map((type) => (
-              <option key={type} value={type} className="bg-stone-900 text-stone-100">
+              <option key={type} value={type} className={formOptionClasses}>
                 {EVENT_TYPE_LABELS[type]}
               </option>
             ))}
@@ -83,7 +85,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-stone-100">Status</label>
+          <label className={formLabelClasses}>Status</label>
           <select
             value={values.status}
             onChange={(e) => onChange({ status: e.target.value as EventStatus })}
@@ -94,7 +96,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
                 key={status}
                 value={status}
                 disabled={!values.startDateTime && statusRequiresDate(status)}
-                className="bg-stone-900 text-stone-100"
+                className={formOptionClasses}
               >
                 {EVENT_STATUS_LABELS[status]}
               </option>
@@ -114,7 +116,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
         onChange={handleStartChange}
         error={statusNeedsDate ? `${EVENT_STATUS_LABELS[values.status]} events need a start date` : undefined}
         labelClassName="text-stone-100"
-        dateInputClassName={dateTimeFieldClasses}
+        dateInputClassName={formDateFieldClasses}
         timeInputClassName={timeFieldClasses}
       />
 
@@ -125,13 +127,13 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
         minDateTime={values.startDateTime}
         error={rangeInvalid ? "End must be on or after the start date" : undefined}
         labelClassName="text-stone-100"
-        dateInputClassName={dateTimeFieldClasses}
+        dateInputClassName={formDateFieldClasses}
         timeInputClassName={timeFieldClasses}
       />
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="mb-1 block text-sm font-medium text-stone-100">Min Guests</label>
+          <label className={formLabelClasses}>Min Guests</label>
           <input
             type="number"
             value={values.minGuests || ""}
@@ -141,7 +143,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-stone-100">Max Guests</label>
+          <label className={formLabelClasses}>Max Guests</label>
           <input
             type="number"
             value={values.maxGuests || ""}

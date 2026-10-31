@@ -1,24 +1,35 @@
 /**
- * EventsFilters Component
- * 
- * Filter controls for the Events page.
- * Contains search input and type/status filter dropdowns.
- * 
+ * SearchPanel Component
+ *
+ * Sidebar search and filter controls for the calendar workspace.
+ * Shares field styling with the create/edit event forms so the sidebar
+ * reads as one surface.
+ *
  * Features:
  * - Search input with icon
- * - Event type filter dropdown
- * - Event status filter dropdown
- * 
+ * - Event type and status filter dropdowns
+ * - Start date range using the shared DatePicker
+ * - Clear filters action when any filter is set
+ *
  * Location: src/features/calendar/panels/content/SearchPanel.tsx
  */
 
-import React, { useRef, useEffect } from "react"
+import React, { useEffect, useId, useRef } from "react"
 import { Search } from "lucide-react"
+import { DatePicker } from "~/components/atoms/date-picker"
 import { ITER_EVENT_STATUSES } from "~/definitions/events/event-constants"
 import { EVENT_TYPE_LABELS, EVENT_STATUS_LABELS, EVENT_TYPE_OPTIONS } from "~/definitions/events/ui"
 import type { EventStatus, EventType } from "~/definitions/database"
+import { parseLocalDateKey, toLocalDateKey } from "~/lib/months"
+import { cn } from "~/lib/utils"
+import {
+  formDateFieldClasses,
+  formFieldClasses,
+  formLabelClasses,
+  formOptionClasses,
+} from "~/features/calendar/forms/eventFormStyles"
 
-interface EventsFiltersProps {
+interface SearchPanelProps {
   /** Current search term */
   searchTerm: string
   /** Callback when search term changes */
@@ -31,21 +42,19 @@ interface EventsFiltersProps {
   filterStatus: EventStatus | null
   /** Callback when status filter changes */
   onFilterStatusChange: (status: EventStatus | null) => void
-  /** Optional ref to focus the search input externally */
-  searchInputRef?: React.RefObject<HTMLInputElement | null>
+  /** Local `YYYY-MM-DD` keys; empty strings mean unbounded */
   dateRange: {
     dateFrom: string
     dateTo: string
   }
   onDateRangeChange: (next: { dateFrom: string; dateTo: string }) => void
+  /** Resets search, type, status and dates in one update */
+  onClearFilters: () => void
 }
 
-/**
- * EventsFilters
- * 
- * Filter bar with search and dropdown filters.
- */
-const SearchPanel: React.FC<EventsFiltersProps> = ({
+const ALL_OPTION = "all"
+
+const SearchPanel: React.FC<SearchPanelProps> = ({
   searchTerm,
   onSearchChange,
   filterType,
@@ -54,90 +63,129 @@ const SearchPanel: React.FC<EventsFiltersProps> = ({
   onFilterStatusChange,
   dateRange,
   onDateRangeChange,
+  onClearFilters,
 }) => {
-
+  const fieldId = useId()
   const searchInputRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
-    if (searchInputRef.current) searchInputRef.current.focus()
+    searchInputRef.current?.focus()
   }, [])
 
+  const dateFrom = parseLocalDateKey(dateRange.dateFrom)
+  const dateTo = parseLocalDateKey(dateRange.dateTo)
+  const hasActiveFilters =
+    searchTerm !== "" ||
+    filterType !== null ||
+    filterStatus !== null ||
+    dateRange.dateFrom !== "" ||
+    dateRange.dateTo !== ""
+
+  const clearFilters = () => {
+    onClearFilters()
+    searchInputRef.current?.focus()
+  }
+
   return (
-    /**
-     * Filters Container
-     * - Flex layout with gap
-     * - Search takes remaining space
-     */
-    <div className="mb-6 p-4 flex w-full flex-col gap-4">
-      
-      {/* Search Input */}
-      <div className="flex-1 relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-        <input
-          ref={searchInputRef}
-          type="text"
-          placeholder="Search events..."
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full rounded-lg border border-white/15 bg-white/5 py-2 pr-4 pl-10 text-stone-100 placeholder:text-stone-400 focus:border-white/30 focus:outline-none"
-        />
+    <div className="space-y-6 p-4">
+      <div>
+        <h2 className="text-lg font-semibold text-stone-100">Search Events</h2>
+        <p className="mt-1 text-sm text-stone-300">Find events by name, type, status or date.</p>
       </div>
 
-      {/* Type Filter Dropdown */}
-      <select
-        value={filterType ?? "all"}
-        onChange={(e) =>
-          onFilterTypeChange(
-            e.target.value === "all" ? null : (e.target.value as EventType),
-          )
-        }
-        className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-stone-100 focus:border-white/30 focus:outline-none"
-      >
-        <option value="all">All Types</option>
-        {EVENT_TYPE_OPTIONS.map(type => (
-          <option key={type} value={type}>{EVENT_TYPE_LABELS[type]}</option>
-        ))}
-      </select>
+      <div className="space-y-4">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            aria-label="Search events"
+            placeholder="Search events..."
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className={cn(formFieldClasses, "pl-10")}
+          />
+        </div>
 
-      {/* Status Filter Dropdown */}
-      <select
-        value={filterStatus ?? "all"}
-        onChange={(e) =>
-          onFilterStatusChange(
-            e.target.value === "all" ? null : (e.target.value as EventStatus),
-          )
-        }
-        className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-stone-100 focus:border-white/30 focus:outline-none"
-      >
-        <option value="all">All Statuses</option>
-        {ITER_EVENT_STATUSES.map(status => (
-          <option key={status} value={status}>{EVENT_STATUS_LABELS[status]}</option>
-        ))}
-      </select>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor={`${fieldId}-type`} className={formLabelClasses}>Type</label>
+            <select
+              id={`${fieldId}-type`}
+              value={filterType ?? ALL_OPTION}
+              onChange={(e) =>
+                onFilterTypeChange(
+                  e.target.value === ALL_OPTION ? null : (e.target.value as EventType),
+                )
+              }
+              className={formFieldClasses}
+            >
+              <option value={ALL_OPTION} className={formOptionClasses}>All Types</option>
+              {EVENT_TYPE_OPTIONS.map((type) => (
+                <option key={type} value={type} className={formOptionClasses}>
+                  {EVENT_TYPE_LABELS[type]}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <input
-          type="date"
-          value={dateRange.dateFrom}
-          onChange={(e) =>
-            onDateRangeChange({
-              dateFrom: e.target.value,
-              dateTo: dateRange.dateTo,
-            })
-          }
-          className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-stone-100 focus:border-white/30 focus:outline-none"
-        />
-        <input
-          type="date"
-          value={dateRange.dateTo}
-          onChange={(e) =>
-            onDateRangeChange({
-              dateFrom: dateRange.dateFrom,
-              dateTo: e.target.value,
-            })
-          }
-          className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-stone-100 focus:border-white/30 focus:outline-none"
-        />
+          <div>
+            <label htmlFor={`${fieldId}-status`} className={formLabelClasses}>Status</label>
+            <select
+              id={`${fieldId}-status`}
+              value={filterStatus ?? ALL_OPTION}
+              onChange={(e) =>
+                onFilterStatusChange(
+                  e.target.value === ALL_OPTION ? null : (e.target.value as EventStatus),
+                )
+              }
+              className={formFieldClasses}
+            >
+              <option value={ALL_OPTION} className={formOptionClasses}>All Statuses</option>
+              {ITER_EVENT_STATUSES.map((status) => (
+                <option key={status} value={status} className={formOptionClasses}>
+                  {EVENT_STATUS_LABELS[status]}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className={formLabelClasses}>Starts From</label>
+            <DatePicker
+              value={dateFrom}
+              onChange={(date) =>
+                onDateRangeChange({ dateFrom: toLocalDateKey(date), dateTo: dateRange.dateTo })
+              }
+              inputClassName={formDateFieldClasses}
+              placeholder="Any date"
+            />
+          </div>
+          <div>
+            <label className={formLabelClasses}>Starts Until</label>
+            <DatePicker
+              value={dateTo}
+              onChange={(date) =>
+                onDateRangeChange({ dateFrom: dateRange.dateFrom, dateTo: toLocalDateKey(date) })
+              }
+              inputClassName={formDateFieldClasses}
+              minDate={dateFrom ?? undefined}
+              placeholder="Any date"
+            />
+          </div>
+        </div>
       </div>
+
+      {hasActiveFilters ? (
+        <button
+          type="button"
+          onClick={clearFilters}
+          className="w-full rounded-lg border border-white/20 px-4 py-2 text-stone-100 transition-colors hover:bg-white/10"
+        >
+          Clear Filters
+        </button>
+      ) : null}
     </div>
   )
 }
