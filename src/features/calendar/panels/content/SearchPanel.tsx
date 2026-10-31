@@ -48,6 +48,8 @@ interface SearchPanelProps {
     dateTo: string
   }
   onDateRangeChange: (next: { dateFrom: string; dateTo: string }) => void
+  /** Resets search, type, status and dates in one update */
+  onClearFilters: () => void
 }
 
 const ALL_OPTION = "all"
@@ -61,6 +63,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
   onFilterStatusChange,
   dateRange,
   onDateRangeChange,
+  onClearFilters,
 }) => {
   const fieldId = useId()
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -78,10 +81,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
     dateRange.dateTo !== ""
 
   const clearFilters = () => {
-    onSearchChange("")
-    onFilterTypeChange(null)
-    onFilterStatusChange(null)
-    onDateRangeChange({ dateFrom: "", dateTo: "" })
+    onClearFilters()
     searchInputRef.current?.focus()
   }
 

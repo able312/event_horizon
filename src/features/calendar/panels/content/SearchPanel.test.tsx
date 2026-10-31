@@ -1,7 +1,38 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { useState } from "react"
+import { MemoryRouter, useLocation } from "react-router"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { useEventsQueryState } from "~/hooks/useEventsQueryState"
 import SearchPanel from "./SearchPanel"
+
+/** SearchPanel wired to the real URL-backed query state, as in CalendarPanelOrchestrator */
+function ConnectedSearchPanel() {
+  const { state, searchInput, setSearchInput, setType, setStatus, resetSearchAndFilters } =
+    useEventsQueryState()
+  const [dateRange, setDateRange] = useState({ dateFrom: "2026-01-01", dateTo: "" })
+  const location = useLocation()
+
+  return (
+    <>
+      <output data-testid="url">{location.search}</output>
+      <SearchPanel
+        searchTerm={searchInput}
+        onSearchChange={setSearchInput}
+        filterType={state.type}
+        onFilterTypeChange={setType}
+        filterStatus={state.status}
+        onFilterStatusChange={setStatus}
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
+        onClearFilters={() => {
+          resetSearchAndFilters()
+          setDateRange({ dateFrom: "", dateTo: "" })
+        }}
+      />
+    </>
+  )
+}
 
 function renderPanel(overrides: Partial<React.ComponentProps<typeof SearchPanel>> = {}) {
   const props: React.ComponentProps<typeof SearchPanel> = {
@@ -13,6 +44,7 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof SearchPanel>
     onFilterStatusChange: vi.fn(),
     dateRange: { dateFrom: "", dateTo: "" },
     onDateRangeChange: vi.fn(),
+    onClearFilters: vi.fn(),
     ...overrides,
   }
   render(<SearchPanel {...props} />)
@@ -37,10 +69,10 @@ describe("SearchPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Clear Filters" }))
 
-    expect(props.onSearchChange).toHaveBeenCalledWith("")
-    expect(props.onFilterTypeChange).toHaveBeenCalledWith(null)
-    expect(props.onFilterStatusChange).toHaveBeenCalledWith(null)
-    expect(props.onDateRangeChange).toHaveBeenCalledWith({ dateFrom: "", dateTo: "" })
+    expect(props.onClearFilters).toHaveBeenCalledTimes(1)
+    // Individual setters would race on the URL; only the combined reset runs
+    expect(props.onFilterTypeChange).not.toHaveBeenCalled()
+    expect(props.onFilterStatusChange).not.toHaveBeenCalled()
   })
 
   it("maps the All option back to a null filter", () => {
@@ -57,5 +89,21 @@ describe("SearchPanel", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Clear date" })[0])
 
     expect(props.onDateRangeChange).toHaveBeenCalledWith({ dateFrom: "", dateTo: "2026-04-01" })
+  })
+
+  it("clears both URL-backed filters when Type and Status are set", () => {
+    render(
+      <MemoryRouter initialEntries={["/events?date=2026-04&search=vip&type=wedding&status=closed"]}>
+        <ConnectedSearchPanel />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear Filters" }))
+
+    expect(screen.getByTestId("url").textContent).toBe("?date=2026-04")
+    expect(screen.getByLabelText<HTMLSelectElement>("Type").value).toBe("all")
+    expect(screen.getByLabelText<HTMLSelectElement>("Status").value).toBe("all")
+    expect(screen.getByLabelText<HTMLInputElement>("Search events").value).toBe("")
+    expect(screen.queryByRole("button", { name: "Clear Filters" })).toBeNull()
   })
 })

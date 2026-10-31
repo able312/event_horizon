@@ -4,6 +4,7 @@ import { Button } from "~/components/atoms/button"
 import { Calendar } from "~/components/atoms/calendar"
 import { Input } from "~/components/atoms/input"
 import { cn } from "~/lib/utils"
+import { parseTypedDate } from "./datePicker.lib"
 import {
   Popover,
   PopoverContent,
@@ -17,11 +18,6 @@ function formatDate(date: Date | null | undefined) {
     month: "long",
     year: "numeric",
   })
-}
-
-function isValidDate(date: Date | undefined): date is Date {
-  if (!date) return false
-  return !Number.isNaN(date.getTime())
 }
 
 function startOfDay(date: Date): Date {
@@ -107,8 +103,8 @@ export function DatePicker({
             return
           }
 
-          const parsed = new Date(raw)
-          if (!isValidDate(parsed)) return
+          const parsed = parseTypedDate(raw)
+          if (!parsed) return
           if (isBeforeMinDate(parsed, minDate)) return
 
           setMonth(parsed)

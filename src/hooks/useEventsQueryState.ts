@@ -162,12 +162,12 @@ export function useEventsQueryState(): UseEventsQueryStateReturn {
     setSearchInputState(search)
   }, [])
 
+  // One URL update: separate setters each start from the same stale searchParams,
+  // so the last call would overwrite the earlier resets
   const resetSearchAndFilters = useCallback(() => {
-      setSearchInput("")
-      setSearch(null)
-      setType(null)
-      setStatus(null)
-    }, [setSearch, setSearchInput, setStatus, setType])
+    setSearchInputState("")
+    updateState((prev) => ({ ...prev, search: null, type: null, status: null }))
+  }, [updateState])
 
   useEffect(() => {
     const canonicalQuery = toCanonicalSearchParams(state).toString()
