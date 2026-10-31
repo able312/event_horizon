@@ -214,6 +214,7 @@ describe("CreateEventSidebarForm save timing", () => {
     expect(dateInputs.length).toBeGreaterThan(0)
 
     fireEvent.change(dateInputs[0], { target: { value: "July 20, 2026" } })
+    fireEvent.blur(dateInputs[0])
 
     await waitFor(() => {
       const latestCall =
