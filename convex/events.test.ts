@@ -129,6 +129,21 @@ describe("Convex events", () => {
     expect((await t.query(api.events.search, { ...params, query: "b", type: "wedding" })).items).toEqual([late])
     await expect(t.query(api.events.search, params)).rejects.toThrow("at least 2")
   })
+  it("searches undated events on their own or with other filters, and rejects a date range alongside", async () => {
+    const t = setup()
+    await t.mutation(api.events.create, { input: { title: "Dated lead", startDateTime: "2026-10-10T00:00:00Z" } })
+    const lead = await t.mutation(api.events.create, { input: { title: "Undated lead", type: "wedding" } })
+    const lost = await t.mutation(api.events.create, { input: { title: "Undated lost", status: "lost" }, client: { displayName: "Smith" } })
+    const params = { query: "", page: 0, pageSize: 50 }
+    expect(await t.query(api.events.search, { ...params, noDate: true })).toMatchObject({ items: [lead, lost], total: 2 })
+    expect((await t.query(api.events.search, { ...params, noDate: true, status: "lost" })).items).toEqual([lost])
+    expect((await t.query(api.events.search, { ...params, noDate: true, type: "wedding" })).items).toEqual([lead])
+    expect((await t.query(api.events.search, { ...params, noDate: true, query: "lead" })).items).toEqual([lead])
+    expect((await t.query(api.events.search, { ...params, noDate: true, query: "smith" })).items).toEqual([lost])
+    expect((await t.query(api.events.search, { ...params, noDate: false, query: "lead" })).total).toBe(2)
+    await expect(t.query(api.events.search, { ...params, noDate: false })).rejects.toThrow("at least 2")
+    await expect(t.query(api.events.search, { ...params, noDate: true, startFrom: "2026-10-01T00:00:00Z" })).rejects.toThrow("noDate")
+  })
 
   it("preserves search relevance, literal matching, client joins, filters and exact pagination totals", async () => {
     const t = setup()

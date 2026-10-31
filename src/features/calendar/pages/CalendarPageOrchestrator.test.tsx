@@ -51,6 +51,10 @@ let holidayNotice: { message: string; canRetry: boolean } | null = null
 vi.mock("../hooks/useMonthHolidays", () => ({
   useMonthHolidays: () => ({ holidays: [], notice: holidayNotice, retry: holidayRetryMock, isRetrying: false }),
 }))
+let undatedCount: number | undefined = 4
+vi.mock("../hooks/useUndatedEventCount", () => ({
+  useUndatedEventCount: () => undatedCount,
+}))
 let pendingRequests: EventRequest[] = []
 vi.mock("~/features/event-requests/hooks/useEventRequests", () => ({
   useEventRequests: () => ({ requests: pendingRequests, dismissRequest: dismissRequestMock }),
@@ -117,7 +121,7 @@ vi.mock("~/lib/months", async () => {
   }
 })
 
-function createQueryState(search: string | null = null) {
+function createQueryState(search: string | null = null, undated = false) {
   const setDate = vi.fn()
   return {
     queryState: {
@@ -127,6 +131,7 @@ function createQueryState(search: string | null = null) {
         view: "calendar",
         type: null,
         status: null,
+        undated,
       },
       searchInput: "",
       setView: vi.fn(),
@@ -136,6 +141,7 @@ function createQueryState(search: string | null = null) {
       resetSearchAndFilters: vi.fn(),
       setType: vi.fn(),
       setStatus: vi.fn(),
+      setUndated: vi.fn(),
       reset: vi.fn(),
     },
     setDate,
@@ -203,6 +209,44 @@ describe("CalendarPageOrchestrator", () => {
     expect(screen.getByTestId("calendar-month-view")).toBeTruthy()
     expect(screen.queryByTestId("events-table-view")).toBeNull()
     expect(screen.queryByTestId("calendar-holiday-notice")).toBeNull()
+  })
+
+  it("opens an undated search from the header shortcut, and turns it off once active", () => {
+    const props = {
+      eventsHook: createEventsHook() as never,
+      searchController: createSearchController() as never,
+      onDeleteRequest: vi.fn(),
+    }
+    const inactive = createQueryState(null).queryState
+    const { rerender } = render(<CalendarPageOrchastrator {...props} queryState={inactive as never} />)
+
+    const button = screen.getByRole("button", { name: "Events with no date (4)" })
+    expect(button.getAttribute("aria-pressed")).toBe("false")
+    fireEvent.click(button)
+    expect(inactive.setUndated).toHaveBeenCalledWith(true)
+    expect(dispatchMock).toHaveBeenCalledWith({ type: "OPEN_SEARCH" })
+
+    dispatchMock.mockReset()
+    const active = createQueryState(null, true).queryState
+    rerender(<CalendarPageOrchastrator {...props} queryState={active as never} />)
+    expect(button.getAttribute("aria-pressed")).toBe("true")
+    fireEvent.click(button)
+    expect(active.setUndated).toHaveBeenCalledWith(false)
+    expect(dispatchMock).not.toHaveBeenCalled()
+  })
+
+  it("leaves the count off the shortcut until it is known", () => {
+    undatedCount = undefined
+    render(
+      <CalendarPageOrchastrator
+        queryState={createQueryState(null).queryState as never}
+        eventsHook={createEventsHook() as never}
+        searchController={createSearchController() as never}
+        onDeleteRequest={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole("button", { name: "Events with no date" })).toBeTruthy()
+    undatedCount = 4
   })
 
   it("notes unavailable holidays beside the month controls without blocking the calendar", () => {

@@ -8,7 +8,7 @@
  * Features:
  * - Search input with icon
  * - Event type and status filter dropdowns
- * - Start date range using the shared DatePicker
+ * - Start date range using the shared DatePicker, or only events with no date
  * - Clear filters action when any filter is set
  *
  * Location: src/features/calendar/panels/content/SearchPanel.tsx
@@ -48,6 +48,9 @@ interface SearchPanelProps {
     dateTo: string
   }
   onDateRangeChange: (next: { dateFrom: string; dateTo: string }) => void
+  /** Only events with no start date; the date range is hidden while set */
+  undatedOnly: boolean
+  onUndatedOnlyChange: (undatedOnly: boolean) => void
   /** Resets search, type, status and dates in one update */
   onClearFilters: () => void
 }
@@ -63,6 +66,8 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
   onFilterStatusChange,
   dateRange,
   onDateRangeChange,
+  undatedOnly,
+  onUndatedOnlyChange,
   onClearFilters,
 }) => {
   const fieldId = useId()
@@ -77,6 +82,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
     searchTerm !== "" ||
     filterType !== null ||
     filterStatus !== null ||
+    undatedOnly ||
     dateRange.dateFrom !== "" ||
     dateRange.dateTo !== ""
 
@@ -151,29 +157,43 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
         </div>
 
         <div className="space-y-4">
-          <div>
-            <label className={formLabelClasses}>Starts From</label>
-            <DatePicker
-              value={dateFrom}
-              onChange={(date) =>
-                onDateRangeChange({ dateFrom: toLocalDateKey(date), dateTo: dateRange.dateTo })
-              }
-              inputClassName={formDateFieldClasses}
-              placeholder="Any date"
+          {/* Above the range so it stays put when the range hides */}
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-stone-100">
+            <input
+              type="checkbox"
+              className="size-4 cursor-pointer accent-orange-500"
+              checked={undatedOnly}
+              onChange={(e) => onUndatedOnlyChange(e.target.checked)}
             />
-          </div>
-          <div>
-            <label className={formLabelClasses}>Starts Until</label>
-            <DatePicker
-              value={dateTo}
-              onChange={(date) =>
-                onDateRangeChange({ dateFrom: dateRange.dateFrom, dateTo: toLocalDateKey(date) })
-              }
-              inputClassName={formDateFieldClasses}
-              minDate={dateFrom ?? undefined}
-              placeholder="Any date"
-            />
-          </div>
+            Only events with no date
+          </label>
+          {undatedOnly ? null : (
+            <>
+              <div>
+                <label className={formLabelClasses}>Starts From</label>
+                <DatePicker
+                  value={dateFrom}
+                  onChange={(date) =>
+                    onDateRangeChange({ dateFrom: toLocalDateKey(date), dateTo: dateRange.dateTo })
+                  }
+                  inputClassName={formDateFieldClasses}
+                  placeholder="Any date"
+                />
+              </div>
+              <div>
+                <label className={formLabelClasses}>Starts Until</label>
+                <DatePicker
+                  value={dateTo}
+                  onChange={(date) =>
+                    onDateRangeChange({ dateFrom: dateRange.dateFrom, dateTo: toLocalDateKey(date) })
+                  }
+                  inputClassName={formDateFieldClasses}
+                  minDate={dateFrom ?? undefined}
+                  placeholder="Any date"
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
 

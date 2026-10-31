@@ -32,7 +32,7 @@ export function useCalendarSearchController(queryState: UseEventsQueryStateRetur
 
   useEffect(() => {
     setPage(0)
-  }, [input.query, input.type, input.status, dateFrom, dateTo])
+  }, [input.query, input.type, input.status, input.undated, dateFrom, dateTo])
 
   const reset = useCallback(() => {
     setDateFrom(initialState.dateFrom)

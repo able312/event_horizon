@@ -21,6 +21,7 @@ export type CalendarSearchInput = {
   query: string
   type: EventType | null
   status: EventStatus | null
+  undated: boolean
 }
 
 export function createInitialCalendarSearchUiState(): CalendarSearchUiState {
@@ -37,9 +38,11 @@ export function buildCalendarSearchInput(queryState: EventsQueryState): Calendar
     query: queryState.search?.trim() ?? "",
     type: queryState.type,
     status: queryState.status,
+    undated: queryState.undated,
   }
 }
 
+/** An undated search ignores the date range: no undated event could fall inside one. */
 export function buildEventsSearchParams(
   input: CalendarSearchInput,
   uiState: CalendarSearchUiState,
@@ -48,8 +51,9 @@ export function buildEventsSearchParams(
     query: input.query,
     type: input.type,
     status: input.status,
-    startFrom: toLocalDateStartIso(uiState.dateFrom),
-    startTo: toLocalDateEndExclusiveIso(uiState.dateTo),
+    startFrom: input.undated ? null : toLocalDateStartIso(uiState.dateFrom),
+    startTo: input.undated ? null : toLocalDateEndExclusiveIso(uiState.dateTo),
+    noDate: input.undated,
     page: uiState.page,
     pageSize: uiState.pageSize,
   }

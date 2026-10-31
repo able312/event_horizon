@@ -30,7 +30,7 @@ const eventId = "event-1", id = "record-1", timeblockId = "block-1"
 const month = getMonthRangeUtcFromLocal("2026-04")!
 const input = { title: "Dinner", type: "function" as const }
 const person = { firstName: "Sam", email: "sam@example.test" }
-const search = { query: "dinner", page: 0, pageSize: 20, type: null, status: null, startFrom: null, startTo: null }
+const search = { query: "dinner", page: 0, pageSize: 20, type: null, status: null, startFrom: null, startTo: null, noDate: false }
 const contracts: Contract[] = [
   { name: "events.getStartingBetween", kind: "source", call: () => events.getEventsByMonth("2026-04"), args: { startFrom: month.startInclusiveIso, startTo: month.endExclusiveIso } },
   { name: "events.getUnscheduled", kind: "source", call: () => events.getUnscheduledEvents(), args: {} },
