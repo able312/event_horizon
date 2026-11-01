@@ -5,7 +5,7 @@ import { fetchSource, pickFields, runMutation } from "./backend"
 import { toContactTargetArgs } from "./eventContacts"
 import { EVENT_FIELDS } from "./events"
 import { toId } from "./ids"
-import { sources } from "./sources"
+import { desktopTimeZone, sources } from "./sources"
 
 /** Website requests waiting for review, newest first. */
 export function getPendingEventRequests(): Promise<EventRequest[]> {
@@ -18,6 +18,7 @@ export function acceptEventRequest(id: string, newEvent: NewEvent, client: Assig
     id: toId<"eventRequests">(id),
     input: pickFields(newEvent, EVENT_FIELDS),
     client: toContactTargetArgs(client),
+    timeZone: desktopTimeZone(),
   })
 }
 

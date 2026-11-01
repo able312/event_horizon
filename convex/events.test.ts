@@ -170,8 +170,8 @@ describe("Convex events", () => {
   })
   it("cascades every dependent document and link, preserving other events and shared contacts/categories", async () => {
     const t = setup()
-    const deleted = await t.mutation(api.events.create, { input: { title: "Delete" }, client: { displayName: "Shared", email: "shared@example.com" } })
-    const kept = await t.mutation(api.events.create, { input: { title: "Keep" }, client: { displayName: "Ignored", email: "shared@example.com" } })
+    const deleted = await t.mutation(api.events.create, { input: { title: "Delete", startDateTime: "2026-10-15T00:00:00Z" }, client: { displayName: "Shared", email: "shared@example.com" } })
+    const kept = await t.mutation(api.events.create, { input: { title: "Keep", startDateTime: "2026-10-15T00:00:00Z" }, client: { displayName: "Ignored", email: "shared@example.com" } })
     const category = await t.mutation(api.vendorCategories.create, { input: { key: "test", label: "Test", colorToken: "sky" } })
     for (const event of [deleted, kept]) {
       await t.mutation(api.payments.create, { eventId: event.id })

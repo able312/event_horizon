@@ -6,7 +6,7 @@ import { api } from "../../../convex/_generated/api"
 import { fetchSource, pickFields, runAction, runMutation, runQuery } from "./backend"
 import { toContactTargetArgs } from "./eventContacts"
 import { toId } from "./ids"
-import { sources } from "./sources"
+import { desktopTimeZone, sources } from "./sources"
 
 /** Fields a create or update may set; the server owns IDs and timestamps. */
 export const EVENT_FIELDS = [
@@ -41,12 +41,16 @@ export function createEvent(newEvent: NewEvent, client?: AssignContactTarget | n
   return runMutation(api.events.create, {
     input: pickFields(newEvent, EVENT_FIELDS),
     client: client ? toContactTargetArgs(client) : null,
+    timeZone: desktopTimeZone(),
   })
 }
 
-/** An update that removes the date also deletes the linked Google Calendar event (googleCalendar.updateEvent). */
+/**
+ * An update that removes the date also deletes the linked Google Calendar event (googleCalendar.updateEvent).
+ * The time zone dates the reminder touchpoint the server adds when the date is removed.
+ */
 export function updateEvent(id: string, updates: UpdateEvent): Promise<Event> {
-  const args = { id: toId<"events">(id), updates: pickFields(updates, EVENT_FIELDS) }
+  const args = { id: toId<"events">(id), updates: pickFields(updates, EVENT_FIELDS), timeZone: desktopTimeZone() }
   return updates.startDateTime === null ? runAction(api.googleCalendar.updateEvent, args) : runMutation(api.events.update, args)
 }
 

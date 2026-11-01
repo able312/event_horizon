@@ -16,9 +16,6 @@ import type { Event } from "~/definitions/database"
 import { useCalendarPanelState } from "../state/useCalendarPanelState"
 import InboxBody from "~/features/inbox/InboxBody"
 import type { UseCalendarSearchControllerReturn } from "../hooks/useCalendarSearchController"
-import UndatedEventsButton from "~/features/calendar/navigation/UndatedEventsButton"
-import { useUndatedSearchShortcut } from "../hooks/useUndatedSearchShortcut"
-import { useUndatedEventCount } from "../hooks/useUndatedEventCount"
 
 
 interface CalendarPageOrchastratorProps {
@@ -53,8 +50,6 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
     const primaryClients = usePrimaryClients(tableEvents.map((event) => event.id))
     const clientsByEventId = primaryClients.data
     const monthHolidays = useMonthHolidays(state.date)
-    const undatedShortcut = useUndatedSearchShortcut(queryState)
-    const undatedCount = useUndatedEventCount()
 
     const handleGoToToday = useCallback(() => {
         const todayMonth = getCurrentMonthParam()
@@ -97,11 +92,6 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
                             />
                         )}
                     </div>
-                    <UndatedEventsButton
-                        isActive={undatedShortcut.isActive}
-                        count={undatedCount}
-                        onToggle={undatedShortcut.toggle}
-                    />
                 </Body.Header>
             )}
 

@@ -64,9 +64,8 @@ export function useEvents(month: string) {
   const queryClient = useQueryClient()
   const { monthQuery, events: monthEvents } = useEventsMonthQuery(month)
 
-  // Kept subscribed so optimistic updates can find undated events in the cache. The calendar
-  // header only reads its count (useUndatedEventCount), so its failures stay out of the
-  // route-blocking state below.
+  // Kept subscribed only so optimistic updates can find undated events in the cache. No view
+  // renders it, so its failures stay out of the route-blocking state below.
   useQuery(eventQueries.unscheduled())
 
   const createMutation = useMutation({

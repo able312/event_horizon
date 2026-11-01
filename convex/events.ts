@@ -4,10 +4,12 @@ import type { MutationCtx } from "./_generated/server"
 import { contactFields } from "./lib/contactValidators"
 import { assignContact, contactOperation } from "./lib/contactOperations"
 import { assertUpdates, requireDocument, toRecord } from "./lib/records"
-import { eventStatus, eventType, nullable } from "./lib/validators"
+import { eventStatus, eventType, nullable, timeZone } from "./lib/validators"
+import { addUndatedEventTouchpoint } from "./touchpoints"
 import { normalizeEmail } from "../src/lib/contacts/contactRules"
 import { assertValidEventDateRange } from "../src/lib/events/eventDateRange"
 import { assertStatusAllowedForDate } from "../src/lib/events/eventStatusRules"
+import { needsUndatedEventTouchpoint } from "../src/lib/touchpoints/undatedEventTouchpoint"
 
 const fields = {
   title: v.optional(v.string()), type: v.optional(eventType), status: v.optional(eventStatus),
@@ -58,10 +60,16 @@ async function legacyClientTarget(ctx: MutationCtx, client: Infer<typeof legacyC
   return existing ? { contactId: existing._id } : { newContact: client }
 }
 export const eventInput = v.object(fields)
+/** The sender's IANA zone, for the undated reminder's due date. Optional: builds released before it don't send one. */
+export const optionalTimeZone = v.optional(timeZone)
 export const eventClient = v.optional(nullable(primaryClient))
-/** Creates an event and its primary client. Shared with accepting a website request (eventRequests.ts). */
-export async function createEventWithClient(ctx: MutationCtx, input: Infer<typeof eventInput>, client: Infer<typeof eventClient>) {
+/**
+ * Creates an event and its primary client, plus a reminder touchpoint when it has no date.
+ * Shared with accepting a website request (eventRequests.ts).
+ */
+export async function createEventWithClient(ctx: MutationCtx, input: Infer<typeof eventInput>, client: Infer<typeof eventClient>, timeZone?: string) {
   const event = await insertEvent(ctx, input)
+  if (needsUndatedEventTouchpoint(null, event)) await addUndatedEventTouchpoint(ctx, event.id, timeZone)
   if (client) {
     const target = "contactId" in client || "newContact" in client ? client : await legacyClientTarget(ctx, client)
     await assignContact(ctx, event.id, target, "client", { isPrimary: true })
@@ -69,8 +77,9 @@ export async function createEventWithClient(ctx: MutationCtx, input: Infer<typeo
   return event
 }
 // A new contact whose email is taken fails with EmailTaken (rolling back the event) so the form can offer the existing contact.
-export const create = companyMutation({ args: { input: eventInput, client: eventClient }, handler: (ctx, { input, client }) => contactOperation(() => createEventWithClient(ctx, input, client)) })
-export const update = companyMutation({ args: { id: v.id("events"), updates: v.object(fields) }, handler: async (ctx, { id, updates }) => {
+export const create = companyMutation({ args: { input: eventInput, client: eventClient, timeZone: optionalTimeZone }, handler: (ctx, { input, client, timeZone }) => contactOperation(() => createEventWithClient(ctx, input, client, timeZone)) })
+// Removing the date adds the same reminder a new undated event gets.
+export const update = companyMutation({ args: { id: v.id("events"), updates: v.object(fields), timeZone: optionalTimeZone }, handler: async (ctx, { id, updates, timeZone }) => {
   assertUpdates(updates)
   const current = await requireDocument(ctx, "events", id)
   const startDateTime = updates.startDateTime === undefined ? current.startDateTime : updates.startDateTime
@@ -79,7 +88,9 @@ export const update = companyMutation({ args: { id: v.id("events"), updates: v.o
   // Clearing the date of a dated-status event must move the status back in the same update.
   if (updates.status !== undefined || updates.startDateTime !== undefined) assertStatusAllowedForDate(updates.status ?? current.status, startDateTime)
   await ctx.db.patch("events", id, { ...updates, updatedAt: Date.now().toString() })
-  return toRecord(await requireDocument(ctx, "events", id))
+  const updated = await requireDocument(ctx, "events", id)
+  if (needsUndatedEventTouchpoint(current, updated)) await addUndatedEventTouchpoint(ctx, id, timeZone)
+  return toRecord(updated)
 } })
 export const importFromCalendar = companyMutation({ args: { rows: v.array(v.object({ calendarId: v.string(), title: v.string(), startDateTime: v.string(), endDateTime: v.string(), internalNotes: nullable(v.string()) })) }, handler: async (ctx, { rows }) => {
   const inserted = [], duplicateCalendarIds: string[] = [], createdAt = Date.now().toString()
