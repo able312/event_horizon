@@ -4,6 +4,7 @@ import { api } from "./_generated/api"
 import { QUESTIONS } from "./lib/eventRequestPayload"
 import { companyIdentity } from "./lib/testIdentity"
 import schema from "./schema"
+import { UNDATED_EVENT_TOUCHPOINT_TITLE } from "../src/lib/touchpoints/undatedEventTouchpoint"
 
 const modules = import.meta.glob("./**/*.{ts,js}")
 const SECRET = "test-secret-value"
@@ -173,6 +174,17 @@ describe("Convex eventRequests", () => {
     expect(stored!.reviewedBy).toBe(event.createdBy)
     expect(await staff.query(api.eventRequests.listPending, {})).toHaveLength(0)
     await expect(staff.mutation(api.eventRequests.accept, { id: request!.id, input: {}, client: ADA })).rejects.toMatchObject({ data: { code: "AlreadyReviewed" } })
+    expect(await staff.query(api.touchpoints.getByEventId, { eventId: event.id })).toEqual([])
+  })
+
+  it("adds the undated reminder touchpoint when the accepted event has no date", async () => {
+    vi.stubEnv("EVENT_REQUEST_SECRET", SECRET)
+    const t = newTest()
+    await submit(t)
+    const staff = t.withIdentity(companyIdentity)
+    const [request] = await staff.query(api.eventRequests.listPending, {})
+    const event = await staff.mutation(api.eventRequests.accept, { id: request!.id, input: { title: "Undated" }, client: ADA, timeZone: "America/Toronto" })
+    expect(await staff.query(api.touchpoints.getByEventId, { eventId: event.id })).toMatchObject([{ title: UNDATED_EVENT_TOUCHPOINT_TITLE, completedAt: null }])
   })
 
   it("refuses to accept without a primary client", async () => {

@@ -36,7 +36,8 @@ async function registeredFunctions(): Promise<[string, RegisteredFunction][]> {
 }
 
 /**
- * Internal functions: run through the Convex CLI with admin access, by the
+ * Internal functions: run through the Convex CLI with admin access (the seed and
+ * the one-off undated touchpoint backfill), by the
  * secret-checked HTTP route in http.ts (website event requests), by the
  * holiday cron (crons.ts), or by googleCalendar.pushEvent / removeEvent /
  * updateEvent once they have checked the caller (recordPush and recordRemoval
@@ -53,6 +54,7 @@ const INTERNAL_FUNCTIONS = new Set([
   "./holidays.ts:recordRefresh",
   "./holidays.ts:refresh",
   "./holidays.ts:bootstrap",
+  "./touchpoints.ts:backfillUndatedEvents",
 ])
 /** The only internal actions: they download the fixed holiday feed. */
 const INTERNAL_ACTIONS = new Set([
@@ -108,7 +110,7 @@ describe("auth enforcement on every function", () => {
     expect((await registeredFunctions()).length).toBeGreaterThan(70)
   })
 
-  it("exposes only public queries and mutations, except the internal seed, event request and holiday functions and the listed actions", async () => {
+  it("exposes only public queries and mutations, except the internal seed, backfill, event request and holiday functions and the listed actions", async () => {
     for (const [name, fn] of await registeredFunctions()) {
       if (INTERNAL_FUNCTIONS.has(name)) {
         expect(fn.isInternal).toBe(true)

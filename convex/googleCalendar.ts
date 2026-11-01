@@ -7,7 +7,7 @@ import { deleteGoogleCalendarEvent, findGoogleCalendarEventUrl, googleEventIdFor
 import { requireDocument, type toRecord } from "./lib/records"
 import { nullable } from "./lib/validators"
 import { primaryClientOf } from "./eventContacts"
-import { eventInput } from "./events"
+import { eventInput, optionalTimeZone } from "./events"
 import { buildGoogleCalendarEventBody, googleCalendarBodyFingerprint, type GoogleCalendarEventBody, type GoogleCalendarSyncStatus } from "../src/features/google-calendar/lib/googleCalendar"
 
 /** eventUrl is on calendar.google.com, the only Google Calendar origin the desktop app opens. */
@@ -271,9 +271,9 @@ export const deleteEvent = companyAction({
  * Deployments without Google Calendar set up only save the update.
  */
 export const updateEvent = companyAction({
-  args: { id: v.id("events"), updates: eventInput },
-  handler: async (ctx, { id, updates }): Promise<EventRecord> => {
-    const updated = await ctx.runMutation(api.events.update, { id, updates })
+  args: { id: v.id("events"), updates: eventInput, timeZone: optionalTimeZone },
+  handler: async (ctx, { id, updates, timeZone }): Promise<EventRecord> => {
+    const updated = await ctx.runMutation(api.events.update, { id, updates, timeZone })
     const linked = updated.calendarId?.trim()
     const removesDate = updates.startDateTime === null && updates.calendarId === undefined
     if (!removesDate || !linked || !isGoogleCalendarConfigured()) return updated

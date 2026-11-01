@@ -5,7 +5,7 @@ import { companyMutation, companyQuery, type CompanyMutationCtx } from "./lib/au
 import { contactOperation } from "./lib/contactOperations"
 import { toRecord } from "./lib/records"
 import { eventType, nullable } from "./lib/validators"
-import { createEventWithClient, eventInput, primaryClient } from "./events"
+import { createEventWithClient, eventInput, optionalTimeZone, primaryClient } from "./events"
 
 const submission = {
   responseId: v.string(), submittedAt: v.string(), eventName: nullable(v.string()),
@@ -59,9 +59,9 @@ export const restore = companyMutation({ args: { id: v.id("eventRequests") }, ha
 // can correct it first. One transaction: if the event or contact fails (e.g.
 // EmailTaken), the request stays pending. Unlike a plain create, the client is
 // required: accepting a request always records who asked.
-export const accept = companyMutation({ args: { id: v.id("eventRequests"), input: eventInput, client: primaryClient }, handler: (ctx, { id, input, client }) => contactOperation(async () => {
+export const accept = companyMutation({ args: { id: v.id("eventRequests"), input: eventInput, client: primaryClient, timeZone: optionalTimeZone }, handler: (ctx, { id, input, client, timeZone }) => contactOperation(async () => {
   await requirePending(ctx, id)
-  const event = await createEventWithClient(ctx, input, client)
+  const event = await createEventWithClient(ctx, input, client, timeZone)
   await ctx.db.patch("eventRequests", id, { status: "accepted", eventId: event.id, ...reviewed(ctx) })
   return event
 }) })

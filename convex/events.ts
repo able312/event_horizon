@@ -4,10 +4,12 @@ import type { MutationCtx } from "./_generated/server"
 import { contactFields } from "./lib/contactValidators"
 import { assignContact, contactOperation } from "./lib/contactOperations"
 import { assertUpdates, requireDocument, toRecord } from "./lib/records"
-import { eventStatus, eventType, nullable } from "./lib/validators"
+import { eventStatus, eventType, nullable, timeZone } from "./lib/validators"
+import { addUndatedEventTouchpoint } from "./touchpoints"
 import { normalizeEmail } from "../src/lib/contacts/contactRules"
 import { assertValidEventDateRange } from "../src/lib/events/eventDateRange"
 import { assertStatusAllowedForDate } from "../src/lib/events/eventStatusRules"
+import { needsUndatedEventTouchpoint } from "../src/lib/touchpoints/undatedEventTouchpoint"
 
 const fields = {
   title: v.optional(v.string()), type: v.optional(eventType), status: v.optional(eventStatus),
@@ -58,10 +60,16 @@ async function legacyClientTarget(ctx: MutationCtx, client: Infer<typeof legacyC
   return existing ? { contactId: existing._id } : { newContact: client }
 }
 export const eventInput = v.object(fields)
+/** The sender's IANA zone, for the undated reminder's due date. Optional: builds released before it don't send one. */
+export const optionalTimeZone = v.optional(timeZone)
 export const eventClient = v.optional(nullable(primaryClient))
-/** Creates an event and its primary client. Shared with accepting a website request (eventRequests.ts). */
-export async function createEventWithClient(ctx: MutationCtx, input: Infer<typeof eventInput>, client: Infer<typeof eventClient>) {
+/**
+ * Creates an event and its primary client, plus a reminder touchpoint when it has no date.
+ * Shared with accepting a website request (eventRequests.ts).
+ */
+export async function createEventWithClient(ctx: MutationCtx, input: Infer<typeof eventInput>, client: Infer<typeof eventClient>, timeZone?: string) {
   const event = await insertEvent(ctx, input)
+  if (needsUndatedEventTouchpoint(null, event)) await addUndatedEventTouchpoint(ctx, event.id, timeZone)
   if (client) {
     const target = "contactId" in client || "newContact" in client ? client : await legacyClientTarget(ctx, client)
     await assignContact(ctx, event.id, target, "client", { isPrimary: true })
@@ -69,8 +77,9 @@ export async function createEventWithClient(ctx: MutationCtx, input: Infer<typeo
   return event
 }
 // A new contact whose email is taken fails with EmailTaken (rolling back the event) so the form can offer the existing contact.
-export const create = companyMutation({ args: { input: eventInput, client: eventClient }, handler: (ctx, { input, client }) => contactOperation(() => createEventWithClient(ctx, input, client)) })
-export const update = companyMutation({ args: { id: v.id("events"), updates: v.object(fields) }, handler: async (ctx, { id, updates }) => {
+export const create = companyMutation({ args: { input: eventInput, client: eventClient, timeZone: optionalTimeZone }, handler: (ctx, { input, client, timeZone }) => contactOperation(() => createEventWithClient(ctx, input, client, timeZone)) })
+// Removing the date adds the same reminder a new undated event gets.
+export const update = companyMutation({ args: { id: v.id("events"), updates: v.object(fields), timeZone: optionalTimeZone }, handler: async (ctx, { id, updates, timeZone }) => {
   assertUpdates(updates)
   const current = await requireDocument(ctx, "events", id)
   const startDateTime = updates.startDateTime === undefined ? current.startDateTime : updates.startDateTime
@@ -79,7 +88,9 @@ export const update = companyMutation({ args: { id: v.id("events"), updates: v.o
   // Clearing the date of a dated-status event must move the status back in the same update.
   if (updates.status !== undefined || updates.startDateTime !== undefined) assertStatusAllowedForDate(updates.status ?? current.status, startDateTime)
   await ctx.db.patch("events", id, { ...updates, updatedAt: Date.now().toString() })
-  return toRecord(await requireDocument(ctx, "events", id))
+  const updated = await requireDocument(ctx, "events", id)
+  if (needsUndatedEventTouchpoint(current, updated)) await addUndatedEventTouchpoint(ctx, id, timeZone)
+  return toRecord(updated)
 } })
 export const importFromCalendar = companyMutation({ args: { rows: v.array(v.object({ calendarId: v.string(), title: v.string(), startDateTime: v.string(), endDateTime: v.string(), internalNotes: nullable(v.string()) })) }, handler: async (ctx, { rows }) => {
   const inserted = [], duplicateCalendarIds: string[] = [], createdAt = Date.now().toString()
@@ -120,17 +131,19 @@ export const remove = companyMutation({ args: { id: v.id("events"), expectedCale
 // Preserve literal substring matching, client joins, exact totals and relevance.
 // This scans the small venue dataset; revisit with denormalized search documents
 // before the dataset approaches Convex's transaction read limits.
-export const search = companyQuery({ args: { query: v.string(), page: v.number(), pageSize: v.number(), type: v.optional(nullable(eventType)), status: v.optional(nullable(eventStatus)), startFrom: v.optional(nullable(v.string())), startTo: v.optional(nullable(v.string())) }, handler: async (ctx, params) => {
+export const search = companyQuery({ args: { query: v.string(), page: v.number(), pageSize: v.number(), type: v.optional(nullable(eventType)), status: v.optional(nullable(eventStatus)), startFrom: v.optional(nullable(v.string())), startTo: v.optional(nullable(v.string())), noDate: v.optional(v.boolean()) }, handler: async (ctx, params) => {
   const query = params.query.trim().toLowerCase()
   if (!Number.isFinite(params.page) || !Number.isFinite(params.pageSize)) throw new Error("Invalid search pagination")
   const page = Math.max(0, Math.floor(params.page)), pageSize = Math.min(50, Math.max(1, Math.floor(params.pageSize)))
   const startFrom = params.startFrom?.trim(), startTo = params.startTo?.trim()
-  if (query.length < 2 && !params.type && !params.status && !startFrom && !startTo) {
+  if (query.length < 2 && !params.type && !params.status && !startFrom && !startTo && !params.noDate) {
     throw new Error("searchEvents: query must be at least 2 characters or a filter must be selected")
   }
+  // An undated event has no start to compare, so the two filters can never both match.
+  if (params.noDate && (startFrom || startTo)) throw new Error("searchEvents: noDate can't be combined with a date range")
   if (startFrom && Number.isNaN(Date.parse(startFrom)) || startTo && Number.isNaN(Date.parse(startTo))) throw new Error("Invalid search date")
   if (startFrom && startTo) range(startFrom, startTo)
-  const events = startFrom || startTo ? await ctx.db.query("events").withIndex("by_start", q => {
+  const events = params.noDate ? await ctx.db.query("events").withIndex("by_start", q => q.eq("startDateTime", null)).collect() : startFrom || startTo ? await ctx.db.query("events").withIndex("by_start", q => {
     const lower = q.gte("startDateTime", startFrom || "")
     return startTo ? lower.lt("startDateTime", startTo) : lower
   }).collect() : await ctx.db.query("events").collect()

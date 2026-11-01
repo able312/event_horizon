@@ -14,6 +14,8 @@ export interface EventsQueryState {
   search: string | null
   type: EventType | null
   status: EventStatus | null
+  /** Only events with no start date. Lives in the URL so Back from an event restores the list. */
+  undated: boolean
 }
 
 export interface UseEventsQueryStateReturn {
@@ -27,6 +29,7 @@ export interface UseEventsQueryStateReturn {
   resetSearchAndFilters: () => void
   setType: (type: EventType | null) => void
   setStatus: (status: EventStatus | null) => void
+  setUndated: (undated: boolean) => void
 
   reset: () => void
 }
@@ -36,6 +39,7 @@ const SEARCH_DEBOUNCE_MS = 300
 const VIEW_VALUES = new Set<EventView>(["calendar", "list", "inbox"])
 const TYPE_VALUES = new Set<EventType>(EVENT_TYPE_OPTIONS)
 const STATUS_VALUES = new Set<EventStatus>(ITER_EVENT_STATUSES)
+const UNDATED_PARAM_VALUE = "1"
 
 function normalizeView(value: unknown): EventView {
   if (typeof value !== "string") return DEFAULT_VIEW
@@ -62,6 +66,10 @@ function normalizeStatus(value: unknown): EventStatus | null {
   return STATUS_VALUES.has(value as EventStatus) ? (value as EventStatus) : null
 }
 
+function normalizeUndated(value: unknown): boolean {
+  return value === true || value === UNDATED_PARAM_VALUE
+}
+
 function sanitizeState(state: EventsQueryState): EventsQueryState {
   return {
     view: normalizeView(state.view),
@@ -69,6 +77,7 @@ function sanitizeState(state: EventsQueryState): EventsQueryState {
     search: normalizeSearch(state.search),
     type: normalizeType(state.type),
     status: normalizeStatus(state.status),
+    undated: normalizeUndated(state.undated),
   }
 }
 
@@ -79,6 +88,7 @@ function parseState(searchParams: URLSearchParams): EventsQueryState {
     search: normalizeSearch(searchParams.get("search")),
     type: normalizeType(searchParams.get("type")),
     status: normalizeStatus(searchParams.get("status")),
+    undated: normalizeUndated(searchParams.get("undated")),
   })
 }
 
@@ -90,6 +100,7 @@ function toCanonicalSearchParams(state: EventsQueryState): URLSearchParams {
   if (state.search) params.set("search", state.search)
   if (state.type) params.set("type", state.type)
   if (state.status) params.set("status", state.status)
+  if (state.undated) params.set("undated", UNDATED_PARAM_VALUE)
 
   return params
 }
@@ -148,6 +159,13 @@ export function useEventsQueryState(): UseEventsQueryStateReturn {
     [updateState],
   )
 
+  const setUndated = useCallback(
+    (undated: boolean) => {
+      updateState((prev) => ({ ...prev, undated }))
+    },
+    [updateState],
+  )
+
   const reset = useCallback(() => {
     updateState(() => ({
       view: DEFAULT_VIEW,
@@ -155,6 +173,7 @@ export function useEventsQueryState(): UseEventsQueryStateReturn {
       search: null,
       type: null,
       status: null,
+      undated: false,
     }))
   }, [updateState])
 
@@ -166,7 +185,7 @@ export function useEventsQueryState(): UseEventsQueryStateReturn {
   // so the last call would overwrite the earlier resets
   const resetSearchAndFilters = useCallback(() => {
     setSearchInputState("")
-    updateState((prev) => ({ ...prev, search: null, type: null, status: null }))
+    updateState((prev) => ({ ...prev, search: null, type: null, status: null, undated: false }))
   }, [updateState])
 
   useEffect(() => {
@@ -207,6 +226,7 @@ export function useEventsQueryState(): UseEventsQueryStateReturn {
     resetSearchAndFilters,
     setType,
     setStatus,
+    setUndated,
     reset,
   }
 }

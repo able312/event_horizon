@@ -50,6 +50,7 @@ export const eventKeys = {
     params.status,
     params.startFrom,
     params.startTo,
+    params.noDate,
     params.page,
     params.pageSize,
   ] as const,

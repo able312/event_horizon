@@ -8,7 +8,7 @@ import SearchPanel from "./SearchPanel"
 
 /** SearchPanel wired to the real URL-backed query state, as in CalendarPanelOrchestrator */
 function ConnectedSearchPanel() {
-  const { state, searchInput, setSearchInput, setType, setStatus, resetSearchAndFilters } =
+  const { state, searchInput, setSearchInput, setType, setStatus, setUndated, resetSearchAndFilters } =
     useEventsQueryState()
   const [dateRange, setDateRange] = useState({ dateFrom: "2026-01-01", dateTo: "" })
   const location = useLocation()
@@ -25,6 +25,8 @@ function ConnectedSearchPanel() {
         onFilterStatusChange={setStatus}
         dateRange={dateRange}
         onDateRangeChange={setDateRange}
+        undatedOnly={state.undated}
+        onUndatedOnlyChange={setUndated}
         onClearFilters={() => {
           resetSearchAndFilters()
           setDateRange({ dateFrom: "", dateTo: "" })
@@ -44,6 +46,8 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof SearchPanel>
     onFilterStatusChange: vi.fn(),
     dateRange: { dateFrom: "", dateTo: "" },
     onDateRangeChange: vi.fn(),
+    undatedOnly: false,
+    onUndatedOnlyChange: vi.fn(),
     onClearFilters: vi.fn(),
     ...overrides,
   }
@@ -89,6 +93,33 @@ describe("SearchPanel", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Clear date" })[0])
 
     expect(props.onDateRangeChange).toHaveBeenCalledWith({ dateFrom: "", dateTo: "2026-04-01" })
+  })
+
+  it("replaces the date range with the no-date filter while it is checked", () => {
+    const props = renderPanel()
+    expect(screen.getAllByPlaceholderText("Any date")).toHaveLength(2)
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Only events with no date" }))
+    expect(props.onUndatedOnlyChange).toHaveBeenCalledWith(true)
+
+    cleanup()
+    renderPanel({ undatedOnly: true })
+    expect(screen.queryAllByPlaceholderText("Any date")).toHaveLength(0)
+    expect(screen.getByRole("button", { name: "Clear Filters" })).toBeTruthy()
+  })
+
+  it("clears the no-date filter from the URL with the others", () => {
+    render(
+      <MemoryRouter initialEntries={["/events?date=2026-04&undated=1"]}>
+        <ConnectedSearchPanel />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole<HTMLInputElement>("checkbox", { name: "Only events with no date" }).checked).toBe(true)
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear Filters" }))
+
+    expect(screen.getByTestId("url").textContent).toBe("?date=2026-04")
+    expect(screen.getByRole<HTMLInputElement>("checkbox", { name: "Only events with no date" }).checked).toBe(false)
   })
 
   it("clears both URL-backed filters when Type and Status are set", () => {

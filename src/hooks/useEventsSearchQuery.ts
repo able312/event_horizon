@@ -11,6 +11,7 @@ export type EventsSearchParams = {
   status: EventStatus | null
   startFrom: string | null
   startTo: string | null
+  noDate: boolean
   page: number
   pageSize: number
 }
@@ -26,7 +27,7 @@ const EMPTY_RESULT: EventSearchResponse = {
 export function useEventsSearchQuery(params: EventsSearchParams) {
   const normalizedQuery = params.query.trim()
   const enabled = normalizedQuery.length >= 2 || Boolean(
-    params.type || params.status || params.startFrom || params.startTo,
+    params.type || params.status || params.startFrom || params.startTo || params.noDate,
   )
   // The server rejects an empty or inverted range; flag it rather than fetch a guaranteed error.
   const invalidDateRange = Boolean(params.startFrom && params.startTo && params.startFrom >= params.startTo)
@@ -38,6 +39,7 @@ export function useEventsSearchQuery(params: EventsSearchParams) {
       status: params.status,
       startFrom: params.startFrom,
       startTo: params.startTo,
+      noDate: params.noDate,
       page: params.page,
       pageSize: params.pageSize,
     }),

@@ -110,3 +110,24 @@ describe("request acceptance navigation", () => {
     expect(result.current.ui.bodyMode).toBe("calendar")
   })
 })
+
+describe("closing the search panel", () => {
+  beforeEach(() => vi.resetAllMocks())
+
+  it("clears search, filters and the undated filter in one URL update", () => {
+    const { result } = renderHook(useSubject, {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <MemoryRouter initialEntries={["/events?date=2026-10&search=vip&type=wedding&undated=1"]}>
+          <PanelProvider>{children}</PanelProvider>
+        </MemoryRouter>
+      ),
+    })
+    act(() => result.current.vm.panelActions.openSearchPanel())
+
+    act(() => result.current.vm.panelActions.closeSearchPanel())
+
+    expect(result.current.ui.sidebarMode).toBe("default")
+    expect(result.current.location.search).toBe("?date=2026-10")
+    expect(searchController.reset).toHaveBeenCalledTimes(1)
+  })
+})

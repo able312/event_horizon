@@ -141,11 +141,11 @@ describe("useEventsQueryState", () => {
     expect(result.current.state.status).toBeNull()
   })
 
-  it("resets search, type and status together in one URL update", () => {
+  it("resets search, type, status and the undated filter together in one URL update", () => {
     const { result } = renderHook(() => useEventsQueryState(), {
-      wrapper: createWrapper("/events?date=2026-04&search=vip&type=wedding&status=closed"),
+      wrapper: createWrapper("/events?date=2026-04&search=vip&type=wedding&status=closed&undated=1"),
     })
-    expect(latestSearch).toBe("?date=2026-04&search=vip&type=wedding&status=closed")
+    expect(latestSearch).toBe("?date=2026-04&search=vip&type=wedding&status=closed&undated=1")
 
     act(() => result.current.resetSearchAndFilters())
 
@@ -153,6 +153,22 @@ describe("useEventsQueryState", () => {
     expect(result.current.searchInput).toBe("")
     expect(result.current.state.type).toBeNull()
     expect(result.current.state.status).toBeNull()
+    expect(result.current.state.undated).toBe(false)
+  })
+
+  it("keeps the undated filter in the URL and drops unrecognized values", () => {
+    const { result } = renderHook(() => useEventsQueryState(), {
+      wrapper: createWrapper("/events?date=2026-04&undated=yes"),
+    })
+    expect(result.current.state.undated).toBe(false)
+    expect(latestSearch).toBe("?date=2026-04")
+
+    act(() => result.current.setUndated(true))
+    expect(result.current.state.undated).toBe(true)
+    expect(latestSearch).toBe("?date=2026-04&undated=1")
+
+    act(() => result.current.setUndated(false))
+    expect(latestSearch).toBe("?date=2026-04")
   })
 
   it("debounces search input before committing to URL", async () => {

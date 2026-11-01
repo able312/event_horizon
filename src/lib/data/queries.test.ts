@@ -19,6 +19,7 @@ const searchParams = {
   status: null,
   startFrom: null,
   startTo: null,
+  noDate: false,
   page: 0,
   pageSize: 50,
 }

@@ -11,6 +11,8 @@ export type EventSearchRequest = {
   status: EventStatus | null
   startFrom: string | null
   startTo: string | null
+  /** Only events with no start date; never sent alongside startFrom/startTo */
+  noDate: boolean
   page: number
   pageSize: number
 }

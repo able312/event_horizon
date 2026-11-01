@@ -29,9 +29,10 @@ describe("useEventsSearchQuery", () => {
     { startFrom: "2026-10-01T00:00:00Z" },
     { startTo: "2026-11-01T00:00:00Z" },
     { type: "wedding", status: "confirmed", query: "a" },
+    { noDate: true },
   ])("searches without requiring text when filters are set: %o", async (filters) => {
     const params: EventsSearchParams = {
-      query: "  ", type: null, status: null, startFrom: null, startTo: null,
+      query: "  ", type: null, status: null, startFrom: null, startTo: null, noDate: false,
       page: 0, pageSize: 50, ...filters,
     }
     vi.mocked(eventsApi.searchEvents).mockResolvedValue({
@@ -44,7 +45,7 @@ describe("useEventsSearchQuery", () => {
     await waitFor(() => expect(result.current.result.total).toBe(3))
     expect(eventsApi.searchEvents).toHaveBeenCalledWith({ ...params, query: params.query.trim() })
 
-    rerender({ ...params, query: "", type: null, status: null, startFrom: null, startTo: null })
+    rerender({ ...params, query: "", type: null, status: null, startFrom: null, startTo: null, noDate: false })
     expect(result.current.enabled).toBe(false)
     expect(result.current.result.items).toEqual([])
     expect(result.current.result.total).toBe(0)
@@ -56,7 +57,7 @@ describe("useEventsSearchQuery", () => {
       () =>
         useEventsSearchQuery({
           query: "", type: null, status: null,
-          startFrom: "2026-10-16T00:00:00Z", startTo: "2026-10-10T00:00:00Z",
+          startFrom: "2026-10-16T00:00:00Z", startTo: "2026-10-10T00:00:00Z", noDate: false,
           page: 0, pageSize: 50,
         }),
       { wrapper: wrapperFactory() },
@@ -78,6 +79,7 @@ describe("useEventsSearchQuery", () => {
           status: null,
           startFrom: null,
           startTo: null,
+          noDate: false,
           page: 0,
           pageSize: 50,
         }),
@@ -105,6 +107,7 @@ describe("useEventsSearchQuery", () => {
           status: null,
           startFrom: null,
           startTo: null,
+          noDate: false,
           page: 0,
           pageSize: 50,
         }),
@@ -120,6 +123,7 @@ describe("useEventsSearchQuery", () => {
       status: null,
       startFrom: null,
       startTo: null,
+      noDate: false,
       page: 0,
       pageSize: 50,
     })

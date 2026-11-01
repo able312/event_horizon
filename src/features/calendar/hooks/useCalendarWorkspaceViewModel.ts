@@ -21,18 +21,16 @@ export function useCalendarWorkspaceViewModel(
   const navigate = useNavigate()
   const location = useLocation()
   const { dispatch, ui } = useCalendarPanelState()
-  const { setSearch, setStatus, setType, setSearchInput } = queryState
+  const { resetSearchAndFilters } = queryState
   const { createEvent, updateEvent } = eventsHook
   const { acceptRequest } = useEventRequests()
 
+  // One URL update: separate setters would each start from the same stale params
   const closeSearchPanel = useCallback(() => {
-    setSearch("")
-    setType(null)
-    setStatus(null)
+    resetSearchAndFilters()
     searchController.reset()
     dispatch({ type: ACTIONS.CLOSE_SEARCH })
-    setSearchInput("")
-  }, [dispatch, searchController, setSearch, setSearchInput, setStatus, setType])
+  }, [dispatch, resetSearchAndFilters, searchController])
 
   const openSearchPanel = useCallback(() => {
     dispatch({ type: ACTIONS.OPEN_SEARCH })
