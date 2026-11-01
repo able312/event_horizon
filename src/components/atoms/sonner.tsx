@@ -1,12 +1,10 @@
-import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
-
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      // Fixed light theme so toasts don't follow the OS dark-mode setting.
+      theme="light"
       className="toaster group"
       style={
         {
