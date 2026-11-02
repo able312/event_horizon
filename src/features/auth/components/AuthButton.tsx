@@ -1,19 +1,21 @@
 import { LogIn, LogOut, Loader2 } from 'lucide-react'
 import { Button } from '~/components/atoms/button'
+import { cn } from '~/lib/utils'
 import { useAuth } from '../state/useAuth'
 
 interface AuthButtonProps {
   variant?: 'default' | 'outline' | 'ghost'
   size?: 'default' | 'sm' | 'lg' | 'icon'
   showUserName?: boolean
+  className?: string
 }
 
-export function AuthButton({ variant = 'outline', size = 'default', showUserName = true }: AuthButtonProps) {
+export function AuthButton({ variant = 'outline', size = 'default', showUserName = true, className }: AuthButtonProps) {
   const { auth, signIn, signOut } = useAuth()
 
   if (auth.isLoading) {
     return (
-      <Button variant={variant} size={size} disabled>
+      <Button variant={variant} size={size} className={className} disabled>
         <Loader2 className="animate-spin" />
         {size !== 'icon' && 'Signing in...'}
       </Button>
@@ -22,13 +24,13 @@ export function AuthButton({ variant = 'outline', size = 'default', showUserName
 
   if (auth.isAuthenticated && auth.user) {
     return (
-      <div className="flex items-center gap-2">
+      <div className={cn("flex items-center gap-2", showUserName ? undefined : "contents")}>
         {showUserName && (
           <span className="text-sm text-muted-foreground">
             {auth.user.firstName || auth.user.email}
           </span>
         )}
-        <Button variant={variant} size={size} onClick={signOut}>
+        <Button variant={variant} size={size} className={className} onClick={signOut}>
           <LogOut />
           {size !== 'icon' && 'Sign out'}
         </Button>
@@ -37,7 +39,7 @@ export function AuthButton({ variant = 'outline', size = 'default', showUserName
   }
 
   return (
-    <Button variant={variant} size={size} onClick={signIn}>
+    <Button variant={variant} size={size} className={className} onClick={signIn}>
       <LogIn />
       {size !== 'icon' && 'Sign in'}
     </Button>
