@@ -21,10 +21,10 @@ const DefaultFooter: React.FC = () => {
           Alpha
         </span>
         {import.meta.env.DEV && <UpdaterDevControls />}
-      </div>
-      <div className="ml-auto flex shrink-0 items-center gap-2">
-        <AuthButton variant="ghost" size="sm" showUserName={false} />
         <UpdaterIndicator />
+      </div>
+      <div className="ml-auto flex shrink-0 items-center">
+        <AuthButton variant="ghost" size="sm" showUserName={false} />
       </div>
     </div>
   )
