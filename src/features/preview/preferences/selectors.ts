@@ -18,15 +18,21 @@ export function hasContactInfo(client: Pick<PrimaryClient, "displayName" | "phon
 }
 
 /**
- * "Internal notes" here, and the "Show internal notes" toggles that use it, mean the
- * event's own `internalNotes` only. Food items also have their own `internalNotes`
- * (kitchen/staff only, beside the client-facing `clientNotes`), which no preview prints
- * yet. The plan is for those toggles to cover food item internal notes too, so when
- * adding them, extend this check to look at food items as well. Otherwise the toggle
- * stays hidden on events that only have item-level internal notes.
+ * "Internal notes" here, and the "Internal notes" toggles that use it, mean the event's
+ * own `internalNotes` only. Food items' kitchen-only `internalNotes` have their own
+ * "Kitchen notes" toggles on the Full BEO and Timeline (see hasKitchenNotes). The Food
+ * BEO doesn't print kitchen notes yet: whether its existing toggle should cover them or
+ * it gets a separate one is still to be decided.
  */
 export function hasInternalNotes(event: Pick<Event, "internalNotes"> | null | undefined): boolean {
   return hasText(event?.internalNotes)
+}
+
+/** True when any food item in these timeblocks has a kitchen-only internal note. */
+export function hasKitchenNotes(
+  timeblocks: Array<{ foodItems?: Array<{ internalNotes?: string | null }> | null }> | null | undefined,
+): boolean {
+  return (timeblocks ?? []).some((tb) => (tb.foodItems ?? []).some((item) => hasText(item.internalNotes)))
 }
 
 export function sortTimeblocksByTime<T extends { time?: string | null; title?: string | null; id: string }>(

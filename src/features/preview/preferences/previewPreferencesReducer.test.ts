@@ -104,4 +104,19 @@ describe("previewPreferencesReducer", () => {
     })
     expect(state.beo.selectedTimeblockIds.notes).toEqual([])
   })
+
+  it("shows kitchen notes by default and toggles them per preview type", () => {
+    let state = createInitialPreviewPreferences()
+    expect(state.beo.showKitchenNotes).toBe(true)
+    expect(state.timeline.showKitchenNotes).toBe(true)
+
+    state = previewPreferencesReducer(state, { type: "beo/setShowKitchenNotes", value: false })
+    expect(state.beo.showKitchenNotes).toBe(false)
+    expect(state.beo.showInternalNotes).toBe(true)
+    expect(state.timeline.showKitchenNotes).toBe(true)
+
+    state = previewPreferencesReducer(state, { type: "timeline/setShowKitchenNotes", value: false })
+    expect(state.timeline.showKitchenNotes).toBe(false)
+    expect(state.timeline.showInternalNotes).toBe(true)
+  })
 })

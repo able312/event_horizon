@@ -17,6 +17,8 @@ export function previewPreferencesReducer(
       return { ...state, beo: { ...state.beo, showContactInfo: action.value } }
     case "beo/setShowInternalNotes":
       return { ...state, beo: { ...state.beo, showInternalNotes: action.value } }
+    case "beo/setShowKitchenNotes":
+      return { ...state, beo: { ...state.beo, showKitchenNotes: action.value } }
     case "beo/setShowPricing":
       return { ...state, beo: { ...state.beo, showPricing: action.value } }
     case "beo/setSectionVisible":
@@ -137,6 +139,11 @@ export function previewPreferencesReducer(
       return {
         ...state,
         timeline: { ...state.timeline, showInternalNotes: action.value },
+      }
+    case "timeline/setShowKitchenNotes":
+      return {
+        ...state,
+        timeline: { ...state.timeline, showKitchenNotes: action.value },
       }
     case "timeline/setIncludeSystemRows":
       return {

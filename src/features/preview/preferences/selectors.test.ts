@@ -6,6 +6,7 @@ import {
   formatPreviewQuantity,
   hasContactInfo,
   hasBeverageSectionContent,
+  hasKitchenNotes,
   isBillableLineItem,
   toTimeblockOptions,
 } from "./selectors"
@@ -69,5 +70,14 @@ describe("preview preference selectors", () => {
     expect(isBillableLineItem({ quantity: 2, unitPriceCents: 100 })).toBe(true)
     expect(isBillableLineItem({ quantity: 0, unitPriceCents: 100 })).toBe(false)
     expect(isBillableLineItem({ quantity: 2, unitPriceCents: null })).toBe(false)
+  })
+
+  it("finds kitchen notes on any food item, ignoring blank ones", () => {
+    expect(hasKitchenNotes(null)).toBe(false)
+    expect(hasKitchenNotes([{ foodItems: [{ internalNotes: "  " }, { internalNotes: null }] }])).toBe(false)
+    expect(hasKitchenNotes([{ foodItems: null }, { foodItems: [{}] }])).toBe(false)
+    expect(
+      hasKitchenNotes([{ foodItems: [{ internalNotes: null }] }, { foodItems: [{ internalNotes: "No nuts" }] }]),
+    ).toBe(true)
   })
 })

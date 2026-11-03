@@ -1,5 +1,6 @@
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import { toCurrency } from "~/features/event-detail/workspace/lib/financial"
+import { KitchenNote } from "~/features/preview/components/KitchenNote"
 import {
   formatPreviewPrice,
   formatPreviewQuantity,
@@ -10,11 +11,14 @@ import { hasText } from "~/lib/utils"
 type FoodTimeblockDetailsProps = {
   timeblock: TimeblockWithItems
   showPricing?: boolean
+  /** Print each item's kitchen-only internal note under its client note. */
+  showKitchenNotes?: boolean
 }
 
 export function FoodTimeblockDetails({
   timeblock,
   showPricing = false,
+  showKitchenNotes = false,
 }: FoodTimeblockDetailsProps) {
   return (
     <div className="mb-4 last:mb-0">
@@ -83,13 +87,13 @@ export function FoodTimeblockDetails({
                     </>
                   ) : null}
                 </div>
-                {/* Food items now have a client note and a kitchen-only internal note. This still
-                    prints only the client note (the old single note); see hasInternalNotes in
-                    preferences/selectors.ts before adding the internal one. */}
                 {hasText(food.clientNotes) ? (
                   <pre className="mt-1 whitespace-pre-wrap font-sans text-xs text-stone-600">
                     {food.clientNotes}
                   </pre>
+                ) : null}
+                {showKitchenNotes && hasText(food.internalNotes) ? (
+                  <KitchenNote note={food.internalNotes} />
                 ) : null}
               </div>
             )

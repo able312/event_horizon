@@ -118,7 +118,7 @@ export default function TimelinePreview() {
               id={`timeline-row-${timeblock.id}`}
               continuationKey="timeline"
             >
-              <TimelineBlock timeblock={timeblock} onOpen={event ? (scrollTop) => openTimeblock(timeblock, scrollTop) : undefined} />
+              <TimelineBlock timeblock={timeblock} showKitchenNotes={prefs.showKitchenNotes} onOpen={event ? (scrollTop) => openTimeblock(timeblock, scrollTop) : undefined} />
             </PreviewBlock>
           )
         })

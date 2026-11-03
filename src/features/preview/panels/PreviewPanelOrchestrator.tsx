@@ -27,6 +27,7 @@ import {
   hasBeverageNotes,
   hasBeverageSectionContent,
   hasInternalNotes,
+  hasKitchenNotes,
   hasPricedFoodOrBeverage,
   toTimeblockOptions,
 } from "~/features/preview/preferences/selectors"
@@ -85,6 +86,10 @@ const PreviewPanelOrchestrator: React.FC = () => {
     state.beo.selectedTimeblockIds.notes,
     noteOptions.map((o) => o.id),
   )
+  const beoKitchenNotesAvailable =
+    state.beo.sections.food &&
+    hasKitchenNotes((food ?? []).filter((tb) => beoFoodSelected.includes(tb.id)))
+  const timelineKitchenNotesAvailable = hasKitchenNotes(food)
   const foodBeoSelected = filterSelectedIds(
     state["beo-food"].selectedFoodTimeblockIds,
     foodOptions.map((o) => o.id),
@@ -159,6 +164,14 @@ const PreviewPanelOrchestrator: React.FC = () => {
                   label="Internal notes"
                   checked={state.beo.showInternalNotes}
                   onChange={(value) => dispatch({ type: "beo/setShowInternalNotes", value })}
+                />
+              ) : null}
+              {beoKitchenNotesAvailable ? (
+                <PreviewToggleRow
+                  id="beo-kitchen-notes"
+                  label="Kitchen notes"
+                  checked={state.beo.showKitchenNotes}
+                  onChange={(value) => dispatch({ type: "beo/setShowKitchenNotes", value })}
                 />
               ) : null}
               {showPricingControl ? (
@@ -371,6 +384,16 @@ const PreviewPanelOrchestrator: React.FC = () => {
                   checked={state.timeline.showInternalNotes}
                   onChange={(value) =>
                     dispatch({ type: "timeline/setShowInternalNotes", value })
+                  }
+                />
+              ) : null}
+              {timelineKitchenNotesAvailable ? (
+                <PreviewToggleRow
+                  id="timeline-kitchen-notes"
+                  label="Kitchen notes"
+                  checked={state.timeline.showKitchenNotes}
+                  onChange={(value) =>
+                    dispatch({ type: "timeline/setShowKitchenNotes", value })
                   }
                 />
               ) : null}

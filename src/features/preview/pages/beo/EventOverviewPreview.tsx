@@ -188,6 +188,7 @@ export function EventOverviewPreview() {
                   <FoodTimeblockDetails
                     timeblock={timeblock}
                     showPricing={prefs.showPricing}
+                    showKitchenNotes={prefs.showKitchenNotes}
                   />
                 </SectionFrameItem>
               </PreviewBlock>

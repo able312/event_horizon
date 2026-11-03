@@ -19,7 +19,10 @@ export type BeoTimeblockSectionId = (typeof BEO_TIMEBLOCK_SECTION_IDS)[number]
 
 export type BeoPreferences = {
   showContactInfo: boolean
+  /** The event's own internal notes, in the header. */
   showInternalNotes: boolean
+  /** Food items' kitchen-only internal notes, under each item. */
+  showKitchenNotes: boolean
   showPricing: boolean
   sections: Record<Exclude<BeoSectionId, "contact" | "internalNotes">, boolean>
   selectedTimeblockIds: Record<BeoTimeblockSectionId, string[]>
@@ -33,7 +36,10 @@ export type FoodBeoPreferences = {
 }
 
 export type TimelinePreferences = {
+  /** The event's own internal notes, in the header. */
   showInternalNotes: boolean
+  /** Food items' kitchen-only internal notes, under each item. */
+  showKitchenNotes: boolean
   includeSystemRows: boolean
 }
 
@@ -65,6 +71,7 @@ export type PreviewPreferencesState = {
 export type PreviewPreferencesAction =
   | { type: "beo/setShowContactInfo"; value: boolean }
   | { type: "beo/setShowInternalNotes"; value: boolean }
+  | { type: "beo/setShowKitchenNotes"; value: boolean }
   | { type: "beo/setShowPricing"; value: boolean }
   | { type: "beo/setSectionVisible"; section: keyof BeoPreferences["sections"]; value: boolean }
   | { type: "beo/setTimeblockSelected"; section: BeoTimeblockSectionId; id: string; value: boolean }
@@ -79,6 +86,7 @@ export type PreviewPreferencesAction =
   | { type: "beo-food/clearAllTimeblocks" }
   | { type: "beo-food/applyDefaultTimeblocks"; ids: string[] }
   | { type: "timeline/setShowInternalNotes"; value: boolean }
+  | { type: "timeline/setShowKitchenNotes"; value: boolean }
   | { type: "timeline/setIncludeSystemRows"; value: boolean }
   | { type: "financial/setDocumentKind"; value: FinancialDocumentKind }
   | { type: "financial/setShowBeverageAppendix"; value: boolean }
@@ -91,6 +99,7 @@ function createInitialBeoPreferences(): BeoPreferences {
   return {
     showContactInfo: true,
     showInternalNotes: true,
+    showKitchenNotes: true,
     showPricing: false,
     sections: {
       tournament: true,
@@ -121,6 +130,7 @@ function createInitialFoodBeoPreferences(): FoodBeoPreferences {
 function createInitialTimelinePreferences(): TimelinePreferences {
   return {
     showInternalNotes: true,
+    showKitchenNotes: true,
     includeSystemRows: true,
   }
 }
