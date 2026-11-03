@@ -12,7 +12,7 @@ import {
   dollarsToCents,
   toCurrency,
 } from "~/features/event-detail/workspace/lib/financial"
-import { PlanningTimeblockItemNoteRow } from "./PlanningTimeblockItemNoteRow"
+import { PlanningTimeblockItemNoteTabsRow } from "./PlanningTimeblockItemNoteTabsRow"
 import type { WorkspaceItemBase } from "./PlanningWorkspaceTimeblockList"
 
 function parseQuantity(value: string): number {
@@ -168,10 +168,11 @@ function PlanningTimeblockItemRow<TItem extends WorkspaceItemBase>({
       </tr>
       <tr className={SECTION_TABLE_BODY_ROW_CLASS}>
         <td colSpan={6} className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-[240px] align-top`}>
-          <PlanningTimeblockItemNoteRow
+          <PlanningTimeblockItemNoteTabsRow
             timeblockID={timeblockId}
             itemID={item.id}
-            note={item.includes ?? ""}
+            clientNote={item.clientNotes ?? ""}
+            internalNote={item.internalNotes ?? ""}
             updateItem={updateItem}
           />
         </td>

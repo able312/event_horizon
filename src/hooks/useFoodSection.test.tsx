@@ -56,7 +56,8 @@ function makeTimeblock(overrides: Partial<TimeblockWithItems> = {}): TimeblockWi
         name: "Sandwiches",
         quantity: 1,
         serviceStyle: "Buffet",
-        includes: "Condiments",
+        clientNotes: "Condiments",
+        internalNotes: null,
         unitPriceCents: 1200,
       },
     ],
@@ -80,7 +81,8 @@ describe("useFoodSection optimistic cache", () => {
       name: "Salads",
       quantity: 2,
       serviceStyle: null,
-      includes: null,
+      clientNotes: null,
+      internalNotes: null,
       unitPriceCents: null,
     }
 
@@ -165,7 +167,8 @@ describe("useFoodSection optimistic cache", () => {
       name: "Wraps",
       quantity: 1,
       serviceStyle: "Buffet",
-      includes: "Condiments",
+      clientNotes: "Condiments",
+      internalNotes: null,
       unitPriceCents: 1200,
     })
   })
@@ -183,7 +186,8 @@ describe("useFoodSection optimistic cache", () => {
             name: "Sandwiches",
             quantity: 1,
             serviceStyle: "Buffet",
-            includes: "Condiments",
+            clientNotes: "Condiments",
+            internalNotes: null,
             unitPriceCents: 1200,
           },
           {
@@ -192,7 +196,8 @@ describe("useFoodSection optimistic cache", () => {
             name: "Salads",
             quantity: 1,
             serviceStyle: "Buffet",
-            includes: "Dressing",
+            clientNotes: "Dressing",
+            internalNotes: null,
             unitPriceCents: 900,
           },
         ],
@@ -214,7 +219,8 @@ describe("useFoodSection optimistic cache", () => {
             name: "Salads",
             quantity: 1,
             serviceStyle: "Buffet",
-            includes: "Dressing",
+            clientNotes: "Dressing",
+            internalNotes: null,
             unitPriceCents: 900,
           },
         ],
@@ -372,7 +378,8 @@ describe("useFoodSection optimistic cache", () => {
         name: "Wraps",
         quantity: 1,
         serviceStyle: "Buffet",
-        includes: "Condiments",
+        clientNotes: "Condiments",
+        internalNotes: null,
         unitPriceCents: 1200,
       })
       await deferredName.promise
@@ -392,7 +399,8 @@ describe("useFoodSection optimistic cache", () => {
       name: "Wraps",
       quantity: 5,
       serviceStyle: "Buffet",
-      includes: "Condiments",
+      clientNotes: "Condiments",
+      internalNotes: null,
       unitPriceCents: 1200,
     })
     deferredRefetch.resolve([
@@ -403,7 +411,8 @@ describe("useFoodSection optimistic cache", () => {
           name: "Wraps",
           quantity: 5,
           serviceStyle: "Buffet",
-          includes: "Condiments",
+          clientNotes: "Condiments",
+          internalNotes: null,
           unitPriceCents: 1200,
         }],
       }),

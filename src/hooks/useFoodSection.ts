@@ -74,7 +74,8 @@ export function useFoodSection() {
         name: newItem?.name || "",
         quantity: newItem?.quantity ?? undefined,
         serviceStyle: newItem?.serviceStyle ?? undefined,
-        includes: newItem?.includes ?? undefined,
+        clientNotes: newItem?.clientNotes ?? undefined,
+        internalNotes: newItem?.internalNotes ?? undefined,
         unitPriceCents: newItem?.unitPriceCents ?? undefined,
       }),
     onMutate: async ({ timeblockId, newItem }) => {
@@ -92,7 +93,8 @@ export function useFoodSection() {
         name: newItem?.name || "",
         quantity: newItem?.quantity ?? null,
         serviceStyle: newItem?.serviceStyle ?? null,
-        includes: newItem?.includes ?? null,
+        clientNotes: newItem?.clientNotes ?? null,
+        internalNotes: newItem?.internalNotes ?? null,
         unitPriceCents: newItem?.unitPriceCents ?? null,
         timeblockId,
       }
@@ -139,7 +141,8 @@ export function useFoodSection() {
         name: updates.name ?? undefined,
         quantity: updates.quantity ?? undefined,
         serviceStyle: updates.serviceStyle ?? undefined,
-        includes: updates.includes ?? undefined,
+        clientNotes: updates.clientNotes ?? undefined,
+        internalNotes: updates.internalNotes ?? undefined,
         unitPriceCents: updates.unitPriceCents ?? undefined,
       }),
     onMutate: async ({ timeblockId, itemId, updates }) => {

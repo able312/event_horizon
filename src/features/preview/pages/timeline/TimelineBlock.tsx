@@ -31,7 +31,8 @@ const TimelineBlock: React.FC<TimelineBlockProps> = ({ timeblock, onOpen }) => {
               key={"foodItem_" + item.id}
               blockHeader={(item.quantity ? item.quantity + " x " : "") + item.name}
               blockSubtitle={item.serviceStyle}
-              plainNotes={item.includes}
+              // Client note only for now; see hasInternalNotes in preferences/selectors.ts.
+              plainNotes={item.clientNotes}
               borderColor="amber"
             />
           ))}

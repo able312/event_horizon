@@ -30,7 +30,7 @@ describe("food items", () => {
   it("uses nullable defaults, joins items, and isolates events", async () => {
     const { t, eventId, otherEventId, food } = await setup()
     const item = await t.mutation(api.foodItems.create, { timeblockId: food.id, name: "Steak" })
-    expect(item).toMatchObject({ name: "Steak", quantity: null, serviceStyle: null, includes: null, unitPriceCents: null })
+    expect(item).toMatchObject({ name: "Steak", quantity: null, serviceStyle: null, clientNotes: null, internalNotes: null, includes: null, unitPriceCents: null })
     expect(await t.query(api.foodItems.getByEventId, { eventId })).toEqual([{ ...food, foodItems: [item], items: [item] }])
     expect(await t.query(api.foodItems.getByEventId, { eventId: otherEventId })).toEqual([])
     expect(await t.query(api.timeblocks.getById, { id: food.id })).toEqual({ ...food, foodItems: [item], beverageItems: [] })
@@ -39,8 +39,8 @@ describe("food items", () => {
   it("patches only supplied fields and reports missing records", async () => {
     const { t, food } = await setup()
     const item = await t.mutation(api.foodItems.create, { timeblockId: food.id, name: "Steak", quantity: 40 })
-    expect(await t.mutation(api.foodItems.update, { id: item.id, updates: { quantity: null, serviceStyle: "Plated", includes: "GF", unitPriceCents: 4500 } }))
-      .toEqual({ ...item, updatedAt: expect.any(String), quantity: null, serviceStyle: "Plated", includes: "GF", unitPriceCents: 4500 })
+    expect(await t.mutation(api.foodItems.update, { id: item.id, updates: { quantity: null, serviceStyle: "Plated", clientNotes: "GF", internalNotes: "Fire at 6", unitPriceCents: 4500 } }))
+      .toEqual({ ...item, updatedAt: expect.any(String), quantity: null, serviceStyle: "Plated", clientNotes: "GF", internalNotes: "Fire at 6", includes: "GF", unitPriceCents: 4500 })
     expect(await t.mutation(api.foodItems.remove, { id: item.id })).toBe(true)
     await expect(t.mutation(api.foodItems.remove, { id: item.id })).rejects.toThrow("record not found")
     await expect(t.mutation(api.foodItems.update, { id: item.id, updates: { name: "Gone" } })).rejects.toThrow("record not found")

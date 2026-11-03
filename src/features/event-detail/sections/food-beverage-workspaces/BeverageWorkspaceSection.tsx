@@ -316,17 +316,8 @@ const BeverageWorkspaceSection: React.FC = () => {
                                   <td colSpan={4} className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-0 align-top`}>
                                     <PlanningTimeblockItemNoteRow
                                       key={`${item.id}_notesRow`}
-                                      timeblockID=""
-                                      itemID={item.id}
                                       note={item.includes ?? ""}
-                                      updateItem={({ itemId, updates }) =>
-                                        updateItem({
-                                          itemId,
-                                          updates: {
-                                            includes: updates.includes ?? null,
-                                          },
-                                        })
-                                      }
+                                      onSave={(includes) => updateItem({ itemId: item.id, updates: { includes } })}
                                     />
                                   </td>
                                 </tr>

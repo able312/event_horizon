@@ -6,6 +6,7 @@ import { Button } from "~/components/atoms/button"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "~/components/atoms/dropdown-menu"
 import type { WorkspaceItemBase } from "./PlanningWorkspaceTimeblockList"
 import { useSetupInstructionSection } from "~/hooks/useSetupInstrucionSection"
+import { toSetupInstructionEntry } from "./portToSetup"
 
 interface FoodBevHeaderTailProps<TItem extends WorkspaceItemBase> {
   title: string
@@ -31,7 +32,7 @@ function FoodBevHeaderTail<TItem extends WorkspaceItemBase>({
   const handlePortToSetup = async () => {
     try {
       const body = timeblockItems
-        .map((item) => `## ${item.name}\n# ${item.serviceStyle}\n${item.includes}\n\n`)
+        .map(toSetupInstructionEntry)
         .join("")
 
       addSetupInstruction({

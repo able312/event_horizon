@@ -146,7 +146,11 @@ export default defineSchema({
     name: v.string(),
     quantity: nullable(v.number()),
     serviceStyle: nullable(foodServiceStyle),
-    includes: nullable(v.string()),
+    // Old single note, now `clientNotes`. Optional until `foodItems:migrateIncludesToClientNotes`
+    // has run everywhere; then remove it and make the two note fields required (lib/foodItemNotes.ts).
+    includes: v.optional(nullable(v.string())),
+    clientNotes: v.optional(nullable(v.string())),
+    internalNotes: v.optional(nullable(v.string())),
     unitPriceCents: nullable(v.number()),
     ...auditWithUpdatedAt,
   }).index("by_timeblock", ["timeblockId"]),

@@ -10,7 +10,8 @@ export type WorkspaceItemBase = {
   name: string
   quantity: number | null
   serviceStyle: string | null
-  includes: string | null
+  clientNotes: string | null
+  internalNotes: string | null
   unitPriceCents: number | null
 }
 
