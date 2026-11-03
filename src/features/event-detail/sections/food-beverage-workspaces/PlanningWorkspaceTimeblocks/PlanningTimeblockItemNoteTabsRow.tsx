@@ -51,44 +51,47 @@ export function PlanningTimeblockItemNoteTabsRow<TItem extends WorkspaceItemBase
     <div className="flex items-start gap-1 py-1">
       <ItemNoteExpandButton isEditing={isEditing} onToggle={toggleEditing} />
 
-      <div role="tablist" aria-label="Item notes" className="flex shrink-0 items-center gap-0.5 pt-0.5">
-        <ItemNoteTabButton
-          label="Client"
-          note={clientNote}
-          active={activeTab === "client"}
-          indicatorClassName="bg-sky-500"
-          onSelect={() => setActiveTab("client")}
-        />
-        {showsInternalNotePrompt(internalNote, activeTab) ? (
-          <button
-            type="button"
-            onClick={addInternalNote}
-            className="h-6 rounded-xs px-1.5 text-xs text-stone-400/80 transition-colors hover:text-orange-500"
-          >
-            Add kitchen note…
-          </button>
-        ) : (
+      {/* Tabs sit above the note so every note starts at the same place and an open note gets the full width. */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div role="tablist" aria-label="Item notes" className="flex shrink-0 items-center gap-0.5 pt-0.5">
           <ItemNoteTabButton
-            label="Kitchen"
-            note={internalNote}
-            active={activeTab === "internal"}
-            indicatorClassName="bg-orange-500"
-            onSelect={() => setActiveTab("internal")}
+            label="Client"
+            note={clientNote}
+            active={activeTab === "client"}
+            indicatorClassName="bg-sky-500"
+            onSelect={() => setActiveTab("client")}
           />
-        )}
-      </div>
+          {showsInternalNotePrompt(internalNote, activeTab) ? (
+            <button
+              type="button"
+              onClick={addInternalNote}
+              className="h-6 rounded-xs px-1.5 text-xs text-stone-400/80 transition-colors hover:text-orange-500"
+            >
+              Add kitchen note…
+            </button>
+          ) : (
+            <ItemNoteTabButton
+              label="Kitchen"
+              note={internalNote}
+              active={activeTab === "internal"}
+              indicatorClassName="bg-orange-500"
+              onSelect={() => setActiveTab("internal")}
+            />
+          )}
+        </div>
 
-      <ItemNoteField
-        // Remount per tab so the textarea's draft belongs to the note it was typed into.
-        key={activeTab}
-        note={note}
-        label={NOTE_COPY[activeTab].label}
-        placeholder={NOTE_COPY[activeTab].placeholder}
-        isEditing={isEditing}
-        focusOnOpen={focusOnOpen}
-        onStartEdit={startEditing}
-        onSave={saveNote}
-      />
+        <ItemNoteField
+          // Remount per tab so the textarea's draft belongs to the note it was typed into.
+          key={activeTab}
+          note={note}
+          label={NOTE_COPY[activeTab].label}
+          placeholder={NOTE_COPY[activeTab].placeholder}
+          isEditing={isEditing}
+          focusOnOpen={focusOnOpen}
+          onStartEdit={startEditing}
+          onSave={saveNote}
+        />
+      </div>
     </div>
   )
 }
