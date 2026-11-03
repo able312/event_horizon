@@ -3,6 +3,7 @@ import type { Event } from "~/definitions/database"
 import type { BeverageItemWithAssignments } from "~/definitions/beverage/beverage-types"
 import type { TimeblockWithItems, TimelineTimeblock } from "~/definitions/timeblocks/timeblocks-types"
 import { SECTION_TYPE } from "~/definitions/timeblocks/timeblock-constants"
+import { hasText } from "~/lib/utils"
 
 export type TimeblockOption = {
   id: string
@@ -25,7 +26,7 @@ export function hasContactInfo(client: Pick<PrimaryClient, "displayName" | "phon
  * stays hidden on events that only have item-level internal notes.
  */
 export function hasInternalNotes(event: Pick<Event, "internalNotes"> | null | undefined): boolean {
-  return Boolean(event?.internalNotes?.trim())
+  return hasText(event?.internalNotes)
 }
 
 export function sortTimeblocksByTime<T extends { time?: string | null; title?: string | null; id: string }>(
@@ -87,7 +88,7 @@ export function hasPricedFoodOrBeverage(params: {
 }
 
 export function hasBeverageNotes(items: Array<{ includes: string | null }> | null | undefined): boolean {
-  return (items ?? []).some((item) => Boolean(item.includes?.trim()))
+  return (items ?? []).some((item) => hasText(item.includes))
 }
 
 export function hasBeverageSectionContent(params: {

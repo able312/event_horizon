@@ -5,6 +5,7 @@ import {
   formatPreviewQuantity,
 } from "~/features/preview/preferences/selectors"
 import { PreviewMarkdownContent } from "~/lib/markdown/PreviewMarkdownContent"
+import { hasText } from "~/lib/utils"
 
 type FoodTimeblockDetailsProps = {
   timeblock: TimeblockWithItems
@@ -85,7 +86,7 @@ export function FoodTimeblockDetails({
                 {/* Food items now have a client note and a kitchen-only internal note. This still
                     prints only the client note (the old single note); see hasInternalNotes in
                     preferences/selectors.ts before adding the internal one. */}
-                {food.clientNotes?.trim() ? (
+                {hasText(food.clientNotes) ? (
                   <pre className="mt-1 whitespace-pre-wrap font-sans text-xs text-stone-600">
                     {food.clientNotes}
                   </pre>

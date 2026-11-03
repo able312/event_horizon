@@ -1,8 +1,9 @@
 import { v } from "convex/values"
 
+import { internal } from "./_generated/api"
 import { internalMutation } from "./_generated/server"
 import { companyMutation, companyQuery } from "./lib/auth"
-import { foodItemNotesPatch, migratedFoodItemNotes, newFoodItemNotes, toFoodItemRecord } from "./lib/foodItemNotes"
+import { foodItemNotesPatch, getFoodItemRecords, migratedFoodItemNotes, newFoodItemNotes, toFoodItemRecord } from "./lib/foodItemNotes"
 import { assertUpdates, requireDocument, toRecord } from "./lib/records"
 import { foodServiceStyle, nullable } from "./lib/validators"
 
@@ -61,32 +62,43 @@ export const getByEventId = companyQuery({
     const timeblocks = await ctx.db.query("timeblocks")
       .withIndex("by_event_section", (q) => q.eq("eventId", eventId).eq("sectionType", "food")).collect()
     return Promise.all(timeblocks.map(async (timeblock) => {
-      const items = (await ctx.db.query("foodItems")
-        .withIndex("by_timeblock", (q) => q.eq("timeblockId", timeblock._id)).collect()).map(toFoodItemRecord)
+      const items = await getFoodItemRecords(ctx, timeblock._id)
       // Keep both names while the existing food section expects `items`.
       return { ...toRecord(timeblock), foodItems: items, items }
     }))
   },
 })
 
+const MIGRATION_BATCH_SIZE = 500
+
 /**
  * One-off migration for the note split: moves each item's old `includes` note into
  * `clientNotes`, sets a blank `internalNotes`, and removes `includes`. Already-migrated
  * items are skipped, so running it twice is harmless. It isn't a user edit, so the audit
- * fields are left alone. Run once per deployment after deploying the schema change:
+ * fields are left alone.
+ *
+ * It works through the table one batch per transaction, so it stays within Convex's
+ * per-mutation limits however large the table grows: each batch schedules the next until
+ * the table is done. Run once per deployment after deploying the schema change:
  * `npx convex run --prod foodItems:migrateIncludesToClientNotes`
+ * The result covers the first batch only; later batches report in the deployment's logs.
  */
 export const migrateIncludesToClientNotes = internalMutation({
-  args: {},
-  returns: v.object({ migrated: v.number(), skipped: v.number() }),
-  handler: async (ctx) => {
+  args: { cursor: v.optional(v.union(v.string(), v.null())), batchSize: v.optional(v.number()) },
+  returns: v.object({ migrated: v.number(), skipped: v.number(), isDone: v.boolean() }),
+  handler: async (ctx, { cursor = null, batchSize = MIGRATION_BATCH_SIZE }) => {
+    const batch = await ctx.db.query("foodItems").paginate({ cursor, numItems: batchSize })
     let migrated = 0, skipped = 0
-    for (const item of await ctx.db.query("foodItems").collect()) {
+    for (const item of batch.page) {
       const patch = migratedFoodItemNotes(item)
       if (!patch) { skipped++; continue }
       await ctx.db.patch("foodItems", item._id, patch)
       migrated++
     }
-    return { migrated, skipped }
+    console.log(`foodItems:migrateIncludesToClientNotes batch: ${migrated} migrated, ${skipped} already done`)
+    if (!batch.isDone) {
+      await ctx.scheduler.runAfter(0, internal.foodItems.migrateIncludesToClientNotes, { cursor: batch.continueCursor, batchSize })
+    }
+    return { migrated, skipped, isDone: batch.isDone }
   },
 })

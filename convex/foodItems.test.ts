@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { api, internal } from "./_generated/api"
 import type { Id } from "./_generated/dataModel"
@@ -89,7 +89,7 @@ describe("food item notes", () => {
       const blank = await insertLegacyItem("Bread", null)
       const current = await t.mutation(api.foodItems.create, { timeblockId: food.id, name: "Steak", clientNotes: "Medium", internalNotes: "Fire at 6:30" })
 
-      expect(await t.mutation(internal.foodItems.migrateIncludesToClientNotes, {})).toEqual({ migrated: 2, skipped: 1 })
+      expect(await t.mutation(internal.foodItems.migrateIncludesToClientNotes, {})).toEqual({ migrated: 2, skipped: 1, isDone: true })
       for (const [id, clientNotes] of [[withNote, "Dressing"], [blank, null]] as const) {
         const doc = await stored(id)
         expect(doc).toMatchObject({ clientNotes, internalNotes: null })
@@ -99,7 +99,32 @@ describe("food item notes", () => {
       }
       expect(await stored(current.id)).toMatchObject({ clientNotes: "Medium", internalNotes: "Fire at 6:30" })
 
-      expect(await t.mutation(internal.foodItems.migrateIncludesToClientNotes, {})).toEqual({ migrated: 0, skipped: 3 })
+      expect(await t.mutation(internal.foodItems.migrateIncludesToClientNotes, {})).toEqual({ migrated: 0, skipped: 3, isDone: true })
+    })
+
+    describe("in batches", () => {
+      afterEach(() => vi.useRealTimers())
+
+      it("schedules the next batch until the whole table is migrated", async () => {
+        vi.useFakeTimers()
+        const { t, insertLegacyItem, stored } = await setup()
+        const ids = [
+          await insertLegacyItem("Salad", "Dressing"),
+          await insertLegacyItem("Bread", null),
+          await insertLegacyItem("Soup", "Croutons"),
+        ]
+
+        expect(await t.mutation(internal.foodItems.migrateIncludesToClientNotes, { batchSize: 1 }))
+          .toEqual({ migrated: 1, skipped: 0, isDone: false })
+        await t.finishAllScheduledFunctions(vi.runAllTimers)
+
+        for (const id of ids) {
+          const doc = await stored(id)
+          expect(doc).toHaveProperty("clientNotes")
+          expect(doc).not.toHaveProperty("includes")
+        }
+        expect(await stored(ids[2])).toMatchObject({ clientNotes: "Croutons", internalNotes: null })
+      })
     })
   })
 })

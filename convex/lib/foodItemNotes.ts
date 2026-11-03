@@ -1,4 +1,5 @@
-import type { Doc } from "../_generated/dataModel"
+import type { Doc, Id } from "../_generated/dataModel"
+import type { QueryCtx } from "../_generated/server"
 import { toRecord } from "./records"
 
 // Food items used to have one note, `includes`. It is now split into `clientNotes`
@@ -28,10 +29,17 @@ function storedClientNotes(doc: StoredNotes): string | null {
 }
 
 export function toFoodItemRecord(doc: Doc<"foodItems">) {
-  const { includes, ...record } = toRecord(doc)
-  void includes
   const clientNotes = storedClientNotes(doc)
-  return { ...record, clientNotes, internalNotes: doc.internalNotes ?? null, includes: clientNotes }
+  return { ...toRecord(doc), clientNotes, internalNotes: doc.internalNotes ?? null, includes: clientNotes }
+}
+
+/**
+ * A timeblock's food items as records. Every query that returns food items should read
+ * them through here (not `toRecord`), so the note fields above stay right for every client.
+ */
+export async function getFoodItemRecords(ctx: Pick<QueryCtx, "db">, timeblockId: Id<"timeblocks">) {
+  const docs = await ctx.db.query("foodItems").withIndex("by_timeblock", (q) => q.eq("timeblockId", timeblockId)).collect()
+  return docs.map(toFoodItemRecord)
 }
 
 /** Note fields for a new food item. */

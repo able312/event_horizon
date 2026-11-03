@@ -1,7 +1,8 @@
-import type { FocusEvent } from "react"
+import { useCallback } from "react"
 import { CornerDownRight } from "lucide-react"
 
 import { Button } from "~/components/atoms/button"
+import { hasText } from "~/lib/utils"
 import { toNotePreview } from "./itemNoteTabs"
 
 interface ItemNoteFieldProps {
@@ -15,10 +16,6 @@ interface ItemNoteFieldProps {
   onSave: (value: string) => void
 }
 
-function moveCursorToEnd(event: FocusEvent<HTMLTextAreaElement>) {
-  const { length } = event.currentTarget.value
-  event.currentTarget.setSelectionRange(length, length)
-}
 
 export function ItemNoteExpandButton({ isEditing, onToggle }: { isEditing: boolean; onToggle: () => void }) {
   return (
@@ -35,12 +32,18 @@ export function ItemNoteExpandButton({ isEditing, onToggle }: { isEditing: boole
 
 /** A note shown as a one-line preview, or as a textarea while editing. Saves on blur. */
 export function ItemNoteField({ note, label, placeholder, isEditing, focusOnOpen, onStartEdit, onSave }: ItemNoteFieldProps) {
+  // Runs once when the textarea mounts, so later clicks into the text keep their caret.
+  const focusAtEnd = useCallback((textarea: HTMLTextAreaElement | null) => {
+    if (!textarea || !focusOnOpen) return
+    textarea.focus()
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length)
+  }, [focusOnOpen])
+
   if (isEditing) {
     return (
       <textarea
         defaultValue={note}
-        autoFocus={focusOnOpen}
-        onFocus={moveCursorToEnd}
+        ref={focusAtEnd}
         onBlur={(e) => onSave(e.target.value)}
         aria-label={label}
         placeholder={placeholder}
@@ -49,13 +52,13 @@ export function ItemNoteField({ note, label, placeholder, isEditing, focusOnOpen
     )
   }
 
-  const preview = toNotePreview(note)
+  const isEmpty = !hasText(note)
   return (
     <div
-      className={`${preview.length <= 0 ? "text-stone-400" : "text-stone-500"} m-0.25 min-h-7.5 w-full px-1.5 py-1`}
+      className={`${isEmpty ? "text-stone-400" : "text-stone-500"} m-0.25 min-h-7.5 w-full px-1.5 py-1`}
       onClick={onStartEdit}
     >
-      {preview.length <= 0 ? placeholder : preview}
+      {isEmpty ? placeholder : toNotePreview(note)}
     </div>
   )
 }
