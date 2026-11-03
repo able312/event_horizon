@@ -73,7 +73,8 @@ describe("TimelineBlock", () => {
               name: "Steak",
               quantity: 40,
               serviceStyle: "Plated",
-              includes: "Medium",
+              clientNotes: "Medium",
+              internalNotes: null,
               unitPriceCents: 4500,
             },
           ],
@@ -102,7 +103,7 @@ describe("TimelineBlock", () => {
     expect(screen.getByText("Item one")).toBeTruthy()
   })
 
-  it("keeps food item includes as plain text without markdown parsing", () => {
+  it("keeps food item client notes as plain text without markdown parsing", () => {
     render(
       <TimelineBlock
         timeblock={makeTimeblock({
@@ -114,7 +115,8 @@ describe("TimelineBlock", () => {
               name: "Salad",
               quantity: 10,
               serviceStyle: "Buffet",
-              includes: "# Not a heading\n**not bold**",
+              clientNotes: "# Not a heading\n**not bold**",
+              internalNotes: null,
               unitPriceCents: 1200,
             },
           ],

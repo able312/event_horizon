@@ -6,6 +6,7 @@ import { buildTimelineRows } from "../src/lib/timeblocks/buildTimelineRows"
 import type { Doc, Id } from "./_generated/dataModel"
 import type { QueryCtx } from "./_generated/server"
 import { companyMutation, companyQuery } from "./lib/auth"
+import { toFoodItemRecord } from "./lib/foodItemNotes"
 import { assertUpdates, requireDocument, toRecord } from "./lib/records"
 import { nullable, timeblockSectionType, timeZone } from "./lib/validators"
 
@@ -22,7 +23,7 @@ async function withItems(ctx: QueryCtx, doc: Doc<"timeblocks">) {
   const { foodItems, beverageLinks } = await getChildren(ctx, doc._id)
   const beverageItems = await Promise.all(beverageLinks.map(async (link) =>
     toRecord(await requireDocument(ctx, "beverageItems", link.beverageItemId))))
-  return { ...toRecord(doc), foodItems: foodItems.map(toRecord), beverageItems }
+  return { ...toRecord(doc), foodItems: foodItems.map(toFoodItemRecord), beverageItems }
 }
 
 function blankDetails(sectionType: Doc<"timeblocks">["sectionType"]) {

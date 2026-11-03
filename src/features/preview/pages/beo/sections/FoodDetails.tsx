@@ -82,9 +82,12 @@ export function FoodTimeblockDetails({
                     </>
                   ) : null}
                 </div>
-                {food.includes?.trim() ? (
+                {/* Food items now have a client note and a kitchen-only internal note. This still
+                    prints only the client note (the old single note); see hasInternalNotes in
+                    preferences/selectors.ts before adding the internal one. */}
+                {food.clientNotes?.trim() ? (
                   <pre className="mt-1 whitespace-pre-wrap font-sans text-xs text-stone-600">
-                    {food.includes}
+                    {food.clientNotes}
                   </pre>
                 ) : null}
               </div>

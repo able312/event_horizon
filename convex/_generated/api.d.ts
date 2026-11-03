@@ -26,6 +26,7 @@ import type * as lib_auth from "../lib/auth.js";
 import type * as lib_contactOperations from "../lib/contactOperations.js";
 import type * as lib_contactValidators from "../lib/contactValidators.js";
 import type * as lib_eventRequestPayload from "../lib/eventRequestPayload.js";
+import type * as lib_foodItemNotes from "../lib/foodItemNotes.js";
 import type * as lib_googleCalendar from "../lib/googleCalendar.js";
 import type * as lib_holidayFeed from "../lib/holidayFeed.js";
 import type * as lib_records from "../lib/records.js";
@@ -65,6 +66,7 @@ declare const fullApi: ApiFromModules<{
   "lib/contactOperations": typeof lib_contactOperations;
   "lib/contactValidators": typeof lib_contactValidators;
   "lib/eventRequestPayload": typeof lib_eventRequestPayload;
+  "lib/foodItemNotes": typeof lib_foodItemNotes;
   "lib/googleCalendar": typeof lib_googleCalendar;
   "lib/holidayFeed": typeof lib_holidayFeed;
   "lib/records": typeof lib_records;

@@ -5,13 +5,14 @@ import { fetchSource, pickItemFields, runMutation } from "./backend"
 import { toId } from "./ids"
 import { sources } from "./sources"
 
-const EDITABLE_FIELDS = ["name", "quantity", "serviceStyle", "includes", "unitPriceCents"] as const
+const EDITABLE_FIELDS = ["name", "quantity", "serviceStyle", "clientNotes", "internalNotes", "unitPriceCents"] as const
 
 type FoodItemValues = {
   name?: string
   quantity?: number
   serviceStyle?: FoodItem["serviceStyle"]
-  includes?: string
+  clientNotes?: string
+  internalNotes?: string
   unitPriceCents?: number
 }
 

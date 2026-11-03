@@ -278,7 +278,10 @@ export type FoodItem = {
   name: string
   quantity: number | null
   serviceStyle: FoodServiceStyle | null
-  includes: string | null
+  /** What the client may see. Before the note split this was the item's only note (`includes`). */
+  clientNotes: string | null
+  /** Kitchen and staff only. */
+  internalNotes: string | null
   unitPriceCents: number | null
 }
 

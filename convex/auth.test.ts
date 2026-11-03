@@ -47,6 +47,7 @@ async function registeredFunctions(): Promise<[string, RegisteredFunction][]> {
 const INTERNAL_FUNCTIONS = new Set([
   "./developmentSeed.ts:seed",
   "./eventRequests.ts:receive",
+  "./foodItems.ts:migrateIncludesToClientNotes",
   "./googleCalendar.ts:getPushContent",
   "./googleCalendar.ts:recordPush",
   "./googleCalendar.ts:recordRemoval",

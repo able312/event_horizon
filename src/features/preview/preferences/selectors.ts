@@ -16,6 +16,14 @@ export function hasContactInfo(client: Pick<PrimaryClient, "displayName" | "phon
   return Boolean(client.displayName.trim() || client.phone?.trim() || client.email?.trim())
 }
 
+/**
+ * "Internal notes" here, and the "Show internal notes" toggles that use it, mean the
+ * event's own `internalNotes` only. Food items also have their own `internalNotes`
+ * (kitchen/staff only, beside the client-facing `clientNotes`), which no preview prints
+ * yet. The plan is for those toggles to cover food item internal notes too, so when
+ * adding them, extend this check to look at food items as well. Otherwise the toggle
+ * stays hidden on events that only have item-level internal notes.
+ */
 export function hasInternalNotes(event: Pick<Event, "internalNotes"> | null | undefined): boolean {
   return Boolean(event?.internalNotes?.trim())
 }

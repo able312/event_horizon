@@ -31,7 +31,7 @@ function FoodBevHeaderTail<TItem extends WorkspaceItemBase>({
   const handlePortToSetup = async () => {
     try {
       const body = timeblockItems
-        .map((item) => `## ${item.name}\n# ${item.serviceStyle}\n${item.includes}\n\n`)
+        .map((item) => `## ${item.name}\n# ${item.serviceStyle}\n${item.clientNotes ?? ""}\n\n`)
         .join("")
 
       addSetupInstruction({
