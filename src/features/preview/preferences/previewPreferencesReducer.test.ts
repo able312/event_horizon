@@ -125,4 +125,31 @@ describe("previewPreferencesReducer", () => {
     expect(state.timeline.showKitchenNotes).toBe(false)
     expect(state.timeline.showInternalNotes).toBe(true)
   })
+
+  it("handles food package options, applying the default selection only once", () => {
+    let state = createInitialPreviewPreferences()
+    expect(state["financial-report"].showFoodPackages).toBe(false)
+    expect(state["financial-report"].foodPackageEstimateMode).toBe("ignore")
+
+    state = previewPreferencesReducer(state, { type: "financial/applyDefaultFoodPackageTimeblocks", ids: ["a", "b"] })
+    expect(state["financial-report"].foodPackageTimeblockIds).toEqual(["a", "b"])
+    expect(state.defaultsApplied.financialFoodPackages).toBe(true)
+
+    state = previewPreferencesReducer(state, { type: "financial/setFoodPackageTimeblockSelected", id: "a", value: false })
+    expect(state["financial-report"].foodPackageTimeblockIds).toEqual(["b"])
+
+    state = previewPreferencesReducer(state, { type: "financial/applyDefaultFoodPackageTimeblocks", ids: ["a", "b", "c"] })
+    expect(state["financial-report"].foodPackageTimeblockIds).toEqual(["b"])
+
+    state = previewPreferencesReducer(state, { type: "financial/selectAllFoodPackageTimeblocks", ids: ["a", "b", "c"] })
+    expect(state["financial-report"].foodPackageTimeblockIds).toEqual(["a", "b", "c"])
+    state = previewPreferencesReducer(state, { type: "financial/clearAllFoodPackageTimeblocks" })
+    expect(state["financial-report"].foodPackageTimeblockIds).toEqual([])
+
+    state = previewPreferencesReducer(state, { type: "financial/setShowFoodPackages", value: true })
+    state = previewPreferencesReducer(state, { type: "financial/setFoodPackageEstimateMode", value: "list" })
+    expect(state["financial-report"].showFoodPackages).toBe(true)
+    expect(state["financial-report"].foodPackageEstimateMode).toBe("list")
+    expect(state["financial-report"].showBeverageAppendix).toBe(false)
+  })
 })

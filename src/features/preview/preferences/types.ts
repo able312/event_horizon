@@ -2,6 +2,10 @@ import {
   DEFAULT_FINANCIAL_DOCUMENT_KIND,
   type FinancialDocumentKind,
 } from "~/features/preview/lib/financialDocumentKinds"
+import {
+  DEFAULT_FOOD_PACKAGE_ESTIMATE_MODE,
+  type FoodPackageEstimateMode,
+} from "~/features/preview/lib/foodPackages"
 
 export type BeoSectionId =
   | "contact"
@@ -52,6 +56,10 @@ export type FinancialPreferences = {
   showBeverageNotes: boolean
   showChargeBreakdown: boolean
   showPaymentStatus: boolean
+  /** Present chosen food timeblocks as alternative packages, on their own page. */
+  showFoodPackages: boolean
+  foodPackageTimeblockIds: string[]
+  foodPackageEstimateMode: FoodPackageEstimateMode
 }
 
 export type CartDiagramPreferences = Record<string, never>
@@ -68,6 +76,7 @@ export type PreviewPreferencesState = {
     beoTimeblocks: Record<BeoTimeblockSectionId, boolean>
     foodBeoTimeblocks: boolean
     financialPayments: boolean
+    financialFoodPackages: boolean
   }
 }
 
@@ -98,6 +107,12 @@ export type PreviewPreferencesAction =
   | { type: "financial/setShowChargeBreakdown"; value: boolean }
   | { type: "financial/setShowPaymentStatus"; value: boolean }
   | { type: "financial/applyPaymentDefault"; hasPayments: boolean }
+  | { type: "financial/setShowFoodPackages"; value: boolean }
+  | { type: "financial/setFoodPackageTimeblockSelected"; id: string; value: boolean }
+  | { type: "financial/selectAllFoodPackageTimeblocks"; ids: string[] }
+  | { type: "financial/clearAllFoodPackageTimeblocks" }
+  | { type: "financial/applyDefaultFoodPackageTimeblocks"; ids: string[] }
+  | { type: "financial/setFoodPackageEstimateMode"; value: FoodPackageEstimateMode }
 
 function createInitialBeoPreferences(): BeoPreferences {
   return {
@@ -147,6 +162,9 @@ function createInitialFinancialPreferences(): FinancialPreferences {
     showBeverageNotes: false,
     showChargeBreakdown: true,
     showPaymentStatus: false,
+    showFoodPackages: false,
+    foodPackageTimeblockIds: [],
+    foodPackageEstimateMode: DEFAULT_FOOD_PACKAGE_ESTIMATE_MODE,
   }
 }
 
@@ -161,6 +179,7 @@ export function createInitialPreviewPreferences(): PreviewPreferencesState {
       beoTimeblocks: { food: false, beverage: false, setup: false, notes: false },
       foodBeoTimeblocks: false,
       financialPayments: false,
+      financialFoodPackages: false,
     },
   }
 }

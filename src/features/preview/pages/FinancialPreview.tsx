@@ -6,13 +6,26 @@ import { getVisibleBeverageTypeSections } from "~/features/event-detail/sections
 import {
   GRATUITY_RATE,
   computeChargeLineTotalCents,
-  computeFinancialPreviewModel,
   toCurrency,
 } from "~/features/event-detail/workspace/lib/financial"
 import { getFinancialDocumentKindLabels } from "~/features/preview/lib/financialDocumentKinds"
+import {
+  buildFoodPackageEstimateRows,
+  computeFoodPackageEstimate,
+  formatCurrencyRange,
+  resolveGuestCountRange,
+  splitFoodPackageTimeblocks,
+  type FoodPackageEstimateRow,
+} from "~/features/preview/lib/foodPackages"
+import {
+  FOOD_PACKAGES_CONTINUATION_KEY,
+  foodPackagesContinuationHeading,
+  renderFoodPackagePages,
+} from "~/features/preview/pages/financial/FoodPackagePages"
 import { PreviewBlock, PreviewDocument } from "~/features/preview/pagination/PreviewDocument"
 import { usePreviewPreferences } from "~/features/preview/preferences/PreviewPreferencesContext"
 import {
+  filterSelectedIds,
   formatPreviewPrice,
   formatPreviewQuantity,
   isBillableLineItem,
@@ -48,12 +61,14 @@ function buildChargeTableSpecs(params: {
     unitPriceCents: number | null | undefined
     quantity: number | null | undefined
   }>
+  foodPackageRows: FoodPackageEstimateRow[]
   hasFoodBeverageSection: boolean
 }): ChargeTableSpec[] {
   const {
     chargeItemsByCategory,
     billableFoodRows,
     billableBeverageRows,
+    foodPackageRows,
     hasFoodBeverageSection,
   } = params
 
@@ -74,6 +89,15 @@ function buildChargeTableSpecs(params: {
                 unitPriceCents={item.unitPriceCents}
                 quantity={item.quantity}
                 totalCents={(item.quantity ?? 0) * (item.unitPriceCents ?? 0)}
+              />
+            ))}
+            {foodPackageRows.map((row) => (
+              <ChargeRow
+                key={row.key}
+                name={row.name}
+                unitPriceCents={null}
+                quantity={null}
+                totalCents={row.totalCents}
               />
             ))}
             {billableBeverageRows.map((item) => (
@@ -198,14 +222,32 @@ export default function FinancialPreview() {
     )
   }, [chargeItems])
 
-  const summary = computeFinancialPreviewModel({
+  // Food packages: chosen food timeblocks shown as alternatives. Until the one-time default
+  // (all food timeblocks) is applied, treat them all as chosen, which is what it selects.
+  const availableFoodIds = (food ?? []).map((tb) => tb.id)
+  const packageTimeblockIds = prefs.showFoodPackages
+    ? state.defaultsApplied.financialFoodPackages
+      ? filterSelectedIds(prefs.foodPackageTimeblockIds, availableFoodIds)
+      : availableFoodIds
+    : null
+  const { packages: packageTimeblocks, certain: certainFood } = splitFoodPackageTimeblocks(
+    food,
+    packageTimeblockIds,
+  )
+  const packageEstimate = computeFoodPackageEstimate({
     menuItems: chargeItems,
     foodTimeblocks: food,
     beverageItems,
     payments,
+    packageTimeblockIds,
+    mode: prefs.foodPackageEstimateMode,
+    guests: resolveGuestCountRange(event),
   })
+  const { low, high } = packageEstimate
+  const foodPackageRows = buildFoodPackageEstimateRows(packageEstimate)
+  const showFoodPackagePages = packageEstimate.packages.length > 0
 
-  const billableFoodRows = (food ?? []).flatMap((timeblock) =>
+  const billableFoodRows = certainFood.flatMap((timeblock) =>
     (timeblock.foodItems ?? [])
       .filter(isBillableLineItem)
       .map((item) => ({ ...item, key: item.id })),
@@ -216,12 +258,14 @@ export default function FinancialPreview() {
   const hasFoodBeverageSection =
     billableFoodRows.length > 0 ||
     billableBeverageRows.length > 0 ||
+    foodPackageRows.length > 0 ||
     (chargeItemsByCategory["Food & Beverage"]?.length ?? 0) > 0
 
   const chargeTables = buildChargeTableSpecs({
     chargeItemsByCategory,
     billableFoodRows,
     billableBeverageRows,
+    foodPackageRows,
     hasFoodBeverageSection,
   })
 
@@ -236,8 +280,10 @@ export default function FinancialPreview() {
       dataReady={eventReady && !eventFetching && clientReady && !clientFetching &&
         chargeReady && !chargeFetching &&
         foodReady && !foodFetching && beverageReady && !beverageFetching &&
-        paymentsReady && !paymentsFetching && state.defaultsApplied.financialPayments}
+        paymentsReady && !paymentsFetching && state.defaultsApplied.financialPayments &&
+        (!prefs.showFoodPackages || state.defaultsApplied.financialFoodPackages)}
       continuationHeadings={{
+        [FOOD_PACKAGES_CONTINUATION_KEY]: foodPackagesContinuationHeading,
         "beverage-appendix": (
           <h2 className="mb-2 text-lg font-bold">Beverage Availability (continued)</h2>
         ),
@@ -302,26 +348,36 @@ export default function FinancialPreview() {
               <>
                 <dt className="text-muted-foreground">Subtotal</dt>
                 <dd className="text-end font-medium">
-                  {toCurrency(summary.chargesSubtotalCents)}
+                  {formatCurrencyRange(low.chargesSubtotalCents, high.chargesSubtotalCents)}
                 </dd>
                 <dt className="text-muted-foreground">HST (13%)</dt>
-                <dd className="text-end font-medium">{toCurrency(summary.hstCents)}</dd>
+                <dd className="text-end font-medium">
+                  {formatCurrencyRange(low.hstCents, high.hstCents)}
+                </dd>
                 <dt className="text-muted-foreground">
                   Gratuity ({Math.round(GRATUITY_RATE * 100)}% on Food + Beverage)
                 </dt>
-                <dd className="text-end font-medium">{toCurrency(summary.gratuityCents)}</dd>
+                <dd className="text-end font-medium">
+                  {formatCurrencyRange(low.gratuityCents, high.gratuityCents)}
+                </dd>
               </>
             ) : null}
 
-            <dt className="text-muted-foreground">Grand Total</dt>
-            <dd className="text-end font-medium">{toCurrency(summary.grandTotalCents)}</dd>
+            <dt className="text-muted-foreground">
+              Grand Total{low.grandTotalCents !== high.grandTotalCents ? " (by package chosen)" : ""}
+            </dt>
+            <dd className="text-end font-medium">
+              {formatCurrencyRange(low.grandTotalCents, high.grandTotalCents)}
+            </dd>
 
             {prefs.showPaymentStatus && (payments?.length ?? 0) > 0 ? (
               <>
                 <dt className="text-muted-foreground">Payments Made</dt>
-                <dd className="text-end font-medium">{toCurrency(summary.paidTotalCents)}</dd>
+                <dd className="text-end font-medium">{toCurrency(low.paidTotalCents)}</dd>
                 <dt className="text-muted-foreground">Balance Due</dt>
-                <dd className="text-end font-medium">{toCurrency(summary.balanceDueCents)}</dd>
+                <dd className="text-end font-medium">
+                  {formatCurrencyRange(low.balanceDueCents, high.balanceDueCents)}
+                </dd>
               </>
             ) : null}
           </dl>
@@ -352,6 +408,10 @@ export default function FinancialPreview() {
           </div>
         </PreviewBlock>
       ) : null}
+
+      {showFoodPackagePages
+        ? renderFoodPackagePages({ packages: packageEstimate.packages, timeblocks: packageTimeblocks })
+        : null}
 
       {showAppendix ? (
         <>

@@ -9,6 +9,7 @@ import { useNoteSection } from "~/hooks/useNoteSection"
 import { usePaymentsSection } from "~/hooks/usePaymentsSection"
 import { useSetupInstructionSection } from "~/hooks/useSetupInstrucionSection"
 import { FINANCIAL_DOCUMENT_KIND_OPTIONS } from "~/features/preview/lib/financialDocumentKinds"
+import { FOOD_PACKAGE_ESTIMATE_MODE_OPTIONS } from "~/features/preview/lib/foodPackages"
 import {
   getPreviewTypesForEvent,
   resolvePreviewType,
@@ -92,6 +93,10 @@ const PreviewPanelOrchestrator: React.FC = () => {
   const timelineKitchenNotesAvailable = hasKitchenNotes(food)
   const foodBeoSelected = filterSelectedIds(
     state["beo-food"].selectedFoodTimeblockIds,
+    foodOptions.map((o) => o.id),
+  )
+  const foodPackageSelected = filterSelectedIds(
+    state["financial-report"].foodPackageTimeblockIds,
     foodOptions.map((o) => o.id),
   )
   const foodBeoKitchenNotesAvailable = hasKitchenNotes(
@@ -475,7 +480,51 @@ const PreviewPanelOrchestrator: React.FC = () => {
                     }
                   />
                 ) : null}
+                {foodOptions.length > 0 ? (
+                  <PreviewToggleRow
+                    id="financial-food-packages"
+                    label="Food packages"
+                    checked={state["financial-report"].showFoodPackages}
+                    onChange={(value) =>
+                      dispatch({ type: "financial/setShowFoodPackages", value })
+                    }
+                  />
+                ) : null}
+                {state["financial-report"].showFoodPackages ? (
+                  <PreviewTimeblockSelector
+                    sectionLabel="Package timeblocks"
+                    options={foodOptions}
+                    selectedIds={foodPackageSelected}
+                    onToggle={(id, value) =>
+                      dispatch({ type: "financial/setFoodPackageTimeblockSelected", id, value })
+                    }
+                    onSelectAll={() =>
+                      dispatch({
+                        type: "financial/selectAllFoodPackageTimeblocks",
+                        ids: foodOptions.map((o) => o.id),
+                      })
+                    }
+                    onClearAll={() => dispatch({ type: "financial/clearAllFoodPackageTimeblocks" })}
+                  />
+                ) : null}
               </PreviewOptionSection>
+
+              {state["financial-report"].showFoodPackages && foodPackageSelected.length > 0 ? (
+                <PreviewOptionSection title="Packages in Estimate">
+                  {FOOD_PACKAGE_ESTIMATE_MODE_OPTIONS.map(({ mode, label }) => (
+                    <PreviewRadioRow
+                      key={mode}
+                      id={`financial-food-package-mode-${mode}`}
+                      name="financial-food-package-mode"
+                      label={label}
+                      checked={state["financial-report"].foodPackageEstimateMode === mode}
+                      onSelect={() =>
+                        dispatch({ type: "financial/setFoodPackageEstimateMode", value: mode })
+                      }
+                    />
+                  ))}
+                </PreviewOptionSection>
+              ) : null}
             </>
           ) : null}
         </div>

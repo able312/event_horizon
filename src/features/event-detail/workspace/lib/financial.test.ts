@@ -88,6 +88,32 @@ describe("financial helpers", () => {
     expect(summary.balanceDueCents).toBe(2808)
   })
 
+  it("adds additionalFoodSubtotalCents to food, with gratuity and HST", () => {
+    const params = {
+      menuItems: [{ id: "m1", quantity: 1, unitPriceCents: 2000 } as never],
+      foodTimeblocks: [{ id: "f-tb", foodItems: [{ id: "f1", quantity: 2, unitPriceCents: 250 }] } as never],
+      beverageItems: [{ id: "b1", quantity: 3, unitPriceCents: 100 } as never],
+      payments: [{ id: "p1", amountCents: 500 } as never],
+    }
+
+    // Omitting the param is the same as passing 0
+    expect(computeFinancialSummaryAllSources(params)).toEqual(
+      computeFinancialSummaryAllSources({ ...params, additionalFoodSubtotalCents: 0 }),
+    )
+
+    const summary = computeFinancialSummaryAllSources({ ...params, additionalFoodSubtotalCents: 1000 })
+    // food 500 + 1000 = 1500; charges 2000 + 1500 + 300 = 3800; gratuity base 1800 -> 324;
+    // HST round(494) = 494; charges total 4294; grand 4618; balance 4118
+    expect(summary.foodSubtotalCents).toBe(1500)
+    expect(summary.chargesSubtotalCents).toBe(3800)
+    expect(summary.gratuityBaseCents).toBe(1800)
+    expect(summary.gratuityCents).toBe(324)
+    expect(summary.hstCents).toBe(494)
+    expect(summary.chargesTotalCents).toBe(4294)
+    expect(summary.grandTotalCents).toBe(4618)
+    expect(summary.balanceDueCents).toBe(4118)
+  })
+
   it("does not apply gratuity to menu-only totals", () => {
     const summary = computeFinancialSummaryAllSources({
       menuItems: [{ id: "m1", quantity: 1, unitPriceCents: 1000 } as never],

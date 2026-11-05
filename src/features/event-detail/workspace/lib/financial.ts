@@ -59,14 +59,19 @@ function computeGratuityCents(gratuityBaseCents: number): number {
   return Math.round(gratuityBaseCents * GRATUITY_RATE)
 }
 
+export type FinancialSummary = ReturnType<typeof computeFinancialSummaryAllSources>
+
 export function computeFinancialSummaryAllSources(params: {
   menuItems: MenuOfChargeItem[] | undefined
   foodTimeblocks: TimeblockWithItems[] | undefined
   beverageItems: BeverageItem[] | undefined
   payments: Payment[] | undefined
+  /** Food charged on top of the timeblocks' items, e.g. a food package figure (see preview/lib/foodPackages). */
+  additionalFoodSubtotalCents?: number
 }) {
   const menuSubtotalCents = computeMenuSubtotalCents(params.menuItems)
-  const foodSubtotalCents = computeFoodSubtotalCents(params.foodTimeblocks)
+  const foodSubtotalCents =
+    computeFoodSubtotalCents(params.foodTimeblocks) + (params.additionalFoodSubtotalCents ?? 0)
   const beverageSubtotalCents = computeBeverageSubtotalCents(params.beverageItems)
   const chargesSubtotalCents = menuSubtotalCents + foodSubtotalCents + beverageSubtotalCents
   const gratuityBaseCents = computeGratuityBaseCents(foodSubtotalCents, beverageSubtotalCents)
@@ -92,12 +97,7 @@ export function computeFinancialSummaryAllSources(params: {
   }
 }
 
-export function computeFinancialPreviewModel(params: {
-  menuItems: MenuOfChargeItem[] | undefined
-  foodTimeblocks: TimeblockWithItems[] | undefined
-  beverageItems: BeverageItem[] | undefined
-  payments: Payment[] | undefined
-}) {
+export function computeFinancialPreviewModel(params: Parameters<typeof computeFinancialSummaryAllSources>[0]) {
   return computeFinancialSummaryAllSources(params)
 }
 

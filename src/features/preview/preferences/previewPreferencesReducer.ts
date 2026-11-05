@@ -8,6 +8,13 @@ function toggleId(ids: string[], id: string, value: boolean): string[] {
   return ids.filter((entry) => entry !== id)
 }
 
+function withFinancial(
+  state: PreviewPreferencesState,
+  updates: Partial<PreviewPreferencesState["financial-report"]>,
+): PreviewPreferencesState {
+  return { ...state, "financial-report": { ...state["financial-report"], ...updates } }
+}
+
 export function previewPreferencesReducer(
   state: PreviewPreferencesState,
   action: PreviewPreferencesAction,
@@ -205,6 +212,28 @@ export function previewPreferencesReducer(
         },
         defaultsApplied: { ...state.defaultsApplied, financialPayments: true },
       }
+    case "financial/setShowFoodPackages":
+      return withFinancial(state, { showFoodPackages: action.value })
+    case "financial/setFoodPackageTimeblockSelected":
+      return withFinancial(state, {
+        foodPackageTimeblockIds: toggleId(
+          state["financial-report"].foodPackageTimeblockIds,
+          action.id,
+          action.value,
+        ),
+      })
+    case "financial/selectAllFoodPackageTimeblocks":
+      return withFinancial(state, { foodPackageTimeblockIds: [...action.ids] })
+    case "financial/clearAllFoodPackageTimeblocks":
+      return withFinancial(state, { foodPackageTimeblockIds: [] })
+    case "financial/applyDefaultFoodPackageTimeblocks":
+      if (state.defaultsApplied.financialFoodPackages) return state
+      return {
+        ...withFinancial(state, { foodPackageTimeblockIds: [...action.ids] }),
+        defaultsApplied: { ...state.defaultsApplied, financialFoodPackages: true },
+      }
+    case "financial/setFoodPackageEstimateMode":
+      return withFinancial(state, { foodPackageEstimateMode: action.value })
     default:
       return state
   }

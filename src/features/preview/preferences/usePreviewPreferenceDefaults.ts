@@ -63,6 +63,16 @@ export function usePreviewPreferenceDefaults() {
   }, [dispatch, food, state.defaultsApplied.foodBeoTimeblocks])
 
   useEffect(() => {
+    if (state.defaultsApplied.financialFoodPackages) return
+    if (!food) return
+
+    dispatch({
+      type: "financial/applyDefaultFoodPackageTimeblocks",
+      ids: food.map((tb) => tb.id),
+    })
+  }, [dispatch, food, state.defaultsApplied.financialFoodPackages])
+
+  useEffect(() => {
     if (state.defaultsApplied.financialPayments) return
     if (payments === undefined) return
 
