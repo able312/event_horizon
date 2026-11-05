@@ -98,9 +98,9 @@ export function computeFinancialSummaryAllSources(params: {
 }
 
 export function toCurrency(cents: number): string {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("en-CA", {
     style: "currency",
-    currency: "USD",
+    currency: "CAD",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(centsToDollars(cents))

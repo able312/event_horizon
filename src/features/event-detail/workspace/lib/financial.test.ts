@@ -8,6 +8,7 @@ import {
   computeFinancialSummaryAllSources,
   dollarsToCents,
   fromDateInputValue,
+  toCurrency,
   toDateInputValue,
 } from "./financial"
 
@@ -146,5 +147,11 @@ describe("financial helpers", () => {
     const iso = fromDateInputValue("2026-11-03")
     expect(iso).toBe("2026-11-03T00:00:00.000Z")
     expect(toDateInputValue(iso)).toBe("2026-11-03")
+  })
+
+  it("formats cents as Canadian dollars with a plain $ sign", () => {
+    expect(toCurrency(123456789)).toBe("$1,234,567.89")
+    expect(toCurrency(50)).toBe("$0.50")
+    expect(toCurrency(-1250)).toBe("-$12.50")
   })
 })
