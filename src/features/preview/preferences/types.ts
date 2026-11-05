@@ -30,7 +30,10 @@ export type BeoPreferences = {
 
 export type FoodBeoPreferences = {
   showContactInfo: boolean
+  /** The event's own internal notes, in the header. */
   showInternalNotes: boolean
+  /** Food items' kitchen-only internal notes, under each item. */
+  showKitchenNotes: boolean
   showPricing: boolean
   selectedFoodTimeblockIds: string[]
 }
@@ -80,6 +83,7 @@ export type PreviewPreferencesAction =
   | { type: "beo/applyDefaultTimeblocks"; section: BeoTimeblockSectionId; ids: string[] }
   | { type: "beo-food/setShowContactInfo"; value: boolean }
   | { type: "beo-food/setShowInternalNotes"; value: boolean }
+  | { type: "beo-food/setShowKitchenNotes"; value: boolean }
   | { type: "beo-food/setShowPricing"; value: boolean }
   | { type: "beo-food/setTimeblockSelected"; id: string; value: boolean }
   | { type: "beo-food/selectAllTimeblocks"; ids: string[] }
@@ -122,6 +126,7 @@ function createInitialFoodBeoPreferences(): FoodBeoPreferences {
   return {
     showContactInfo: false,
     showInternalNotes: true,
+    showKitchenNotes: true,
     showPricing: false,
     selectedFoodTimeblockIds: [],
   }

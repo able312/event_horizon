@@ -92,6 +92,11 @@ export function previewPreferencesReducer(
         ...state,
         "beo-food": { ...state["beo-food"], showInternalNotes: action.value },
       }
+    case "beo-food/setShowKitchenNotes":
+      return {
+        ...state,
+        "beo-food": { ...state["beo-food"], showKitchenNotes: action.value },
+      }
     case "beo-food/setShowPricing":
       return {
         ...state,

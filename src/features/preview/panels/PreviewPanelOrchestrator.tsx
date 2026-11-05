@@ -94,6 +94,9 @@ const PreviewPanelOrchestrator: React.FC = () => {
     state["beo-food"].selectedFoodTimeblockIds,
     foodOptions.map((o) => o.id),
   )
+  const foodBeoKitchenNotesAvailable = hasKitchenNotes(
+    (food ?? []).filter((tb) => foodBeoSelected.includes(tb.id)),
+  )
 
   const handleSelectType = (typeId: PreviewTypeId) => {
     if (!eventId) return
@@ -346,6 +349,16 @@ const PreviewPanelOrchestrator: React.FC = () => {
                   checked={state["beo-food"].showInternalNotes}
                   onChange={(value) =>
                     dispatch({ type: "beo-food/setShowInternalNotes", value })
+                  }
+                />
+              ) : null}
+              {foodBeoKitchenNotesAvailable ? (
+                <PreviewToggleRow
+                  id="food-beo-kitchen-notes"
+                  label="Kitchen notes"
+                  checked={state["beo-food"].showKitchenNotes}
+                  onChange={(value) =>
+                    dispatch({ type: "beo-food/setShowKitchenNotes", value })
                   }
                 />
               ) : null}

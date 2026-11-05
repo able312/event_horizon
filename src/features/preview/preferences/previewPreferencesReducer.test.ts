@@ -109,6 +109,12 @@ describe("previewPreferencesReducer", () => {
     let state = createInitialPreviewPreferences()
     expect(state.beo.showKitchenNotes).toBe(true)
     expect(state.timeline.showKitchenNotes).toBe(true)
+    expect(state["beo-food"].showKitchenNotes).toBe(true)
+
+    state = previewPreferencesReducer(state, { type: "beo-food/setShowKitchenNotes", value: false })
+    expect(state["beo-food"].showKitchenNotes).toBe(false)
+    expect(state["beo-food"].showInternalNotes).toBe(true)
+    expect(state.beo.showKitchenNotes).toBe(true)
 
     state = previewPreferencesReducer(state, { type: "beo/setShowKitchenNotes", value: false })
     expect(state.beo.showKitchenNotes).toBe(false)

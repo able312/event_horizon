@@ -73,11 +73,10 @@ export function FoodOnlyPreview() {
               >
                 {isFirst ? <SectionFrameHeading title="Food" /> : null}
                 <SectionFrameItem isLast={isLast}>
-                  {/* Kitchen notes aren't printed here yet: still to decide whether the
-                      "Internal notes" toggle covers them or they get their own. */}
                   <FoodTimeblockDetails
                     timeblock={timeblock}
                     showPricing={prefs.showPricing}
+                    showKitchenNotes={prefs.showKitchenNotes}
                   />
                 </SectionFrameItem>
               </PreviewBlock>

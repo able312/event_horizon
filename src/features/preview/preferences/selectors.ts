@@ -20,9 +20,7 @@ export function hasContactInfo(client: Pick<PrimaryClient, "displayName" | "phon
 /**
  * "Internal notes" here, and the "Internal notes" toggles that use it, mean the event's
  * own `internalNotes` only. Food items' kitchen-only `internalNotes` have their own
- * "Kitchen notes" toggles on the Full BEO and Timeline (see hasKitchenNotes). The Food
- * BEO doesn't print kitchen notes yet: whether its existing toggle should cover them or
- * it gets a separate one is still to be decided.
+ * "Kitchen notes" toggles (see hasKitchenNotes).
  */
 export function hasInternalNotes(event: Pick<Event, "internalNotes"> | null | undefined): boolean {
   return hasText(event?.internalNotes)
