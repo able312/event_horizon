@@ -1,7 +1,4 @@
-import {
-  SectionFrameHeading,
-  SectionFrameItem,
-} from "~/features/preview/components/SectionFrame"
+import { SectionFrameHeading } from "~/features/preview/components/SectionFrame"
 import { combineQueryStates } from "~/features/preview/pagination/combineQueryStates"
 import { PreviewBlock, PreviewDocument } from "~/features/preview/pagination/PreviewDocument"
 import { usePreviewPreferences } from "~/features/preview/preferences/PreviewPreferencesContext"
@@ -13,6 +10,7 @@ import { usePrintableContactGroups } from "~/hooks/useEventContacts"
 import { useEvent } from "~/hooks/useEvent"
 import { useFoodSection } from "~/hooks/useFoodSection"
 import { PrintHeader } from "./EventOverviewHeader"
+import { renderSectionBlocks } from "./renderSectionBlocks"
 import { FoodTimeblockDetails } from "./sections/FoodDetails"
 
 export function FoodOnlyPreview() {
@@ -56,25 +54,18 @@ export function FoodOnlyPreview() {
       </PreviewBlock>
 
       {showFood
-        ? selectedFood.map((timeblock, index) => {
-            const isFirst = index === 0
-            const isLast = index === selectedFood.length - 1
-            return (
-              <PreviewBlock
-                key={`food-beo-food-${timeblock.id}`}
-                id={`food-beo-food-${timeblock.id}`}
-                continuationKey="food"
-              >
-                {isFirst ? <SectionFrameHeading title="Food" /> : null}
-                <SectionFrameItem isLast={isLast}>
-                  <FoodTimeblockDetails
-                    timeblock={timeblock}
-                    showPricing={prefs.showPricing}
-                    showKitchenNotes={prefs.showKitchenNotes}
-                  />
-                </SectionFrameItem>
-              </PreviewBlock>
-            )
+        ? renderSectionBlocks({
+            key: "food",
+            title: "Food",
+            items: selectedFood,
+            blockId: (timeblock) => `food-beo-food-${timeblock.id}`,
+            render: (timeblock) => (
+              <FoodTimeblockDetails
+                timeblock={timeblock}
+                showPricing={prefs.showPricing}
+                showKitchenNotes={prefs.showKitchenNotes}
+              />
+            ),
           })
         : null}
     </PreviewDocument>
