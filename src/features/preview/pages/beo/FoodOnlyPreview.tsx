@@ -2,6 +2,7 @@ import {
   SectionFrameHeading,
   SectionFrameItem,
 } from "~/features/preview/components/SectionFrame"
+import { combineQueryStates } from "~/features/preview/pagination/combineQueryStates"
 import { PreviewBlock, PreviewDocument } from "~/features/preview/pagination/PreviewDocument"
 import { usePreviewPreferences } from "~/features/preview/preferences/PreviewPreferencesContext"
 import {
@@ -15,22 +16,15 @@ import { PrintHeader } from "./EventOverviewHeader"
 import { FoodTimeblockDetails } from "./sections/FoodDetails"
 
 export function FoodOnlyPreview() {
-  const {
-    data: event,
-    isSuccess: eventReady,
-    isError: eventError,
-    isFetching: eventFetching,
-  } = useEvent()
+  const eventQuery = useEvent()
+  const event = eventQuery.data
   const { state } = usePreviewPreferences()
   const prefs = state["beo-food"]
-  const {
-    data: food,
-    isSuccess: foodReady,
-    isError: foodError,
-    isFetching: foodFetching,
-  } = useFoodSection()
+  const foodQuery = useFoodSection()
+  const food = foodQuery.data
 
   const contacts = usePrintableContactGroups(event?.id)
+  const queries = combineQueryStates([contacts, eventQuery, foodQuery])
 
   if (!event) return <p>No event data found.</p>
 
@@ -46,8 +40,8 @@ export function FoodOnlyPreview() {
 
   return (
     <PreviewDocument
-      dataError={contacts.isError || eventError || foodError}
-      dataReady={contacts.isSuccess && !contacts.isFetching && eventReady && !eventFetching && foodReady && !foodFetching && state.defaultsApplied.foodBeoTimeblocks}
+      dataError={queries.error}
+      dataReady={queries.ready && state.defaultsApplied.foodBeoTimeblocks}
       continuationHeadings={{
         food: <SectionFrameHeading title="Food (continued)" />,
       }}
