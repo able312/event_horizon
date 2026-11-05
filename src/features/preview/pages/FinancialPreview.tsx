@@ -5,7 +5,8 @@ import siloLogo from "~/assets/SILO-SM-RGB.png"
 import { getVisibleBeverageTypeSections } from "~/features/event-detail/sections/food-beverage-workspaces/beverage/beverageTypeSections"
 import {
   GRATUITY_RATE,
-  computeChargeLineTotalCents,
+  HST_RATE,
+  computeBillableLineTotalCents,
   toCurrency,
 } from "~/features/event-detail/workspace/lib/financial"
 import { getFinancialDocumentKindLabels } from "~/features/preview/lib/financialDocumentKinds"
@@ -88,7 +89,7 @@ function buildChargeTableSpecs(params: {
                 name={item.name}
                 unitPriceCents={item.unitPriceCents}
                 quantity={item.quantity}
-                totalCents={(item.quantity ?? 0) * (item.unitPriceCents ?? 0)}
+                totalCents={computeBillableLineTotalCents(item)}
               />
             ))}
             {foodPackageRows.map((row) => (
@@ -106,7 +107,7 @@ function buildChargeTableSpecs(params: {
                 name={item.name}
                 unitPriceCents={item.unitPriceCents}
                 quantity={item.quantity}
-                totalCents={(item.quantity ?? 0) * (item.unitPriceCents ?? 0)}
+                totalCents={computeBillableLineTotalCents(item)}
               />
             ))}
             {(chargeItemsByCategory["Food & Beverage"] ?? []).map((item) => (
@@ -115,7 +116,7 @@ function buildChargeTableSpecs(params: {
                 name={item.name}
                 unitPriceCents={item.unitPriceCents}
                 quantity={item.quantity}
-                totalCents={computeChargeLineTotalCents(item)}
+                totalCents={computeBillableLineTotalCents(item)}
               />
             ))}
           </>
@@ -138,7 +139,7 @@ function buildChargeTableSpecs(params: {
               name={item.name}
               unitPriceCents={item.unitPriceCents}
               quantity={item.quantity}
-              totalCents={computeChargeLineTotalCents(item)}
+              totalCents={computeBillableLineTotalCents(item)}
             />
           ))}
         </>
@@ -158,7 +159,7 @@ function buildChargeTableSpecs(params: {
               name={item.name}
               unitPriceCents={item.unitPriceCents}
               quantity={item.quantity}
-              totalCents={computeChargeLineTotalCents(item)}
+              totalCents={computeBillableLineTotalCents(item)}
             />
           ))}
         </>
@@ -350,7 +351,7 @@ export default function FinancialPreview() {
                 <dd className="text-end font-medium">
                   {formatCurrencyRange(low.chargesSubtotalCents, high.chargesSubtotalCents)}
                 </dd>
-                <dt className="text-muted-foreground">HST (13%)</dt>
+                <dt className="text-muted-foreground">HST ({Math.round(HST_RATE * 100)}%)</dt>
                 <dd className="text-end font-medium">
                   {formatCurrencyRange(low.hstCents, high.hstCents)}
                 </dd>

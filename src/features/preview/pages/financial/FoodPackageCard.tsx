@@ -1,5 +1,10 @@
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
-import { GRATUITY_RATE, HST_RATE, toCurrency } from "~/features/event-detail/workspace/lib/financial"
+import {
+  GRATUITY_RATE,
+  HST_RATE,
+  computeBillableLineTotalCents,
+  toCurrency,
+} from "~/features/event-detail/workspace/lib/financial"
 import {
   formatCurrencyRange,
   type ChargeBreakdown,
@@ -53,7 +58,7 @@ export function FoodPackageCard({
               <p className="text-end tabular-nums">{formatPreviewPrice(item.unitPriceCents, toCurrency)}</p>
               <p className="text-end tabular-nums">{formatPreviewQuantity(item.quantity)}</p>
               <p className="text-end tabular-nums">
-                {isBillableLineItem(item) ? toCurrency((item.quantity ?? 0) * (item.unitPriceCents ?? 0)) : ""}
+                {isBillableLineItem(item) ? toCurrency(computeBillableLineTotalCents(item)) : ""}
               </p>
             </div>
           ))}

@@ -5,9 +5,7 @@ import {
   HST_RATE,
   centsToDollars,
   computeBillableLineTotalCents,
-  computeChargeLineTotalCents,
   computeFinancialSummaryAllSources,
-  computeFinancialPreviewModel,
   dollarsToCents,
   fromDateInputValue,
   toDateInputValue,
@@ -31,32 +29,12 @@ describe("financial helpers", () => {
       beverageItems: [],
     })
 
-    expect(computeChargeLineTotalCents({ quantity: 3, unitPriceCents: 250 } as never)).toBe(750)
+    expect(computeBillableLineTotalCents({ quantity: 3, unitPriceCents: 250 })).toBe(750)
     expect(summary.menuSubtotalCents).toBe(8000)
     expect(summary.hstCents).toBe(Math.round(8000 * HST_RATE))
     expect(summary.chargesTotalCents).toBe(9040)
     expect(summary.paidTotalCents).toBe(1000)
     expect(summary.balanceDueCents).toBe(8040)
-  })
-
-  it("computes preview model totals in cents", () => {
-    const items = [
-      { id: "venue-1", category: "Venue", quantity: 3, unitPriceCents: 1234 } as never,
-      { id: "venue-2", category: "Venue", quantity: 1, unitPriceCents: 500 } as never,
-      { id: "golf-1", category: "Golf", quantity: 2, unitPriceCents: 2000 } as never,
-    ]
-
-    const preview = computeFinancialPreviewModel({
-      menuItems: items,
-      foodTimeblocks: [],
-      beverageItems: [],
-      payments: [{ id: "p", amountCents: 1250 } as never],
-    })
-    expect(preview.menuSubtotalCents).toBe(8202)
-    expect(preview.hstCents).toBe(Math.round(8202 * HST_RATE))
-    expect(preview.chargesTotalCents).toBe(9268)
-    expect(preview.paidTotalCents).toBe(1250)
-    expect(preview.balanceDueCents).toBe(8018)
   })
 
   it("computes all-source totals including food and beverage", () => {

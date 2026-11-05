@@ -1,7 +1,6 @@
 import { useEffect } from "react"
 
 import { useBeverageSection } from "~/hooks/useBeverageSection"
-import { useEvent } from "~/hooks/useEvent"
 import { useFoodSection } from "~/hooks/useFoodSection"
 import { useNoteSection } from "~/hooks/useNoteSection"
 import { usePaymentsSection } from "~/hooks/usePaymentsSection"
@@ -18,7 +17,6 @@ import {
  */
 export function usePreviewPreferenceDefaults() {
   const { state, dispatch } = usePreviewPreferences()
-  const { data: event } = useEvent()
   const { data: food } = useFoodSection()
   const { timeblocks: beverageTimeblocks, data: beverageData } = useBeverageSection()
   const { data: setup } = useSetupInstructionSection()
@@ -81,7 +79,4 @@ export function usePreviewPreferenceDefaults() {
       hasPayments: payments.length > 0,
     })
   }, [dispatch, payments, state.defaultsApplied.financialPayments])
-
-  // Touch event so the hook stays event-scoped without unused-var noise if unused.
-  void event
 }

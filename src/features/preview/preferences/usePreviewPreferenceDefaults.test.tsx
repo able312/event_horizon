@@ -4,9 +4,8 @@ import { PreviewPreferencesProvider, usePreviewPreferences } from "./PreviewPref
 import { usePreviewPreferenceDefaults } from "./usePreviewPreferenceDefaults"
 
 const mocks = vi.hoisted(() => ({
-  event: vi.fn(), food: vi.fn(), beverage: vi.fn(), setup: vi.fn(), notes: vi.fn(), payments: vi.fn(),
+  food: vi.fn(), beverage: vi.fn(), setup: vi.fn(), notes: vi.fn(), payments: vi.fn(),
 }))
-vi.mock("~/hooks/useEvent", () => ({ useEvent: mocks.event }))
 vi.mock("~/hooks/useFoodSection", () => ({ useFoodSection: mocks.food }))
 vi.mock("~/hooks/useBeverageSection", () => ({ useBeverageSection: mocks.beverage }))
 vi.mock("~/hooks/useSetupInstrucionSection", () => ({ useSetupInstructionSection: mocks.setup }))
@@ -15,7 +14,6 @@ vi.mock("~/hooks/usePaymentsSection", () => ({ usePaymentsSection: mocks.payment
 
 describe("usePreviewPreferenceDefaults", () => {
   it("applies each BEO section once it loads and preserves later user selections", () => {
-    mocks.event.mockReturnValue({ data: { id: "event" } })
     mocks.food.mockReturnValue({ data: undefined })
     mocks.beverage.mockReturnValue({ data: undefined, timeblocks: [] })
     mocks.setup.mockReturnValue({ data: undefined })

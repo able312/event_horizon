@@ -1,5 +1,5 @@
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
-import { toCurrency } from "~/features/event-detail/workspace/lib/financial"
+import { computeBillableLineTotalCents, toCurrency } from "~/features/event-detail/workspace/lib/financial"
 import { KitchenNote } from "~/features/preview/components/KitchenNote"
 import {
   formatPreviewPrice,
@@ -62,7 +62,7 @@ export function FoodTimeblockDetails({
             const price = formatPreviewPrice(food.unitPriceCents, toCurrency)
             const lineTotal =
               (food.quantity ?? 0) > 0 && (food.unitPriceCents ?? 0) > 0
-                ? toCurrency((food.quantity ?? 0) * (food.unitPriceCents ?? 0))
+                ? toCurrency(computeBillableLineTotalCents(food))
                 : ""
 
             return (

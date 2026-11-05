@@ -17,18 +17,18 @@ export function dollarsToCents(value: string | number | null | undefined): numbe
   return Math.round(asNumber * 100)
 }
 
-export function computeChargeLineTotalCents(item: MenuOfChargeItem): number {
-  return (item.quantity ?? 0) * (item.unitPriceCents ?? 0)
-}
-
-export function computeBillableLineTotalCents(item: { quantity: number | null; unitPriceCents: number | null }): number {
+/** Quantity × unit price for any priced line (charge, food or beverage item); missing values count as 0. */
+export function computeBillableLineTotalCents(item: {
+  quantity?: number | null
+  unitPriceCents?: number | null
+}): number {
   return (item.quantity ?? 0) * (item.unitPriceCents ?? 0)
 }
 
 export function computeMenuSubtotalCents(items: MenuOfChargeItem[] | undefined): number {
   if (!items || items.length === 0) return 0
 
-  return items.reduce((sum, item) => sum + computeChargeLineTotalCents(item), 0)
+  return items.reduce((sum, item) => sum + computeBillableLineTotalCents(item), 0)
 }
 
 export function computePaymentsTotalCents(payments: Payment[] | undefined): number {
@@ -95,10 +95,6 @@ export function computeFinancialSummaryAllSources(params: {
     paidTotalCents,
     balanceDueCents,
   }
-}
-
-export function computeFinancialPreviewModel(params: Parameters<typeof computeFinancialSummaryAllSources>[0]) {
-  return computeFinancialSummaryAllSources(params)
 }
 
 export function toCurrency(cents: number): string {
