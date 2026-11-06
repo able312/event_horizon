@@ -159,6 +159,74 @@ describe("packBlocksIntoPages", () => {
     expect(pages[2]?.continuationKeys).toEqual(["food"])
   })
 
+  it("does not mark a section's first block as continued when it is pushed to a new page", () => {
+    const pages = packBlocksIntoPages(
+      [
+        { id: "bev-1", height: 250, continuationKey: "beverage" },
+        { id: "setup-1", height: 100, continuationKey: "setup" },
+      ],
+      { contentHeightPx: 300, continuationHeadingHeights: { beverage: 30, setup: 30 } },
+    )
+
+    expect(pages.map((page) => page.blockIds)).toEqual([["bev-1"], ["setup-1"]])
+    expect(pages[1]?.continuationKeys).toEqual([])
+  })
+
+  it("marks later pages as continued when a section spans pages", () => {
+    const pages = packBlocksIntoPages(
+      [
+        { id: "bev-1", height: 250, continuationKey: "beverage" },
+        { id: "setup-1", height: 200, continuationKey: "setup" },
+        { id: "setup-2", height: 200, continuationKey: "setup" },
+        { id: "setup-3", height: 200, continuationKey: "setup" },
+      ],
+      300,
+    )
+
+    expect(pages.map((page) => page.blockIds)).toEqual([["bev-1"], ["setup-1"], ["setup-2"], ["setup-3"]])
+    expect(pages.map((page) => page.continuationKeys)).toEqual([[], [], ["setup"], ["setup"]])
+  })
+
+  it("marks the next page as continued when a single block is split", () => {
+    const pages = packBlocksIntoPages(
+      [
+        { id: "bev-1", height: 100, continuationKey: "beverage" },
+        { id: "setup-1", height: 400, continuationKey: "setup", breakOffsets: [100, 200, 300] },
+      ],
+      300,
+    )
+
+    // setup-1 starts its section on page 2, then splits onto page 3.
+    expect(pages.map((page) => page.blockIds)).toEqual([["bev-1"], ["setup-1"], ["setup-1"]])
+    expect(pages.map((page) => page.continuationKeys)).toEqual([[], [], ["setup"]])
+  })
+
+  it("does not mark a keyless block after a keyed section as continued", () => {
+    const pages = packBlocksIntoPages(
+      [
+        { id: "setup-1", height: 250, continuationKey: "setup" },
+        { id: "notes", height: 100 },
+      ],
+      300,
+    )
+
+    expect(pages.map((page) => page.blockIds)).toEqual([["setup-1"], ["notes"]])
+    expect(pages[1]?.continuationKeys).toEqual([])
+  })
+
+  it("marks content as continued when it is pushed below a separate section title block", () => {
+    const pages = packBlocksIntoPages(
+      [
+        { id: "packages-header", height: 80, continuationKey: "packages", breakBefore: true },
+        { id: "package-1", height: 250, continuationKey: "packages" },
+      ],
+      300,
+    )
+
+    expect(pages.map((page) => page.blockIds)).toEqual([["packages-header"], ["package-1"]])
+    expect(pages.map((page) => page.continuationKeys)).toEqual([[], ["packages"]])
+  })
+
   it("returns no pages for empty input", () => {
     expect(packBlocksIntoPages([])).toEqual([])
   })

@@ -76,7 +76,7 @@ describe("PreviewDocument pagination", () => {
     heights.food = 42
     const { container } = render(
       <PreviewDocument continuationHeadings={{ food: <h2>Food continued</h2> }}>
-        <PreviewBlock id="a" className="mb-6">First</PreviewBlock>
+        <PreviewBlock id="a" className="mb-6" continuationKey="food">First</PreviewBlock>
         <PreviewBlock id="b" continuationKey="food">Second</PreviewBlock>
       </PreviewDocument>,
     )

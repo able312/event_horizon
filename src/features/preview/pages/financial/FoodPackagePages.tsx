@@ -22,7 +22,13 @@ export function renderFoodPackagePages(params: {
   const timeblocksById = new Map(params.timeblocks.map((tb) => [tb.id, tb]))
 
   return [
-    <PreviewBlock key="financial-food-packages-header" id="financial-food-packages-header" breakBefore keepTogether>
+    <PreviewBlock
+      key="financial-food-packages-header"
+      id="financial-food-packages-header"
+      continuationKey={FOOD_PACKAGES_CONTINUATION_KEY}
+      breakBefore
+      keepTogether
+    >
       <div>
         <h2 className="text-lg font-bold">Food Packages</h2>
         <p className="mb-4 mt-1 text-sm text-stone-600">
