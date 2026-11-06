@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { parseIcsImportFile } from "./icsImportService.js"
 
 vi.mock("node:fs/promises", () => ({
@@ -12,6 +12,17 @@ async function setIcsContent(content: string) {
   const fsPromises = await import("node:fs/promises")
   vi.mocked(fsPromises.default.readFile).mockResolvedValue(content)
 }
+
+// All-day events are read in the machine's local time zone. Pin it to the venue's
+// (Eastern) so the expected UTC offsets hold on CI and cloud machines too.
+const originalTimeZone = process.env.TZ
+beforeAll(() => {
+  process.env.TZ = "America/Toronto"
+})
+afterAll(() => {
+  if (originalTimeZone === undefined) delete process.env.TZ
+  else process.env.TZ = originalTimeZone
+})
 
 beforeEach(() => {
   vi.useFakeTimers()

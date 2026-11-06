@@ -5,14 +5,18 @@ import {
   getVisibleBeverageTypeSections,
 } from "~/features/event-detail/sections/food-beverage-workspaces/beverage/beverageTypeSections"
 import { CartPreview } from "~/features/preview/components/CartPreview"
+import { KitchenNote } from "~/features/preview/components/KitchenNote"
 import { PreviewMarkdownContent } from "~/lib/markdown/PreviewMarkdownContent"
+import { hasText } from "~/lib/utils"
 
 type TimelineBlockProps = {
   timeblock: TimelineTimeblock
   onOpen?: (scrollTop: number) => void
+  /** Print each food item's kitchen-only internal note under its client note. */
+  showKitchenNotes?: boolean
 }
 
-const TimelineBlock: React.FC<TimelineBlockProps> = ({ timeblock, onOpen }) => {
+const TimelineBlock: React.FC<TimelineBlockProps> = ({ timeblock, onOpen, showKitchenNotes = false }) => {
   if (!timeblock.time || timeblock.time.length === 0) return null
 
   return (
@@ -31,8 +35,8 @@ const TimelineBlock: React.FC<TimelineBlockProps> = ({ timeblock, onOpen }) => {
               key={"foodItem_" + item.id}
               blockHeader={(item.quantity ? item.quantity + " x " : "") + item.name}
               blockSubtitle={item.serviceStyle}
-              // Client note only for now; see hasInternalNotes in preferences/selectors.ts.
               plainNotes={item.clientNotes}
+              kitchenNotes={showKitchenNotes ? item.internalNotes : null}
               borderColor="amber"
             />
           ))}
@@ -157,6 +161,7 @@ type GenericDetailsBlockProps = {
   blockSubtitle?: React.ReactNode
   markdownNotes?: string | null
   plainNotes?: string | null
+  kitchenNotes?: string | null
   borderColor?: BorderColor
 }
 
@@ -165,11 +170,13 @@ const GenericDetailsBlock: React.FC<GenericDetailsBlockProps> = ({
   blockSubtitle,
   markdownNotes,
   plainNotes,
+  kitchenNotes,
   borderColor = "gray",
 }) => {
   const hasMarkdown = Boolean(markdownNotes)
   const hasPlain = Boolean(plainNotes)
-  if (!blockHeader && !blockSubtitle && !hasMarkdown && !hasPlain) return null
+  const hasKitchen = hasText(kitchenNotes)
+  if (!blockHeader && !blockSubtitle && !hasMarkdown && !hasPlain && !hasKitchen) return null
 
   return (
     <div className={`mt-2 break-inside-avoid border-l-2 pl-2 ${BORDER_COLOR_CLASS[borderColor]}`}>
@@ -184,6 +191,7 @@ const GenericDetailsBlock: React.FC<GenericDetailsBlockProps> = ({
         {hasPlain && plainNotes ? (
           <pre className="pb-1 font-sans text-xs italic text-wrap text-stone-600">{plainNotes}</pre>
         ) : null}
+        {hasKitchen ? <KitchenNote note={kitchenNotes} className="mb-1" /> : null}
       </div>
     </div>
   )

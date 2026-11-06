@@ -87,6 +87,34 @@ describe("TimelineBlock", () => {
     expect(screen.getByText("Medium")).toBeTruthy()
   })
 
+  it("prints food item kitchen notes only when asked", () => {
+    const timeblock = makeTimeblock({
+      sectionType: "food",
+      foodItems: [
+        {
+          id: "item-1",
+          timeblockId: "timeblock-1",
+          name: "Steak",
+          quantity: 40,
+          serviceStyle: "Plated",
+          clientNotes: "Medium",
+          internalNotes: "Rest 10 minutes",
+          unitPriceCents: 4500,
+        },
+      ],
+    })
+    const { rerender } = render(<TimelineBlock timeblock={timeblock} />)
+
+    expect(screen.getByText("Medium")).toBeTruthy()
+    expect(screen.queryByText("Rest 10 minutes")).toBeNull()
+
+    rerender(<TimelineBlock timeblock={timeblock} showKitchenNotes />)
+
+    expect(screen.getByText("Medium")).toBeTruthy()
+    expect(screen.getByText("Rest 10 minutes")).toBeTruthy()
+    expect(screen.getByText(/Kitchen:/)).toBeTruthy()
+  })
+
   it("renders markdown-capable details through the shared renderer", () => {
     render(
       <TimelineBlock

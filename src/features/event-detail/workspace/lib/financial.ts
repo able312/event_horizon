@@ -17,18 +17,18 @@ export function dollarsToCents(value: string | number | null | undefined): numbe
   return Math.round(asNumber * 100)
 }
 
-export function computeChargeLineTotalCents(item: MenuOfChargeItem): number {
-  return (item.quantity ?? 0) * (item.unitPriceCents ?? 0)
-}
-
-export function computeBillableLineTotalCents(item: { quantity: number | null; unitPriceCents: number | null }): number {
+/** Quantity × unit price for any priced line (charge, food or beverage item); missing values count as 0. */
+export function computeBillableLineTotalCents(item: {
+  quantity?: number | null
+  unitPriceCents?: number | null
+}): number {
   return (item.quantity ?? 0) * (item.unitPriceCents ?? 0)
 }
 
 export function computeMenuSubtotalCents(items: MenuOfChargeItem[] | undefined): number {
   if (!items || items.length === 0) return 0
 
-  return items.reduce((sum, item) => sum + computeChargeLineTotalCents(item), 0)
+  return items.reduce((sum, item) => sum + computeBillableLineTotalCents(item), 0)
 }
 
 export function computePaymentsTotalCents(payments: Payment[] | undefined): number {
@@ -59,14 +59,19 @@ function computeGratuityCents(gratuityBaseCents: number): number {
   return Math.round(gratuityBaseCents * GRATUITY_RATE)
 }
 
+export type FinancialSummary = ReturnType<typeof computeFinancialSummaryAllSources>
+
 export function computeFinancialSummaryAllSources(params: {
   menuItems: MenuOfChargeItem[] | undefined
   foodTimeblocks: TimeblockWithItems[] | undefined
   beverageItems: BeverageItem[] | undefined
   payments: Payment[] | undefined
+  /** Food charged on top of the timeblocks' items, e.g. a food package figure (see preview/lib/foodPackages). */
+  additionalFoodSubtotalCents?: number
 }) {
   const menuSubtotalCents = computeMenuSubtotalCents(params.menuItems)
-  const foodSubtotalCents = computeFoodSubtotalCents(params.foodTimeblocks)
+  const foodSubtotalCents =
+    computeFoodSubtotalCents(params.foodTimeblocks) + (params.additionalFoodSubtotalCents ?? 0)
   const beverageSubtotalCents = computeBeverageSubtotalCents(params.beverageItems)
   const chargesSubtotalCents = menuSubtotalCents + foodSubtotalCents + beverageSubtotalCents
   const gratuityBaseCents = computeGratuityBaseCents(foodSubtotalCents, beverageSubtotalCents)
@@ -92,19 +97,10 @@ export function computeFinancialSummaryAllSources(params: {
   }
 }
 
-export function computeFinancialPreviewModel(params: {
-  menuItems: MenuOfChargeItem[] | undefined
-  foodTimeblocks: TimeblockWithItems[] | undefined
-  beverageItems: BeverageItem[] | undefined
-  payments: Payment[] | undefined
-}) {
-  return computeFinancialSummaryAllSources(params)
-}
-
 export function toCurrency(cents: number): string {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("en-CA", {
     style: "currency",
-    currency: "USD",
+    currency: "CAD",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(centsToDollars(cents))

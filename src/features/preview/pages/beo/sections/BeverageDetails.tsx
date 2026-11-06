@@ -1,6 +1,6 @@
 import type { BeverageItem, BeverageItemType } from "~/definitions/database"
 import type { Timeblock } from "~/definitions/database"
-import { toCurrency } from "~/features/event-detail/workspace/lib/financial"
+import { computeBillableLineTotalCents, toCurrency } from "~/features/event-detail/workspace/lib/financial"
 import {
   formatPreviewPrice,
   formatPreviewQuantity,
@@ -69,7 +69,7 @@ export function BeverageTypeSectionList({
         const price = formatPreviewPrice(item.unitPriceCents, toCurrency)
         const lineTotal =
           (item.quantity ?? 0) > 0 && (item.unitPriceCents ?? 0) > 0
-            ? toCurrency((item.quantity ?? 0) * (item.unitPriceCents ?? 0))
+            ? toCurrency(computeBillableLineTotalCents(item))
             : ""
 
         return (

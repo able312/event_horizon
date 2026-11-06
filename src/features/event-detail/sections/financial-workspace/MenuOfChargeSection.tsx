@@ -15,7 +15,6 @@ import { useMenuOfChargeItemsSection } from "~/hooks/useMenuOfChargeSection"
 import {
   centsToDollars,
   computeBillableLineTotalCents,
-  computeChargeLineTotalCents,
   computeMenuSubtotalCents,
   dollarsToCents,
   toCurrency,
@@ -619,7 +618,7 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
                         </tr>
                       ) : (
                         section.items.map((item) => {
-                          const lineTotalCents = computeChargeLineTotalCents(item)
+                          const lineTotalCents = computeBillableLineTotalCents(item)
                           const isExpanded = Boolean(expandedRows[item.id])
 
                           return (

@@ -5,11 +5,10 @@ import {
   HST_RATE,
   centsToDollars,
   computeBillableLineTotalCents,
-  computeChargeLineTotalCents,
   computeFinancialSummaryAllSources,
-  computeFinancialPreviewModel,
   dollarsToCents,
   fromDateInputValue,
+  toCurrency,
   toDateInputValue,
 } from "./financial"
 
@@ -31,32 +30,12 @@ describe("financial helpers", () => {
       beverageItems: [],
     })
 
-    expect(computeChargeLineTotalCents({ quantity: 3, unitPriceCents: 250 } as never)).toBe(750)
+    expect(computeBillableLineTotalCents({ quantity: 3, unitPriceCents: 250 })).toBe(750)
     expect(summary.menuSubtotalCents).toBe(8000)
     expect(summary.hstCents).toBe(Math.round(8000 * HST_RATE))
     expect(summary.chargesTotalCents).toBe(9040)
     expect(summary.paidTotalCents).toBe(1000)
     expect(summary.balanceDueCents).toBe(8040)
-  })
-
-  it("computes preview model totals in cents", () => {
-    const items = [
-      { id: "venue-1", category: "Venue", quantity: 3, unitPriceCents: 1234 } as never,
-      { id: "venue-2", category: "Venue", quantity: 1, unitPriceCents: 500 } as never,
-      { id: "golf-1", category: "Golf", quantity: 2, unitPriceCents: 2000 } as never,
-    ]
-
-    const preview = computeFinancialPreviewModel({
-      menuItems: items,
-      foodTimeblocks: [],
-      beverageItems: [],
-      payments: [{ id: "p", amountCents: 1250 } as never],
-    })
-    expect(preview.menuSubtotalCents).toBe(8202)
-    expect(preview.hstCents).toBe(Math.round(8202 * HST_RATE))
-    expect(preview.chargesTotalCents).toBe(9268)
-    expect(preview.paidTotalCents).toBe(1250)
-    expect(preview.balanceDueCents).toBe(8018)
   })
 
   it("computes all-source totals including food and beverage", () => {
@@ -86,6 +65,32 @@ describe("financial helpers", () => {
     expect(summary.grandTotalCents).toBe(3308)
     expect(summary.paidTotalCents).toBe(500)
     expect(summary.balanceDueCents).toBe(2808)
+  })
+
+  it("adds additionalFoodSubtotalCents to food, with gratuity and HST", () => {
+    const params = {
+      menuItems: [{ id: "m1", quantity: 1, unitPriceCents: 2000 } as never],
+      foodTimeblocks: [{ id: "f-tb", foodItems: [{ id: "f1", quantity: 2, unitPriceCents: 250 }] } as never],
+      beverageItems: [{ id: "b1", quantity: 3, unitPriceCents: 100 } as never],
+      payments: [{ id: "p1", amountCents: 500 } as never],
+    }
+
+    // Omitting the param is the same as passing 0
+    expect(computeFinancialSummaryAllSources(params)).toEqual(
+      computeFinancialSummaryAllSources({ ...params, additionalFoodSubtotalCents: 0 }),
+    )
+
+    const summary = computeFinancialSummaryAllSources({ ...params, additionalFoodSubtotalCents: 1000 })
+    // food 500 + 1000 = 1500; charges 2000 + 1500 + 300 = 3800; gratuity base 1800 -> 324;
+    // HST round(494) = 494; charges total 4294; grand 4618; balance 4118
+    expect(summary.foodSubtotalCents).toBe(1500)
+    expect(summary.chargesSubtotalCents).toBe(3800)
+    expect(summary.gratuityBaseCents).toBe(1800)
+    expect(summary.gratuityCents).toBe(324)
+    expect(summary.hstCents).toBe(494)
+    expect(summary.chargesTotalCents).toBe(4294)
+    expect(summary.grandTotalCents).toBe(4618)
+    expect(summary.balanceDueCents).toBe(4118)
   })
 
   it("does not apply gratuity to menu-only totals", () => {
@@ -142,5 +147,11 @@ describe("financial helpers", () => {
     const iso = fromDateInputValue("2026-11-03")
     expect(iso).toBe("2026-11-03T00:00:00.000Z")
     expect(toDateInputValue(iso)).toBe("2026-11-03")
+  })
+
+  it("formats cents as Canadian dollars with a plain $ sign", () => {
+    expect(toCurrency(123456789)).toBe("$1,234,567.89")
+    expect(toCurrency(50)).toBe("$0.50")
+    expect(toCurrency(-1250)).toBe("-$12.50")
   })
 })
