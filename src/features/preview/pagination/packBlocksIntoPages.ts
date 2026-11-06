@@ -97,16 +97,24 @@ export function packBlocksIntoPages(
   }
 
   /**
-   * Open a new page mid-section and prepend the continuation heading.
-   * Only the incoming block's own key is used — a keyless block means a new
-   * section and must not inherit the prior section's "(continued)" heading.
+   * Open a new page and, when the section carries on from the previous page,
+   * prepend its continuation heading. Only the incoming block's own key is
+   * used — a keyless block means a new section and must not inherit the prior
+   * section's "(continued)" heading.
    */
-  const openContinuationPage = (block: MeasuredBlock) => {
+  const openContinuationPage = (block: MeasuredBlock, continuesSection: boolean) => {
     pushPage()
-    if (block.continuationKey && headingHeightFor(block.continuationKey) < contentHeightPx) {
+    if (
+      continuesSection &&
+      block.continuationKey &&
+      headingHeightFor(block.continuationKey) < contentHeightPx
+    ) {
       current.continuationKeys.push(block.continuationKey)
     }
   }
+
+  /** Key of the last block placed, so a section's first block is not marked "(continued)". */
+  let previousKey: string | undefined
 
   for (const block of blocks) {
     const pageNonEmpty = current.blockIds.length > 0
@@ -117,7 +125,7 @@ export function packBlocksIntoPages(
       // Fresh section start — do not show "(continued)" on this page.
       pushPage()
     } else if (!fits && pageNonEmpty) {
-      openContinuationPage(block)
+      openContinuationPage(block, block.continuationKey === previousKey)
     }
 
     let offset = 0
@@ -142,8 +150,10 @@ export function packBlocksIntoPages(
       usedHeight += height
       // Assign the end directly so floating-point drift cannot leave a sliver for an extra page.
       offset = end
-      if (offset < block.height) openContinuationPage(block)
+      // A split block always carries its section onto the next page.
+      if (offset < block.height) openContinuationPage(block, true)
     } while (offset < block.height)
+    previousKey = block.continuationKey
   }
 
   pushPage()
