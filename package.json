@@ -62,7 +62,7 @@
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.4.1",
     "convex-test": "^0.0.60",
-    "electron": "^41.10.7",
+    "electron": "^45.2.3",
     "electron-builder": "^26.8.1",
     "eslint": "^9.25.0",
     "eslint-plugin-react-hooks": "^5.2.0",
