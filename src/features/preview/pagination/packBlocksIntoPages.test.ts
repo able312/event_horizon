@@ -214,6 +214,19 @@ describe("packBlocksIntoPages", () => {
     expect(pages[1]?.continuationKeys).toEqual([])
   })
 
+  it("marks content as continued when it is pushed below a separate section title block", () => {
+    const pages = packBlocksIntoPages(
+      [
+        { id: "packages-header", height: 80, continuationKey: "packages", breakBefore: true },
+        { id: "package-1", height: 250, continuationKey: "packages" },
+      ],
+      300,
+    )
+
+    expect(pages.map((page) => page.blockIds)).toEqual([["packages-header"], ["package-1"]])
+    expect(pages.map((page) => page.continuationKeys)).toEqual([[], ["packages"]])
+  })
+
   it("returns no pages for empty input", () => {
     expect(packBlocksIntoPages([])).toEqual([])
   })

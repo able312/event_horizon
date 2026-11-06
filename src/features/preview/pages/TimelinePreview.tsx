@@ -65,7 +65,7 @@ export default function TimelinePreview() {
         ),
       }}
     >
-      <PreviewBlock id="timeline-header" keepTogether>
+      <PreviewBlock id="timeline-header" continuationKey="timeline" keepTogether>
         <div>
           <h2 className="pb-2 text-xl font-bold">{event?.title}</h2>
           <div className="mb-4 grid grid-cols-2 gap-2 border-b-2">

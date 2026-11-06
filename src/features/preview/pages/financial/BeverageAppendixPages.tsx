@@ -27,6 +27,7 @@ export function renderBeverageAppendixPages(params: {
     <PreviewBlock
       key="financial-beverage-appendix-header"
       id="financial-beverage-appendix-header"
+      continuationKey={BEVERAGE_APPENDIX_CONTINUATION_KEY}
       breakBefore
       keepTogether
     >
