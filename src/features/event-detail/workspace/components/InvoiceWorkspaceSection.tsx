@@ -1,12 +1,17 @@
 import React from "react"
 
 import { splitEstimateAddOns } from "~/features/event-detail/workspace/lib/estimateAddOns"
+import InvoicePackageQuantities from "~/features/event-detail/sections/financial-workspace/InvoicePackageQuantities"
 import PaymentsSection from "~/features/event-detail/sections/financial-workspace/PaymentsSection"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
 import { useFoodSection } from "~/hooks/useFoodSection"
 import { useMenuOfChargeItemsSection } from "~/hooks/useMenuOfChargeSection"
 import { usePaymentsSection } from "~/hooks/usePaymentsSection"
-import { computeFinancialSummaryAllSources, toCurrency } from "~/features/event-detail/workspace/lib/financial"
+import {
+  computeFinancialSummaryAllSources,
+  getPackagePricePerPersonCents,
+  toCurrency,
+} from "~/features/event-detail/workspace/lib/financial"
 import { useOpenPreview } from "../hooks/useOpenPreview"
 import { GeneratePreviewButton } from "./GeneratePreviewButton"
 import WorkspaceSummaryField from "./WorkspaceSummaryField"
@@ -19,7 +24,7 @@ interface InvoiceWorkspaceSectionProps {
 const InvoiceWorkspaceSection: React.FC<InvoiceWorkspaceSectionProps> = ({ eventId }) => {
   const openPreview = useOpenPreview(eventId)
   const { data: menuItems } = useMenuOfChargeItemsSection()
-  const { data: foodData } = useFoodSection()
+  const { data: foodData, updateTimeblock: updateFoodTimeblock } = useFoodSection()
   const { items: beverageData } = useBeverageSection()
   // Add-ons the client has not accepted (still flagged) are not billed.
   const { foodTimeblocks, beverageItems } = splitEstimateAddOns(foodData, beverageData)
@@ -45,6 +50,17 @@ const InvoiceWorkspaceSection: React.FC<InvoiceWorkspaceSectionProps> = ({ event
           <WorkspaceSummaryField label="Balance Remaining" value={toCurrency(summary.balanceDueCents)} emphasis />
         </div>
       </div>
+
+      {foodTimeblocks.some((timeblock) => getPackagePricePerPersonCents(timeblock) != null) ? (
+        <div className="min-w-0 rounded-xs border border-border bg-background p-3 shadow-sm">
+          <InvoicePackageQuantities
+            timeblocks={foodTimeblocks}
+            onUpdateQuantity={({ timeblockId, packageQuantity }) =>
+              updateFoodTimeblock({ id: timeblockId, updates: { packageQuantity } })
+            }
+          />
+        </div>
+      ) : null}
 
       <div className="min-w-0 rounded-xs border border-border bg-background p-3 shadow-sm">
         <PaymentsSection />

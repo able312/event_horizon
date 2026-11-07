@@ -308,6 +308,11 @@ export type Timeblock = {
    * items on the estimate. Missing or null means none.
    */
   packagePricePerPersonCents?: number | null
+  /**
+   * Food timeblocks with a package price: the final number of portions the invoice bills it
+   * for. Missing or null means not set yet; the estimate never uses it.
+   */
+  packageQuantity?: number | null
 }
 /** Allowlisted fields for ordinary timeblock patches from the renderer. */
 export type UpdateTimeblock = {
@@ -318,6 +323,8 @@ export type UpdateTimeblock = {
   isAddOn?: boolean
   /** Null clears it; otherwise a whole number of cents, 0 or more. */
   packagePricePerPersonCents?: number | null
+  /** Null clears it; otherwise a whole number, 0 or more. */
+  packageQuantity?: number | null
 }
 
 // ============================================================================

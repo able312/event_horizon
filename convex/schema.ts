@@ -172,6 +172,7 @@ export default defineSchema({
     // `timeblocks:backfillEstimateFields` fills them in.
     isAddOn: v.optional(v.boolean()),
     packagePricePerPersonCents: v.optional(nullable(v.number())),
+    packageQuantity: v.optional(nullable(v.number())),
     ...audit,
   }).index("by_event_section", ["eventId", "sectionType"]),
 

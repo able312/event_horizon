@@ -29,8 +29,8 @@ describe("timeblock estimate fields", () => {
   it("creates timeblocks that aren't add-ons and have no package price", async () => {
     const { t, eventId, stored } = await setup()
     const food = await t.mutation(api.timeblocks.create, { eventId, sectionType: "food", title: "Dinner" })
-    expect(food).toMatchObject({ isAddOn: false, packagePricePerPersonCents: null })
-    expect(await stored(food.id)).toMatchObject({ isAddOn: false, packagePricePerPersonCents: null })
+    expect(food).toMatchObject({ isAddOn: false, packagePricePerPersonCents: null, packageQuantity: null })
+    expect(await stored(food.id)).toMatchObject({ isAddOn: false, packagePricePerPersonCents: null, packageQuantity: null })
   })
 
   it("updates isAddOn and the package price, and clears the price with null", async () => {
@@ -55,12 +55,30 @@ describe("timeblock estimate fields", () => {
     expect(await stored(food.id)).toMatchObject({ packagePricePerPersonCents: null })
   })
 
+  it("updates the final package quantity and clears it with null", async () => {
+    const { t, eventId, stored } = await setup()
+    const food = await t.mutation(api.timeblocks.create, { eventId, sectionType: "food", title: "Dinner" })
+    expect(await t.mutation(api.timeblocks.update, { id: food.id, updates: { packageQuantity: 48 } }))
+      .toMatchObject({ packageQuantity: 48 })
+    expect(await stored(food.id)).toMatchObject({ packageQuantity: 48 })
+    expect(await t.mutation(api.timeblocks.update, { id: food.id, updates: { packageQuantity: null } }))
+      .toMatchObject({ packageQuantity: null })
+  })
+
+  it.each([-1, 2.5, Number.NaN, Number.POSITIVE_INFINITY])("rejects a package quantity of %s", async (quantity) => {
+    const { t, eventId, stored } = await setup()
+    const food = await t.mutation(api.timeblocks.create, { eventId, sectionType: "food", title: "Dinner" })
+    await expect(t.mutation(api.timeblocks.update, { id: food.id, updates: { packageQuantity: quantity } }))
+      .rejects.toThrow("packageQuantity must be a whole number")
+    expect(await stored(food.id)).toMatchObject({ packageQuantity: null })
+  })
+
   it("reads timeblocks stored without them as not an add-on with no package price", async () => {
     const { t, eventId, insertLegacyTimeblock, stored } = await setup()
     const food = await insertLegacyTimeblock("food", "Dinner")
     const bar = await insertLegacyTimeblock("beverage", "Bar")
     expect(await stored(food)).not.toHaveProperty("isAddOn")
-    const defaults = { isAddOn: false, packagePricePerPersonCents: null }
+    const defaults = { isAddOn: false, packagePricePerPersonCents: null, packageQuantity: null }
 
     expect(await t.query(api.timeblocks.getById, { id: food })).toMatchObject(defaults)
     expect((await t.query(api.timeblocks.getByEventIdAndSectionType, { eventId, sectionType: "food" }))[0]).toMatchObject(defaults)
@@ -88,7 +106,7 @@ describe("timeblock estimate fields", () => {
 
       expect(await t.mutation(internal.timeblocks.backfillEstimateFields, {})).toEqual({ migrated: 2, skipped: 1, isDone: true })
       const doc = await stored(missing)
-      expect(doc).toMatchObject({ isAddOn: false, packagePricePerPersonCents: null, updatedAt: null })
+      expect(doc).toMatchObject({ isAddOn: false, packagePricePerPersonCents: null, packageQuantity: null, updatedAt: null })
       // A migration isn't a user edit: no audit stamp.
       expect(doc).not.toHaveProperty("updatedBy")
       expect(await stored(partial)).toMatchObject({ isAddOn: true, packagePricePerPersonCents: null })

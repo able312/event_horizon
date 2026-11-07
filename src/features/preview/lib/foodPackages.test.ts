@@ -229,9 +229,19 @@ describe("package price in the estimate totals", () => {
     expect(range.low.foodSubtotalCents).toBe(40000)
   })
 
-  it("bills quantity × price on the invoice, ignoring the package price", () => {
+  it("bills the package price × its final quantity on the invoice, in place of the items it covers", () => {
+    const summary = computeFinancialSummaryAllSources({
+      menuItems: [],
+      foodTimeblocks: [{ ...priced, packageQuantity: 48 }],
+      beverageItems: [],
+    })
+    // Platters 2 × $100 + $45 × 48; the buffet's own 50 × $30 is not billed.
+    expect(summary.foodSubtotalCents).toBe(40000 + 4500 * 48)
+  })
+
+  it("bills nothing for a package price until its final quantity is set, never guessing", () => {
     const summary = computeFinancialSummaryAllSources({ menuItems: [], foodTimeblocks: [priced], beverageItems: [] })
-    expect(summary.foodSubtotalCents).toBe(40000 + 50 * 3000)
+    expect(summary.foodSubtotalCents).toBe(40000)
   })
 })
 

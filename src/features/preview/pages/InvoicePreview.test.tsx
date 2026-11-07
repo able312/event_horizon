@@ -122,4 +122,37 @@ describe("InvoicePreview", () => {
     expect(screen.queryByText("Balance Due")).toBeNull()
     expect(screen.queryByText("R-1")).toBeNull()
   })
+
+  it("bills a package × its final quantity and leaves out add-ons the client has not accepted", async () => {
+    mockInvoiceEvent()
+    hooksMock.useMenuOfChargeItemsSection.mockReturnValue({ data: [] })
+    hooksMock.useFoodSection.mockReturnValue({
+      data: [
+        {
+          id: "dinner",
+          title: "Dinner",
+          packagePricePerPersonCents: 4500,
+          packageQuantity: 48,
+          foodItems: [
+            { id: "f1", name: "Buffet", quantity: 50, unitPriceCents: 3000, pricingBasis: "per_person" },
+            { id: "f2", name: "Wings", quantity: 2, unitPriceCents: 10000, pricingBasis: "each" },
+            { id: "f3", name: "Dessert station", quantity: 50, unitPriceCents: 800, pricingBasis: "per_person", isAddOn: true },
+          ],
+        },
+      ],
+    })
+    renderInvoice(invoiceState(false))
+
+    await waitFor(() => {
+      expect(screen.getByText("Event Invoice")).toBeTruthy()
+    })
+
+    expect(screen.getByText("Dinner (package)")).toBeTruthy()
+    expect(screen.getByText("$2,160.00")).toBeTruthy()
+    expect(screen.getByText("Wings")).toBeTruthy()
+    expect(screen.queryByText("Buffet")).toBeNull()
+    expect(screen.queryByText("Dessert station")).toBeNull()
+    // 236000 + HST 30680 + gratuity 42480
+    expect(screen.getAllByText("$3,091.60").length).toBeGreaterThan(0)
+  })
 })

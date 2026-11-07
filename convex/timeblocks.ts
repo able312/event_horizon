@@ -8,7 +8,12 @@ import { internal } from "./_generated/api"
 import { internalMutation, type QueryCtx } from "./_generated/server"
 import { companyMutation, companyQuery } from "./lib/auth"
 import { backfillMissingFieldsBatch } from "./lib/backfill"
-import { assertPackagePrice, TIMEBLOCK_ESTIMATE_DEFAULTS, toTimeblockRecord } from "./lib/estimateFields"
+import {
+  assertPackagePrice,
+  assertPackageQuantity,
+  TIMEBLOCK_ESTIMATE_DEFAULTS,
+  toTimeblockRecord,
+} from "./lib/estimateFields"
 import { getFoodItemRecords } from "./lib/foodItemNotes"
 import { toBeverageItemRecord } from "./lib/pricingBasis"
 import { assertUpdates, requireDocument, toRecord } from "./lib/records"
@@ -80,10 +85,12 @@ export const update = companyMutation({
     // Estimate fields (lib/estimateFields.ts); the Estimate section sets them on food timeblocks.
     isAddOn: v.optional(v.boolean()),
     packagePricePerPersonCents: v.optional(nullable(v.number())),
+    packageQuantity: v.optional(nullable(v.number())),
   }) },
   handler: async (ctx, { id, updates }) => {
     assertUpdates(updates)
     assertPackagePrice(updates.packagePricePerPersonCents)
+    assertPackageQuantity(updates.packageQuantity)
     await requireDocument(ctx, "timeblocks", id)
     await ctx.db.patch("timeblocks", id, { ...updates, updatedAt: Date.now().toString() })
     return toTimeblockRecord(await requireDocument(ctx, "timeblocks", id))
@@ -178,10 +185,10 @@ export const getAllTimelineBlocks = companyQuery({
 const MIGRATION_BATCH_SIZE = 500
 
 /**
- * One-off migration for the estimate fields: sets `isAddOn: false` and
- * `packagePricePerPersonCents: null` on every timeblock saved before they existed (missing
+ * One-off migration for the estimate fields: sets `isAddOn: false`,
+ * `packagePricePerPersonCents: null` and `packageQuantity: null` on every timeblock saved before they existed (missing
  * already reads that way). Fields a timeblock has are left as they are, and timeblocks that
- * have both are skipped, so running it twice is harmless. One batch per transaction; each
+ * have them all are skipped, so running it twice is harmless. One batch per transaction; each
  * batch schedules the next. Run once per deployment after deploying the schema change:
  * `npx convex run --prod timeblocks:backfillEstimateFields`
  * The result covers the first batch only; later batches report in the deployment's logs.

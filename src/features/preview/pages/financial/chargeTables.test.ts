@@ -4,6 +4,7 @@ import type { MenuOfChargeItem } from "~/definitions/database"
 import {
   buildChargeTableSpecs,
   buildEstimateFoodRows,
+  buildInvoiceFoodRows,
   formatChargeRowCells,
   groupChargeItemsByCategory,
 } from "./chargeTables"
@@ -135,5 +136,52 @@ describe("buildEstimateFoodRows", () => {
       { id: "package-price-dinner", name: "Dinner", unitPriceCents: 4500, quantity: null, pricingBasis: "per_person" },
       expect.objectContaining({ id: "wings" }),
     ])
+  })
+})
+
+describe("buildInvoiceFoodRows", () => {
+  const base = {
+    eventId: "e1",
+    time: null,
+    details: null,
+    sectionType: "food" as const,
+    assignedTo: null,
+    createdAt: "0",
+    updatedAt: null,
+  }
+  const item = (id: string, pricingBasis: "each" | "per_person", quantity: number | null, unitPriceCents: number | null) => ({
+    id,
+    timeblockId: "tb",
+    name: id,
+    quantity,
+    unitPriceCents,
+    pricingBasis,
+    serviceStyle: null,
+    clientNotes: null,
+    internalNotes: null,
+  })
+  const items = [item("steak", "per_person", 40, 3000), item("wings", "each", 3, 10000)]
+
+  it("bills items quantity × price without a package price", () => {
+    expect(buildInvoiceFoodRows([{ ...base, id: "dinner", title: "Dinner", foodItems: items }]).map((row) => row.id))
+      .toEqual(["steak", "wings"])
+  })
+
+  it("bills a package price × its final quantity in place of the items it covers", () => {
+    const rows = buildInvoiceFoodRows([
+      { ...base, id: "dinner", title: "Dinner", packagePricePerPersonCents: 4500, packageQuantity: 45, foodItems: items },
+    ])
+    expect(rows).toEqual([
+      { id: "package-price-dinner", name: "Dinner (package)", unitPriceCents: 4500, quantity: 45, pricingBasis: "each" },
+      expect.objectContaining({ id: "wings" }),
+    ])
+    expect(formatChargeRowCells(rows[0])).toEqual({ cost: "$45.00", quantity: "45", total: "$2,025.00" })
+  })
+
+  it("prints the package line without a total until its quantity is set", () => {
+    const [packageRow] = buildInvoiceFoodRows([
+      { ...base, id: "dinner", title: "Dinner", packagePricePerPersonCents: 4500, packageQuantity: null, foodItems: items },
+    ])
+    expect(formatChargeRowCells(packageRow).total).toBe("")
   })
 })

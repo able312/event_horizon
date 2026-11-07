@@ -5,6 +5,7 @@ import { computeFinancialSummaryAllSources } from "~/features/event-detail/works
 import { getFinancialDocumentKindLabels } from "~/features/preview/lib/financialDocumentKinds"
 import {
   buildChargeTableSpecs,
+  buildInvoiceFoodRows,
   groupChargeItemsByCategory,
   renderChargeTableBlocks,
 } from "~/features/preview/pages/financial/chargeTables"
@@ -53,9 +54,7 @@ export default function InvoicePreview() {
   const chargeItemsByCategory = useMemo(() => groupChargeItemsByCategory(chargeItems), [chargeItems])
   const chargeTables = buildChargeTableSpecs({
     chargeItemsByCategory,
-    billableFoodRows: food.flatMap((timeblock) =>
-      (timeblock.foodItems ?? []).filter(isBillableLineItem),
-    ),
+    billableFoodRows: buildInvoiceFoodRows(food),
     billableBeverageRows: beverageItems.filter(isBillableLineItem),
     foodPackageRows: [],
   })

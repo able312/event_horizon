@@ -5,6 +5,7 @@ import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-typ
 import {
   computeBillableLineTotalCents,
   getPackagePricePerPersonCents,
+  getPackageQuantity,
   getPricingBasis,
   isCoveredByPackagePrice,
   toCurrency,
@@ -18,6 +19,7 @@ import {
 import {
   formatPreviewPrice,
   formatPreviewQuantity,
+  isBillableLineItem,
   isEstimateBillableLineItem,
 } from "~/features/preview/preferences/selectors"
 import { PreviewBlock } from "~/features/preview/pagination/PreviewDocument"
@@ -106,6 +108,29 @@ export function buildEstimateFoodRows(timeblocks: TimeblockWithItems[]): PricedR
       unitPriceCents: packagePrice,
       quantity: null,
       pricingBasis: "per_person",
+    }
+    return [packageRow, ...items]
+  })
+}
+
+/**
+ * The invoice's food lines: each item's quantity × price, with a timeblock's package price
+ * billed as one line × its final quantity in place of the per-person items it covers. Until the
+ * quantity is set, that line prints with no quantity or total (see needsPackageQuantity).
+ */
+export function buildInvoiceFoodRows(timeblocks: TimeblockWithItems[]): PricedRow[] {
+  return timeblocks.flatMap((timeblock) => {
+    const items = (timeblock.foodItems ?? [])
+      .filter((item) => !isCoveredByPackagePrice(timeblock, item))
+      .filter(isBillableLineItem)
+    const packagePrice = getPackagePricePerPersonCents(timeblock)
+    if (packagePrice == null) return items
+    const packageRow: PricedRow = {
+      id: `package-price-${timeblock.id}`,
+      name: `${timeblock.title || "Untitled"} (package)`,
+      unitPriceCents: packagePrice,
+      quantity: getPackageQuantity(timeblock),
+      pricingBasis: "each",
     }
     return [packageRow, ...items]
   })
