@@ -9,10 +9,13 @@ export function FinancialHeader({
   labels,
   client,
   eventStartDateTime,
+  validUntil = null,
 }: {
   labels: FinancialDocumentKindLabels
   client: PrimaryClient | null | undefined
   eventStartDateTime: string | null | undefined
+  /** The last day the estimate's prices hold, already formatted for print. */
+  validUntil?: string | null
 }) {
   return (
     <div>
@@ -55,6 +58,12 @@ export function FinancialHeader({
           <dd className="font-medium">{formatDate(eventStartDateTime ?? "")}</dd>
           <dt className="text-muted-foreground">{labels.dateLabel}</dt>
           <dd className="font-medium">{formatDate(new Date().toString())}</dd>
+          {validUntil ? (
+            <>
+              <dt className="text-muted-foreground">Valid Until</dt>
+              <dd className="font-medium">{validUntil}</dd>
+            </>
+          ) : null}
         </dl>
       </div>
     </div>

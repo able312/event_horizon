@@ -178,6 +178,7 @@ describe("Convex events", () => {
       await t.mutation(api.touchpoints.create, { eventId: event.id })
       await t.mutation(api.menuOfChargeItems.create, { eventId: event.id })
       await t.mutation(api.cartDetails.ensureByEventId, { eventId: event.id })
+      await t.mutation(api.estimateDetails.ensureByEventId, { eventId: event.id })
       await t.mutation(api.tournamentDetails.ensureByEventId, { eventId: event.id })
       const food = await t.mutation(api.timeblocks.create, { eventId: event.id, sectionType: "food" })
       await t.mutation(api.foodItems.create, { timeblockId: food.id, name: "Dinner" })
@@ -188,7 +189,7 @@ describe("Convex events", () => {
     }
     await t.mutation(api.events.remove, { id: deleted.id })
     await t.run(async ctx => {
-      for (const table of ["payments", "touchpoints", "menuOfChargeItems", "cartDetails", "tournamentDetails", "beverageItems"] as const) {
+      for (const table of ["payments", "touchpoints", "menuOfChargeItems", "cartDetails", "estimateDetails", "tournamentDetails", "beverageItems"] as const) {
         const rows = await ctx.db.query(table).collect()
         expect(rows).toHaveLength(1)
         expect(rows[0]?.eventId).toBe(kept.id)

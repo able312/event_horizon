@@ -3,6 +3,7 @@ import type {
   BEVERAGE_TYPES,
   CART_LAYOUTS,
   CHARGE_CATEGORIES,
+  DEPOSIT_KINDS,
   EVENT_REQUEST_STATUSES,
   EVENT_STATUSES,
   EVENT_TYPES,
@@ -177,6 +178,48 @@ export type CartDetails = {
   updatedAt: string | null
 }
 export type UpdateCartDetails = Partial<Omit<CartDetails, "id" | "createdAt" | "updatedAt">>
+
+// ============================================================================
+// Estimate Details
+// ============================================================================
+
+/** See DEPOSIT_KINDS. */
+export type DepositKind = (typeof DEPOSIT_KINDS)[number]
+
+/** Proposal details printed on the event's Estimate (one per event). */
+export type EstimateDetails = {
+  id: string
+  eventId: string
+  /** Printed at the top of the estimate */
+  introNote: string | null
+  /** YYYY-MM-DD */
+  validUntil: string | null
+  /** null uses the venue default terms (VenueSettings); a string, even "", is this event's own terms */
+  terms: string | null
+  depositKind: DepositKind
+  /** Used when depositKind is "amount" */
+  depositAmountCents: number | null
+  /** Used when depositKind is "percent"; 25 means 25% */
+  depositPercent: number | null
+  /** YYYY-MM-DD */
+  depositDueDate: string | null
+  depositNote: string | null
+  createdAt: string
+  updatedAt: string | null
+}
+export type UpdateEstimateDetails = Partial<Omit<EstimateDetails, "id" | "eventId" | "createdAt" | "updatedAt">>
+
+// ============================================================================
+// Venue Settings
+// ============================================================================
+
+/** Venue-wide settings (a single record; absent until someone saves a setting). */
+export type VenueSettings = {
+  id: string
+  defaultEstimateTerms: string | null
+  createdAt: string
+  updatedAt: string | null
+}
 
 // ============================================================================
 // Menu of Charge Items

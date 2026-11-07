@@ -9,6 +9,7 @@ import {
   chargeCategory,
   contactKind,
   contactRoleType,
+  depositKind,
   eventRequestStatus,
   eventStatus,
   eventType,
@@ -97,6 +98,34 @@ export default defineSchema({
     updatedAt: nullable(v.string()),
     ...audit,
   }).index("by_event", ["eventId"]),
+
+  // Proposal details printed on the event's Estimate; one row per event, created by
+  // estimateDetails.ensureByEventId. `terms: null` means "use the venue default".
+  estimateDetails: defineTable({
+    eventId: v.id("events"),
+    introNote: nullable(v.string()),
+    /** YYYY-MM-DD */
+    validUntil: nullable(v.string()),
+    terms: nullable(v.string()),
+    depositKind,
+    depositAmountCents: nullable(v.number()),
+    /** 0-100, e.g. 25 for 25% */
+    depositPercent: nullable(v.number()),
+    /** YYYY-MM-DD */
+    depositDueDate: nullable(v.string()),
+    depositNote: nullable(v.string()),
+    createdAt: v.string(),
+    updatedAt: nullable(v.string()),
+    ...audit,
+  }).index("by_event", ["eventId"]),
+
+  // Venue-wide settings: a singleton (at most one row), written by venueSettings.ts.
+  venueSettings: defineTable({
+    defaultEstimateTerms: nullable(v.string()),
+    createdAt: v.string(),
+    updatedAt: nullable(v.string()),
+    ...audit,
+  }),
 
   payments: defineTable({
     eventId: v.id("events"),

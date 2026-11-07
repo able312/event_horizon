@@ -7,6 +7,8 @@ import * as timeblocks from "./timeblocks"
 import * as beverage from "./beverageItems"
 import * as food from "./foodItems"
 import * as cart from "./cartDetails"
+import * as estimate from "./estimateDetails"
+import * as venue from "./venueSettings"
 import * as tournament from "./tournamentDetails"
 import * as contacts from "./contacts"
 import * as touchpoints from "./touchpoints"
@@ -64,6 +66,11 @@ const contracts: Contract[] = [
   { name: "timeblocks.remove", kind: "mutation", call: () => timeblocks.deleteTimeblock(id), args: { id } },
   { name: "cartDetails.ensureByEventId", kind: "mutation", call: () => cart.getOrCreateCartDetailsByEventId(eventId), args: { eventId } },
   { name: "cartDetails.update", kind: "mutation", call: () => cart.updateCartDetails(id, { time: "12:00", eventId }), args: { id, updates: { time: "12:00" } } },
+  { name: "estimateDetails.ensureByEventId", kind: "mutation", call: () => estimate.getOrCreateEstimateDetailsByEventId(eventId), args: { eventId } },
+  { name: "estimateDetails.update", kind: "mutation", call: () => estimate.updateEstimateDetails(id, { terms: null, depositKind: "percent", depositPercent: 25, eventId } as Parameters<typeof estimate.updateEstimateDetails>[1]), args: { id, updates: { terms: null, depositKind: "percent", depositPercent: 25 } } },
+  { name: "venueSettings.get", kind: "source", call: () => venue.getVenueSettings(), args: {} },
+  { name: "venueSettings.setDefaultEstimateTerms", kind: "mutation", call: () => venue.setDefaultEstimateTerms("Net 30"), args: { terms: "Net 30" } },
+  { name: "venueSettings.setDefaultEstimateTerms", kind: "mutation", call: () => venue.setDefaultEstimateTerms(null), args: { terms: null } },
   { name: "tournamentDetails.ensureByEventId", kind: "mutation", call: () => tournament.getOrCreateTournamentDetailsByEventId(eventId), args: { eventId } },
   { name: "tournamentDetails.update", kind: "mutation", call: () => tournament.updateTournamentDetails(id, { notes: "New", eventId }), args: { id, updates: { notes: "New" } } },
   { name: "beverageItems.getByEventId", kind: "source", call: () => beverage.getBeverageSectionWithItems(eventId), args: { eventId } },

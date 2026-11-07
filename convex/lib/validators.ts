@@ -7,6 +7,7 @@ import {
   CHARGE_CATEGORIES,
   CONTACT_KINDS,
   CONTACT_ROLE_TYPES,
+  DEPOSIT_KINDS,
   EVENT_REQUEST_STATUSES,
   EVENT_STATUSES,
   EVENT_TYPES,
@@ -40,6 +41,7 @@ export const foodServiceStyle = literalUnion(FOOD_SERVICE_STYLES)
 export const beverageType = literalUnion(BEVERAGE_TYPES)
 export const beverageServiceStyle = literalUnion(BEVERAGE_SERVICE_STYLES)
 export const pricingBasis = literalUnion(PRICING_BASES)
+export const depositKind = literalUnion(DEPOSIT_KINDS)
 export const contactKind = literalUnion(CONTACT_KINDS)
 export const contactRoleType = literalUnion(CONTACT_ROLE_TYPES)
 

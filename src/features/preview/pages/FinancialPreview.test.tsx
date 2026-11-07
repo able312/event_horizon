@@ -1,5 +1,5 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("~/assets/Westlinks-SM-RGB.png", () => ({
   default: "/test-westlinks-logo.png",
@@ -21,6 +21,8 @@ const hooksMock = vi.hoisted(() => ({
   useFoodSection: vi.fn(),
   useBeverageSection: vi.fn(),
   usePrimaryClient: vi.fn(),
+  useEstimateDetailsSection: vi.fn(),
+  useVenueSettings: vi.fn(),
 }))
 
 vi.mock("~/hooks/useEvent", () => ({
@@ -42,6 +44,34 @@ vi.mock("~/hooks/useBeverageSection", () => ({
 vi.mock("~/hooks/useEventContacts", () => ({
   usePrimaryClient: hooksMock.usePrimaryClient,
 }))
+
+vi.mock("~/hooks/useEstimateDetailsSection", () => ({
+  useEstimateDetailsSection: hooksMock.useEstimateDetailsSection,
+}))
+
+vi.mock("~/hooks/useVenueSettings", () => ({
+  useVenueSettings: hooksMock.useVenueSettings,
+}))
+
+const NO_PROPOSAL_DETAILS = {
+  id: "details-1",
+  eventId: "event-1",
+  introNote: null,
+  validUntil: null,
+  terms: null,
+  depositKind: "none",
+  depositAmountCents: null,
+  depositPercent: null,
+  depositDueDate: null,
+  depositNote: null,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: null,
+}
+
+beforeEach(() => {
+  hooksMock.useEstimateDetailsSection.mockReturnValue({ data: NO_PROPOSAL_DETAILS })
+  hooksMock.useVenueSettings.mockReturnValue({ data: null })
+})
 
 function renderFinancial(initialState?: PreviewPreferencesState) {
   return render(
@@ -170,6 +200,55 @@ describe("FinancialPreview", () => {
       // 370000 -> 370000 + 48100 + 66600 = 484700; 550000 -> 550000 + 71500 + 99000 = 720500
       expect(screen.getByText("Grand Total (by guest count)")).toBeTruthy()
       expect(screen.getByText("$4,847.00 – $7,205.00")).toBeTruthy()
+    })
+
+    it("prints the proposal details, with a percentage deposit that follows the total range", async () => {
+      mockPerPersonEvent({ minGuests: 80, maxGuests: 120 })
+      hooksMock.useEstimateDetailsSection.mockReturnValue({
+        data: {
+          ...NO_PROPOSAL_DETAILS,
+          introNote: "Thank you for considering us.",
+          validUntil: "2026-12-01",
+          depositKind: "percent",
+          depositPercent: 25,
+          depositDueDate: "2026-12-15",
+          depositNote: "Non-refundable.",
+        },
+      })
+      hooksMock.useVenueSettings.mockReturnValue({
+        data: { id: "venue", defaultEstimateTerms: "Payment due in full.\n\nNo outside food.", createdAt: "", updatedAt: null },
+      })
+      renderFinancial()
+
+      await waitFor(() => {
+        expect(screen.getByText("Event Estimate")).toBeTruthy()
+      })
+      expect(screen.getByText("Thank you for considering us.")).toBeTruthy()
+      expect(screen.getByText("Valid Until")).toBeTruthy()
+      expect(screen.getByText("Dec 1, 2026")).toBeTruthy()
+      expect(screen.getByText("25% of the grand total: $1,211.75 – $1,801.25")).toBeTruthy()
+      expect(screen.getByText("Dec 15, 2026")).toBeTruthy()
+      expect(screen.getByText("Non-refundable.")).toBeTruthy()
+      expect(screen.getByText("Terms")).toBeTruthy()
+      expect(screen.getByText("Payment due in full.")).toBeTruthy()
+      expect(screen.getByText("No outside food.")).toBeTruthy()
+    })
+
+    it("prints the event's own terms over the venue default, and no deposit by default", async () => {
+      mockPerPersonEvent({ minGuests: 80, maxGuests: 120 })
+      hooksMock.useEstimateDetailsSection.mockReturnValue({ data: { ...NO_PROPOSAL_DETAILS, terms: "Event terms." } })
+      hooksMock.useVenueSettings.mockReturnValue({
+        data: { id: "venue", defaultEstimateTerms: "Venue terms.", createdAt: "", updatedAt: null },
+      })
+      renderFinancial()
+
+      await waitFor(() => {
+        expect(screen.getByText("Event Estimate")).toBeTruthy()
+      })
+      expect(screen.getByText("Event terms.")).toBeTruthy()
+      expect(screen.queryByText("Venue terms.")).toBeNull()
+      expect(screen.queryByText("Deposit")).toBeNull()
+      expect(screen.queryByText("Valid Until")).toBeNull()
     })
 
     it("shows a per-person line without a dollar total, and leaves it out, when there is no guest count", async () => {

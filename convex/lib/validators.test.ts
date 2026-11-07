@@ -10,6 +10,7 @@ import {
   CHARGE_CATEGORIES,
   CONTACT_KINDS,
   CONTACT_ROLE_TYPES,
+  DEPOSIT_KINDS,
   EVENT_STATUSES,
   EVENT_TYPES,
   FOOD_SERVICE_STYLES,
@@ -25,6 +26,7 @@ import {
   chargeCategory,
   contactKind,
   contactRoleType,
+  depositKind,
   eventStatus,
   eventType,
   foodServiceStyle,
@@ -50,6 +52,7 @@ const enumCases = [
   { name: "beverageServiceStyle", validator: beverageServiceStyle, values: BEVERAGE_SERVICE_STYLES },
   { name: "contactKind", validator: contactKind, values: CONTACT_KINDS },
   { name: "contactRoleType", validator: contactRoleType, values: CONTACT_ROLE_TYPES },
+  { name: "depositKind", validator: depositKind, values: DEPOSIT_KINDS },
 ] as const
 
 describe.each(enumCases)("$name", ({ validator, values }) => {

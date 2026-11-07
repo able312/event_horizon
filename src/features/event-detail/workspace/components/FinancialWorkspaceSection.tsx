@@ -1,5 +1,6 @@
 import React from "react"
 
+import EstimateProposalSection from "~/features/event-detail/sections/financial-workspace/EstimateProposalSection"
 import MenuOfChargeSection from "~/features/event-detail/sections/financial-workspace/MenuOfChargeSection"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
 import { useFoodSection } from "~/hooks/useFoodSection"
@@ -77,6 +78,12 @@ const FinancialWorkspaceSection: React.FC<FinancialWorkspaceSectionProps> = ({ e
           onUpdateBeverageBillingItem={({ itemId, updates }) =>
             updateBeverageItem({ itemId, updates })
           }
+        />
+      </div>
+
+      <div className="rounded-xs border border-border bg-background p-3 shadow-sm">
+        <EstimateProposalSection
+          grandTotal={{ lowCents: low.grandTotalCents, highCents: high.grandTotalCents }}
         />
       </div>
     </div>

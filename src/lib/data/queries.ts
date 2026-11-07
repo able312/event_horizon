@@ -7,6 +7,7 @@ import * as beverageItemsApi from "./beverageItems"
 import * as cartDetailsApi from "./cartDetails"
 import * as contactRolesApi from "./contactRoles"
 import * as contactsApi from "./contacts"
+import * as estimateDetailsApi from "./estimateDetails"
 import * as eventContactsApi from "./eventContacts"
 import * as eventRequestsApi from "./eventRequests"
 import * as eventsApi from "./events"
@@ -20,6 +21,7 @@ import * as touchpointsApi from "./touchpoints"
 import * as tournamentDetailsApi from "./tournamentDetails"
 import * as usersApi from "./users"
 import * as vendorCategoriesApi from "./vendorCategories"
+import * as venueSettingsApi from "./venueSettings"
 import { liveMeta, livePagesMeta } from "./liveQueries"
 import { sources } from "./sources"
 
@@ -176,6 +178,19 @@ export const cartDetailsQueries = {
     queryKey: cartDetailsKeys.byEvent(eventId),
     queryFn: () => cartDetailsApi.getOrCreateCartDetailsByEventId(eventId),
     ...liveMeta(sources.cartDetails.byEvent(eventId)),
+  }),
+}
+
+export const estimateDetailsKeys = {
+  byEvent: (eventId: string) => ["estimate_details", eventId] as const,
+}
+
+export const estimateDetailsQueries = {
+  /** Creates the event's estimate details on first read, then follows them live (as cart details). */
+  byEvent: (eventId: string) => queryOptions({
+    queryKey: estimateDetailsKeys.byEvent(eventId),
+    queryFn: () => estimateDetailsApi.getOrCreateEstimateDetailsByEventId(eventId),
+    ...liveMeta(sources.estimateDetails.byEvent(eventId)),
   }),
 }
 
@@ -384,6 +399,23 @@ export const userQueries = {
     queryKey: userKeys.all(),
     queryFn: () => usersApi.getUsers(),
     ...liveMeta(sources.users.all()),
+  }),
+}
+
+// ============================================================================
+// Venue settings
+// ============================================================================
+
+export const venueSettingsKeys = {
+  get: () => ["venue-settings"] as const,
+}
+
+export const venueSettingsQueries = {
+  /** The venue-wide settings (null until first saved), kept live. */
+  get: () => queryOptions({
+    queryKey: venueSettingsKeys.get(),
+    queryFn: () => venueSettingsApi.getVenueSettings(),
+    ...liveMeta(sources.venueSettings.get()),
   }),
 }
 

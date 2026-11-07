@@ -25,15 +25,27 @@ import {
   foodPackagesContinuationHeading,
   renderFoodPackagePages,
 } from "~/features/preview/pages/financial/FoodPackagePages"
+import {
+  EstimateDeposit,
+  EstimateIntroNote,
+  renderEstimateTermsBlocks,
+} from "~/features/preview/pages/financial/ProposalBlocks"
+import {
+  formatDeposit,
+  formatProposalDate,
+  resolveEstimateTerms,
+} from "~/features/preview/lib/estimateProposal"
 import { combineQueryStates } from "~/features/preview/pagination/combineQueryStates"
 import { PreviewBlock, PreviewDocument } from "~/features/preview/pagination/PreviewDocument"
 import { usePreviewPreferences } from "~/features/preview/preferences/PreviewPreferencesContext"
 import { filterSelectedIds, isEstimateBillableLineItem } from "~/features/preview/preferences/selectors"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
+import { useEstimateDetailsSection } from "~/hooks/useEstimateDetailsSection"
 import { useEvent } from "~/hooks/useEvent"
 import { usePrimaryClient } from "~/hooks/useEventContacts"
 import { useFoodSection } from "~/hooks/useFoodSection"
 import { useMenuOfChargeItemsSection } from "~/hooks/useMenuOfChargeSection"
+import { useVenueSettings } from "~/hooks/useVenueSettings"
 
 export default function FinancialPreview() {
   const eventQuery = useEvent()
@@ -45,12 +57,17 @@ export default function FinancialPreview() {
   const food = foodQuery.data
   const beverageQuery = useBeverageSection()
   const beverageItems = beverageQuery.items
+  const estimateDetailsQuery = useEstimateDetailsSection()
+  const estimateDetails = estimateDetailsQuery.data
+  const venueSettingsQuery = useVenueSettings()
   const queries = combineQueryStates([
     eventQuery,
     clientQuery,
     chargeQuery,
     foodQuery,
     beverageQuery,
+    estimateDetailsQuery,
+    venueSettingsQuery,
   ])
 
   const { state } = usePreviewPreferences()
@@ -90,6 +107,13 @@ export default function FinancialPreview() {
     perPersonGuests: guests,
   })
 
+  const introNote = estimateDetails?.introNote?.trim() ?? ""
+  const deposit = formatDeposit(estimateDetails, {
+    lowCents: packageEstimate.low.grandTotalCents,
+    highCents: packageEstimate.high.grandTotalCents,
+  })
+  const terms = resolveEstimateTerms(estimateDetails, venueSettingsQuery.data?.defaultEstimateTerms)
+
   const showAppendix = prefs.showBeverageAppendix && beverageItems.length > 0
   const beverageSections = getVisibleBeverageTypeSections(beverageItems, {
     hideEmptySpecialOrders: true,
@@ -112,8 +136,15 @@ export default function FinancialPreview() {
           labels={getFinancialDocumentKindLabels("estimate")}
           client={clientQuery.data}
           eventStartDateTime={event?.startDateTime}
+          validUntil={formatProposalDate(estimateDetails?.validUntil)}
         />
       </PreviewBlock>
+
+      {introNote ? (
+        <PreviewBlock id="financial-intro">
+          <EstimateIntroNote note={introNote} />
+        </PreviewBlock>
+      ) : null}
 
       {renderChargeTableBlocks(chargeTables)}
 
@@ -125,6 +156,18 @@ export default function FinancialPreview() {
           rangeNote={packageEstimate.rangeNote}
         />
       </PreviewBlock>
+
+      {deposit ? (
+        <PreviewBlock id="financial-deposit" keepTogether className="mb-6">
+          <EstimateDeposit
+            amount={deposit}
+            dueDate={formatProposalDate(estimateDetails?.depositDueDate)}
+            note={estimateDetails?.depositNote?.trim() || null}
+          />
+        </PreviewBlock>
+      ) : null}
+
+      {renderEstimateTermsBlocks(terms)}
 
       {packageEstimate.packages.length > 0
         ? renderFoodPackagePages({ packages: packageEstimate.packages, timeblocks: packageTimeblocks })

@@ -14,6 +14,8 @@ export const AUDITED_TABLES = [
   "events",
   "tournamentDetails",
   "cartDetails",
+  "estimateDetails",
+  "venueSettings",
   "payments",
   "touchpoints",
   "menuOfChargeItems",

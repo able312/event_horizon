@@ -32,6 +32,10 @@ vi.mock("~/hooks/useBeverageSection", () => ({
   useBeverageSection: hooksMock.useBeverageSection,
 }))
 
+vi.mock("~/features/event-detail/sections/financial-workspace/EstimateProposalSection", () => ({
+  default: () => <div>Proposal Details</div>,
+}))
+
 vi.mock("~/features/event-detail/sections/financial-workspace/MenuOfChargeSection", () => ({
   default: (props: unknown) => {
     menuPropsMock(props)

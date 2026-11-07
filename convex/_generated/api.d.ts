@@ -14,6 +14,7 @@ import type * as contactRoles from "../contactRoles.js";
 import type * as contacts from "../contacts.js";
 import type * as crons from "../crons.js";
 import type * as developmentSeed from "../developmentSeed.js";
+import type * as estimateDetails from "../estimateDetails.js";
 import type * as eventContacts from "../eventContacts.js";
 import type * as eventRequests from "../eventRequests.js";
 import type * as events from "../events.js";
@@ -41,6 +42,7 @@ import type * as touchpoints from "../touchpoints.js";
 import type * as tournamentDetails from "../tournamentDetails.js";
 import type * as users from "../users.js";
 import type * as vendorCategories from "../vendorCategories.js";
+import type * as venueSettings from "../venueSettings.js";
 
 import type {
   ApiFromModules,
@@ -55,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   contacts: typeof contacts;
   crons: typeof crons;
   developmentSeed: typeof developmentSeed;
+  estimateDetails: typeof estimateDetails;
   eventContacts: typeof eventContacts;
   eventRequests: typeof eventRequests;
   events: typeof events;
@@ -82,6 +85,7 @@ declare const fullApi: ApiFromModules<{
   tournamentDetails: typeof tournamentDetails;
   users: typeof users;
   vendorCategories: typeof vendorCategories;
+  venueSettings: typeof venueSettings;
 }>;
 
 /**
