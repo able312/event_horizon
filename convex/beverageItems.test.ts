@@ -93,3 +93,68 @@ describe("beverage item pricing basis", () => {
     })
   })
 })
+
+describe("beverage item add-ons", () => {
+  it("saves and updates isAddOn", async () => {
+    const { t, eventId, bar, stored } = await setup()
+    const item = await t.mutation(api.beverageItems.create, { eventId, name: "Champagne toast", type: "Wine", isAddOn: true })
+    expect(item).toMatchObject({ isAddOn: true })
+    expect(await t.mutation(api.beverageItems.update, { id: item.id, updates: { isAddOn: false } })).toMatchObject({ isAddOn: false })
+    expect(await stored(item.id)).toMatchObject({ isAddOn: false })
+
+    const assigned = await t.mutation(api.beverageItems.createAssignedToTimeblock, {
+      eventId, timeblockId: bar.id, name: "Espresso bar", type: "Non-Alcoholic", isAddOn: true,
+    })
+    expect(assigned).toMatchObject({ isAddOn: true, assignedTimeblockIds: [bar.id] })
+  })
+
+  it("stores false when an older build creates an item without it", async () => {
+    const { t, eventId, bar, stored } = await setup()
+    const item = await t.mutation(api.beverageItems.create, { eventId, name: "Keg", type: "Beer" })
+    expect(item).toMatchObject({ isAddOn: false })
+    expect(await stored(item.id)).toMatchObject({ isAddOn: false })
+    const assigned = await t.mutation(api.beverageItems.createAssignedToTimeblock, { eventId, timeblockId: bar.id, name: "Cider", type: "Coolers" })
+    expect(await stored(assigned.id)).toMatchObject({ isAddOn: false })
+  })
+
+  it("reads items stored without it as false", async () => {
+    const { t, eventId, bar, insertLegacyItem, stored } = await setup()
+    const id = await insertLegacyItem("Lager")
+    expect(await stored(id)).not.toHaveProperty("isAddOn")
+    await t.mutation(api.beverageItems.setItemTimeblocks, { itemId: id, timeblockIds: [bar.id] })
+
+    const section = await t.query(api.beverageItems.getByEventId, { eventId })
+    expect(section.items[0]).toMatchObject({ isAddOn: false })
+    const focused = await t.query(api.timeblocks.getById, { id: bar.id })
+    expect(focused?.beverageItems[0]).toMatchObject({ isAddOn: false })
+    expect(await t.mutation(api.beverageItems.update, { id, updates: { name: "Pilsner" } })).toMatchObject({ isAddOn: false })
+  })
+
+  describe("backfillAddOn", () => {
+    afterEach(() => vi.useRealTimers())
+
+    it("sets false where it is missing, skips items that have it, and can run twice", async () => {
+      const { t, eventId, insertLegacyItem, stored } = await setup()
+      const missing = await insertLegacyItem("Lager")
+      const addOn = await t.mutation(api.beverageItems.create, { eventId, name: "Champagne toast", type: "Wine", isAddOn: true })
+
+      expect(await t.mutation(internal.beverageItems.backfillAddOn, {})).toEqual({ migrated: 1, skipped: 1, isDone: true })
+      const doc = await stored(missing)
+      expect(doc).toMatchObject({ isAddOn: false })
+      expect(doc).not.toHaveProperty("updatedBy")
+      expect(await stored(addOn.id)).toMatchObject({ isAddOn: true })
+
+      expect(await t.mutation(internal.beverageItems.backfillAddOn, {})).toEqual({ migrated: 0, skipped: 2, isDone: true })
+    })
+
+    it("schedules the next batch until the whole table is done", async () => {
+      vi.useFakeTimers()
+      const { t, insertLegacyItem, stored } = await setup()
+      const ids = [await insertLegacyItem("Lager"), await insertLegacyItem("Stout"), await insertLegacyItem("Cider")]
+
+      expect(await t.mutation(internal.beverageItems.backfillAddOn, { batchSize: 1 })).toEqual({ migrated: 1, skipped: 0, isDone: false })
+      await t.finishAllScheduledFunctions(vi.runAllTimers)
+      for (const id of ids) expect(await stored(id)).toMatchObject({ isAddOn: false })
+    })
+  })
+})

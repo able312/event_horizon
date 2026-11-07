@@ -4,8 +4,11 @@ import { buildConversionImpact } from "../src/definitions/timeblocks/timeblock-c
 import { getSectionDefaultPrefill } from "../src/definitions/timeblocks/setupInstructionPrefill"
 import { buildTimelineRows } from "../src/lib/timeblocks/buildTimelineRows"
 import type { Doc, Id } from "./_generated/dataModel"
-import type { QueryCtx } from "./_generated/server"
+import { internal } from "./_generated/api"
+import { internalMutation, type QueryCtx } from "./_generated/server"
 import { companyMutation, companyQuery } from "./lib/auth"
+import { backfillMissingFieldsBatch } from "./lib/backfill"
+import { assertPackagePrice, TIMEBLOCK_ESTIMATE_DEFAULTS, toTimeblockRecord } from "./lib/estimateFields"
 import { getFoodItemRecords } from "./lib/foodItemNotes"
 import { toBeverageItemRecord } from "./lib/pricingBasis"
 import { assertUpdates, requireDocument, toRecord } from "./lib/records"
@@ -24,7 +27,7 @@ async function withItems(ctx: QueryCtx, doc: Doc<"timeblocks">) {
   const beverageLinks = await ctx.db.query("beverageItemTimeblocks").withIndex("by_timeblock", (q) => q.eq("timeblockId", doc._id)).collect()
   const beverageItems = await Promise.all(beverageLinks.map(async (link) =>
     toBeverageItemRecord(await requireDocument(ctx, "beverageItems", link.beverageItemId))))
-  return { ...toRecord(doc), foodItems: await getFoodItemRecords(ctx, doc._id), beverageItems }
+  return { ...toTimeblockRecord(doc), foodItems: await getFoodItemRecords(ctx, doc._id), beverageItems }
 }
 
 function blankDetails(sectionType: Doc<"timeblocks">["sectionType"]) {
@@ -62,8 +65,9 @@ export const create = companyMutation({
       assignedTo: null,
       createdAt: Date.now().toString(),
       updatedAt: null,
+      ...TIMEBLOCK_ESTIMATE_DEFAULTS,
     })
-    return toRecord(await requireDocument(ctx, "timeblocks", id))
+    return toTimeblockRecord(await requireDocument(ctx, "timeblocks", id))
   },
 })
 
@@ -73,12 +77,16 @@ export const update = companyMutation({
     time: v.optional(nullable(v.string())),
     details: v.optional(nullable(v.string())),
     assignedTo: v.optional(nullable(v.string())),
+    // Estimate fields (lib/estimateFields.ts); the Estimate section sets them on food timeblocks.
+    isAddOn: v.optional(v.boolean()),
+    packagePricePerPersonCents: v.optional(nullable(v.number())),
   }) },
   handler: async (ctx, { id, updates }) => {
     assertUpdates(updates)
+    assertPackagePrice(updates.packagePricePerPersonCents)
     await requireDocument(ctx, "timeblocks", id)
     await ctx.db.patch("timeblocks", id, { ...updates, updatedAt: Date.now().toString() })
-    return toRecord(await requireDocument(ctx, "timeblocks", id))
+    return toTimeblockRecord(await requireDocument(ctx, "timeblocks", id))
   },
 })
 
@@ -132,7 +140,7 @@ export const convertSectionType = companyMutation({
       details: current.details ?? blankDetails(toType),
       updatedAt: Date.now().toString(),
     })
-    return { timeblock: toRecord(await requireDocument(ctx, "timeblocks", timeblockId)), impact }
+    return { timeblock: toTimeblockRecord(await requireDocument(ctx, "timeblocks", timeblockId)), impact }
   },
 })
 
@@ -164,5 +172,29 @@ export const getAllTimelineBlocks = companyQuery({
       rawCartDetails: carts ? toRecord(carts) : null,
       timeZone,
     })
+  },
+})
+
+const MIGRATION_BATCH_SIZE = 500
+
+/**
+ * One-off migration for the estimate fields: sets `isAddOn: false` and
+ * `packagePricePerPersonCents: null` on every timeblock saved before they existed (missing
+ * already reads that way). Fields a timeblock has are left as they are, and timeblocks that
+ * have both are skipped, so running it twice is harmless. One batch per transaction; each
+ * batch schedules the next. Run once per deployment after deploying the schema change:
+ * `npx convex run --prod timeblocks:backfillEstimateFields`
+ * The result covers the first batch only; later batches report in the deployment's logs.
+ */
+export const backfillEstimateFields = internalMutation({
+  args: { cursor: v.optional(v.union(v.string(), v.null())), batchSize: v.optional(v.number()) },
+  returns: v.object({ migrated: v.number(), skipped: v.number(), isDone: v.boolean() }),
+  handler: async (ctx, { cursor = null, batchSize = MIGRATION_BATCH_SIZE }) => {
+    const { continueCursor, ...result } = await backfillMissingFieldsBatch(
+      ctx, "timeblocks", "backfillEstimateFields", TIMEBLOCK_ESTIMATE_DEFAULTS, cursor, batchSize)
+    if (!result.isDone) {
+      await ctx.scheduler.runAfter(0, internal.timeblocks.backfillEstimateFields, { cursor: continueCursor, batchSize })
+    }
+    return result
   },
 })

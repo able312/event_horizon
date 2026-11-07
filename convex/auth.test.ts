@@ -45,9 +45,11 @@ async function registeredFunctions(): Promise<[string, RegisteredFunction][]> {
  * that caller).
  */
 const INTERNAL_FUNCTIONS = new Set([
+  "./beverageItems.ts:backfillAddOn",
   "./beverageItems.ts:backfillPricingBasis",
   "./developmentSeed.ts:seed",
   "./eventRequests.ts:receive",
+  "./foodItems.ts:backfillAddOn",
   "./foodItems.ts:backfillPricingBasis",
   "./foodItems.ts:migrateIncludesToClientNotes",
   "./googleCalendar.ts:getPushContent",
@@ -57,6 +59,7 @@ const INTERNAL_FUNCTIONS = new Set([
   "./holidays.ts:recordRefresh",
   "./holidays.ts:refresh",
   "./holidays.ts:bootstrap",
+  "./timeblocks.ts:backfillEstimateFields",
   "./touchpoints.ts:backfillUndatedEvents",
 ])
 /** The only internal actions: they download the fixed holiday feed. */

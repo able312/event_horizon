@@ -4,8 +4,10 @@ import { internal } from "./_generated/api"
 import type { Id } from "./_generated/dataModel"
 import { internalMutation, type QueryCtx } from "./_generated/server"
 import { companyMutation, companyQuery } from "./lib/auth"
+import { backfillMissingFieldsBatch } from "./lib/backfill"
+import { DEFAULT_IS_ADD_ON, toTimeblockRecord } from "./lib/estimateFields"
 import { backfillPricingBasisBatch, DEFAULT_PRICING_BASIS, toBeverageItemRecord } from "./lib/pricingBasis"
-import { assertUpdates, requireDocument, toRecord } from "./lib/records"
+import { assertUpdates, requireDocument } from "./lib/records"
 import { beverageServiceStyle, beverageType, nullable, pricingBasis } from "./lib/validators"
 
 const editableFields = {
@@ -17,6 +19,8 @@ const editableFields = {
   unitPriceCents: v.optional(nullable(v.number())),
   // Optional: older app builds don't send it; new items then get "each".
   pricingBasis: v.optional(pricingBasis),
+  // Optional: older app builds don't send it; new items then aren't add-ons.
+  isAddOn: v.optional(v.boolean()),
 }
 const createFields = {
   ...editableFields,
@@ -45,6 +49,7 @@ export const create = companyMutation({
       includes: values.includes ?? null,
       unitPriceCents: values.unitPriceCents ?? null,
       pricingBasis: values.pricingBasis ?? DEFAULT_PRICING_BASIS,
+      isAddOn: values.isAddOn ?? DEFAULT_IS_ADD_ON,
     })
     return toBeverageItemRecord(await requireDocument(ctx, "beverageItems", id))
   },
@@ -62,6 +67,7 @@ export const createAssignedToTimeblock = companyMutation({
       includes: values.includes ?? null,
       unitPriceCents: values.unitPriceCents ?? null,
       pricingBasis: values.pricingBasis ?? DEFAULT_PRICING_BASIS,
+      isAddOn: values.isAddOn ?? DEFAULT_IS_ADD_ON,
     })
     await ctx.db.insert("beverageItemTimeblocks", { beverageItemId: id, timeblockId })
     return { ...toBeverageItemRecord(await requireDocument(ctx, "beverageItems", id)), assignedTimeblockIds: [timeblockId] }
@@ -114,7 +120,7 @@ export const getByEventId = companyQuery({
       const links = await ctx.db.query("beverageItemTimeblocks").withIndex("by_item", (q) => q.eq("beverageItemId", doc._id)).collect()
       return { ...toBeverageItemRecord(doc), assignedTimeblockIds: links.map((link) => link.timeblockId) }
     }))
-    return { timeblocks: timeblocks.map(toRecord), items }
+    return { timeblocks: timeblocks.map(toTimeblockRecord), items }
   },
 })
 
@@ -135,6 +141,26 @@ export const backfillPricingBasis = internalMutation({
     const { continueCursor, ...result } = await backfillPricingBasisBatch(ctx, "beverageItems", cursor, batchSize)
     if (!result.isDone) {
       await ctx.scheduler.runAfter(0, internal.beverageItems.backfillPricingBasis, { cursor: continueCursor, batchSize })
+    }
+    return result
+  },
+})
+
+/**
+ * One-off migration for add-ons: sets `isAddOn: false` on every beverage item saved before
+ * the field existed (missing already reads as false). Items that have one are skipped, so
+ * running it twice is harmless. Batched like `backfillPricingBasis` above. Run once per
+ * deployment after deploying the schema change: `npx convex run --prod beverageItems:backfillAddOn`
+ * The result covers the first batch only; later batches report in the deployment's logs.
+ */
+export const backfillAddOn = internalMutation({
+  args: { cursor: v.optional(v.union(v.string(), v.null())), batchSize: v.optional(v.number()) },
+  returns: v.object({ migrated: v.number(), skipped: v.number(), isDone: v.boolean() }),
+  handler: async (ctx, { cursor = null, batchSize = MIGRATION_BATCH_SIZE }) => {
+    const { continueCursor, ...result } = await backfillMissingFieldsBatch(
+      ctx, "beverageItems", "backfillAddOn", { isAddOn: DEFAULT_IS_ADD_ON }, cursor, batchSize)
+    if (!result.isDone) {
+      await ctx.scheduler.runAfter(0, internal.beverageItems.backfillAddOn, { cursor: continueCursor, batchSize })
     }
     return result
   },

@@ -36,7 +36,9 @@ export function createTimeblock(data: CreateTimeblockInput): Promise<Timeblock> 
 export function updateTimeblock(id: string, updates: UpdateTimeblock): Promise<Timeblock> {
   return runMutation(api.timeblocks.update, {
     id: toId<"timeblocks">(id),
-    updates: pickFields(updates, ["title", "time", "details", "assignedTo"]),
+    updates: pickFields(updates, [
+      "title", "time", "details", "assignedTo", "isAddOn", "packagePricePerPersonCents",
+    ]),
   })
 }
 

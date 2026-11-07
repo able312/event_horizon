@@ -301,6 +301,13 @@ export type Timeblock = {
   assignedTo: string | null
   createdAt: string
   updatedAt: string | null
+  /** Food timeblocks: an optional add-on on the estimate, left out of its totals. Missing means false. */
+  isAddOn?: boolean
+  /**
+   * Food timeblocks: a per-person price that replaces the sum of the block's per-person
+   * items on the estimate. Missing or null means none.
+   */
+  packagePricePerPersonCents?: number | null
 }
 /** Allowlisted fields for ordinary timeblock patches from the renderer. */
 export type UpdateTimeblock = {
@@ -308,6 +315,9 @@ export type UpdateTimeblock = {
   time?: string | null
   details?: string | null
   assignedTo?: string | null
+  isAddOn?: boolean
+  /** Null clears it; otherwise a whole number of cents, 0 or more. */
+  packagePricePerPersonCents?: number | null
 }
 
 // ============================================================================
@@ -331,6 +341,8 @@ export type FoodItem = {
   internalNotes: string | null
   unitPriceCents: number | null
   pricingBasis?: PricingBasis
+  /** An optional add-on on the estimate, left out of its totals until accepted. Missing means false. */
+  isAddOn?: boolean
 }
 
 // ============================================================================
@@ -350,4 +362,6 @@ export type BeverageItem = {
   includes: string | null
   unitPriceCents: number | null
   pricingBasis?: PricingBasis
+  /** An optional add-on on the estimate, left out of its totals until accepted. Missing means false. */
+  isAddOn?: boolean
 }

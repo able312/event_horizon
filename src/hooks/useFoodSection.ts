@@ -77,6 +77,8 @@ export function useFoodSection() {
         clientNotes: newItem?.clientNotes ?? undefined,
         internalNotes: newItem?.internalNotes ?? undefined,
         unitPriceCents: newItem?.unitPriceCents ?? undefined,
+        pricingBasis: newItem?.pricingBasis,
+        isAddOn: newItem?.isAddOn,
       }),
     onMutate: async ({ timeblockId, newItem }) => {
       const focusedQueryKey = timeblockKeys.byId(timeblockId)
@@ -96,6 +98,8 @@ export function useFoodSection() {
         clientNotes: newItem?.clientNotes ?? null,
         internalNotes: newItem?.internalNotes ?? null,
         unitPriceCents: newItem?.unitPriceCents ?? null,
+        pricingBasis: newItem?.pricingBasis,
+        isAddOn: newItem?.isAddOn ?? false,
         timeblockId,
       }
 
@@ -144,6 +148,8 @@ export function useFoodSection() {
         clientNotes: updates.clientNotes ?? undefined,
         internalNotes: updates.internalNotes ?? undefined,
         unitPriceCents: updates.unitPriceCents ?? undefined,
+        pricingBasis: updates.pricingBasis,
+        isAddOn: updates.isAddOn,
       }),
     onMutate: async ({ timeblockId, itemId, updates }) => {
       const focusedQueryKey = timeblockKeys.byId(timeblockId)

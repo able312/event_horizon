@@ -6,7 +6,7 @@ import { toId, toIds } from "./ids"
 import { createWithClientId, resolveRecordId } from "./optimisticIds"
 import { sources } from "./sources"
 
-const EDITABLE_FIELDS = ["name", "quantity", "type", "serviceStyle", "includes", "unitPriceCents", "pricingBasis"] as const
+const EDITABLE_FIELDS = ["name", "quantity", "type", "serviceStyle", "includes", "unitPriceCents", "pricingBasis", "isAddOn"] as const
 
 type NewBeverageItemInput = {
   /** Client ID of the row already shown; the created item gets a server ID (see optimisticIds.ts). */
@@ -19,6 +19,7 @@ type NewBeverageItemInput = {
   includes?: string
   unitPriceCents?: number
   pricingBasis?: PricingBasis
+  isAddOn?: boolean
 }
 
 export function getBeverageSectionWithItems(eventId: string): Promise<BeverageSectionPayload> {
@@ -54,6 +55,7 @@ export async function updateBeverageItem(id: string, updates: {
   includes?: string | null
   unitPriceCents?: number | null
   pricingBasis?: PricingBasis
+  isAddOn?: boolean
 }): Promise<BeverageItem> {
   return runMutation(api.beverageItems.update, {
     id: toId<"beverageItems">(await resolveRecordId(id)),

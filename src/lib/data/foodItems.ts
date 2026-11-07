@@ -5,7 +5,7 @@ import { fetchSource, pickItemFields, runMutation } from "./backend"
 import { toId } from "./ids"
 import { sources } from "./sources"
 
-const EDITABLE_FIELDS = ["name", "quantity", "serviceStyle", "clientNotes", "internalNotes", "unitPriceCents", "pricingBasis"] as const
+const EDITABLE_FIELDS = ["name", "quantity", "serviceStyle", "clientNotes", "internalNotes", "unitPriceCents", "pricingBasis", "isAddOn"] as const
 
 type FoodItemValues = {
   name?: string
@@ -15,6 +15,7 @@ type FoodItemValues = {
   internalNotes?: string
   unitPriceCents?: number
   pricingBasis?: PricingBasis
+  isAddOn?: boolean
 }
 
 export function getFoodSectionWithItems(eventId: string): Promise<TimeblockWithItems[]> {

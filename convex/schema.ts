@@ -168,6 +168,10 @@ export default defineSchema({
     assignedTo: nullable(v.string()),
     createdAt: v.string(),
     updatedAt: nullable(v.string()),
+    // Optional estimate fields (lib/estimateFields.ts): missing means false / null.
+    // `timeblocks:backfillEstimateFields` fills them in.
+    isAddOn: v.optional(v.boolean()),
+    packagePricePerPersonCents: v.optional(nullable(v.number())),
     ...audit,
   }).index("by_event_section", ["eventId", "sectionType"]),
 
@@ -185,6 +189,8 @@ export default defineSchema({
     // Optional: items saved before the field existed have none and mean "each" (lib/pricingBasis.ts).
     // `*:backfillPricingBasis` fills it in; it can become required once that has run everywhere.
     pricingBasis: v.optional(pricingBasis),
+    // Optional: missing means false (lib/estimateFields.ts); `*:backfillAddOn` fills it in.
+    isAddOn: v.optional(v.boolean()),
     ...auditWithUpdatedAt,
   }).index("by_timeblock", ["timeblockId"]),
 
@@ -199,6 +205,8 @@ export default defineSchema({
     // Optional: items saved before the field existed have none and mean "each" (lib/pricingBasis.ts).
     // `*:backfillPricingBasis` fills it in; it can become required once that has run everywhere.
     pricingBasis: v.optional(pricingBasis),
+    // Optional: missing means false (lib/estimateFields.ts); `*:backfillAddOn` fills it in.
+    isAddOn: v.optional(v.boolean()),
     ...auditWithUpdatedAt,
   }).index("by_event", ["eventId"]),
 

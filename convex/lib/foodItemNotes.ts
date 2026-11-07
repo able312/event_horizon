@@ -1,5 +1,6 @@
 import type { Doc, Id } from "../_generated/dataModel"
 import type { QueryCtx } from "../_generated/server"
+import { storedIsAddOn } from "./estimateFields"
 import { storedPricingBasis } from "./pricingBasis"
 import { toRecord } from "./records"
 
@@ -37,12 +38,13 @@ export function toFoodItemRecord(doc: Doc<"foodItems">) {
     internalNotes: doc.internalNotes ?? null,
     includes: clientNotes,
     pricingBasis: storedPricingBasis(doc),
+    isAddOn: storedIsAddOn(doc),
   }
 }
 
 /**
  * A timeblock's food items as records. Every query that returns food items should read
- * them through here (not `toRecord`), so the note fields above and `pricingBasis` stay right
+ * them through here (not `toRecord`), so the note fields above, `pricingBasis` and `isAddOn` stay right
  * for every client.
  */
 export async function getFoodItemRecords(ctx: Pick<QueryCtx, "db">, timeblockId: Id<"timeblocks">) {
