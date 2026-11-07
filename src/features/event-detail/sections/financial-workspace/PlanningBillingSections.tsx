@@ -10,6 +10,7 @@ import {
   getPackagePricePerPersonCents,
   getPricingBasis,
   isCoveredByPackagePrice,
+  parseDollarsToCents,
 } from "~/features/event-detail/workspace/lib/financial"
 import { formatCurrencyRange, type GuestCountRange } from "~/features/preview/lib/foodPackages"
 import {
@@ -38,7 +39,7 @@ export type BillingTimeblockUpdates = {
 type BillingItem = Pick<FoodItem, "id" | "name" | "quantity" | "unitPriceCents" | "pricingBasis" | "isAddOn">
 
 /** How a row counts toward the estimate, beyond its own pricing. */
-type RowStatus = "counted" | "add-on" | "in-add-on-timeblock" | "in-package-price"
+type RowStatus = "counted" | "add-on" | "in-add-on-timeblock" | "in-package-price" | "add-on-in-package-price"
 
 const PRICING_BASIS_OPTIONS: Array<{ value: PricingBasis; label: string }> = [
   { value: "each", label: "Each" },
@@ -58,6 +59,7 @@ const ROW_STATUS_NOTE: Record<Exclude<RowStatus, "counted">, string> = {
   "add-on": "Add-on, not in total",
   "in-add-on-timeblock": "Add-on, not in total",
   "in-package-price": "In package price",
+  "add-on-in-package-price": "Add-on, but the package price covers per-person items: price it Each to charge extra",
 }
 
 function renderPlanningCta(onNavigateToPlanning?: () => void, prefix = "Start planning") {
@@ -168,16 +170,20 @@ const EstimateBillingRow: React.FC<{
   const statusNote = status === "counted" ? null : ROW_STATUS_NOTE[status]
 
   return (
-    <tr className={`${SECTION_TABLE_BODY_ROW_CLASS} ${status === "add-on" ? "bg-sky-50/60" : ""}`}>
+    <tr className={`${SECTION_TABLE_BODY_ROW_CLASS} ${status === "add-on" ? "bg-sky-50/60" : ""} ${status === "add-on-in-package-price" ? "bg-amber-50" : ""}`}>
       <td className={`${SECTION_TABLE_BODY_CELL_CLASS} text-xs text-foreground`}>{item.name || "Untitled item"}</td>
       <td className={SECTION_TABLE_BODY_CELL_CLASS}>
         <input
           type="checkbox"
           checked={isAddOn(item)}
-          disabled={status === "in-add-on-timeblock"}
+          // A per-person item under a package price is covered by it, so accepting it as an
+          // add-on would charge nothing extra; only an already-ticked one can be unticked.
+          disabled={status === "in-add-on-timeblock" || status === "in-package-price"}
           onChange={(e) => onUpdate?.({ isAddOn: e.target.checked })}
           className="h-3.5 w-3.5 accent-orange-500"
-          title="Offer as an optional add-on, left out of the total until the client accepts it"
+          title={status === "in-package-price"
+            ? "Covered by the package price. Price it Each to offer it as a paid add-on."
+            : "Offer as an optional add-on, left out of the total until the client accepts it"}
           aria-label={`${label} Add-on`}
         />
       </td>
@@ -226,7 +232,11 @@ const EstimateBillingRow: React.FC<{
             <span className={statusNote ? "text-muted-foreground" : undefined}>
               {formatLineTotal(computeEstimateLineTotal(item, guests))}
             </span>
-            {statusNote ? <span className="block text-[10px] text-sky-700">{statusNote}</span> : null}
+            {statusNote ? (
+              <span className={`block text-[10px] ${status === "add-on-in-package-price" ? "text-amber-700" : "text-sky-700"}`}>
+                {statusNote}
+              </span>
+            ) : null}
           </>
         )}
       </td>
@@ -251,7 +261,13 @@ const TimeblockBillingControls: React.FC<{
           defaultValue={packagePrice == null ? "" : centsToDollars(packagePrice).toFixed(2)}
           onBlur={(e) => {
             const value = e.target.value.trim()
-            const next = value ? Math.max(0, dollarsToCents(value)) : null
+            const parsed = value ? parseDollarsToCents(value) : null
+            if (value && parsed == null) {
+              // Not a number: keep the saved price rather than store $0.
+              e.target.value = packagePrice == null ? "" : centsToDollars(packagePrice).toFixed(2)
+              return
+            }
+            const next = parsed == null ? null : Math.max(0, parsed)
             if (next !== packagePrice) onUpdate?.({ packagePricePerPersonCents: next })
           }}
           className={`${CELL_INPUT_CLASS} w-20`}
@@ -275,7 +291,7 @@ const TimeblockBillingControls: React.FC<{
 
 function foodRowStatus(timeblock: TimeblockWithItems, item: BillingItem): RowStatus {
   if (isAddOn(timeblock)) return "in-add-on-timeblock"
-  if (isAddOn(item)) return "add-on"
+  if (isAddOn(item)) return isCoveredByPackagePrice(timeblock, item) ? "add-on-in-package-price" : "add-on"
   if (isCoveredByPackagePrice(timeblock, item)) return "in-package-price"
   return "counted"
 }

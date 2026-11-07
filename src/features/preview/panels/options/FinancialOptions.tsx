@@ -32,7 +32,7 @@ export function FinancialOptions() {
   return (
     <>
       <PreviewOptionSection title="Options">
-        {(beverageItems?.length ?? 0) > 0 ? (
+        {(beverageItems ?? []).some((item) => !isAddOn(item)) ? (
           <PreviewToggleRow
             id="financial-beverage-appendix"
             label="Show beverage list"

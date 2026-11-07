@@ -22,6 +22,17 @@ export function dollarsToCents(value: string | number | null | undefined): numbe
   return Math.round(asNumber * 100)
 }
 
+/**
+ * A typed dollar amount in cents, accepting "$" and thousands commas ("$1,200.50"), or null
+ * when the text isn't a number. Unlike dollarsToCents, never turns unreadable text into $0.
+ */
+export function parseDollarsToCents(value: string): number | null {
+  const cleaned = value.replace(/[$,\s]/g, "")
+  if (!cleaned) return null
+  const amount = Number(cleaned)
+  return Number.isFinite(amount) ? Math.round(amount * 100) : null
+}
+
 /** Quantity × unit price for any priced line (charge, food or beverage item); missing values count as 0. */
 export function computeBillableLineTotalCents(item: {
   quantity?: number | null

@@ -1,7 +1,7 @@
 import React, { useRef } from "react"
 
 import type { DepositKind, EstimateDetails, UpdateEstimateDetails } from "~/definitions/database"
-import { centsToDollars, dollarsToCents } from "~/features/event-detail/workspace/lib/financial"
+import { centsToDollars, parseDollarsToCents } from "~/features/event-detail/workspace/lib/financial"
 import {
   formatDeposit,
   nextEventTerms,
@@ -60,7 +60,16 @@ const DepositFields: React.FC<{
               type="text"
               inputMode="decimal"
               defaultValue={details.depositAmountCents == null ? "" : centsToDollars(details.depositAmountCents).toFixed(2)}
-              onBlur={(e) => onUpdate({ depositAmountCents: e.target.value.trim() ? Math.max(0, dollarsToCents(e.target.value)) : null })}
+              onBlur={(e) => {
+                const value = e.target.value.trim()
+                const parsed = value ? parseDollarsToCents(value) : null
+                // Not a number: keep the saved amount rather than store $0.
+                if (value && parsed == null) {
+                  e.target.value = details.depositAmountCents == null ? "" : centsToDollars(details.depositAmountCents).toFixed(2)
+                  return
+                }
+                onUpdate({ depositAmountCents: parsed == null ? null : Math.max(0, parsed) })
+              }}
               className={FIELD_CLASS}
             />
           </div>

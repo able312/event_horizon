@@ -101,7 +101,8 @@ export function buildEstimateFoodRows(timeblocks: TimeblockWithItems[]): PricedR
       .filter((item) => !isCoveredByPackagePrice(timeblock, item))
       .filter(isEstimateBillableLineItem)
     const packagePrice = getPackagePricePerPersonCents(timeblock)
-    if (packagePrice == null || packagePrice <= 0) return items
+    // A $0 package still prints its line, so the dishes it covers never vanish unnoticed.
+    if (packagePrice == null) return items
     const packageRow: PricedRow = {
       id: `package-price-${timeblock.id}`,
       name: timeblock.title || "Untitled",

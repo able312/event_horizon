@@ -14,6 +14,7 @@ import {
   dollarsToCents,
   fromDateInputValue,
   needsPackageQuantity,
+  parseDollarsToCents,
   toCurrency,
   toDateInputValue,
 } from "./financial"
@@ -273,5 +274,20 @@ describe("invoice package billing", () => {
     const zero = timeblock({ packagePricePerPersonCents: 4500, packageQuantity: 0 })
     expect(computeInvoiceFoodTimeblockSubtotalCents(zero)).toBe(3 * 10000)
     expect(needsPackageQuantity(zero)).toBe(false)
+  })
+})
+
+describe("parseDollarsToCents", () => {
+  it("reads typed amounts, with or without $ and commas", () => {
+    expect(parseDollarsToCents("45")).toBe(4500)
+    expect(parseDollarsToCents("$45.50")).toBe(4550)
+    expect(parseDollarsToCents(" $1,200 ")).toBe(120000)
+    expect(parseDollarsToCents("0")).toBe(0)
+  })
+
+  it("is null for blank or unreadable text instead of $0", () => {
+    expect(parseDollarsToCents("")).toBeNull()
+    expect(parseDollarsToCents("forty")).toBeNull()
+    expect(parseDollarsToCents("45/pp")).toBeNull()
   })
 })

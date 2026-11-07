@@ -122,6 +122,13 @@ describe("buildEstimateFoodRows", () => {
     expect(rows.map((row) => row.id)).toEqual(["soup"])
   })
 
+  it("still prints a $0 package line, so the dishes it covers don't vanish unnoticed", () => {
+    const rows = buildEstimateFoodRows([
+      { ...base, id: "dinner", title: "Dinner", packagePricePerPersonCents: 0, foodItems: [item("steak", "per_person", null, 3000)] },
+    ])
+    expect(rows.map((row) => row.id)).toEqual(["package-price-dinner"])
+  })
+
   it("prints a package price as one per-person line, keeping fixed-price items", () => {
     const rows = buildEstimateFoodRows([
       {

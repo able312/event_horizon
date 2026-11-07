@@ -257,7 +257,11 @@ describe("MenuOfChargeSection", () => {
     // $45 × 50 + 2 × $100; the buffet is covered and the dessert station is an add-on
     expect(screen.getByText("Food Subtotal: $2,450.00")).toBeTruthy()
     expect(screen.getByText("In package price")).toBeTruthy()
-    expect(screen.getByText("Add-on, not in total")).toBeTruthy()
+    // A per-person add-on under a package price would charge nothing extra once accepted: warn.
+    expect(screen.getByText("Add-on, but the package price covers per-person items: price it Each to charge extra")).toBeTruthy()
+
+    // The buffet is covered by the package price, so it can't be offered as a paid add-on.
+    expect((screen.getAllByLabelText("Food Add-on")[0] as HTMLInputElement).disabled).toBe(true)
 
     fireEvent.click(screen.getAllByLabelText("Food Add-on")[1])
     expect(updateFoodBillingItem).toHaveBeenCalledWith({
@@ -267,6 +271,17 @@ describe("MenuOfChargeSection", () => {
     })
 
     const packagePrice = screen.getByLabelText("Dinner Package price per person")
+    // Unreadable text keeps the saved price instead of storing $0.
+    fireEvent.change(packagePrice, { target: { value: "forty-five" } })
+    fireEvent.blur(packagePrice)
+    expect(updateFoodBillingTimeblock).not.toHaveBeenCalled()
+    expect((packagePrice as HTMLInputElement).value).toBe("45.00")
+    fireEvent.change(packagePrice, { target: { value: "$50" } })
+    fireEvent.blur(packagePrice)
+    expect(updateFoodBillingTimeblock).toHaveBeenCalledWith({
+      timeblockId: "food-tb-1",
+      updates: { packagePricePerPersonCents: 5000 },
+    })
     fireEvent.change(packagePrice, { target: { value: "" } })
     fireEvent.blur(packagePrice)
     expect(updateFoodBillingTimeblock).toHaveBeenCalledWith({
