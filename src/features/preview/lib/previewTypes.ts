@@ -81,6 +81,16 @@ export function getPreviewTypeLabel(type: PreviewTypeId): string {
   return PREVIEW_TYPES.find((entry) => entry.id === type)?.label ?? type
 }
 
+/**
+ * Documents sent to clients (estimates and invoices) open the Save PDF dialog after printing,
+ * so there is a copy of what was sent. The user can still cancel the save.
+ */
+const SAVE_AFTER_PRINT_TYPES = new Set<PreviewTypeId>(["financial-report", "invoice"])
+
+export function savesPdfAfterPrint(type: PreviewTypeId): boolean {
+  return SAVE_AFTER_PRINT_TYPES.has(type)
+}
+
 export function getPreviewTypesForEvent(
   eventType: string | null | undefined,
 ): PreviewTypeDefinition[] {

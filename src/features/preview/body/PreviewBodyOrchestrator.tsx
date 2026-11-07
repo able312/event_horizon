@@ -14,6 +14,7 @@ import { buildPdfFileName } from "~/features/preview/lib/buildPdfFileName"
 import {
   getPreviewTypeLabel,
   resolvePreviewType,
+  savesPdfAfterPrint,
   type PreviewTypeId,
 } from "~/features/preview/lib/previewTypes"
 import { useEvent } from "~/hooks/useEvent"
@@ -103,11 +104,6 @@ const PreviewBodyOrchestrator: React.FC = () => {
     restoredTicket.current = ticket
   }, [documentKey, documentStatus, searchParams])
 
-  const handlePrint = () => {
-    if (!canExport) return
-    window.print()
-  }
-
   const handleSavePDF = async () => {
     if (!canExport) return
     try {
@@ -124,6 +120,13 @@ const PreviewBodyOrchestrator: React.FC = () => {
       toast.error("Failed to save PDF")
       console.error("Failed to save PDF:", err)
     }
+  }
+
+  const handlePrint = () => {
+    if (!canExport) return
+    // window.print() blocks until the print dialog closes, so the save dialog opens after it.
+    window.print()
+    if (savesPdfAfterPrint(previewType)) void handleSavePDF()
   }
 
   useHotkey("Cmd+P", handlePrint)
