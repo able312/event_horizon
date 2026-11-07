@@ -1,6 +1,4 @@
-export const FINANCIAL_DOCUMENT_KINDS = ["estimate", "invoice"] as const
-
-export type FinancialDocumentKind = (typeof FINANCIAL_DOCUMENT_KINDS)[number]
+export type FinancialDocumentKind = "estimate" | "invoice"
 
 export type FinancialDocumentKindLabels = {
   /** Heading printed at the top of the document. */
