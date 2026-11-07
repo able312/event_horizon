@@ -47,7 +47,7 @@ const PREVIEW_TYPES: PreviewTypeDefinition[] = [
   },
   {
     id: "financial-report",
-    label: "Financial Report",
+    label: "Estimate",
     icon: DollarSign,
   },
   {

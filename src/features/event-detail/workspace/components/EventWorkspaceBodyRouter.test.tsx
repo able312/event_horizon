@@ -159,7 +159,7 @@ describe("EventWorkspaceBodyRouter", () => {
       selectedNode: {
         id: "category:financial",
         groupId: "categories",
-        label: "Financial",
+        label: "Estimate",
         nodeType: "financial",
         sourceRef: { kind: "financial", view: "overview" },
       },

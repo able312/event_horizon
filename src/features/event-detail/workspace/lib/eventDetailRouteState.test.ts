@@ -89,7 +89,7 @@ function buildNavModel(overrides?: Partial<WorkspaceNavModel>): WorkspaceNavMode
         id: "category:financial",
         groupId: "categories",
         nodeType: "financial",
-        label: "Financial",
+        label: "Estimate",
         sourceRef: { kind: "financial", view: "overview" },
       },
     ],

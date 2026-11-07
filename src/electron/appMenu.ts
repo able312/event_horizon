@@ -147,7 +147,7 @@ export function rebuildAppMenu(targetWindowId?: number) {
               },
             },
             {
-              label: "Generate Financial Report",
+              label: "Generate Estimate",
               click: (_menuItem, browserWindow) => {
                 if (!browserWindow || !(browserWindow instanceof BrowserWindow)) return
                 navigateToPreview(browserWindow, "financial-report")

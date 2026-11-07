@@ -36,7 +36,7 @@ const FinancialWorkspaceSection: React.FC<FinancialWorkspaceSectionProps> = ({ e
     <div className="space-y-4">
       <div className="rounded-xs border border-border bg-gradient-to-b from-muted/35 to-muted/10 p-3 shadow-sm">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold tracking-wide">Financial Summary</h3>
+          <h3 className="text-sm font-semibold tracking-wide">Estimate Summary</h3>
           <GeneratePreviewButton label="Generate Estimate" onClick={() => openPreview("financial-report")} />
         </div>
         <div className="mt-2 grid grid-cols-1 gap-0.5 text-sm md:grid-cols-2 xl:grid-cols-4 bg-stone-200">

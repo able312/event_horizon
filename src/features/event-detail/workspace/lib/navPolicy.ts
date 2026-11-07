@@ -51,7 +51,7 @@ export const WORKSPACE_CATEGORIES = [
   },
   {
     id: "financial",
-    label: "Financial",
+    label: "Estimate",
     slug: "financial",
     icon: CircleDollarSign,
   },

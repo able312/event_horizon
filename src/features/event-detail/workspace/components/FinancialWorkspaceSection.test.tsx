@@ -66,7 +66,7 @@ describe("FinancialWorkspaceSection", () => {
     const onSelectWorkspaceNode = vi.fn()
     render(<FinancialWorkspaceSection eventId="event-1" onSelectWorkspaceNode={onSelectWorkspaceNode} />)
 
-    expect(screen.getByText("Financial Summary")).toBeTruthy()
+    expect(screen.getByText("Estimate Summary")).toBeTruthy()
     expect(screen.getByText("Menu Of Charges Table")).toBeTruthy()
     expect(screen.getByText("Menu Of Charges Table").parentElement?.className).toContain("min-w-0")
 

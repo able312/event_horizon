@@ -5,7 +5,7 @@
 - Name: Event Horizon
 - What it does:
   - An in-house event ops tool to track all details about events we host at our venue.
-  - Event creation → multi-day phased status process → track event status, deposits, all details → generate PDFs (Estimate/BEO/Timeline) for staff access.
+  - Event creation → multi-day phased status process → track event status, deposits, all details → generate PDFs (Estimate/Invoice/BEO/Timeline) for staff access.
 - Primary user(s):
   - The venue team (5–6 people: 4 on Windows, 1 on macOS). Everyone with a company account sees and edits the same data.
 - Operating mode:
@@ -149,7 +149,7 @@ Each environment has its own isolated database, so branch work can't touch share
 - Add to Google Calendar: the event header button creates or updates the event on the venue's shared Google Calendar through `googleCalendar.pushEvent` (replacing the old open-in-browser and paste-ID flow). It needs a start and end. The event's `calendarId` stores the Google iCalUID (or, for a single occurrence of a repeating Google event, that occurrence's event ID, since occurrences share the series' iCalUID); "Link existing event" still accepts a pasted ID or event link. Each push records a fingerprint of what was sent (`googleCalendarSyncs`); the live `googleCalendar.getSyncStatus` query compares it with the event as it is now, so the card highlights Update when the event has changes Google doesn't have and hides it once Google is up to date. Edits made in Google itself aren't detected. Disconnect clears the link and leaves the Google event in place; Remove from Google Calendar deletes it, then clears the link. Removing an event's date also deletes its linked Google event and clears the link (`googleCalendar.updateEvent`, which every date-clearing update goes through), so an undated lead doesn't stay on the shared calendar; once it has a date again it can be added again. Renderer code (the card, its actions and the event body builder Convex also uses) lives in `src/features/google-calendar/`. Setup: [GOOGLE_CALENDAR_SETUP.md](GOOGLE_CALENDAR_SETUP.md).
 - Attach/track details and their attached timeblocks data
 - See holidays while booking: the main month calendar flags dates in Google's public Canadian holiday calendar, with the names on hover/focus. Holidays are read-only and never become events. After deploying the feature, run the bootstrap once ([HOLIDAYS.md](HOLIDAYS.md)).
-- Generate PDFs (Estimate, BEO, Timeline)
+- Generate PDFs (Estimate, Invoice, BEO, Timeline)
 - Confirm persistence across restarts, and that edits appear live in a second signed-in window
 
 ## Quality Gates / How to Verify
