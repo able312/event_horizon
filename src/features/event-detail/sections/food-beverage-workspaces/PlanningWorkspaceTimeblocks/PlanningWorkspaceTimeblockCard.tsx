@@ -117,8 +117,6 @@ function PlanningWorkspaceTimeblockCard<TItem extends WorkspaceItemBase>({
                   <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT + " pl-4"}>Item</th>
                   <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Service Style</th>
                   <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Qty</th>
-                  <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Unit Price</th>
-                  <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Line Total</th>
                   <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Remove</th>
                 </tr>
               </thead>

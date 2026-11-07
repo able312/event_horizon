@@ -12,7 +12,6 @@ export type WorkspaceItemBase = {
   serviceStyle: string | null
   clientNotes: string | null
   internalNotes: string | null
-  unitPriceCents: number | null
 }
 
 interface PlanningWorkspaceTimeblockListProps<TItem extends WorkspaceItemBase> {

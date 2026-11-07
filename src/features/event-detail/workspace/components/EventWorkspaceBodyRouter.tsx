@@ -60,7 +60,7 @@ function renderCategoryWorkspace(
       return (
         <div className={`${scrollContainerClassName} p-4 pt-8 space-y-6`}>
           <FinancialWorkspaceSection
-            eventId={eventResource.event?.id ?? ""}
+            eventResource={eventResource}
             onSelectWorkspaceNode={onSelectNode}
           />
         </div>

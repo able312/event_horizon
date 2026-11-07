@@ -66,7 +66,7 @@ describe("MenuOfChargeSection", () => {
     expect(screen.getByText("Food")).toBeTruthy()
     expect(screen.getByText("Beverage")).toBeTruthy()
     expect(screen.getAllByText("From Planning")).toHaveLength(2)
-    expect(screen.getAllByText("These items are organized in planning. Adjust qty and pricing here.")).toHaveLength(2)
+    expect(screen.getAllByText(/These items are organized in planning\. Set how each is priced here/)).toHaveLength(2)
     expect(screen.getByText("Dinner")).toBeTruthy()
     expect(screen.getAllByText("Wine").length).toBeGreaterThan(0)
 
@@ -168,5 +168,57 @@ describe("MenuOfChargeSection", () => {
 
     fireEvent.click(screen.getAllByRole("button", { name: "Start planning" })[1])
     expect(onNavigateToBeverage).toHaveBeenCalledTimes(1)
+  })
+
+  it("prices per-person lines against the guest count and saves the pricing choice", () => {
+    const updateFoodBillingItem = vi.fn()
+    hookMock.useMenuOfChargeItemsSection.mockReturnValue({
+      data: [],
+      createMenuOfChargeItemAsync: vi.fn(async () => ({ id: "new-id" })),
+      updateMenuOfChargeItem: vi.fn(),
+      deleteMenuOfChargeItemAsync: vi.fn(async () => true),
+    })
+
+    const foodTimeblocks = [
+      {
+        id: "food-tb-1",
+        title: "Dinner",
+        foodItems: [
+          { id: "food-1", name: "Buffet", quantity: 0, unitPriceCents: 4500, pricingBasis: "per_person" },
+          { id: "food-2", name: "Charcuterie board", quantity: 2, unitPriceCents: 15000, pricingBasis: "each" },
+        ],
+      } as never,
+    ]
+
+    const { rerender } = render(
+      <MenuOfChargeSection
+        foodTimeblocks={foodTimeblocks}
+        guests={{ min: 80, max: 120 }}
+        onUpdateFoodBillingItem={updateFoodBillingItem}
+      />,
+    )
+
+    // 45.00 × 80–120 guests; the board is 2 × 150.00
+    expect(screen.getByText("$3,600.00 – $5,400.00")).toBeTruthy()
+    expect(screen.getByText("$300.00")).toBeTruthy()
+    expect(screen.getByText("Food Subtotal: $3,900.00 – $5,700.00")).toBeTruthy()
+    expect(screen.getByText("Charges Subtotal: $3,900.00 – $5,700.00")).toBeTruthy()
+
+    fireEvent.change(screen.getAllByLabelText("Food Pricing")[1], { target: { value: "per_person" } })
+    expect(updateFoodBillingItem).toHaveBeenCalledWith({
+      timeblockId: "food-tb-1",
+      itemId: "food-2",
+      updates: { pricingBasis: "per_person" },
+    })
+
+    rerender(
+      <MenuOfChargeSection
+        foodTimeblocks={foodTimeblocks}
+        guests={null}
+        onUpdateFoodBillingItem={updateFoodBillingItem}
+      />,
+    )
+    expect(screen.getByText("Needs guest count")).toBeTruthy()
+    expect(screen.getByText("Food Subtotal: $300.00")).toBeTruthy()
   })
 })

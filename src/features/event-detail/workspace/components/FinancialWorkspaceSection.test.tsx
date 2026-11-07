@@ -1,6 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import type { Event } from "~/definitions/database"
 import FinancialWorkspaceSection from "./FinancialWorkspaceSection"
 
 const hooksMock = vi.hoisted(() => ({
@@ -64,9 +65,20 @@ describe("FinancialWorkspaceSection", () => {
     })
 
     const onSelectWorkspaceNode = vi.fn()
-    render(<FinancialWorkspaceSection eventId="event-1" onSelectWorkspaceNode={onSelectWorkspaceNode} />)
+    render(
+      <FinancialWorkspaceSection
+        eventResource={{
+          event: { id: "event-1", minGuests: 80, maxGuests: 120 } as Event,
+          isLoading: false,
+          updateEvent: vi.fn(),
+          deleteEvent: vi.fn(),
+        }}
+        onSelectWorkspaceNode={onSelectWorkspaceNode}
+      />,
+    )
 
     expect(screen.getByText("Estimate Summary")).toBeTruthy()
+    expect(screen.getByText("Quoting for 80–120 guests")).toBeTruthy()
     expect(screen.getByText("Menu Of Charges Table")).toBeTruthy()
     expect(screen.getByText("Menu Of Charges Table").parentElement?.className).toContain("min-w-0")
 
@@ -88,6 +100,7 @@ describe("FinancialWorkspaceSection", () => {
       onNavigateToBeverage: expect.any(Function),
       onUpdateFoodBillingItem: updateFoodItem,
       onUpdateBeverageBillingItem: expect.any(Function),
+      guests: { min: 80, max: 120 },
     }))
 
     ;(menuPropsMock.mock.calls[0][0] as { onNavigateToFood: () => void }).onNavigateToFood()

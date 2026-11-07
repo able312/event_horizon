@@ -5,7 +5,6 @@ import { toast } from "sonner"
 import type {
   BeverageItem,
   ChargeCategory,
-  FoodItem,
   MenuOfChargeItem,
   UpdateMenuOfChargeItem,
 } from "~/definitions/database"
@@ -19,7 +18,7 @@ import {
   dollarsToCents,
   toCurrency,
 } from "~/features/event-detail/workspace/lib/financial"
-import { getVisibleBeverageTypeSections } from "~/features/event-detail/sections/food-beverage-workspaces/beverage/beverageTypeSections"
+import { formatCurrencyRange, type GuestCountRange } from "~/features/preview/lib/foodPackages"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +34,12 @@ import {
   SECTION_TABLE_HEAD_CELL_CLASS_RIGHT,
   SECTION_TABLE_HEAD_ROW_CLASS,
 } from "../../../../components/event-detail/detail-sections/sections/tableStyles"
+import { sumEstimateBillingItems } from "./estimateLineTotals"
+import {
+  BeveragePlanningBillingSection,
+  FoodPlanningBillingSection,
+  type BillingItemUpdates,
+} from "./PlanningBillingSections"
 
 function focusNextCell(rowId: string, currentCellIndex: number) {
   const rowCells = document.querySelectorAll<HTMLElement>(`[data-row-id="${rowId}"] [data-cell]`)
@@ -52,14 +57,16 @@ interface MenuOfChargeSectionProps {
   beverageItems?: BeverageItem[]
   onNavigateToFood?: () => void
   onNavigateToBeverage?: () => void
+  /** The event's guest count, which prices per-person food and beverage lines. */
+  guests?: GuestCountRange | null
   onUpdateFoodBillingItem?: (payload: {
     timeblockId: string
     itemId: string
-    updates: Pick<Partial<FoodItem>, "quantity" | "unitPriceCents">
+    updates: BillingItemUpdates
   }) => void
   onUpdateBeverageBillingItem?: (payload: {
     itemId: string
-    updates: Pick<Partial<BeverageItem>, "quantity" | "unitPriceCents">
+    updates: BillingItemUpdates
   }) => void
 }
 
@@ -70,277 +77,7 @@ interface CategorySection {
   items: MenuOfChargeItem[]
 }
 
-interface BillingItem {
-  id: string
-  name: string
-  quantity: number | null
-  unitPriceCents: number | null
-}
-
-interface PlanningBillingSectionProps {
-  title: string
-  timeblocks: TimeblockWithItems[]
-  itemKey: "foodItems"
-  onNavigateToPlanning?: () => void
-  onUpdateItem?: (payload: {
-    timeblockId: string
-    itemId: string
-    updates: { quantity?: number | null; unitPriceCents?: number | null }
-  }) => void
-}
-
-interface BeveragePlanningBillingSectionProps {
-  items: BeverageItem[]
-  onNavigateToPlanning?: () => void
-  onUpdateItem?: (payload: {
-    itemId: string
-    updates: { quantity?: number | null; unitPriceCents?: number | null }
-  }) => void
-}
-
 const UNCATEGORIZED_KEY = "__uncategorized__"
-const PLANNING_BILLING_CARD_CLASS = "rounded-xs border border-border bg-background p-3 shadow-sm"
-const PLANNING_BILLING_TABLE_CLASS = `${SECTION_TABLE_CLASS} table-fixed min-w-[640px]`
-
-function PlanningBillingTableColgroup() {
-  return (
-    <colgroup>
-      <col />
-      <col className="w-16" />
-      <col className="w-28" />
-      <col className="w-24" />
-    </colgroup>
-  )
-}
-
-function renderPlanningCta(onNavigateToPlanning?: () => void, prefix = "Start planning") {
-  if (!onNavigateToPlanning) return null
-
-  return (
-    <button
-      type="button"
-      onClick={onNavigateToPlanning}
-      className="inline-flex items-center text-xs font-medium text-primary hover:underline"
-    >
-      {prefix}
-    </button>
-  )
-}
-
-const PlanningBillingSection: React.FC<PlanningBillingSectionProps> = ({
-  title,
-  timeblocks,
-  itemKey,
-  onNavigateToPlanning,
-  onUpdateItem,
-}) => {
-  const subtotalCents = timeblocks.reduce((sum, timeblock) => {
-    const items = (timeblock[itemKey] ?? []) as BillingItem[]
-    return sum + items.reduce((itemSum, item) => itemSum + computeBillableLineTotalCents(item), 0)
-  }, 0)
-
-  return (
-    <div className={`${PLANNING_BILLING_CARD_CLASS} space-y-2`}>
-      <div className="flex items-center gap-2">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h4>
-        <span className="rounded-full border border-border bg-orange-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-orange-700">
-          From Planning
-        </span>
-      </div>
-      <p className="text-xs text-muted-foreground">These items are organized in planning. Adjust qty and pricing here.</p>
-
-      {timeblocks.length === 0 ? (
-        <div className="rounded-xs border border-dashed border-border px-3 py-3 text-xs text-muted-foreground bg-red-50">
-          <span className="text-red-800">No {title.toLowerCase()} timeblocks from planning yet. </span>
-          {renderPlanningCta(onNavigateToPlanning)}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {timeblocks.map((timeblock) => {
-            const items = (timeblock[itemKey] ?? []) as BillingItem[]
-
-            return (
-              <div key={timeblock.id} className="space-y-0.5">
-                <div className="border-b border-border/70 bg-muted/25 px-2 py-1.5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{timeblock.title}</p>
-                </div>
-
-                {items.length === 0 ? (
-                  <div className="rounded-xs border border-dashed border-border px-3 py-3 text-xs text-muted-foreground bg-yellow-50">
-                    <span>There are no items for this. </span>
-                    {renderPlanningCta(onNavigateToPlanning)}
-                  </div>
-                ) : (
-                  <div className={SECTION_TABLE_CONTAINER_CLASS}>
-                    <table className={PLANNING_BILLING_TABLE_CLASS}>
-                      <PlanningBillingTableColgroup />
-                      <thead>
-                        <tr className={SECTION_TABLE_HEAD_ROW_CLASS}>
-                          <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Item</th>
-                          <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Qty</th>
-                          <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Unit Price ($)</th>
-                          <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Line Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {items.map((item) => (
-                          <tr key={item.id} className={SECTION_TABLE_BODY_ROW_CLASS}>
-                            <td className={`${SECTION_TABLE_BODY_CELL_CLASS} text-xs text-foreground`}>
-                              {item.name || "Untitled item"}
-                            </td>
-                            <td className={`${SECTION_TABLE_BODY_CELL_CLASS} text-right`}>
-                              <input
-                                type="number"
-                                min="0"
-                                defaultValue={item.quantity ?? 0}
-                                onBlur={(e) => onUpdateItem?.({
-                                  timeblockId: timeblock.id,
-                                  itemId: item.id,
-                                  updates: { quantity: Math.max(0, Number(e.target.value) || 0) },
-                                })}
-                                className="ml-auto block h-7 w-14 border-0 border-b border-border bg-transparent px-1 text-right text-xs focus:border-primary focus:outline-none"
-                                aria-label={`${title} Quantity`}
-                              />
-                            </td>
-                            <td className={`${SECTION_TABLE_BODY_CELL_CLASS} text-right`}>
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                defaultValue={centsToDollars(item.unitPriceCents).toFixed(2)}
-                                onBlur={(e) => onUpdateItem?.({
-                                  timeblockId: timeblock.id,
-                                  itemId: item.id,
-                                  updates: { unitPriceCents: Math.max(0, dollarsToCents(e.target.value)) },
-                                })}
-                                className="ml-auto block h-7 w-20 border-0 border-b border-border bg-transparent px-1 text-right text-xs focus:border-primary focus:outline-none"
-                                aria-label={`${title} Unit Price`}
-                              />
-                            </td>
-                            <td className={`${SECTION_TABLE_BODY_CELL_CLASS} text-right text-xs font-medium`}>
-                              {toCurrency(computeBillableLineTotalCents(item))}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      <div className="px-1.5 pt-1 text-right text-xs font-medium text-foreground">
-        {title} Subtotal: {toCurrency(subtotalCents)}
-      </div>
-    </div>
-  )
-}
-
-const BeveragePlanningBillingSection: React.FC<BeveragePlanningBillingSectionProps> = ({
-  items,
-  onNavigateToPlanning,
-  onUpdateItem,
-}) => {
-  const typeSections = useMemo(
-    () => getVisibleBeverageTypeSections(items, { hideEmptySpecialOrders: true }),
-    [items],
-  )
-  const subtotalCents = items.reduce((sum, item) => sum + computeBillableLineTotalCents(item), 0)
-
-  return (
-    <div className={`${PLANNING_BILLING_CARD_CLASS} space-y-2`}>
-      <div className="flex items-center gap-2">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Beverage</h4>
-        <span className="rounded-full border border-border bg-orange-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-orange-700">
-          From Planning
-        </span>
-      </div>
-      <p className="text-xs text-muted-foreground">These items are organized in planning. Adjust qty and pricing here.</p>
-
-      {items.length === 0 ? (
-        <div className="rounded-xs border border-dashed border-border px-3 py-3 text-xs text-muted-foreground bg-red-50">
-          <span className="text-red-800">No beverage items from planning yet. </span>
-          {renderPlanningCta(onNavigateToPlanning)}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {typeSections.map((section) => (
-            <div key={section.type} className="space-y-0.5">
-              <div className="border-b border-border/70 bg-muted/25 px-2 py-1.5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{section.type}</p>
-              </div>
-
-              {section.items.length === 0 ? (
-                <div className="rounded-xs border border-dashed border-border px-3 py-3 text-xs text-muted-foreground bg-yellow-50">
-                  <span>There are no items for this. </span>
-                  {renderPlanningCta(onNavigateToPlanning)}
-                </div>
-              ) : (
-                <div className={SECTION_TABLE_CONTAINER_CLASS}>
-                  <table className={PLANNING_BILLING_TABLE_CLASS}>
-                    <PlanningBillingTableColgroup />
-                    <thead>
-                      <tr className={SECTION_TABLE_HEAD_ROW_CLASS}>
-                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Item</th>
-                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Qty</th>
-                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Unit Price ($)</th>
-                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Line Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {section.items.map((item) => (
-                        <tr key={item.id} className={SECTION_TABLE_BODY_ROW_CLASS}>
-                          <td className={`${SECTION_TABLE_BODY_CELL_CLASS} text-xs text-foreground`}>
-                            {item.name || "Untitled item"}
-                          </td>
-                          <td className={`${SECTION_TABLE_BODY_CELL_CLASS} text-right`}>
-                            <input
-                              type="number"
-                              min="0"
-                              defaultValue={item.quantity ?? 0}
-                              onBlur={(e) => onUpdateItem?.({
-                                itemId: item.id,
-                                updates: { quantity: Math.max(0, Number(e.target.value) || 0) },
-                              })}
-                              className="ml-auto block h-7 w-14 border-0 border-b border-border bg-transparent px-1 text-right text-xs focus:border-primary focus:outline-none"
-                              aria-label="Beverage Quantity"
-                            />
-                          </td>
-                          <td className={`${SECTION_TABLE_BODY_CELL_CLASS} text-right`}>
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              defaultValue={centsToDollars(item.unitPriceCents).toFixed(2)}
-                              onBlur={(e) => onUpdateItem?.({
-                                itemId: item.id,
-                                updates: { unitPriceCents: Math.max(0, dollarsToCents(e.target.value)) },
-                              })}
-                              className="ml-auto block h-7 w-20 border-0 border-b border-border bg-transparent px-1 text-right text-xs focus:border-primary focus:outline-none"
-                              aria-label="Beverage Unit Price"
-                            />
-                          </td>
-                          <td className={`${SECTION_TABLE_BODY_CELL_CLASS} text-right text-xs font-medium`}>
-                            {toCurrency(computeBillableLineTotalCents(item))}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="px-1.5 pt-1 text-right text-xs font-medium text-foreground">
-        Beverage Subtotal: {toCurrency(subtotalCents)}
-      </div>
-    </div>
-  )
-}
 
 const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
   className,
@@ -349,6 +86,7 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
   beverageItems = [],
   onNavigateToFood,
   onNavigateToBeverage,
+  guests = null,
   onUpdateFoodBillingItem,
   onUpdateBeverageBillingItem,
 }) => {
@@ -435,11 +173,10 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
 
   const items = useMemo(() => menuOfChargeItems ?? [], [menuOfChargeItems])
   const menuSubtotalCents = computeMenuSubtotalCents(items)
-  const foodSubtotalCents = foodTimeblocks.reduce((sum, timeblock) => (
-    sum + (timeblock.foodItems ?? []).reduce((itemSum, item) => itemSum + computeBillableLineTotalCents(item), 0)
-  ), 0)
-  const beverageSubtotalCents = beverageItems.reduce((sum, item) => sum + computeBillableLineTotalCents(item), 0)
-  const chargesSubtotalCents = menuSubtotalCents + foodSubtotalCents + beverageSubtotalCents
+  const planningSubtotal = sumEstimateBillingItems(
+    [...foodTimeblocks.flatMap((timeblock) => timeblock.foodItems ?? []), ...beverageItems],
+    guests,
+  )
   const hasPlanningContent = foodTimeblocks.length > 0 || beverageItems.length > 0
 
   const categorySections = useMemo<CategorySection[]>(() => {
@@ -500,15 +237,15 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
 
   const planningSections = (
     <div className="space-y-6">
-      <PlanningBillingSection
-        title="Food"
+      <FoodPlanningBillingSection
         timeblocks={foodTimeblocks}
-        itemKey="foodItems"
+        guests={guests}
         onNavigateToPlanning={onNavigateToFood}
         onUpdateItem={onUpdateFoodBillingItem}
       />
       <BeveragePlanningBillingSection
         items={beverageItems}
+        guests={guests}
         onNavigateToPlanning={onNavigateToBeverage}
         onUpdateItem={onUpdateBeverageBillingItem}
       />
@@ -763,7 +500,10 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
           {planningSections}
 
           <div className="px-1.5 py-2 text-right text-xs font-medium text-foreground">
-            Charges Subtotal: {toCurrency(chargesSubtotalCents)}
+            Charges Subtotal: {formatCurrencyRange(
+              menuSubtotalCents + planningSubtotal.lowCents,
+              menuSubtotalCents + planningSubtotal.highCents,
+            )}
           </div>
         </div>
       )}

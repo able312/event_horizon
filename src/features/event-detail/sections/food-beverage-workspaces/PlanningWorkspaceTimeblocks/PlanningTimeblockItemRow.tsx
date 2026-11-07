@@ -6,25 +6,11 @@ import {
   SECTION_TABLE_BODY_CELL_CLASS,
   SECTION_TABLE_BODY_ROW_CLASS,
 } from "~/components/event-detail/detail-sections/sections/tableStyles"
-import {
-  centsToDollars,
-  computeBillableLineTotalCents,
-  dollarsToCents,
-  toCurrency,
-} from "~/features/event-detail/workspace/lib/financial"
 import { PlanningTimeblockItemNoteTabsRow } from "./PlanningTimeblockItemNoteTabsRow"
 import type { WorkspaceItemBase } from "./PlanningWorkspaceTimeblockList"
 
 function parseQuantity(value: string): number {
   return Math.max(0, Number(value) || 0)
-}
-
-function parsePrice(value: string): number {
-  return Math.max(0, dollarsToCents(value))
-}
-
-function formatUnitPrice(unitPriceCents: number | null): string {
-  return unitPriceCents ? centsToDollars(unitPriceCents).toFixed(2) : ""
 }
 
 export interface PlanningTimeblockItemRowProps<TItem extends WorkspaceItemBase> {
@@ -47,7 +33,6 @@ function PlanningTimeblockItemRow<TItem extends WorkspaceItemBase>({
   const [name, setName] = useState(item.name ?? "")
   const [serviceStyle, setServiceStyle] = useState(item.serviceStyle ?? "")
   const [quantity, setQuantity] = useState(String(item.quantity ?? 0))
-  const [unitPrice, setUnitPrice] = useState(formatUnitPrice(item.unitPriceCents))
 
   useEffect(() => {
     setName(item.name ?? "")
@@ -60,10 +45,6 @@ function PlanningTimeblockItemRow<TItem extends WorkspaceItemBase>({
   useEffect(() => {
     setQuantity(String(item.quantity ?? 0))
   }, [item.quantity])
-
-  useEffect(() => {
-    setUnitPrice(formatUnitPrice(item.unitPriceCents))
-  }, [item.unitPriceCents])
 
   const patchItem = (field: keyof WorkspaceItemBase, value: WorkspaceItemBase[keyof WorkspaceItemBase]) =>
     ({ [field]: value }) as Partial<TItem>
@@ -130,28 +111,6 @@ function PlanningTimeblockItemRow<TItem extends WorkspaceItemBase>({
             className="ml-auto h-8 w-16 rounded-xs border border-transparent bg-transparent px-1.5 text-right text-sm text-muted-foreground outline-none transition-colors focus:border-border focus:bg-background focus:text-foreground disabled:opacity-60"
           />
         </td>
-        <td className={`${SECTION_TABLE_BODY_CELL_CLASS} w-[112px] align-top text-right`}>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={unitPrice}
-            disabled={disabled}
-            onChange={(e) => setUnitPrice(e.target.value)}
-            onBlur={(e) =>
-              updateItem({
-                timeblockId,
-                itemId: item.id,
-                updates: patchItem("unitPriceCents", parsePrice(e.target.value)),
-              })
-            }
-            aria-label="Unit Price"
-            placeholder="0.00"
-            className="ml-auto h-8 w-20 rounded-xs border border-transparent bg-transparent px-1.5 text-right text-sm text-muted-foreground outline-none transition-colors focus:border-border focus:bg-background focus:text-foreground disabled:opacity-60"
-          />
-        </td>
-        <td className={`${SECTION_TABLE_BODY_CELL_CLASS} w-[104px] align-center text-right text-sm font-medium text-foreground`}>
-          {toCurrency(computeBillableLineTotalCents(item))}
-        </td>
         <td className={`${SECTION_TABLE_BODY_CELL_CLASS} w-[72px] align-top text-right`}>
           <Button
             type="button"
@@ -167,7 +126,7 @@ function PlanningTimeblockItemRow<TItem extends WorkspaceItemBase>({
         </td>
       </tr>
       <tr className={SECTION_TABLE_BODY_ROW_CLASS}>
-        <td colSpan={6} className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-[240px] align-top`}>
+        <td colSpan={4} className={`${SECTION_TABLE_BODY_CELL_CLASS} min-w-[240px] align-top`}>
           <PlanningTimeblockItemNoteTabsRow
             timeblockID={timeblockId}
             itemID={item.id}
