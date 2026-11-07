@@ -8,6 +8,7 @@ import type {
   EVENT_TYPES,
   FOOD_SERVICE_STYLES,
   PLAY_FORMATS,
+  PRICING_BASES,
   START_FORMATS,
   TIMEBLOCK_SECTION_TYPES,
 } from "./enums.js"
@@ -272,6 +273,9 @@ export type UpdateTimeblock = {
 
 export type FoodServiceStyle = (typeof FOOD_SERVICE_STYLES)[number]
 
+/** See PRICING_BASES. Missing on records saved before the field existed; read it with getPricingBasis. */
+export type PricingBasis = (typeof PRICING_BASES)[number]
+
 export type FoodItem = {
   id: string
   timeblockId: string
@@ -283,6 +287,7 @@ export type FoodItem = {
   /** Kitchen and staff only. */
   internalNotes: string | null
   unitPriceCents: number | null
+  pricingBasis?: PricingBasis
 }
 
 // ============================================================================
@@ -301,4 +306,5 @@ export type BeverageItem = {
   serviceStyle: BeverageServiceStyle | null
   includes: string | null
   unitPriceCents: number | null
+  pricingBasis?: PricingBasis
 }

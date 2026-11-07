@@ -24,6 +24,13 @@ export const TIMEBLOCK_SECTION_TYPES = [
 
 export const FOOD_SERVICE_STYLES = ["Buffet", "Family-Style", "Plated", "Passed"] as const
 
+/**
+ * How a food or beverage item's price applies on the estimate: "each" is quantity × price
+ * (a platter, a keg); "per_person" is price × the event's guest count. Invoices always use
+ * quantity × price.
+ */
+export const PRICING_BASES = ["each", "per_person"] as const
+
 export const BEVERAGE_TYPES = ["Special Orders", "Beer", "Wine", "Coolers", "Rails", "Non-Alcoholic"] as const
 export const BEVERAGE_SERVICE_STYLES = ["Consumption Bar", "Cash Bar", "Open Bar", "Ticketed Bar"] as const
 

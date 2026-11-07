@@ -185,6 +185,8 @@ Each environment has its own isolated database, so branch work can't touch share
 - When changing the Convex schema:
   - Production already holds data. Make changes that existing documents still satisfy (e.g. new fields optional), or migrate the data first, and confirm existing data survives.
   - `npx convex deploy` refuses a schema that existing documents don't match.
+  - Pending one-off migrations (run once per deployment after deploying; safe to run again):
+    - Food/beverage `pricingBasis` (missing means "each"): `npx convex run --prod foodItems:backfillPricingBasis` and `npx convex run --prod beverageItems:backfillPricingBasis`.
 
 ## Dependency Overrides
 

@@ -4,8 +4,9 @@ import { internal } from "./_generated/api"
 import { internalMutation } from "./_generated/server"
 import { companyMutation, companyQuery } from "./lib/auth"
 import { foodItemNotesPatch, getFoodItemRecords, migratedFoodItemNotes, newFoodItemNotes, toFoodItemRecord } from "./lib/foodItemNotes"
+import { backfillPricingBasisBatch, DEFAULT_PRICING_BASIS } from "./lib/pricingBasis"
 import { assertUpdates, requireDocument, toRecord } from "./lib/records"
-import { foodServiceStyle, nullable } from "./lib/validators"
+import { foodServiceStyle, nullable, pricingBasis } from "./lib/validators"
 
 const editableFields = {
   name: v.optional(v.string()),
@@ -17,6 +18,8 @@ const editableFields = {
   // See lib/foodItemNotes.ts for when this can go.
   includes: v.optional(nullable(v.string())),
   unitPriceCents: v.optional(nullable(v.number())),
+  // Optional: older app builds don't send it; new items then get "each".
+  pricingBasis: v.optional(pricingBasis),
 }
 
 // Public functions; every handler requires a company identity (lib/auth.ts).
@@ -32,6 +35,7 @@ export const create = companyMutation({
       serviceStyle: values.serviceStyle ?? null,
       ...newFoodItemNotes(values),
       unitPriceCents: values.unitPriceCents ?? null,
+      pricingBasis: values.pricingBasis ?? DEFAULT_PRICING_BASIS,
     })
     return toFoodItemRecord(await requireDocument(ctx, "foodItems", id))
   },
@@ -100,5 +104,25 @@ export const migrateIncludesToClientNotes = internalMutation({
       await ctx.scheduler.runAfter(0, internal.foodItems.migrateIncludesToClientNotes, { cursor: batch.continueCursor, batchSize })
     }
     return { migrated, skipped, isDone: batch.isDone }
+  },
+})
+
+/**
+ * One-off migration for the pricing basis: sets `pricingBasis: "each"` on every food item
+ * saved before the field existed (missing already reads as "each", so nothing changes for
+ * the team). Items that have one are skipped, so running it twice is harmless. Batched like
+ * `migrateIncludesToClientNotes` above. Run once per deployment after deploying the schema change:
+ * `npx convex run --prod foodItems:backfillPricingBasis`
+ * The result covers the first batch only; later batches report in the deployment's logs.
+ */
+export const backfillPricingBasis = internalMutation({
+  args: { cursor: v.optional(v.union(v.string(), v.null())), batchSize: v.optional(v.number()) },
+  returns: v.object({ migrated: v.number(), skipped: v.number(), isDone: v.boolean() }),
+  handler: async (ctx, { cursor = null, batchSize = MIGRATION_BATCH_SIZE }) => {
+    const { continueCursor, ...result } = await backfillPricingBasisBatch(ctx, "foodItems", cursor, batchSize)
+    if (!result.isDone) {
+      await ctx.scheduler.runAfter(0, internal.foodItems.backfillPricingBasis, { cursor: continueCursor, batchSize })
+    }
+    return result
   },
 })

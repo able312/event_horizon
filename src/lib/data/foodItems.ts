@@ -1,11 +1,11 @@
-import type { FoodItem } from "~/definitions/database"
+import type { FoodItem, PricingBasis } from "~/definitions/database"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import { api } from "../../../convex/_generated/api"
 import { fetchSource, pickItemFields, runMutation } from "./backend"
 import { toId } from "./ids"
 import { sources } from "./sources"
 
-const EDITABLE_FIELDS = ["name", "quantity", "serviceStyle", "clientNotes", "internalNotes", "unitPriceCents"] as const
+const EDITABLE_FIELDS = ["name", "quantity", "serviceStyle", "clientNotes", "internalNotes", "unitPriceCents", "pricingBasis"] as const
 
 type FoodItemValues = {
   name?: string
@@ -14,6 +14,7 @@ type FoodItemValues = {
   clientNotes?: string
   internalNotes?: string
   unitPriceCents?: number
+  pricingBasis?: PricingBasis
 }
 
 export function getFoodSectionWithItems(eventId: string): Promise<TimeblockWithItems[]> {

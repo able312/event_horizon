@@ -29,6 +29,7 @@ import type * as lib_eventRequestPayload from "../lib/eventRequestPayload.js";
 import type * as lib_foodItemNotes from "../lib/foodItemNotes.js";
 import type * as lib_googleCalendar from "../lib/googleCalendar.js";
 import type * as lib_holidayFeed from "../lib/holidayFeed.js";
+import type * as lib_pricingBasis from "../lib/pricingBasis.js";
 import type * as lib_records from "../lib/records.js";
 import type * as lib_testIdentity from "../lib/testIdentity.js";
 import type * as lib_users from "../lib/users.js";
@@ -69,6 +70,7 @@ declare const fullApi: ApiFromModules<{
   "lib/foodItemNotes": typeof lib_foodItemNotes;
   "lib/googleCalendar": typeof lib_googleCalendar;
   "lib/holidayFeed": typeof lib_holidayFeed;
+  "lib/pricingBasis": typeof lib_pricingBasis;
   "lib/records": typeof lib_records;
   "lib/testIdentity": typeof lib_testIdentity;
   "lib/users": typeof lib_users;

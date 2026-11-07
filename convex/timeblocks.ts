@@ -7,6 +7,7 @@ import type { Doc, Id } from "./_generated/dataModel"
 import type { QueryCtx } from "./_generated/server"
 import { companyMutation, companyQuery } from "./lib/auth"
 import { getFoodItemRecords } from "./lib/foodItemNotes"
+import { toBeverageItemRecord } from "./lib/pricingBasis"
 import { assertUpdates, requireDocument, toRecord } from "./lib/records"
 import { nullable, timeblockSectionType, timeZone } from "./lib/validators"
 
@@ -22,7 +23,7 @@ async function getChildren(ctx: QueryCtx, id: Id<"timeblocks">) {
 async function withItems(ctx: QueryCtx, doc: Doc<"timeblocks">) {
   const beverageLinks = await ctx.db.query("beverageItemTimeblocks").withIndex("by_timeblock", (q) => q.eq("timeblockId", doc._id)).collect()
   const beverageItems = await Promise.all(beverageLinks.map(async (link) =>
-    toRecord(await requireDocument(ctx, "beverageItems", link.beverageItemId))))
+    toBeverageItemRecord(await requireDocument(ctx, "beverageItems", link.beverageItemId))))
   return { ...toRecord(doc), foodItems: await getFoodItemRecords(ctx, doc._id), beverageItems }
 }
 

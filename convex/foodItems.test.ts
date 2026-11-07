@@ -128,3 +128,61 @@ describe("food item notes", () => {
     })
   })
 })
+
+describe("food item pricing basis", () => {
+  it("saves and updates the pricing basis", async () => {
+    const { t, food, stored } = await setup()
+    const item = await t.mutation(api.foodItems.create, { timeblockId: food.id, name: "Canapés", pricingBasis: "per_person" })
+    expect(item).toMatchObject({ pricingBasis: "per_person" })
+    expect(await t.mutation(api.foodItems.update, { id: item.id, updates: { pricingBasis: "each" } }))
+      .toMatchObject({ pricingBasis: "each" })
+    expect(await stored(item.id)).toMatchObject({ pricingBasis: "each" })
+  })
+
+  it("stores \"each\" when an older build creates an item without one", async () => {
+    const { t, food, stored } = await setup()
+    const item = await t.mutation(api.foodItems.create, { timeblockId: food.id, name: "Platter", quantity: 2 })
+    expect(item).toMatchObject({ pricingBasis: "each" })
+    expect(await stored(item.id)).toMatchObject({ pricingBasis: "each" })
+    // Editing another field leaves it alone.
+    expect(await t.mutation(api.foodItems.update, { id: item.id, updates: { quantity: 3 } })).toMatchObject({ pricingBasis: "each" })
+  })
+
+  it("reads items stored without one as \"each\"", async () => {
+    const { t, eventId, food, insertLegacyItem, stored } = await setup()
+    const id = await insertLegacyItem("Salad", null)
+    expect(await stored(id)).not.toHaveProperty("pricingBasis")
+    const [section] = await t.query(api.foodItems.getByEventId, { eventId })
+    expect(section?.foodItems[0]).toMatchObject({ pricingBasis: "each" })
+    const focused = await t.query(api.timeblocks.getById, { id: food.id })
+    expect(focused?.foodItems[0]).toMatchObject({ pricingBasis: "each" })
+  })
+
+  describe("backfillPricingBasis", () => {
+    afterEach(() => vi.useRealTimers())
+
+    it("sets \"each\" where it is missing, skips items that have one, and can run twice", async () => {
+      const { t, food, insertLegacyItem, stored } = await setup()
+      const missing = await insertLegacyItem("Salad", null)
+      const perPerson = await t.mutation(api.foodItems.create, { timeblockId: food.id, name: "Canapés", pricingBasis: "per_person" })
+
+      expect(await t.mutation(internal.foodItems.backfillPricingBasis, {})).toEqual({ migrated: 1, skipped: 1, isDone: true })
+      const doc = await stored(missing)
+      expect(doc).toMatchObject({ pricingBasis: "each" })
+      expect(doc).not.toHaveProperty("updatedBy")
+      expect(await stored(perPerson.id)).toMatchObject({ pricingBasis: "per_person" })
+
+      expect(await t.mutation(internal.foodItems.backfillPricingBasis, {})).toEqual({ migrated: 0, skipped: 2, isDone: true })
+    })
+
+    it("schedules the next batch until the whole table is done", async () => {
+      vi.useFakeTimers()
+      const { t, insertLegacyItem, stored } = await setup()
+      const ids = [await insertLegacyItem("Salad", null), await insertLegacyItem("Bread", null), await insertLegacyItem("Soup", null)]
+
+      expect(await t.mutation(internal.foodItems.backfillPricingBasis, { batchSize: 1 })).toEqual({ migrated: 1, skipped: 0, isDone: false })
+      await t.finishAllScheduledFunctions(vi.runAllTimers)
+      for (const id of ids) expect(await stored(id)).toMatchObject({ pricingBasis: "each" })
+    })
+  })
+})

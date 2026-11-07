@@ -16,6 +16,7 @@ import {
   holidayEntry,
   nullable,
   playFormat,
+  pricingBasis,
   startFormat,
   timeblockSectionType,
 } from "./lib/validators"
@@ -152,6 +153,9 @@ export default defineSchema({
     clientNotes: v.optional(nullable(v.string())),
     internalNotes: v.optional(nullable(v.string())),
     unitPriceCents: nullable(v.number()),
+    // Optional: items saved before the field existed have none and mean "each" (lib/pricingBasis.ts).
+    // `*:backfillPricingBasis` fills it in; it can become required once that has run everywhere.
+    pricingBasis: v.optional(pricingBasis),
     ...auditWithUpdatedAt,
   }).index("by_timeblock", ["timeblockId"]),
 
@@ -163,6 +167,9 @@ export default defineSchema({
     serviceStyle: nullable(beverageServiceStyle),
     includes: nullable(v.string()),
     unitPriceCents: nullable(v.number()),
+    // Optional: items saved before the field existed have none and mean "each" (lib/pricingBasis.ts).
+    // `*:backfillPricingBasis` fills it in; it can become required once that has run everywhere.
+    pricingBasis: v.optional(pricingBasis),
     ...auditWithUpdatedAt,
   }).index("by_event", ["eventId"]),
 

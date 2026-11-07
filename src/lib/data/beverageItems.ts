@@ -1,4 +1,4 @@
-import type { BeverageItem, BeverageItemType } from "~/definitions/database"
+import type { BeverageItem, BeverageItemType, PricingBasis } from "~/definitions/database"
 import type { BeverageItemWithAssignments, BeverageSectionPayload } from "~/definitions/beverage/beverage-types"
 import { api } from "../../../convex/_generated/api"
 import { fetchSource, pickItemFields, runMutation } from "./backend"
@@ -6,7 +6,7 @@ import { toId, toIds } from "./ids"
 import { createWithClientId, resolveRecordId } from "./optimisticIds"
 import { sources } from "./sources"
 
-const EDITABLE_FIELDS = ["name", "quantity", "type", "serviceStyle", "includes", "unitPriceCents"] as const
+const EDITABLE_FIELDS = ["name", "quantity", "type", "serviceStyle", "includes", "unitPriceCents", "pricingBasis"] as const
 
 type NewBeverageItemInput = {
   /** Client ID of the row already shown; the created item gets a server ID (see optimisticIds.ts). */
@@ -18,6 +18,7 @@ type NewBeverageItemInput = {
   serviceStyle?: BeverageItem["serviceStyle"]
   includes?: string
   unitPriceCents?: number
+  pricingBasis?: PricingBasis
 }
 
 export function getBeverageSectionWithItems(eventId: string): Promise<BeverageSectionPayload> {
@@ -52,6 +53,7 @@ export async function updateBeverageItem(id: string, updates: {
   serviceStyle?: BeverageItem["serviceStyle"]
   includes?: string | null
   unitPriceCents?: number | null
+  pricingBasis?: PricingBasis
 }): Promise<BeverageItem> {
   return runMutation(api.beverageItems.update, {
     id: toId<"beverageItems">(await resolveRecordId(id)),
