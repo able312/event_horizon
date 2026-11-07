@@ -290,8 +290,10 @@ const TimeblockBillingControls: React.FC<{
 }
 
 function foodRowStatus(timeblock: TimeblockWithItems, item: BillingItem): RowStatus {
-  if (isAddOn(timeblock)) return "in-add-on-timeblock"
+  // An item flagged on its own is a separate add-on even inside an add-on timeblock, so it
+  // stays visible and can be unticked there.
   if (isAddOn(item)) return isCoveredByPackagePrice(timeblock, item) ? "add-on-in-package-price" : "add-on"
+  if (isAddOn(timeblock)) return "in-add-on-timeblock"
   if (isCoveredByPackagePrice(timeblock, item)) return "in-package-price"
   return "counted"
 }

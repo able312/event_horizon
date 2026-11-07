@@ -102,6 +102,28 @@ describe("splitEstimateAddOns", () => {
     ])
   })
 
+  it("keeps an item flagged on its own separate from its add-on timeblock", () => {
+    const dinner = timeblock(
+      "dinner",
+      "Dinner",
+      [
+        food({ id: "main", name: "Main", quantity: 1, unitPriceCents: 10000, pricingBasis: "each" }),
+        food({ id: "dessert", name: "Dessert", quantity: 1, unitPriceCents: 2000, pricingBasis: "each", isAddOn: true }),
+      ],
+      { isAddOn: true },
+    )
+    const offered = splitEstimateAddOns([dinner], [])
+    expect(offered.addOns).toEqual([
+      { key: "timeblock-dinner", name: "Dinner", includes: ["Main"], fixedCents: 10000, perPersonRateCents: 0 },
+      { key: "food-dessert", name: "Dessert", includes: [], fixedCents: 2000, perPersonRateCents: 0 },
+    ])
+
+    // Accepting the timeblock bills what it offered; the dessert is still optional.
+    const accepted = splitEstimateAddOns([{ ...dinner, isAddOn: false }], [])
+    expect(accepted.foodTimeblocks[0].foodItems?.map((item) => item.id)).toEqual(["main"])
+    expect(accepted.addOns.map((addOn) => addOn.key)).toEqual(["food-dessert"])
+  })
+
   it("takes add-on beverages out, after the food add-ons", () => {
     const dinner = timeblock("dinner", "Dinner", [food({ id: "cake", isAddOn: true, quantity: 1, unitPriceCents: 5000 })])
     const bar = beverage({ id: "bar", name: "Bar upgrade", unitPriceCents: 1200, pricingBasis: "per_person", isAddOn: true })

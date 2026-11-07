@@ -67,13 +67,14 @@ export function splitEstimateAddOns<B extends BeverageItem>(
   const counted: TimeblockWithItems[] = []
 
   for (const timeblock of foodTimeblocks ?? []) {
-    if (isAddOn(timeblock)) {
-      addOns.push(timeblockAddOn(timeblock))
-      continue
-    }
+    // An item flagged on its own stays a separate add-on, even inside an add-on timeblock:
+    // accepting the timeblock (clearing its flag) leaves the item's flag set, so the
+    // timeblock's offered price and contents must not include it.
     const items = timeblock.foodItems ?? []
+    const ownTimeblock = { ...timeblock, foodItems: items.filter((item) => !isAddOn(item)) }
+    if (isAddOn(timeblock)) addOns.push(timeblockAddOn(ownTimeblock))
     for (const item of items.filter(isAddOn)) addOns.push(itemAddOn(`food-${item.id}`, item))
-    counted.push({ ...timeblock, foodItems: items.filter((item) => !isAddOn(item)) })
+    if (!isAddOn(timeblock)) counted.push(ownTimeblock)
   }
 
   const beverages = beverageItems ?? []
