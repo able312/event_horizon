@@ -1,6 +1,7 @@
 import React from "react"
 
 import EstimateProposalSection from "~/features/event-detail/sections/financial-workspace/EstimateProposalSection"
+import { splitEstimateAddOns } from "~/features/event-detail/workspace/lib/estimateAddOns"
 import MenuOfChargeSection from "~/features/event-detail/sections/financial-workspace/MenuOfChargeSection"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
 import { useFoodSection } from "~/hooks/useFoodSection"
@@ -31,16 +32,19 @@ const FinancialWorkspaceSection: React.FC<FinancialWorkspaceSectionProps> = ({ e
   const {
     data: foodTimeblocks,
     updateItem: updateFoodItem,
+    updateTimeblock: updateFoodTimeblock,
   } = useFoodSection()
   const {
     items: beverageItems,
     updateItem: updateBeverageItem,
   } = useBeverageSection()
 
+  // Optional add-ons are offered separately and left out of the summary.
+  const counted = splitEstimateAddOns(foodTimeblocks, beverageItems)
   const { low, high } = computeEstimateSummaryRange({
     menuItems,
-    foodTimeblocks,
-    beverageItems,
+    foodTimeblocks: counted.foodTimeblocks,
+    beverageItems: counted.beverageItems,
     guests,
   })
   const formatRange = (pick: (summary: FinancialSummary) => number) => formatCurrencyRange(pick(low), pick(high))
@@ -75,6 +79,7 @@ const FinancialWorkspaceSection: React.FC<FinancialWorkspaceSectionProps> = ({ e
           onNavigateToFood={() => onSelectWorkspaceNode("category:food")}
           onNavigateToBeverage={() => onSelectWorkspaceNode("category:beverage")}
           onUpdateFoodBillingItem={updateFoodItem}
+          onUpdateFoodBillingTimeblock={({ timeblockId, updates }) => updateFoodTimeblock({ id: timeblockId, updates })}
           onUpdateBeverageBillingItem={({ itemId, updates }) =>
             updateBeverageItem({ itemId, updates })
           }

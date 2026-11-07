@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 
+import { splitEstimateAddOns } from "~/features/event-detail/workspace/lib/estimateAddOns"
 import { computeFinancialSummaryAllSources } from "~/features/event-detail/workspace/lib/financial"
 import { getFinancialDocumentKindLabels } from "~/features/preview/lib/financialDocumentKinds"
 import {
@@ -32,9 +33,9 @@ export default function InvoicePreview() {
   const chargeQuery = useMenuOfChargeItemsSection()
   const chargeItems = chargeQuery.data
   const foodQuery = useFoodSection()
-  const food = foodQuery.data
   const beverageQuery = useBeverageSection()
-  const beverageItems = beverageQuery.items
+  // Add-ons the client has not accepted (still flagged) are not billed.
+  const { foodTimeblocks: food, beverageItems } = splitEstimateAddOns(foodQuery.data, beverageQuery.items)
   const paymentsQuery = usePaymentsSection()
   const payments = paymentsQuery.data ?? []
   const queries = combineQueryStates([
@@ -52,7 +53,7 @@ export default function InvoicePreview() {
   const chargeItemsByCategory = useMemo(() => groupChargeItemsByCategory(chargeItems), [chargeItems])
   const chargeTables = buildChargeTableSpecs({
     chargeItemsByCategory,
-    billableFoodRows: (food ?? []).flatMap((timeblock) =>
+    billableFoodRows: food.flatMap((timeblock) =>
       (timeblock.foodItems ?? []).filter(isBillableLineItem),
     ),
     billableBeverageRows: beverageItems.filter(isBillableLineItem),

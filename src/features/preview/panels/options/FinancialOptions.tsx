@@ -1,3 +1,4 @@
+import { isAddOn } from "~/features/event-detail/workspace/lib/estimateAddOns"
 import { FOOD_PACKAGE_ESTIMATE_MODE_OPTIONS } from "~/features/preview/lib/foodPackages"
 import {
   PreviewOptionSection,
@@ -21,7 +22,8 @@ export function FinancialOptions() {
   const { data: food } = useFoodSection()
   const { items: beverageItems } = useBeverageSection()
 
-  const foodOptions = toTimeblockOptions(food)
+  // Add-on timeblocks are offered separately, never as package options.
+  const foodOptions = toTimeblockOptions(food?.filter((tb) => !isAddOn(tb)))
   const packageSelected = filterSelectedIds(
     prefs.foodPackageTimeblockIds,
     foodOptions.map((o) => o.id),

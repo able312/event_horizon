@@ -3,9 +3,10 @@ import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-typ
 import {
   GRATUITY_RATE,
   HST_RATE,
-  computeBillableLineTotalCents,
   computeEstimateSummaryRange,
-  getPricingBasis,
+  computeFoodTimeblockRates,
+  getPackagePricePerPersonCents,
+  isCoveredByPackagePrice,
   toCurrency,
   type EstimateSummaryRange,
   type GuestCountRange,
@@ -101,10 +102,15 @@ export type PerPersonPricing = {
 export type FoodPackageSummary = {
   timeblockId: string
   title: string
-  /** Quantity × price over the package's "each" items. */
+  /** Quantity × price over the package's fixed-price ("each") items, e.g. platters. */
   eachSubtotalCents: number
-  /** The package's per-person prices added up: what each guest adds to its subtotal. */
+  /**
+   * What each guest adds to the package subtotal: its package price when set, otherwise its
+   * per-person items' prices added up.
+   */
   perPersonRateCents: number
+  /** The package price per person set on the timeblock; null when its items are priced individually. */
+  packagePricePerPersonCents: number | null
   /**
    * The whole package at the fewest guests (low) and the most (high). Equal without
    * per-person items; without a guest count, per-person items are left out of both.
@@ -129,20 +135,14 @@ export function summarizeFoodPackage(
   guests: GuestCountRange | null,
 ): FoodPackageSummary {
   const items = timeblock.foodItems ?? []
-  const rates = {
-    eachSubtotalCents: items
-      .filter((item) => getPricingBasis(item) === "each")
-      .reduce((sum, item) => sum + computeBillableLineTotalCents(item), 0),
-    perPersonRateCents: items
-      .filter((item) => getPricingBasis(item) === "per_person")
-      .reduce((sum, item) => sum + (item.unitPriceCents ?? 0), 0),
-  }
+  const rates = computeFoodTimeblockRates(timeblock)
   const subtotalAt = (guestCount: number | null) => computeFoodPackageSubtotalCents(rates, guestCount)
 
   return {
     timeblockId: timeblock.id,
     title: timeblock.title,
     ...rates,
+    packagePricePerPersonCents: getPackagePricePerPersonCents(timeblock),
     totals: {
       low: computeFoodChargeBreakdown(subtotalAt(guests?.min ?? null)),
       high: computeFoodChargeBreakdown(subtotalAt(guests?.max ?? null)),
@@ -154,7 +154,9 @@ export function summarizeFoodPackage(
           atMinGuests: computeFoodChargeBreakdown(subtotalAt(guests.min) / guests.min),
         }
       : null,
-    unpricedItemNames: items.filter((item) => !isEstimateBillableLineItem(item)).map((item) => item.name),
+    unpricedItemNames: items
+      .filter((item) => !isCoveredByPackagePrice(timeblock, item) && !isEstimateBillableLineItem(item))
+      .map((item) => item.name),
   }
 }
 

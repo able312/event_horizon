@@ -186,6 +186,53 @@ describe("summarizeFoodPackage", () => {
   it("has no per-person pricing without a guest count", () => {
     expect(summarizeFoodPackage(packageB, null).perPerson).toBeNull()
   })
+
+  it("prices per person by the package price, keeping fixed-price items like platters on top", () => {
+    const priced = {
+      ...makeTimeblock("pkg-p", "Package P", [
+        { id: "p1", name: "Wings platter", quantity: 4, unitPriceCents: 10000, pricingBasis: "each" }, // 40000
+        { id: "p2", name: "Salad", quantity: null, unitPriceCents: 800, pricingBasis: "per_person" },
+        { id: "p3", name: "Chicken", quantity: null, unitPriceCents: null, pricingBasis: "per_person" },
+      ]),
+      packagePricePerPersonCents: 4500,
+    }
+    const summary = summarizeFoodPackage(priced, { min: 25, max: 50 })
+
+    expect(summary.packagePricePerPersonCents).toBe(4500)
+    expect(summary.perPersonRateCents).toBe(4500)
+    expect(summary.eachSubtotalCents).toBe(40000)
+    // 40000 + 4500 × 25 = 152500; 40000 + 4500 × 50 = 265000
+    expect(summary.totals.low.subtotalCents).toBe(152500)
+    expect(summary.totals.high.subtotalCents).toBe(265000)
+    // The chicken has no price of its own, but the package price covers it.
+    expect(summary.unpricedItemNames).toEqual([])
+  })
+})
+
+describe("package price in the estimate totals", () => {
+  const priced = {
+    ...makeTimeblock("dinner", "Dinner", [
+      { id: "d1", name: "Wings platter", quantity: 4, unitPriceCents: 10000, pricingBasis: "each" },
+      { id: "d2", name: "Buffet", quantity: 50, unitPriceCents: 3000, pricingBasis: "per_person" },
+    ]),
+    packagePricePerPersonCents: 4500,
+  }
+
+  it("replaces per-person items with the package price × guests on the estimate", () => {
+    const range = computeEstimateSummaryRange({ menuItems: [], foodTimeblocks: [priced], beverageItems: [], guests: { min: 25, max: 50 } })
+    expect(range.low.foodSubtotalCents).toBe(40000 + 4500 * 25)
+    expect(range.high.foodSubtotalCents).toBe(40000 + 4500 * 50)
+  })
+
+  it("keeps only the fixed-price items without a guest count", () => {
+    const range = computeEstimateSummaryRange({ menuItems: [], foodTimeblocks: [priced], beverageItems: [], guests: null })
+    expect(range.low.foodSubtotalCents).toBe(40000)
+  })
+
+  it("bills quantity × price on the invoice, ignoring the package price", () => {
+    const summary = computeFinancialSummaryAllSources({ menuItems: [], foodTimeblocks: [priced], beverageItems: [] })
+    expect(summary.foodSubtotalCents).toBe(40000 + 50 * 3000)
+  })
 })
 
 describe("splitFoodPackageTimeblocks", () => {

@@ -3,10 +3,13 @@ import React, { useMemo } from "react"
 import type { BeverageItem, FoodItem, PricingBasis } from "~/definitions/database"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import { getVisibleBeverageTypeSections } from "~/features/event-detail/sections/food-beverage-workspaces/beverage/beverageTypeSections"
+import { isAddOn } from "~/features/event-detail/workspace/lib/estimateAddOns"
 import {
   centsToDollars,
   dollarsToCents,
+  getPackagePricePerPersonCents,
   getPricingBasis,
+  isCoveredByPackagePrice,
 } from "~/features/event-detail/workspace/lib/financial"
 import { formatCurrencyRange, type GuestCountRange } from "~/features/preview/lib/foodPackages"
 import {
@@ -18,15 +21,24 @@ import {
   SECTION_TABLE_HEAD_CELL_CLASS_RIGHT,
   SECTION_TABLE_HEAD_ROW_CLASS,
 } from "../../../../components/event-detail/detail-sections/sections/tableStyles"
-import { computeEstimateLineTotal, sumEstimateBillingItems, type CentsRange } from "./estimateLineTotals"
+import { computeEstimateLineTotal, sumEstimatePlanning, type CentsRange } from "./estimateLineTotals"
 
 export type BillingItemUpdates = {
   quantity?: number | null
   unitPriceCents?: number | null
   pricingBasis?: PricingBasis
+  isAddOn?: boolean
 }
 
-type BillingItem = Pick<FoodItem, "id" | "name" | "quantity" | "unitPriceCents" | "pricingBasis">
+export type BillingTimeblockUpdates = {
+  isAddOn?: boolean
+  packagePricePerPersonCents?: number | null
+}
+
+type BillingItem = Pick<FoodItem, "id" | "name" | "quantity" | "unitPriceCents" | "pricingBasis" | "isAddOn">
+
+/** How a row counts toward the estimate, beyond its own pricing. */
+type RowStatus = "counted" | "add-on" | "in-add-on-timeblock" | "in-package-price"
 
 const PRICING_BASIS_OPTIONS: Array<{ value: PricingBasis; label: string }> = [
   { value: "each", label: "Each" },
@@ -34,12 +46,18 @@ const PRICING_BASIS_OPTIONS: Array<{ value: PricingBasis; label: string }> = [
 ]
 
 const PLANNING_BILLING_CARD_CLASS = "rounded-xs border border-border bg-background p-3 shadow-sm"
-const PLANNING_BILLING_TABLE_CLASS = `${SECTION_TABLE_CLASS} table-fixed min-w-[640px]`
+const PLANNING_BILLING_TABLE_CLASS = `${SECTION_TABLE_CLASS} table-fixed min-w-[700px]`
 const CELL_INPUT_CLASS =
   "ml-auto block h-7 border-0 border-b border-border bg-transparent px-1 text-right text-xs focus:border-primary focus:outline-none"
 
 function formatLineTotal(total: CentsRange | null): string {
   return total ? formatCurrencyRange(total.lowCents, total.highCents) : "Needs guest count"
+}
+
+const ROW_STATUS_NOTE: Record<Exclude<RowStatus, "counted">, string> = {
+  "add-on": "Add-on, not in total",
+  "in-add-on-timeblock": "Add-on, not in total",
+  "in-package-price": "In package price",
 }
 
 function renderPlanningCta(onNavigateToPlanning?: () => void, prefix = "Start planning") {
@@ -73,7 +91,7 @@ const PlanningBillingCard: React.FC<{
     </div>
     <p className="text-xs text-muted-foreground">
       These items are organized in planning. Set how each is priced here: each (quantity × price) or per person
-      (price × guests).
+      (price × guests). Tick Add-on to offer an item separately, left out of the total until the client accepts it.
     </p>
 
     {isEmpty ? (
@@ -95,11 +113,14 @@ const PlanningBillingGroup: React.FC<{
   heading: string
   isEmpty: boolean
   onNavigateToPlanning?: () => void
+  /** Timeblock-level controls (food only): add-on and package price. */
+  controls?: React.ReactNode
   children: React.ReactNode
-}> = ({ heading, isEmpty, onNavigateToPlanning, children }) => (
+}> = ({ heading, isEmpty, onNavigateToPlanning, controls, children }) => (
   <div className="space-y-0.5">
-    <div className="border-b border-border/70 bg-muted/25 px-2 py-1.5">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 bg-muted/25 px-2 py-1.5">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{heading}</p>
+      {controls}
     </div>
 
     {isEmpty ? (
@@ -112,6 +133,7 @@ const PlanningBillingGroup: React.FC<{
         <table className={PLANNING_BILLING_TABLE_CLASS}>
           <colgroup>
             <col />
+            <col className="w-16" />
             <col className="w-28" />
             <col className="w-16" />
             <col className="w-28" />
@@ -120,6 +142,7 @@ const PlanningBillingGroup: React.FC<{
           <thead>
             <tr className={SECTION_TABLE_HEAD_ROW_CLASS}>
               <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Item</th>
+              <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Add-on</th>
               <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Pricing</th>
               <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Qty</th>
               <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Unit Price ($)</th>
@@ -137,14 +160,27 @@ const EstimateBillingRow: React.FC<{
   label: string
   item: BillingItem
   guests: GuestCountRange | null
+  status: RowStatus
   onUpdate?: (updates: BillingItemUpdates) => void
-}> = ({ label, item, guests, onUpdate }) => {
+}> = ({ label, item, guests, status, onUpdate }) => {
   const pricingBasis = getPricingBasis(item)
   const isPerPerson = pricingBasis === "per_person"
+  const statusNote = status === "counted" ? null : ROW_STATUS_NOTE[status]
 
   return (
-    <tr className={SECTION_TABLE_BODY_ROW_CLASS}>
+    <tr className={`${SECTION_TABLE_BODY_ROW_CLASS} ${status === "add-on" ? "bg-sky-50/60" : ""}`}>
       <td className={`${SECTION_TABLE_BODY_CELL_CLASS} text-xs text-foreground`}>{item.name || "Untitled item"}</td>
+      <td className={SECTION_TABLE_BODY_CELL_CLASS}>
+        <input
+          type="checkbox"
+          checked={isAddOn(item)}
+          disabled={status === "in-add-on-timeblock"}
+          onChange={(e) => onUpdate?.({ isAddOn: e.target.checked })}
+          className="h-3.5 w-3.5 accent-orange-500"
+          title="Offer as an optional add-on, left out of the total until the client accepts it"
+          aria-label={`${label} Add-on`}
+        />
+      </td>
       <td className={SECTION_TABLE_BODY_CELL_CLASS}>
         <select
           value={pricingBasis}
@@ -176,16 +212,72 @@ const EstimateBillingRow: React.FC<{
           inputMode="decimal"
           defaultValue={centsToDollars(item.unitPriceCents).toFixed(2)}
           onBlur={(e) => onUpdate?.({ unitPriceCents: Math.max(0, dollarsToCents(e.target.value)) })}
-          className={`${CELL_INPUT_CLASS} w-20`}
+          className={`${CELL_INPUT_CLASS} w-20 ${status === "in-package-price" ? "text-muted-foreground" : ""}`}
+          title={status === "in-package-price" ? "Not used on the estimate: the package price covers this item." : undefined}
           aria-label={`${label} Unit Price`}
         />
         {isPerPerson ? <span className="block text-[10px] text-muted-foreground">per person</span> : null}
       </td>
       <td className={`${SECTION_TABLE_BODY_CELL_CLASS} text-right text-xs font-medium`}>
-        {formatLineTotal(computeEstimateLineTotal(item, guests))}
+        {status === "in-package-price" ? (
+          <span className="text-muted-foreground">{statusNote}</span>
+        ) : (
+          <>
+            <span className={statusNote ? "text-muted-foreground" : undefined}>
+              {formatLineTotal(computeEstimateLineTotal(item, guests))}
+            </span>
+            {statusNote ? <span className="block text-[10px] text-sky-700">{statusNote}</span> : null}
+          </>
+        )}
       </td>
     </tr>
   )
+}
+
+const TimeblockBillingControls: React.FC<{
+  timeblock: TimeblockWithItems
+  onUpdate?: (updates: BillingTimeblockUpdates) => void
+}> = ({ timeblock, onUpdate }) => {
+  const packagePrice = getPackagePricePerPersonCents(timeblock)
+  return (
+    <div className="flex flex-wrap items-center gap-4 text-xs">
+      <label className="inline-flex items-center gap-1.5">
+        <span className="text-muted-foreground">Package price / person ($)</span>
+        <input
+          key={packagePrice ?? "none"}
+          type="text"
+          inputMode="decimal"
+          placeholder="None"
+          defaultValue={packagePrice == null ? "" : centsToDollars(packagePrice).toFixed(2)}
+          onBlur={(e) => {
+            const value = e.target.value.trim()
+            const next = value ? Math.max(0, dollarsToCents(value)) : null
+            if (next !== packagePrice) onUpdate?.({ packagePricePerPersonCents: next })
+          }}
+          className={`${CELL_INPUT_CLASS} w-20`}
+          title="Replaces this timeblock's per-person item prices. Fixed-price items (each), like platters, still add their own price."
+          aria-label={`${timeblock.title} Package price per person`}
+        />
+      </label>
+      <label className="inline-flex items-center gap-1.5">
+        <input
+          type="checkbox"
+          checked={isAddOn(timeblock)}
+          onChange={(e) => onUpdate?.({ isAddOn: e.target.checked })}
+          className="h-3.5 w-3.5 accent-orange-500"
+          aria-label={`${timeblock.title} Add-on`}
+        />
+        <span className="text-muted-foreground">Whole timeblock is an add-on</span>
+      </label>
+    </div>
+  )
+}
+
+function foodRowStatus(timeblock: TimeblockWithItems, item: BillingItem): RowStatus {
+  if (isAddOn(timeblock)) return "in-add-on-timeblock"
+  if (isAddOn(item)) return "add-on"
+  if (isCoveredByPackagePrice(timeblock, item)) return "in-package-price"
+  return "counted"
 }
 
 export const FoodPlanningBillingSection: React.FC<{
@@ -193,8 +285,9 @@ export const FoodPlanningBillingSection: React.FC<{
   guests: GuestCountRange | null
   onNavigateToPlanning?: () => void
   onUpdateItem?: (payload: { timeblockId: string; itemId: string; updates: BillingItemUpdates }) => void
-}> = ({ timeblocks, guests, onNavigateToPlanning, onUpdateItem }) => {
-  const subtotal = sumEstimateBillingItems(timeblocks.flatMap((timeblock) => timeblock.foodItems ?? []), guests)
+  onUpdateTimeblock?: (payload: { timeblockId: string; updates: BillingTimeblockUpdates }) => void
+}> = ({ timeblocks, guests, onNavigateToPlanning, onUpdateItem, onUpdateTimeblock }) => {
+  const subtotal = sumEstimatePlanning(timeblocks, [], guests).food
 
   return (
     <PlanningBillingCard
@@ -209,9 +302,15 @@ export const FoodPlanningBillingSection: React.FC<{
         return (
           <PlanningBillingGroup
             key={timeblock.id}
-            heading={timeblock.title}
+            heading={isAddOn(timeblock) ? `${timeblock.title} (add-on)` : timeblock.title}
             isEmpty={items.length === 0}
             onNavigateToPlanning={onNavigateToPlanning}
+            controls={
+              <TimeblockBillingControls
+                timeblock={timeblock}
+                onUpdate={(updates) => onUpdateTimeblock?.({ timeblockId: timeblock.id, updates })}
+              />
+            }
           >
             {items.map((item) => (
               <EstimateBillingRow
@@ -219,6 +318,7 @@ export const FoodPlanningBillingSection: React.FC<{
                 label="Food"
                 item={item}
                 guests={guests}
+                status={foodRowStatus(timeblock, item)}
                 onUpdate={(updates) => onUpdateItem?.({ timeblockId: timeblock.id, itemId: item.id, updates })}
               />
             ))}
@@ -245,7 +345,7 @@ export const BeveragePlanningBillingSection: React.FC<{
       title="Beverage"
       isEmpty={items.length === 0}
       emptyLabel="No beverage items from planning yet."
-      subtotal={sumEstimateBillingItems(items, guests)}
+      subtotal={sumEstimatePlanning([], items, guests).beverage}
       onNavigateToPlanning={onNavigateToPlanning}
     >
       {typeSections.map((section) => (
@@ -261,6 +361,7 @@ export const BeveragePlanningBillingSection: React.FC<{
               label="Beverage"
               item={item}
               guests={guests}
+              status={isAddOn(item) ? "add-on" : "counted"}
               onUpdate={(updates) => onUpdateItem?.({ itemId: item.id, updates })}
             />
           ))}

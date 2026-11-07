@@ -221,4 +221,60 @@ describe("MenuOfChargeSection", () => {
     expect(screen.getByText("Needs guest count")).toBeTruthy()
     expect(screen.getByText("Food Subtotal: $300.00")).toBeTruthy()
   })
+
+  it("leaves add-ons out of the subtotal and prices a timeblock by its package price", () => {
+    const updateFoodBillingItem = vi.fn()
+    const updateFoodBillingTimeblock = vi.fn()
+    hookMock.useMenuOfChargeItemsSection.mockReturnValue({
+      data: [],
+      createMenuOfChargeItemAsync: vi.fn(async () => ({ id: "new-id" })),
+      updateMenuOfChargeItem: vi.fn(),
+      deleteMenuOfChargeItemAsync: vi.fn(async () => true),
+    })
+
+    const foodTimeblocks = [
+      {
+        id: "food-tb-1",
+        title: "Dinner",
+        packagePricePerPersonCents: 4500,
+        foodItems: [
+          { id: "food-1", name: "Buffet", quantity: 0, unitPriceCents: 3000, pricingBasis: "per_person" },
+          { id: "food-2", name: "Wings platter", quantity: 2, unitPriceCents: 10000, pricingBasis: "each" },
+          { id: "food-3", name: "Dessert station", quantity: 0, unitPriceCents: 800, pricingBasis: "per_person", isAddOn: true },
+        ],
+      } as never,
+    ]
+
+    render(
+      <MenuOfChargeSection
+        foodTimeblocks={foodTimeblocks}
+        guests={{ min: 50, max: 50 }}
+        onUpdateFoodBillingItem={updateFoodBillingItem}
+        onUpdateFoodBillingTimeblock={updateFoodBillingTimeblock}
+      />,
+    )
+
+    // $45 × 50 + 2 × $100; the buffet is covered and the dessert station is an add-on
+    expect(screen.getByText("Food Subtotal: $2,450.00")).toBeTruthy()
+    expect(screen.getByText("In package price")).toBeTruthy()
+    expect(screen.getByText("Add-on, not in total")).toBeTruthy()
+
+    fireEvent.click(screen.getAllByLabelText("Food Add-on")[1])
+    expect(updateFoodBillingItem).toHaveBeenCalledWith({
+      timeblockId: "food-tb-1",
+      itemId: "food-2",
+      updates: { isAddOn: true },
+    })
+
+    const packagePrice = screen.getByLabelText("Dinner Package price per person")
+    fireEvent.change(packagePrice, { target: { value: "" } })
+    fireEvent.blur(packagePrice)
+    expect(updateFoodBillingTimeblock).toHaveBeenCalledWith({
+      timeblockId: "food-tb-1",
+      updates: { packagePricePerPersonCents: null },
+    })
+
+    fireEvent.click(screen.getByLabelText("Dinner Add-on"))
+    expect(updateFoodBillingTimeblock).toHaveBeenCalledWith({ timeblockId: "food-tb-1", updates: { isAddOn: true } })
+  })
 })

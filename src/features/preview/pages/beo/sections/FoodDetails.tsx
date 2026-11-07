@@ -1,4 +1,5 @@
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
+import { isAddOn } from "~/features/event-detail/workspace/lib/estimateAddOns"
 import { computeBillableLineTotalCents, toCurrency } from "~/features/event-detail/workspace/lib/financial"
 import { KitchenNote } from "~/features/preview/components/KitchenNote"
 import {
@@ -24,7 +25,10 @@ export function FoodTimeblockDetails({
     <div className="mb-4 last:mb-0">
       <div className="border border-stone-200 bg-stone-50 px-2 py-1.5">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <h3 className="text-sm font-bold text-stone-800">{timeblock.title}</h3>
+          <h3 className="text-sm font-bold text-stone-800">
+            {timeblock.title}
+            {isAddOn(timeblock) ? <span className="ml-1.5 text-[10px] font-normal uppercase tracking-wide text-stone-500">(add-on, not confirmed)</span> : null}
+          </h3>
           <div className="flex flex-wrap gap-x-4 text-xs text-stone-600">
             {timeblock.time ? <span>Time: {timeblock.time}</span> : null}
             {timeblock.assignedTo ? <span>Assigned: {timeblock.assignedTo}</span> : null}
@@ -77,7 +81,10 @@ export function FoodTimeblockDetails({
                       : "grid-cols-[minmax(0,2fr)_1fr_auto]"
                   }`}
                 >
-                  <p className="font-semibold">{food.name}</p>
+                  <p className="font-semibold">
+                    {food.name}
+                    {isAddOn(food) ? <span className="ml-1.5 text-[10px] font-normal uppercase tracking-wide text-stone-500">(add-on, not confirmed)</span> : null}
+                  </p>
                   <p>{food.serviceStyle ?? ""}</p>
                   <p className="text-end tabular-nums">{qty}</p>
                   {showPricing ? (

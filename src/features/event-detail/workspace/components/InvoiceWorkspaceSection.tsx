@@ -1,5 +1,6 @@
 import React from "react"
 
+import { splitEstimateAddOns } from "~/features/event-detail/workspace/lib/estimateAddOns"
 import PaymentsSection from "~/features/event-detail/sections/financial-workspace/PaymentsSection"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
 import { useFoodSection } from "~/hooks/useFoodSection"
@@ -18,8 +19,10 @@ interface InvoiceWorkspaceSectionProps {
 const InvoiceWorkspaceSection: React.FC<InvoiceWorkspaceSectionProps> = ({ eventId }) => {
   const openPreview = useOpenPreview(eventId)
   const { data: menuItems } = useMenuOfChargeItemsSection()
-  const { data: foodTimeblocks } = useFoodSection()
-  const { items: beverageItems } = useBeverageSection()
+  const { data: foodData } = useFoodSection()
+  const { items: beverageData } = useBeverageSection()
+  // Add-ons the client has not accepted (still flagged) are not billed.
+  const { foodTimeblocks, beverageItems } = splitEstimateAddOns(foodData, beverageData)
   const { data: payments } = usePaymentsSection()
 
   const summary = computeFinancialSummaryAllSources({

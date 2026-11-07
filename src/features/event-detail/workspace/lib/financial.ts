@@ -76,18 +76,69 @@ function computeFoodOrBeverageLineCents(
   return computeEstimateLineTotalCents(item, perPersonGuestCount) ?? 0
 }
 
+/** The package price per person set on a food timeblock, or null when its items are priced individually. */
+export function getPackagePricePerPersonCents(
+  timeblock: { packagePricePerPersonCents?: number | null },
+): number | null {
+  return timeblock.packagePricePerPersonCents ?? null
+}
+
+/**
+ * Whether an item's own price is replaced by its timeblock's package price on the estimate:
+ * per-person items are, fixed-price ("each") items like platters are not.
+ */
+export function isCoveredByPackagePrice(
+  timeblock: { packagePricePerPersonCents?: number | null },
+  item: { pricingBasis?: PricingBasis | null },
+): boolean {
+  return getPackagePricePerPersonCents(timeblock) != null && getPricingBasis(item) === "per_person"
+}
+
+/**
+ * A food timeblock's estimate pricing: a fixed part (quantity × price over its "each" items,
+ * e.g. platters) and what each guest adds (its package price when set, otherwise its
+ * per-person items' prices added up).
+ */
+export function computeFoodTimeblockRates(
+  timeblock: TimeblockWithItems,
+): { eachSubtotalCents: number; perPersonRateCents: number } {
+  const items = timeblock.foodItems ?? []
+  return {
+    eachSubtotalCents: items
+      .filter((item) => getPricingBasis(item) === "each")
+      .reduce((sum, item) => sum + computeBillableLineTotalCents(item), 0),
+    perPersonRateCents: getPackagePricePerPersonCents(timeblock) ?? items
+      .filter((item) => getPricingBasis(item) === "per_person")
+      .reduce((sum, item) => sum + (item.unitPriceCents ?? 0), 0),
+  }
+}
+
+/**
+ * A food timeblock's estimate subtotal for this many guests. With a package price, that price
+ * × guests stands in for its per-person items; fixed-price items always add quantity × price.
+ * Null guests leave per-person pricing out. Undefined (the invoice) is quantity × price throughout.
+ */
+export function computeFoodTimeblockSubtotalCents(
+  timeblock: TimeblockWithItems,
+  perPersonGuestCount: number | null | undefined,
+): number {
+  if (perPersonGuestCount === undefined) {
+    return (timeblock.foodItems ?? []).reduce((sum, item) => sum + computeBillableLineTotalCents(item), 0)
+  }
+  const rates = computeFoodTimeblockRates(timeblock)
+  return rates.eachSubtotalCents + (perPersonGuestCount == null ? 0 : rates.perPersonRateCents * perPersonGuestCount)
+}
+
 function computeFoodSubtotalCents(
   foodTimeblocks: TimeblockWithItems[] | undefined,
   perPersonGuestCount: number | null | undefined,
 ): number {
   if (!foodTimeblocks || foodTimeblocks.length === 0) return 0
 
-  return foodTimeblocks.reduce((sum, timeblock) => (
-    sum + (timeblock.foodItems ?? []).reduce(
-      (itemSum, item) => itemSum + computeFoodOrBeverageLineCents(item, perPersonGuestCount),
-      0,
-    )
-  ), 0)
+  return foodTimeblocks.reduce(
+    (sum, timeblock) => sum + computeFoodTimeblockSubtotalCents(timeblock, perPersonGuestCount),
+    0,
+  )
 }
 
 function computeBeverageSubtotalCents(
@@ -119,7 +170,8 @@ export function computeFinancialSummaryAllSources(params: {
   additionalFoodSubtotalCents?: number
   /**
    * Estimate only. When given, "per_person" food and beverage lines are price × this count
-   * (left out when null). When omitted, every line is quantity × price, as on the invoice.
+   * (left out when null), and a food timeblock's package price replaces its per-person items.
+   * When omitted, every line is quantity × price, as on the invoice.
    */
   perPersonGuestCount?: number | null
 }) {

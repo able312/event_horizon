@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 
+import { splitEstimateAddOns } from "~/features/event-detail/workspace/lib/estimateAddOns"
 import { getVisibleBeverageTypeSections } from "~/features/event-detail/sections/food-beverage-workspaces/beverage/beverageTypeSections"
 import { getFinancialDocumentKindLabels } from "~/features/preview/lib/financialDocumentKinds"
 import {
@@ -13,8 +14,10 @@ import {
   beverageAppendixContinuationHeading,
   renderBeverageAppendixPages,
 } from "~/features/preview/pages/financial/BeverageAppendixPages"
+import { AddOnsTable } from "~/features/preview/pages/financial/AddOnsTable"
 import {
   buildChargeTableSpecs,
+  buildEstimateFoodRows,
   groupChargeItemsByCategory,
   renderChargeTableBlocks,
 } from "~/features/preview/pages/financial/chargeTables"
@@ -54,9 +57,9 @@ export default function FinancialPreview() {
   const chargeQuery = useMenuOfChargeItemsSection()
   const chargeItems = chargeQuery.data
   const foodQuery = useFoodSection()
-  const food = foodQuery.data
   const beverageQuery = useBeverageSection()
-  const beverageItems = beverageQuery.items
+  // Optional add-ons print in their own table and stay out of everything else, packages included.
+  const { foodTimeblocks: food, beverageItems, addOns } = splitEstimateAddOns(foodQuery.data, beverageQuery.items)
   const estimateDetailsQuery = useEstimateDetailsSection()
   const estimateDetails = estimateDetailsQuery.data
   const venueSettingsQuery = useVenueSettings()
@@ -77,7 +80,7 @@ export default function FinancialPreview() {
 
   // Food packages: chosen food timeblocks shown as alternatives. Until the one-time default
   // (all food timeblocks) is applied, treat them all as chosen, which is what it selects.
-  const availableFoodIds = (food ?? []).map((tb) => tb.id)
+  const availableFoodIds = food.map((tb) => tb.id)
   const packageTimeblockIds = prefs.showFoodPackages
     ? state.defaultsApplied.financialFoodPackages
       ? filterSelectedIds(prefs.foodPackageTimeblockIds, availableFoodIds)
@@ -99,9 +102,7 @@ export default function FinancialPreview() {
 
   const chargeTables = buildChargeTableSpecs({
     chargeItemsByCategory,
-    billableFoodRows: certainFood.flatMap((timeblock) =>
-      (timeblock.foodItems ?? []).filter(isEstimateBillableLineItem),
-    ),
+    billableFoodRows: buildEstimateFoodRows(certainFood),
     billableBeverageRows: beverageItems.filter(isEstimateBillableLineItem),
     foodPackageRows: buildFoodPackageEstimateRows(packageEstimate),
     perPersonGuests: guests,
@@ -156,6 +157,12 @@ export default function FinancialPreview() {
           rangeNote={packageEstimate.rangeNote}
         />
       </PreviewBlock>
+
+      {addOns.length > 0 ? (
+        <PreviewBlock id="financial-add-ons" keepTogether className="mb-6">
+          <AddOnsTable addOns={addOns} guests={guests} />
+        </PreviewBlock>
+      ) : null}
 
       {deposit ? (
         <PreviewBlock id="financial-deposit" keepTogether className="mb-6">

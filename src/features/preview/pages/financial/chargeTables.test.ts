@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest"
 
 import type { MenuOfChargeItem } from "~/definitions/database"
-import { buildChargeTableSpecs, formatChargeRowCells, groupChargeItemsByCategory } from "./chargeTables"
+import {
+  buildChargeTableSpecs,
+  buildEstimateFoodRows,
+  formatChargeRowCells,
+  groupChargeItemsByCategory,
+} from "./chargeTables"
 
 const charge = (id: string, category: string | null) =>
   ({ id, category, name: id, quantity: 1, unitPriceCents: 100 }) as unknown as MenuOfChargeItem
@@ -84,5 +89,51 @@ describe("formatChargeRowCells", () => {
 
   it("shows a per-person line with no dollar total when the event has no guest count", () => {
     expect(formatChargeRowCells(perPerson, null)).toEqual({ cost: "$45.00", quantity: "", total: "per person" })
+  })
+})
+
+describe("buildEstimateFoodRows", () => {
+  const base = {
+    eventId: "e1",
+    time: null,
+    details: null,
+    sectionType: "food" as const,
+    assignedTo: null,
+    createdAt: "0",
+    updatedAt: null,
+  }
+  const item = (id: string, pricingBasis: "each" | "per_person", quantity: number | null, unitPriceCents: number | null) => ({
+    id,
+    timeblockId: "tb",
+    name: id,
+    quantity,
+    unitPriceCents,
+    pricingBasis,
+    serviceStyle: null,
+    clientNotes: null,
+    internalNotes: null,
+  })
+
+  it("lists each timeblock's priced items", () => {
+    const rows = buildEstimateFoodRows([
+      { ...base, id: "lunch", title: "Lunch", foodItems: [item("soup", "per_person", null, 900), item("bread", "each", null, 500)] },
+    ])
+    expect(rows.map((row) => row.id)).toEqual(["soup"])
+  })
+
+  it("prints a package price as one per-person line, keeping fixed-price items", () => {
+    const rows = buildEstimateFoodRows([
+      {
+        ...base,
+        id: "dinner",
+        title: "Dinner",
+        packagePricePerPersonCents: 4500,
+        foodItems: [item("steak", "per_person", null, 3000), item("wings", "each", 4, 10000)],
+      },
+    ])
+    expect(rows).toEqual([
+      { id: "package-price-dinner", name: "Dinner", unitPriceCents: 4500, quantity: null, pricingBasis: "per_person" },
+      expect.objectContaining({ id: "wings" }),
+    ])
   })
 })

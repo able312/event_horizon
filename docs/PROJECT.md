@@ -151,6 +151,8 @@ Each environment has its own isolated database, so branch work can't touch share
 - Attach/track details and their attached timeblocks data
 - See holidays while booking: the main month calendar flags dates in Google's public Canadian holiday calendar, with the names on hover/focus. Holidays are read-only and never become events. After deploying the feature, run the bootstrap once ([HOLIDAYS.md](HOLIDAYS.md)).
 - Generate PDFs (Estimate, Invoice, BEO, Timeline). Printing an Estimate or Invoice also opens the Save PDF dialog afterwards, so the team keeps a copy of what was sent (`savesPdfAfterPrint` in `src/features/preview/lib/previewTypes.ts`); the user can cancel it.
+- Optional add-ons on the Estimate: any food or beverage item, or a whole food timeblock, can be ticked as an add-on in the Estimate section. Add-ons stay in planning, print on the estimate under "Optional Add-ons" with their own price, and are left out of the estimate totals, the food package options and the invoice until the add-on box is cleared (when the client accepts). The BEO marks them "add-on, not confirmed" (`src/features/event-detail/workspace/lib/estimateAddOns.ts`).
+- Package price per person: a food timeblock can carry a package price per person in the Estimate section. On the estimate it replaces the timeblock's per-person items (printed as "Included" on its package card) and is charged × guests; fixed-price items such as platters keep their own quantity × price, labelled "Fixed price, regardless of guest count". A priced package prints its set price instead of a per-head figure derived from the total. The invoice still bills each item's quantity × price (`computeFoodTimeblockRates` in `src/features/event-detail/workspace/lib/financial.ts`).
 - Proposal details on the Estimate: the Estimate section's Proposal Details card edits the intro note, valid-until date, deposit (none, a fixed amount, or a % of the grand total, with a due date and note) and terms. Terms follow the venue default until edited for the event; "Save as venue default" updates the default for every event still following it (`src/features/preview/lib/estimateProposal.ts`).
 - Confirm persistence across restarts, and that edits appear live in a second signed-in window
 
@@ -189,6 +191,7 @@ Each environment has its own isolated database, so branch work can't touch share
   - `npx convex deploy` refuses a schema that existing documents don't match.
   - Pending one-off migrations (run once per deployment after deploying; safe to run again):
     - Food/beverage `pricingBasis` (missing means "each"): `npx convex run --prod foodItems:backfillPricingBasis` and `npx convex run --prod beverageItems:backfillPricingBasis`.
+    - Estimate add-ons and package prices (`isAddOn` missing means false; `packagePricePerPersonCents` missing means none): `npx convex run --prod foodItems:backfillAddOn`, `npx convex run --prod beverageItems:backfillAddOn` and `npx convex run --prod timeblocks:backfillEstimateFields`.
 
 ## Dependency Overrides
 

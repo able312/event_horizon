@@ -34,11 +34,12 @@ import {
   SECTION_TABLE_HEAD_CELL_CLASS_RIGHT,
   SECTION_TABLE_HEAD_ROW_CLASS,
 } from "../../../../components/event-detail/detail-sections/sections/tableStyles"
-import { sumEstimateBillingItems } from "./estimateLineTotals"
+import { sumEstimatePlanning } from "./estimateLineTotals"
 import {
   BeveragePlanningBillingSection,
   FoodPlanningBillingSection,
   type BillingItemUpdates,
+  type BillingTimeblockUpdates,
 } from "./PlanningBillingSections"
 
 function focusNextCell(rowId: string, currentCellIndex: number) {
@@ -68,6 +69,10 @@ interface MenuOfChargeSectionProps {
     itemId: string
     updates: BillingItemUpdates
   }) => void
+  onUpdateFoodBillingTimeblock?: (payload: {
+    timeblockId: string
+    updates: BillingTimeblockUpdates
+  }) => void
 }
 
 interface CategorySection {
@@ -89,6 +94,7 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
   guests = null,
   onUpdateFoodBillingItem,
   onUpdateBeverageBillingItem,
+  onUpdateFoodBillingTimeblock,
 }) => {
   const {
     data: menuOfChargeItems,
@@ -173,10 +179,11 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
 
   const items = useMemo(() => menuOfChargeItems ?? [], [menuOfChargeItems])
   const menuSubtotalCents = computeMenuSubtotalCents(items)
-  const planningSubtotal = sumEstimateBillingItems(
-    [...foodTimeblocks.flatMap((timeblock) => timeblock.foodItems ?? []), ...beverageItems],
-    guests,
-  )
+  const planningTotals = sumEstimatePlanning(foodTimeblocks, beverageItems, guests)
+  const planningSubtotal = {
+    lowCents: planningTotals.food.lowCents + planningTotals.beverage.lowCents,
+    highCents: planningTotals.food.highCents + planningTotals.beverage.highCents,
+  }
   const hasPlanningContent = foodTimeblocks.length > 0 || beverageItems.length > 0
 
   const categorySections = useMemo<CategorySection[]>(() => {
@@ -242,6 +249,7 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
         guests={guests}
         onNavigateToPlanning={onNavigateToFood}
         onUpdateItem={onUpdateFoodBillingItem}
+        onUpdateTimeblock={onUpdateFoodBillingTimeblock}
       />
       <BeveragePlanningBillingSection
         items={beverageItems}

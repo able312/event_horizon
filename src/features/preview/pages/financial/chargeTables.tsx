@@ -1,9 +1,12 @@
 import type { ReactNode } from "react"
 
 import type { MenuOfChargeItem, PricingBasis } from "~/definitions/database"
+import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import {
   computeBillableLineTotalCents,
+  getPackagePricePerPersonCents,
   getPricingBasis,
+  isCoveredByPackagePrice,
   toCurrency,
 } from "~/features/event-detail/workspace/lib/financial"
 import {
@@ -12,13 +15,17 @@ import {
   type FoodPackageEstimateRow,
   type GuestCountRange,
 } from "~/features/preview/lib/foodPackages"
-import { formatPreviewPrice, formatPreviewQuantity } from "~/features/preview/preferences/selectors"
+import {
+  formatPreviewPrice,
+  formatPreviewQuantity,
+  isEstimateBillableLineItem,
+} from "~/features/preview/preferences/selectors"
 import { PreviewBlock } from "~/features/preview/pagination/PreviewDocument"
 import { ChargeRow, ChargeTable } from "./ChargeTable"
 
 const CHARGE_CATEGORIES = ["Venue", "Golf", "Goods", "Service", "Food & Beverage"] as const
 
-type PricedRow = {
+export type PricedRow = {
   id: string
   name: string
   unitPriceCents: number | null | undefined
@@ -80,6 +87,28 @@ export function formatChargeRowCells(
     quantity: formatPreviewQuantity(item.quantity),
     total: totalCents > 0 ? toCurrency(totalCents) : "",
   }
+}
+
+/**
+ * The estimate's food lines: each timeblock's priced items, with a timeblock's package price
+ * printed as one per-person line in place of the per-person items it covers.
+ */
+export function buildEstimateFoodRows(timeblocks: TimeblockWithItems[]): PricedRow[] {
+  return timeblocks.flatMap((timeblock) => {
+    const items = (timeblock.foodItems ?? [])
+      .filter((item) => !isCoveredByPackagePrice(timeblock, item))
+      .filter(isEstimateBillableLineItem)
+    const packagePrice = getPackagePricePerPersonCents(timeblock)
+    if (packagePrice == null || packagePrice <= 0) return items
+    const packageRow: PricedRow = {
+      id: `package-price-${timeblock.id}`,
+      name: timeblock.title || "Untitled",
+      unitPriceCents: packagePrice,
+      quantity: null,
+      pricingBasis: "per_person",
+    }
+    return [packageRow, ...items]
+  })
 }
 
 function renderPricedRows(items: PricedRow[], perPersonGuests?: GuestCountRange | null): ReactNode {
