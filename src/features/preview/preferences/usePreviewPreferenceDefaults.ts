@@ -71,12 +71,12 @@ export function usePreviewPreferenceDefaults() {
   }, [dispatch, food, state.defaultsApplied.financialFoodPackages])
 
   useEffect(() => {
-    if (state.defaultsApplied.financialPayments) return
+    if (state.defaultsApplied.invoicePayments) return
     if (payments === undefined) return
 
     dispatch({
-      type: "financial/applyPaymentDefault",
+      type: "invoice/applyPaymentDefault",
       hasPayments: payments.length > 0,
     })
-  }, [dispatch, payments, state.defaultsApplied.financialPayments])
+  }, [dispatch, payments, state.defaultsApplied.invoicePayments])
 }

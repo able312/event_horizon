@@ -25,7 +25,6 @@ import {
   foodPackagesContinuationHeading,
   renderFoodPackagePages,
 } from "~/features/preview/pages/financial/FoodPackagePages"
-import { PaymentsTable } from "~/features/preview/pages/financial/PaymentsTable"
 import { combineQueryStates } from "~/features/preview/pagination/combineQueryStates"
 import { PreviewBlock, PreviewDocument } from "~/features/preview/pagination/PreviewDocument"
 import { usePreviewPreferences } from "~/features/preview/preferences/PreviewPreferencesContext"
@@ -35,7 +34,6 @@ import { useEvent } from "~/hooks/useEvent"
 import { usePrimaryClient } from "~/hooks/useEventContacts"
 import { useFoodSection } from "~/hooks/useFoodSection"
 import { useMenuOfChargeItemsSection } from "~/hooks/useMenuOfChargeSection"
-import { usePaymentsSection } from "~/hooks/usePaymentsSection"
 
 export default function FinancialPreview() {
   const eventQuery = useEvent()
@@ -47,15 +45,12 @@ export default function FinancialPreview() {
   const food = foodQuery.data
   const beverageQuery = useBeverageSection()
   const beverageItems = beverageQuery.items
-  const paymentsQuery = usePaymentsSection()
-  const payments = paymentsQuery.data ?? []
   const queries = combineQueryStates([
     eventQuery,
     clientQuery,
     chargeQuery,
     foodQuery,
     beverageQuery,
-    paymentsQuery,
   ])
 
   const { state } = usePreviewPreferences()
@@ -79,7 +74,6 @@ export default function FinancialPreview() {
     menuItems: chargeItems,
     foodTimeblocks: food,
     beverageItems,
-    payments: paymentsQuery.data,
     packageTimeblockIds,
     mode: prefs.foodPackageEstimateMode,
     guests: resolveGuestCountRange(event),
@@ -104,7 +98,6 @@ export default function FinancialPreview() {
       dataError={queries.error}
       dataReady={
         queries.ready &&
-        state.defaultsApplied.financialPayments &&
         (!prefs.showFoodPackages || state.defaultsApplied.financialFoodPackages)
       }
       continuationHeadings={{
@@ -114,7 +107,7 @@ export default function FinancialPreview() {
     >
       <PreviewBlock id="financial-header" keepTogether>
         <FinancialHeader
-          labels={getFinancialDocumentKindLabels(prefs.documentKind)}
+          labels={getFinancialDocumentKindLabels("estimate")}
           client={clientQuery.data}
           eventStartDateTime={event?.startDateTime}
         />
@@ -127,15 +120,8 @@ export default function FinancialPreview() {
           low={packageEstimate.low}
           high={packageEstimate.high}
           showChargeBreakdown={prefs.showChargeBreakdown}
-          showPaymentStatus={prefs.showPaymentStatus && payments.length > 0}
         />
       </PreviewBlock>
-
-      {payments.length > 0 ? (
-        <PreviewBlock id="financial-payments" keepTogether className="mb-6">
-          <PaymentsTable payments={payments} />
-        </PreviewBlock>
-      ) : null}
 
       {packageEstimate.packages.length > 0
         ? renderFoodPackagePages({ packages: packageEstimate.packages, timeblocks: packageTimeblocks })

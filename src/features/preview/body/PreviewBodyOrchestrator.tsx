@@ -16,7 +16,6 @@ import {
   resolvePreviewType,
   type PreviewTypeId,
 } from "~/features/preview/lib/previewTypes"
-import { usePreviewPreferences } from "~/features/preview/preferences/PreviewPreferencesContext"
 import { useEvent } from "~/hooks/useEvent"
 import { usePrimaryClient } from "~/hooks/useEventContacts"
 import { useHotkey } from "~/lib/hotKeys"
@@ -34,6 +33,7 @@ const FoodOnlyPreview = lazy(() =>
   })),
 )
 const FinancialPreview = lazy(() => import("~/features/preview/pages/FinancialPreview"))
+const InvoicePreview = lazy(() => import("~/features/preview/pages/InvoicePreview"))
 const CartDiagramPreview = lazy(() =>
   import("~/features/preview/pages/CartDiagramPreview").then((module) => ({
     default: module.CartDiagramPreview,
@@ -58,6 +58,8 @@ function renderPreviewPage(type: PreviewTypeId) {
       return <FoodOnlyPreview />
     case "financial-report":
       return <FinancialPreview />
+    case "invoice":
+      return <InvoicePreview />
     case "cart-diagram":
       return <CartDiagramPreview />
     default:
@@ -74,7 +76,6 @@ const PreviewBodyOrchestrator: React.FC = () => {
   const previewType = resolvePreviewType(searchParams)
   const previewPage = useMemo(() => renderPreviewPage(previewType), [previewType])
   const { data: event } = useEvent()
-  const { state: previewPreferences } = usePreviewPreferences()
   const {
     data: client,
     isSuccess: contactsLoaded,
@@ -114,7 +115,6 @@ const PreviewBodyOrchestrator: React.FC = () => {
         clientName: client?.displayName,
         startDateTime: event?.startDateTime,
         previewType,
-        financialDocumentKind: previewPreferences["financial-report"].documentKind,
       })
       const saved = await callSavePDF({ defaultFileName })
       if (!saved) return

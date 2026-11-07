@@ -5,6 +5,7 @@ import {
   ClipboardList,
   DollarSign,
   LayoutGrid,
+  ReceiptText,
   UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react"
@@ -14,6 +15,7 @@ const PREVIEW_TYPE_IDS = [
   "beo-food",
   "timeline",
   "financial-report",
+  "invoice",
   "cart-diagram",
 ] as const
 
@@ -47,6 +49,11 @@ const PREVIEW_TYPES: PreviewTypeDefinition[] = [
     id: "financial-report",
     label: "Financial Report",
     icon: DollarSign,
+  },
+  {
+    id: "invoice",
+    label: "Invoice",
+    icon: ReceiptText,
   },
   {
     id: "cart-diagram",

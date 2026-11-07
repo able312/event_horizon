@@ -1,4 +1,4 @@
-import type { BeverageItem, Event, MenuOfChargeItem, Payment } from "~/definitions/database"
+import type { BeverageItem, Event, MenuOfChargeItem } from "~/definitions/database"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import {
   GRATUITY_RATE,
@@ -156,7 +156,6 @@ export function computeFoodPackageEstimate(params: {
   menuItems: MenuOfChargeItem[] | undefined
   foodTimeblocks: TimeblockWithItems[] | undefined
   beverageItems: BeverageItem[] | undefined
-  payments: Payment[] | undefined
   /** Null or empty when food packages are off. */
   packageTimeblockIds: string[] | null
   mode: FoodPackageEstimateMode
@@ -173,7 +172,6 @@ export function computeFoodPackageEstimate(params: {
       menuItems: params.menuItems,
       foodTimeblocks: certain,
       beverageItems: params.beverageItems,
-      payments: params.payments,
       additionalFoodSubtotalCents,
     })
 

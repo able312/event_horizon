@@ -1,8 +1,4 @@
 import {
-  DEFAULT_FINANCIAL_DOCUMENT_KIND,
-  type FinancialDocumentKind,
-} from "~/features/preview/lib/financialDocumentKinds"
-import {
   DEFAULT_FOOD_PACKAGE_ESTIMATE_MODE,
   type FoodPackageEstimateMode,
 } from "~/features/preview/lib/foodPackages"
@@ -51,15 +47,19 @@ export type TimelinePreferences = {
 }
 
 export type FinancialPreferences = {
-  documentKind: FinancialDocumentKind
   showBeverageAppendix: boolean
   showBeverageNotes: boolean
   showChargeBreakdown: boolean
-  showPaymentStatus: boolean
   /** Present chosen food timeblocks as alternative packages, on their own page. */
   showFoodPackages: boolean
   foodPackageTimeblockIds: string[]
   foodPackageEstimateMode: FoodPackageEstimateMode
+}
+
+export type InvoicePreferences = {
+  showChargeBreakdown: boolean
+  /** Payments made and balance due, under the totals. */
+  showPaymentStatus: boolean
 }
 
 export type CartDiagramPreferences = Record<string, never>
@@ -69,14 +69,15 @@ export type PreviewPreferencesState = {
   "beo-food": FoodBeoPreferences
   timeline: TimelinePreferences
   "financial-report": FinancialPreferences
+  invoice: InvoicePreferences
   "cart-diagram": CartDiagramPreferences
   /** Tracks which data-derived defaults have been applied once. */
   defaultsApplied: {
     /** Per section, so one slow or failed section does not hold back the others. */
     beoTimeblocks: Record<BeoTimeblockSectionId, boolean>
     foodBeoTimeblocks: boolean
-    financialPayments: boolean
     financialFoodPackages: boolean
+    invoicePayments: boolean
   }
 }
 
@@ -101,18 +102,18 @@ export type PreviewPreferencesAction =
   | { type: "timeline/setShowInternalNotes"; value: boolean }
   | { type: "timeline/setShowKitchenNotes"; value: boolean }
   | { type: "timeline/setIncludeSystemRows"; value: boolean }
-  | { type: "financial/setDocumentKind"; value: FinancialDocumentKind }
   | { type: "financial/setShowBeverageAppendix"; value: boolean }
   | { type: "financial/setShowBeverageNotes"; value: boolean }
   | { type: "financial/setShowChargeBreakdown"; value: boolean }
-  | { type: "financial/setShowPaymentStatus"; value: boolean }
-  | { type: "financial/applyPaymentDefault"; hasPayments: boolean }
   | { type: "financial/setShowFoodPackages"; value: boolean }
   | { type: "financial/setFoodPackageTimeblockSelected"; id: string; value: boolean }
   | { type: "financial/selectAllFoodPackageTimeblocks"; ids: string[] }
   | { type: "financial/clearAllFoodPackageTimeblocks" }
   | { type: "financial/applyDefaultFoodPackageTimeblocks"; ids: string[] }
   | { type: "financial/setFoodPackageEstimateMode"; value: FoodPackageEstimateMode }
+  | { type: "invoice/setShowChargeBreakdown"; value: boolean }
+  | { type: "invoice/setShowPaymentStatus"; value: boolean }
+  | { type: "invoice/applyPaymentDefault"; hasPayments: boolean }
 
 function createInitialBeoPreferences(): BeoPreferences {
   return {
@@ -157,14 +158,19 @@ function createInitialTimelinePreferences(): TimelinePreferences {
 
 function createInitialFinancialPreferences(): FinancialPreferences {
   return {
-    documentKind: DEFAULT_FINANCIAL_DOCUMENT_KIND,
     showBeverageAppendix: false,
     showBeverageNotes: false,
     showChargeBreakdown: true,
-    showPaymentStatus: false,
     showFoodPackages: false,
     foodPackageTimeblockIds: [],
     foodPackageEstimateMode: DEFAULT_FOOD_PACKAGE_ESTIMATE_MODE,
+  }
+}
+
+function createInitialInvoicePreferences(): InvoicePreferences {
+  return {
+    showChargeBreakdown: true,
+    showPaymentStatus: false,
   }
 }
 
@@ -174,12 +180,13 @@ export function createInitialPreviewPreferences(): PreviewPreferencesState {
     "beo-food": createInitialFoodBeoPreferences(),
     timeline: createInitialTimelinePreferences(),
     "financial-report": createInitialFinancialPreferences(),
+    invoice: createInitialInvoicePreferences(),
     "cart-diagram": {},
     defaultsApplied: {
       beoTimeblocks: { food: false, beverage: false, setup: false, notes: false },
       foodBeoTimeblocks: false,
-      financialPayments: false,
       financialFoodPackages: false,
+      invoicePayments: false,
     },
   }
 }

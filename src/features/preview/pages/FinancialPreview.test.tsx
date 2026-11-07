@@ -20,7 +20,6 @@ const hooksMock = vi.hoisted(() => ({
   useMenuOfChargeItemsSection: vi.fn(),
   useFoodSection: vi.fn(),
   useBeverageSection: vi.fn(),
-  usePaymentsSection: vi.fn(),
   usePrimaryClient: vi.fn(),
 }))
 
@@ -38,10 +37,6 @@ vi.mock("~/hooks/useFoodSection", () => ({
 
 vi.mock("~/hooks/useBeverageSection", () => ({
   useBeverageSection: hooksMock.useBeverageSection,
-}))
-
-vi.mock("~/hooks/usePaymentsSection", () => ({
-  usePaymentsSection: hooksMock.usePaymentsSection,
 }))
 
 vi.mock("~/hooks/useEventContacts", () => ({
@@ -86,10 +81,6 @@ describe("FinancialPreview", () => {
     hooksMock.useBeverageSection.mockReturnValue({
       items: [{ id: "b1", name: "Drinks", quantity: 1, unitPriceCents: 1500, type: "Beer", eventId: "event-1" }],
     })
-    hooksMock.usePaymentsSection.mockReturnValue({
-      data: [{ id: "p1", date: "2026-05-01T00:00:00.000Z", amountCents: 2500, notes: "", recieptNumber: "" }],
-    })
-
     renderFinancial()
 
     await waitFor(() => {
@@ -104,7 +95,7 @@ describe("FinancialPreview", () => {
     expect(screen.queryByText("Charges Total")).toBeNull()
     expect(screen.getByText("Grand Total")).toBeTruthy()
     expect(screen.getAllByText("$170.15").length).toBeGreaterThan(0)
-    expect(screen.getByText("Payments Made")).toBeTruthy()
+    expect(screen.queryByText("Payments Made")).toBeNull()
     expect(screen.queryByText("$14,500.00")).toBeNull()
   })
 
@@ -131,7 +122,6 @@ describe("FinancialPreview", () => {
     hooksMock.useBeverageSection.mockReturnValue({
       items: [{ id: "b1", name: "Wine", quantity: null, unitPriceCents: 2500, type: "Wine", eventId: "e1" }],
     })
-    hooksMock.usePaymentsSection.mockReturnValue({ data: [] })
 
     renderFinancial()
 
@@ -159,8 +149,7 @@ describe("FinancialPreview", () => {
         ],
       })
       hooksMock.useBeverageSection.mockReturnValue({ items: [] })
-      hooksMock.usePaymentsSection.mockReturnValue({ data: [] })
-    }
+      }
 
     function packageState(mode: FoodPackageEstimateMode): PreviewPreferencesState {
       const state = createInitialPreviewPreferences()
@@ -172,7 +161,7 @@ describe("FinancialPreview", () => {
           foodPackageTimeblockIds: ["pkg-a", "pkg-b"],
           foodPackageEstimateMode: mode,
         },
-        defaultsApplied: { ...state.defaultsApplied, financialPayments: true, financialFoodPackages: true },
+        defaultsApplied: { ...state.defaultsApplied, financialFoodPackages: true },
       }
     }
 

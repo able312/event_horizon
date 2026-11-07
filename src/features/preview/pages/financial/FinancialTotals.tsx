@@ -14,13 +14,13 @@ export function FinancialTotals({
   low,
   high,
   showChargeBreakdown,
-  showPaymentStatus,
+  showPaymentStatus = false,
 }: {
   low: FinancialSummary
   high: FinancialSummary
   showChargeBreakdown: boolean
-  /** Print payments made and balance due; the caller turns this off when there are no payments. */
-  showPaymentStatus: boolean
+  /** Print payments made and balance due (invoice only); the caller turns this off when there are no payments. */
+  showPaymentStatus?: boolean
 }) {
   return (
     <div className="mt-10 flex justify-end border-t border-dashed border-black">

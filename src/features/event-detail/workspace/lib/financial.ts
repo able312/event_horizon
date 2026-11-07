@@ -65,7 +65,8 @@ export function computeFinancialSummaryAllSources(params: {
   menuItems: MenuOfChargeItem[] | undefined
   foodTimeblocks: TimeblockWithItems[] | undefined
   beverageItems: BeverageItem[] | undefined
-  payments: Payment[] | undefined
+  /** Left out for an estimate, which has nothing paid against it. */
+  payments?: Payment[]
   /** Food charged on top of the timeblocks' items, e.g. a food package figure (see preview/lib/foodPackages). */
   additionalFoodSubtotalCents?: number
 }) {

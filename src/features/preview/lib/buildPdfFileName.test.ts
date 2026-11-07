@@ -35,8 +35,7 @@ describe("getPdfDocumentType", () => {
     expect(getPdfDocumentType("beo-food")).toBe("BEO")
     expect(getPdfDocumentType("timeline")).toBe("Timeline")
     expect(getPdfDocumentType("financial-report")).toBe("Estimate")
-    expect(getPdfDocumentType("financial-report", "invoice")).toBe("Invoice")
-    expect(getPdfDocumentType("beo", "invoice")).toBe("BEO")
+    expect(getPdfDocumentType("invoice")).toBe("Invoice")
     expect(getPdfDocumentType("cart-diagram")).toBe("Cart_Setup")
   })
 })
@@ -88,13 +87,12 @@ describe("buildPdfFileName", () => {
     ).toBe("10.16.2026_Carrie_Estimate_01.12.2027.pdf")
   })
 
-  it("builds an invoice filename when the financial report is titled as an invoice", () => {
+  it("builds an invoice filename for invoices", () => {
     expect(
       buildPdfFileName({
         clientName: "Carrie",
         startDateTime: "2027-01-12T12:00:00.000Z",
-        previewType: "financial-report",
-        financialDocumentKind: "invoice",
+        previewType: "invoice",
         now: new Date(2026, 9, 16),
       }),
     ).toBe("10.16.2026_Carrie_Invoice_01.12.2027.pdf")

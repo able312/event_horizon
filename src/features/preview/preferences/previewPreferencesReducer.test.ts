@@ -28,12 +28,12 @@ const SIMPLE_CASES: SimpleCase[] = [
   { action: { type: "timeline/setShowInternalNotes", value: false }, key: "timeline", expected: { showInternalNotes: false } },
   { action: { type: "timeline/setShowKitchenNotes", value: false }, key: "timeline", expected: { showKitchenNotes: false } },
   { action: { type: "timeline/setIncludeSystemRows", value: false }, key: "timeline", expected: { includeSystemRows: false } },
-  { action: { type: "financial/setDocumentKind", value: "invoice" }, key: "financial-report", expected: { documentKind: "invoice" } },
   { action: { type: "financial/setShowBeverageAppendix", value: true }, key: "financial-report", expected: { showBeverageAppendix: true } },
   { action: { type: "financial/setShowBeverageNotes", value: false }, key: "financial-report", expected: { showBeverageNotes: false } },
   { action: { type: "financial/setShowChargeBreakdown", value: false }, key: "financial-report", expected: { showChargeBreakdown: false } },
-  { action: { type: "financial/setShowPaymentStatus", value: true }, key: "financial-report", expected: { showPaymentStatus: true } },
   { action: { type: "financial/setShowFoodPackages", value: true }, key: "financial-report", expected: { showFoodPackages: true } },
+  { action: { type: "invoice/setShowChargeBreakdown", value: false }, key: "invoice", expected: { showChargeBreakdown: false } },
+  { action: { type: "invoice/setShowPaymentStatus", value: true }, key: "invoice", expected: { showPaymentStatus: true } },
 ]
 
 describe("previewPreferencesReducer", () => {
@@ -91,33 +91,22 @@ describe("previewPreferencesReducer", () => {
     })
   })
 
-  it("defaults the financial report to an estimate and switches its title", () => {
+  it("defaults invoice payment status from whether payments exist", () => {
     let state = createInitialPreviewPreferences()
-    expect(state["financial-report"].documentKind).toBe("estimate")
+    expect(state.invoice.showPaymentStatus).toBe(false)
 
     state = previewPreferencesReducer(state, {
-      type: "financial/setDocumentKind",
-      value: "invoice",
-    })
-    expect(state["financial-report"].documentKind).toBe("invoice")
-    expect(state["financial-report"].showChargeBreakdown).toBe(true)
-  })
-
-  it("defaults financial payment status from whether payments exist", () => {
-    let state = createInitialPreviewPreferences()
-    expect(state["financial-report"].showPaymentStatus).toBe(false)
-
-    state = previewPreferencesReducer(state, {
-      type: "financial/applyPaymentDefault",
+      type: "invoice/applyPaymentDefault",
       hasPayments: true,
     })
-    expect(state["financial-report"].showPaymentStatus).toBe(true)
+    expect(state.invoice.showPaymentStatus).toBe(true)
+    expect(state.defaultsApplied.invoicePayments).toBe(true)
 
     state = previewPreferencesReducer(state, {
-      type: "financial/applyPaymentDefault",
+      type: "invoice/applyPaymentDefault",
       hasPayments: false,
     })
-    expect(state["financial-report"].showPaymentStatus).toBe(true)
+    expect(state.invoice.showPaymentStatus).toBe(true)
   })
 
   it("supports select-all and clear-all for timeblocks", () => {

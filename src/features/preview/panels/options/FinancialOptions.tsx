@@ -1,4 +1,3 @@
-import { FINANCIAL_DOCUMENT_KIND_OPTIONS } from "~/features/preview/lib/financialDocumentKinds"
 import { FOOD_PACKAGE_ESTIMATE_MODE_OPTIONS } from "~/features/preview/lib/foodPackages"
 import {
   PreviewOptionSection,
@@ -14,15 +13,13 @@ import {
 } from "~/features/preview/preferences/selectors"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
 import { useFoodSection } from "~/hooks/useFoodSection"
-import { usePaymentsSection } from "~/hooks/usePaymentsSection"
 
-/** Estimate/invoice options: the title, what prints, and how food packages are estimated. */
+/** Estimate options: what prints, and how food packages are estimated. */
 export function FinancialOptions() {
   const { state, dispatch } = usePreviewPreferences()
   const prefs = state["financial-report"]
   const { data: food } = useFoodSection()
   const { items: beverageItems } = useBeverageSection()
-  const { data: payments } = usePaymentsSection()
 
   const foodOptions = toTimeblockOptions(food)
   const packageSelected = filterSelectedIds(
@@ -32,19 +29,6 @@ export function FinancialOptions() {
 
   return (
     <>
-      <PreviewOptionSection title="Title">
-        {FINANCIAL_DOCUMENT_KIND_OPTIONS.map(({ kind, label }) => (
-          <PreviewRadioRow
-            key={kind}
-            id={`financial-document-kind-${kind}`}
-            name="financial-document-kind"
-            label={label}
-            checked={prefs.documentKind === kind}
-            onSelect={() => dispatch({ type: "financial/setDocumentKind", value: kind })}
-          />
-        ))}
-      </PreviewOptionSection>
-
       <PreviewOptionSection title="Options">
         {(beverageItems?.length ?? 0) > 0 ? (
           <PreviewToggleRow
@@ -68,14 +52,6 @@ export function FinancialOptions() {
           checked={prefs.showChargeBreakdown}
           onChange={(value) => dispatch({ type: "financial/setShowChargeBreakdown", value })}
         />
-        {(payments?.length ?? 0) > 0 ? (
-          <PreviewToggleRow
-            id="financial-payment-status"
-            label="Payment status"
-            checked={prefs.showPaymentStatus}
-            onChange={(value) => dispatch({ type: "financial/setShowPaymentStatus", value })}
-          />
-        ) : null}
         {foodOptions.length > 0 ? (
           <PreviewToggleRow
             id="financial-food-packages"

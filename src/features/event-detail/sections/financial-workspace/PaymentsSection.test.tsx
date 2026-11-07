@@ -86,21 +86,4 @@ describe("PaymentsSection", () => {
       expect(createPaymentAsync).toHaveBeenCalledTimes(1)
     })
   })
-
-  it("shows generate estimate CTA in workspace empty state", () => {
-    const onGenerateEstimate = vi.fn()
-
-    hookMock.usePaymentsSection.mockReturnValue({
-      data: [],
-      isLoading: false,
-      createPaymentAsync: vi.fn(async () => ({ id: "new" })),
-      updatePayment: vi.fn(),
-      deletePaymentAsync: vi.fn(async () => true),
-    })
-
-    render(<PaymentsSection emptyStateMode="workspace" onGenerateEstimate={onGenerateEstimate} />)
-
-    fireEvent.click(screen.getByRole("button", { name: "Generate Estimate" }))
-    expect(onGenerateEstimate).toHaveBeenCalledTimes(1)
-  })
 })

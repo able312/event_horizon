@@ -111,7 +111,7 @@ describe("PreviewPanelOrchestrator", () => {
     expect(screen.getByRole("button", { name: "Cart Setup Diagram" })).toBeTruthy()
   })
 
-  it("shows financial options when the financial preview is active", () => {
+  it("shows estimate options, without payment status, when the estimate preview is active", () => {
     hooksMock.useEvent.mockReturnValue({
       data: {
         id: "evt_1",
@@ -120,7 +120,7 @@ describe("PreviewPanelOrchestrator", () => {
       },
     })
     hooksMock.useFoodSection.mockReturnValue({ data: [] })
-      hooksMock.useSetupInstructionSection.mockReturnValue({ data: [] })
+    hooksMock.useSetupInstructionSection.mockReturnValue({ data: [] })
     hooksMock.useNoteSection.mockReturnValue({ data: [] })
     hooksMock.useBeverageSection.mockReturnValue({
       timeblocks: [],
@@ -141,6 +141,40 @@ describe("PreviewPanelOrchestrator", () => {
     )
 
     expect(screen.getByText("Show beverage list")).toBeTruthy()
+    expect(screen.getByText("Charge breakdown")).toBeTruthy()
+    expect(screen.queryByText("Payment status")).toBeNull()
+  })
+
+  it("shows invoice options when the invoice preview is active", () => {
+    hooksMock.useEvent.mockReturnValue({
+      data: {
+        id: "evt_1",
+        title: "Spring Banquet",
+        startDateTime: "2026-06-01T16:00:00.000Z",
+      },
+    })
+    hooksMock.useFoodSection.mockReturnValue({ data: [] })
+    hooksMock.useSetupInstructionSection.mockReturnValue({ data: [] })
+    hooksMock.useNoteSection.mockReturnValue({ data: [] })
+    hooksMock.useBeverageSection.mockReturnValue({
+      timeblocks: [],
+      items: [{ id: "b1", name: "Lager", includes: "Local", unitPriceCents: 800, quantity: null }],
+    })
+    hooksMock.usePaymentsSection.mockReturnValue({
+      data: [{ id: "p1", amountCents: 1000 }],
+    })
+
+    render(
+      <PreviewPreferencesProvider>
+        <MemoryRouter initialEntries={["/preview/evt_1?type=invoice"]}>
+          <Routes>
+            <Route path="/preview/:id" element={<PreviewPanelOrchestrator />} />
+          </Routes>
+        </MemoryRouter>
+      </PreviewPreferencesProvider>,
+    )
+
+    expect(screen.queryByText("Show beverage list")).toBeNull()
     expect(screen.getByText("Charge breakdown")).toBeTruthy()
     expect(screen.getByText("Payment status")).toBeTruthy()
   })

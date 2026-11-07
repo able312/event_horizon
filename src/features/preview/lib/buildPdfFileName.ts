@@ -1,8 +1,4 @@
-import {
-  DEFAULT_FINANCIAL_DOCUMENT_KIND,
-  getFinancialDocumentKindLabels,
-  type FinancialDocumentKind,
-} from "~/features/preview/lib/financialDocumentKinds"
+import { getFinancialDocumentKindLabels } from "~/features/preview/lib/financialDocumentKinds"
 import type { PreviewTypeId } from "~/features/preview/lib/previewTypes"
 
 const UNSAFE_FILENAME_CHARS = /[/\\:*?"<>|]/g
@@ -13,8 +9,6 @@ export type BuildPdfFileNameInput = {
   clientName: string | null | undefined
   startDateTime: string | null | undefined
   previewType: PreviewTypeId
-  /** Which title the financial report carries; ignored for other preview types. */
-  financialDocumentKind?: FinancialDocumentKind
   now?: Date
 }
 
@@ -34,15 +28,14 @@ export function extractClientLastName(clientName: string | null | undefined): st
   return parts[parts.length - 1] ?? "Client"
 }
 
-export function getPdfDocumentType(
-  previewType: PreviewTypeId,
-  financialDocumentKind: FinancialDocumentKind = DEFAULT_FINANCIAL_DOCUMENT_KIND,
-): PdfDocumentType {
+export function getPdfDocumentType(previewType: PreviewTypeId): PdfDocumentType {
   switch (previewType) {
     case "timeline":
       return "Timeline"
     case "financial-report":
-      return getFinancialDocumentKindLabels(financialDocumentKind).fileLabel
+      return getFinancialDocumentKindLabels("estimate").fileLabel
+    case "invoice":
+      return getFinancialDocumentKindLabels("invoice").fileLabel
     case "cart-diagram":
       return "Cart_Setup"
     case "beo":
@@ -70,12 +63,11 @@ export function buildPdfFileName({
   clientName,
   startDateTime,
   previewType,
-  financialDocumentKind,
   now = new Date(),
 }: BuildPdfFileNameInput): string {
   const created = formatPdfDate(now)
   const lastName = sanitizeFileNameSegment(extractClientLastName(clientName))
-  const docType = getPdfDocumentType(previewType, financialDocumentKind)
+  const docType = getPdfDocumentType(previewType)
   const eventDate = formatEventDateFromIso(startDateTime)
 
   return `${created}_${lastName}_${docType}_${eventDate}.pdf`

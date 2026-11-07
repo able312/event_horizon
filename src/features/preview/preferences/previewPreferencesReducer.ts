@@ -102,22 +102,12 @@ export function previewPreferencesReducer(
       return withPreview(state, "timeline", { showKitchenNotes: action.value })
     case "timeline/setIncludeSystemRows":
       return withPreview(state, "timeline", { includeSystemRows: action.value })
-    case "financial/setDocumentKind":
-      return withPreview(state, "financial-report", { documentKind: action.value })
     case "financial/setShowBeverageAppendix":
       return withPreview(state, "financial-report", { showBeverageAppendix: action.value })
     case "financial/setShowBeverageNotes":
       return withPreview(state, "financial-report", { showBeverageNotes: action.value })
     case "financial/setShowChargeBreakdown":
       return withPreview(state, "financial-report", { showChargeBreakdown: action.value })
-    case "financial/setShowPaymentStatus":
-      return withPreview(state, "financial-report", { showPaymentStatus: action.value })
-    case "financial/applyPaymentDefault":
-      if (state.defaultsApplied.financialPayments) return state
-      return {
-        ...withPreview(state, "financial-report", { showPaymentStatus: action.hasPayments }),
-        defaultsApplied: { ...state.defaultsApplied, financialPayments: true },
-      }
     case "financial/setShowFoodPackages":
       return withPreview(state, "financial-report", { showFoodPackages: action.value })
     case "financial/setFoodPackageTimeblockSelected":
@@ -140,6 +130,16 @@ export function previewPreferencesReducer(
       }
     case "financial/setFoodPackageEstimateMode":
       return withPreview(state, "financial-report", { foodPackageEstimateMode: action.value })
+    case "invoice/setShowChargeBreakdown":
+      return withPreview(state, "invoice", { showChargeBreakdown: action.value })
+    case "invoice/setShowPaymentStatus":
+      return withPreview(state, "invoice", { showPaymentStatus: action.value })
+    case "invoice/applyPaymentDefault":
+      if (state.defaultsApplied.invoicePayments) return state
+      return {
+        ...withPreview(state, "invoice", { showPaymentStatus: action.hasPayments }),
+        defaultsApplied: { ...state.defaultsApplied, invoicePayments: true },
+      }
     default:
       return state
   }
