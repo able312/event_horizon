@@ -5,6 +5,8 @@ import {
   HST_RATE,
   centsToDollars,
   computeBillableLineTotalCents,
+  computeEstimateLineTotalCents,
+  computeEstimateSummaryRange,
   computeFinancialSummaryAllSources,
   dollarsToCents,
   fromDateInputValue,
@@ -153,5 +155,77 @@ describe("financial helpers", () => {
     expect(toCurrency(123456789)).toBe("$1,234,567.89")
     expect(toCurrency(50)).toBe("$0.50")
     expect(toCurrency(-1250)).toBe("-$12.50")
+  })
+})
+
+describe("per-person pricing on the estimate", () => {
+  const params = {
+    menuItems: [{ id: "m1", quantity: 1, unitPriceCents: 2000 } as never],
+    foodTimeblocks: [
+      {
+        id: "f-tb",
+        foodItems: [
+          { id: "f1", quantity: 2, unitPriceCents: 250 },
+          { id: "f2", quantity: 3, unitPriceCents: 4500, pricingBasis: "per_person" },
+        ],
+      } as never,
+    ],
+    beverageItems: [
+      { id: "b1", quantity: 3, unitPriceCents: 100, pricingBasis: "each" } as never,
+      { id: "b2", quantity: null, unitPriceCents: 1000, pricingBasis: "per_person" } as never,
+    ],
+  }
+
+  it("prices each line by quantity × price when no guest count is passed (invoice)", () => {
+    const summary = computeFinancialSummaryAllSources(params)
+    // food 500 + 3 × 4500 = 14000; beverage 300 + 0 = 300
+    expect(summary.foodSubtotalCents).toBe(14000)
+    expect(summary.beverageSubtotalCents).toBe(300)
+  })
+
+  it("prices per-person lines by the guest count, ignoring quantity", () => {
+    const summary = computeFinancialSummaryAllSources({ ...params, perPersonGuestCount: 50 })
+    // food 500 + 4500 × 50 = 225500; beverage 300 + 1000 × 50 = 50300; menu unchanged
+    expect(summary.menuSubtotalCents).toBe(2000)
+    expect(summary.foodSubtotalCents).toBe(225500)
+    expect(summary.beverageSubtotalCents).toBe(50300)
+    expect(summary.gratuityBaseCents).toBe(275800)
+  })
+
+  it("leaves per-person lines out when the guest count is null", () => {
+    const summary = computeFinancialSummaryAllSources({ ...params, perPersonGuestCount: null })
+    expect(summary.foodSubtotalCents).toBe(500)
+    expect(summary.beverageSubtotalCents).toBe(300)
+  })
+
+  it("computes one estimate line", () => {
+    const perPerson = { quantity: 3, unitPriceCents: 4500, pricingBasis: "per_person" as const }
+    expect(computeEstimateLineTotalCents(perPerson, 80)).toBe(360000)
+    expect(computeEstimateLineTotalCents(perPerson, null)).toBeNull()
+    expect(computeEstimateLineTotalCents({ quantity: 3, unitPriceCents: 4500 }, 80)).toBe(13500)
+    expect(computeEstimateLineTotalCents({ quantity: 3, unitPriceCents: 4500, pricingBasis: "each" }, null)).toBe(13500)
+  })
+
+  it("ranges the estimate from the fewest to the most guests", () => {
+    const range = computeEstimateSummaryRange({ ...params, guests: { min: 10, max: 20 } })
+    expect(range.low).toEqual(computeFinancialSummaryAllSources({ ...params, perPersonGuestCount: 10 }))
+    expect(range.high).toEqual(computeFinancialSummaryAllSources({ ...params, perPersonGuestCount: 20 }))
+    expect(range.low.foodSubtotalCents).toBe(500 + 45000)
+    expect(range.high.foodSubtotalCents).toBe(500 + 90000)
+
+    const withExtra = computeEstimateSummaryRange({
+      ...params,
+      guests: { min: 10, max: 20 },
+      additionalFoodSubtotalCents: { low: 100, high: 200 },
+    })
+    expect(withExtra.low.foodSubtotalCents).toBe(500 + 45000 + 100)
+    expect(withExtra.high.foodSubtotalCents).toBe(500 + 90000 + 200)
+  })
+
+  it("leaves per-person lines out of both ends without a guest count", () => {
+    const range = computeEstimateSummaryRange({ ...params, guests: null })
+    expect(range.low).toEqual(range.high)
+    expect(range.low).toEqual(computeFinancialSummaryAllSources({ ...params, perPersonGuestCount: null }))
+    expect(range.low.paidTotalCents).toBe(0)
   })
 })

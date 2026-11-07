@@ -8,6 +8,7 @@ import {
   hasBeverageSectionContent,
   hasKitchenNotes,
   isBillableLineItem,
+  isEstimateBillableLineItem,
   toTimeblockOptions,
 } from "./selectors"
 
@@ -70,6 +71,15 @@ describe("preview preference selectors", () => {
     expect(isBillableLineItem({ quantity: 2, unitPriceCents: 100 })).toBe(true)
     expect(isBillableLineItem({ quantity: 0, unitPriceCents: 100 })).toBe(false)
     expect(isBillableLineItem({ quantity: 2, unitPriceCents: null })).toBe(false)
+  })
+
+  it("needs only a price for a per-person line on the estimate", () => {
+    expect(isEstimateBillableLineItem({ quantity: null, unitPriceCents: 100, pricingBasis: "per_person" })).toBe(true)
+    expect(isEstimateBillableLineItem({ quantity: 0, unitPriceCents: 100, pricingBasis: "per_person" })).toBe(true)
+    expect(isEstimateBillableLineItem({ quantity: 5, unitPriceCents: 0, pricingBasis: "per_person" })).toBe(false)
+    expect(isEstimateBillableLineItem({ quantity: 0, unitPriceCents: 100, pricingBasis: "each" })).toBe(false)
+    expect(isEstimateBillableLineItem({ quantity: 0, unitPriceCents: 100 })).toBe(false)
+    expect(isEstimateBillableLineItem({ quantity: 2, unitPriceCents: 100 })).toBe(true)
   })
 
   it("finds kitchen notes on any food item, ignoring blank ones", () => {

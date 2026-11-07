@@ -28,7 +28,7 @@ import {
 import { combineQueryStates } from "~/features/preview/pagination/combineQueryStates"
 import { PreviewBlock, PreviewDocument } from "~/features/preview/pagination/PreviewDocument"
 import { usePreviewPreferences } from "~/features/preview/preferences/PreviewPreferencesContext"
-import { filterSelectedIds, isBillableLineItem } from "~/features/preview/preferences/selectors"
+import { filterSelectedIds, isEstimateBillableLineItem } from "~/features/preview/preferences/selectors"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
 import { useEvent } from "~/hooks/useEvent"
 import { usePrimaryClient } from "~/hooks/useEventContacts"
@@ -70,22 +70,24 @@ export default function FinancialPreview() {
     food,
     packageTimeblockIds,
   )
+  const guests = resolveGuestCountRange(event)
   const packageEstimate = computeFoodPackageEstimate({
     menuItems: chargeItems,
     foodTimeblocks: food,
     beverageItems,
     packageTimeblockIds,
     mode: prefs.foodPackageEstimateMode,
-    guests: resolveGuestCountRange(event),
+    guests,
   })
 
   const chargeTables = buildChargeTableSpecs({
     chargeItemsByCategory,
     billableFoodRows: certainFood.flatMap((timeblock) =>
-      (timeblock.foodItems ?? []).filter(isBillableLineItem),
+      (timeblock.foodItems ?? []).filter(isEstimateBillableLineItem),
     ),
-    billableBeverageRows: beverageItems.filter(isBillableLineItem),
+    billableBeverageRows: beverageItems.filter(isEstimateBillableLineItem),
     foodPackageRows: buildFoodPackageEstimateRows(packageEstimate),
+    perPersonGuests: guests,
   })
 
   const showAppendix = prefs.showBeverageAppendix && beverageItems.length > 0
@@ -120,6 +122,7 @@ export default function FinancialPreview() {
           low={packageEstimate.low}
           high={packageEstimate.high}
           showChargeBreakdown={prefs.showChargeBreakdown}
+          rangeNote={packageEstimate.rangeNote}
         />
       </PreviewBlock>
 

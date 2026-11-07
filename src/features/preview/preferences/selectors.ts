@@ -1,8 +1,9 @@
 import type { PrimaryClient } from "~/definitions/contacts"
-import type { Event } from "~/definitions/database"
+import type { Event, PricingBasis } from "~/definitions/database"
 import type { BeverageItemWithAssignments } from "~/definitions/beverage/beverage-types"
 import type { TimeblockWithItems, TimelineTimeblock } from "~/definitions/timeblocks/timeblocks-types"
 import { SECTION_TYPE } from "~/definitions/timeblocks/timeblock-constants"
+import { getPricingBasis } from "~/features/event-detail/workspace/lib/financial"
 import { hasText } from "~/lib/utils"
 
 export type TimeblockOption = {
@@ -124,4 +125,17 @@ export function isBillableLineItem(item: {
   unitPriceCents: number | null | undefined
 }): boolean {
   return (item.quantity ?? 0) > 0 && (item.unitPriceCents ?? 0) > 0
+}
+
+/**
+ * Billable on the estimate: a per-person food or beverage line needs only a price (its
+ * quantity is ignored there); anything else follows isBillableLineItem.
+ */
+export function isEstimateBillableLineItem(item: {
+  quantity: number | null | undefined
+  unitPriceCents: number | null | undefined
+  pricingBasis?: PricingBasis | null
+}): boolean {
+  if (getPricingBasis(item) === "per_person") return (item.unitPriceCents ?? 0) > 0
+  return isBillableLineItem(item)
 }

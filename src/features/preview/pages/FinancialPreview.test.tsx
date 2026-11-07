@@ -134,6 +134,60 @@ describe("FinancialPreview", () => {
     expect(screen.queryByText("Wine")).toBeNull()
   })
 
+  describe("per-person pricing", () => {
+    function mockPerPersonEvent(guests: { minGuests: number | null; maxGuests: number | null }) {
+      hooksMock.useEvent.mockReturnValue({
+        data: { id: "event-1", startDateTime: "2026-06-01T16:00:00.000Z", ...guests },
+      })
+      hooksMock.usePrimaryClient.mockReturnValue({ data: null })
+      hooksMock.useMenuOfChargeItemsSection.mockReturnValue({ data: [] })
+      hooksMock.useFoodSection.mockReturnValue({
+        data: [
+          {
+            id: "dinner",
+            title: "Dinner",
+            foodItems: [
+              { id: "d1", name: "Buffet", quantity: null, unitPriceCents: 4500, pricingBasis: "per_person" },
+              { id: "d2", name: "Cake", quantity: 1, unitPriceCents: 10000, pricingBasis: "each" },
+            ],
+          },
+        ],
+      })
+      hooksMock.useBeverageSection.mockReturnValue({ items: [] })
+    }
+
+    it("prices per-person lines by the guest range and ranges the totals", async () => {
+      mockPerPersonEvent({ minGuests: 80, maxGuests: 120 })
+      renderFinancial()
+
+      await waitFor(() => {
+        expect(screen.getByText("Event Estimate")).toBeTruthy()
+      })
+
+      expect(screen.getByText("Buffet")).toBeTruthy()
+      expect(screen.getByText("$45.00 per person × 80–120 guests")).toBeTruthy()
+      expect(screen.getByText("$3,600.00 – $5,400.00")).toBeTruthy()
+      // 370000 -> 370000 + 48100 + 66600 = 484700; 550000 -> 550000 + 71500 + 99000 = 720500
+      expect(screen.getByText("Grand Total (by guest count)")).toBeTruthy()
+      expect(screen.getByText("$4,847.00 – $7,205.00")).toBeTruthy()
+    })
+
+    it("shows a per-person line without a dollar total, and leaves it out, when there is no guest count", async () => {
+      mockPerPersonEvent({ minGuests: null, maxGuests: null })
+      renderFinancial()
+
+      await waitFor(() => {
+        expect(screen.getByText("Event Estimate")).toBeTruthy()
+      })
+
+      expect(screen.getByText("Buffet")).toBeTruthy()
+      expect(screen.getByText("per person")).toBeTruthy()
+      expect(screen.getByText("Grand Total")).toBeTruthy()
+      // Cake only: 10000 + 1300 + 1800
+      expect(screen.getAllByText("$131.00").length).toBeGreaterThan(0)
+    })
+  })
+
   describe("food packages", () => {
     function mockPackageEvent() {
       hooksMock.useEvent.mockReturnValue({

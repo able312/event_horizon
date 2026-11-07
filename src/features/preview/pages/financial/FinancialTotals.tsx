@@ -7,20 +7,23 @@ import {
 import { formatCurrencyRange } from "~/features/preview/lib/foodPackages"
 
 /**
- * The totals block. Takes the low and high summaries (equal unless food packages make the
- * total depend on the package chosen) and prints each figure as a range where they differ.
+ * The totals block. Takes the low and high summaries (equal unless the estimate depends on
+ * the food package chosen or the guest count) and prints each figure as a range where they differ.
  */
 export function FinancialTotals({
   low,
   high,
   showChargeBreakdown,
   showPaymentStatus = false,
+  rangeNote = null,
 }: {
   low: FinancialSummary
   high: FinancialSummary
   showChargeBreakdown: boolean
   /** Print payments made and balance due (invoice only); the caller turns this off when there are no payments. */
   showPaymentStatus?: boolean
+  /** Why the totals are a range, e.g. "by guest count"; printed after "Grand Total". */
+  rangeNote?: string | null
 }) {
   return (
     <div className="mt-10 flex justify-end border-t border-dashed border-black">
@@ -45,7 +48,7 @@ export function FinancialTotals({
         ) : null}
 
         <dt className="text-muted-foreground">
-          Grand Total{low.grandTotalCents !== high.grandTotalCents ? " (by package chosen)" : ""}
+          Grand Total{rangeNote ? ` (${rangeNote})` : ""}
         </dt>
         <dd className="text-end font-medium">
           {formatCurrencyRange(low.grandTotalCents, high.grandTotalCents)}
