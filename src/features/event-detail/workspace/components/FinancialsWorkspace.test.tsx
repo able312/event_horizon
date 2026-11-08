@@ -16,6 +16,9 @@ vi.mock("react-router", async () => {
 })
 vi.mock("./FinancialWorkspaceSection", () => ({ default: () => <div>Estimate View</div> }))
 vi.mock("./InvoiceWorkspaceSection", () => ({ default: () => <div>Invoice View</div> }))
+vi.mock("~/features/event-detail/sections/financial-workspace/ProposalDetailsButton", () => ({
+  default: () => <button type="button">Proposal Details</button>,
+}))
 
 afterEach(() => {
   cleanup()
@@ -37,6 +40,8 @@ describe("FinancialsWorkspace", () => {
     )
 
     expect(screen.getByText("Estimate View")).toBeTruthy()
+    // Proposal details belong to the estimate, so they sit beside its Generate button
+    expect(screen.getByRole("button", { name: "Proposal Details" })).toBeTruthy()
     fireEvent.click(screen.getByRole("button", { name: "Generate Estimate" }))
     expect(navigateMock).toHaveBeenLastCalledWith(
       "/preview/event-1?type=financial-report&returnTo=%2Fevents%2Fevent-1%2Ffinancial%3FreturnTo%3D%252Fcontacts%252Fcontact-1",
@@ -44,6 +49,7 @@ describe("FinancialsWorkspace", () => {
 
     fireEvent.click(screen.getByRole("radio", { name: "Invoice" }))
     expect(screen.getByText("Invoice View")).toBeTruthy()
+    expect(screen.queryByRole("button", { name: "Proposal Details" })).toBeNull()
     fireEvent.click(screen.getByRole("button", { name: "Generate Invoice" }))
     expect(navigateMock).toHaveBeenLastCalledWith(
       "/preview/event-1?type=invoice&returnTo=%2Fevents%2Fevent-1%2Ffinancial%3FreturnTo%3D%252Fcontacts%252Fcontact-1",

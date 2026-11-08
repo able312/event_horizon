@@ -30,6 +30,8 @@ function isBeforeMinDate(date: Date, minDate: Date | undefined): boolean {
 }
 
 type DatePickerProps = {
+  /** id for the text input, so a <label htmlFor> can point at it */
+  id?: string
   name?: string
   value: Date | null
   onChange?: (date: Date | null) => void
@@ -39,6 +41,7 @@ type DatePickerProps = {
 }
 
 export function DatePicker({
+  id,
   name,
   value,
   onChange,
@@ -47,7 +50,7 @@ export function DatePicker({
   placeholder = "Pick a date",
 }: DatePickerProps) {
   const generatedId = React.useId()
-  const inputId = `${generatedId}-input`
+  const inputId = id ?? `${generatedId}-input`
   const buttonId = `${generatedId}-button`
 
   const [open, setOpen] = React.useState(false)

@@ -22,7 +22,9 @@ interface EventWorkspaceBodyRouterProps {
   onNavigateToOverview: () => void
 }
 
-const scrollContainerClassName = "h-full min-h-0 overflow-y-auto bg-stone-100"
+// `relative` keeps absolutely positioned content (e.g. `sr-only` table headers) laid out inside
+// this scroller rather than against the page, where it would make the whole window scrollable.
+const scrollContainerClassName = "relative h-full min-h-0 overflow-y-auto bg-stone-100"
 
 function renderCategoryWorkspace(
   categoryId: WorkspaceCategoryId,

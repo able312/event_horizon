@@ -7,6 +7,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* The window is the app shell (SplitLayout's h-screen root); only its panels scroll. Clipping the
+   document stops the whole app shifting up when something positioned escapes a panel and a wheel
+   event chains past a panel that has nothing left to scroll. Print releases this in App.css. */
+html,
+body {
+  overflow: hidden;
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;

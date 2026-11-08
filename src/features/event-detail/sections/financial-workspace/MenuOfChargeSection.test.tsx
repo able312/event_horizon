@@ -139,6 +139,7 @@ describe("MenuOfChargeSection", () => {
     expect(beverageCard?.className).toContain("shadow-sm")
 
     expect(screen.getByText("Other Charges Subtotal: $25.00")).toBeTruthy()
+    expect(screen.getByLabelText("Food & Beverage subtotal").textContent).toBe("$25.00")
   })
 
   it("renders workspace empty state alongside planning-owned empty states", async () => {

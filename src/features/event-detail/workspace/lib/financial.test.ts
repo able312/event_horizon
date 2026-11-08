@@ -10,6 +10,7 @@ import {
   computeEstimateLineTotalCents,
   computeEstimateSummaryRange,
   computeFinancialSummaryAllSources,
+  computeGrandTotalPerGuest,
   computeInvoiceFoodTimeblockSubtotalCents,
   dollarsToCents,
   fromDateInputValue,
@@ -289,5 +290,23 @@ describe("parseDollarsToCents", () => {
     expect(parseDollarsToCents("")).toBeNull()
     expect(parseDollarsToCents("forty")).toBeNull()
     expect(parseDollarsToCents("45/pp")).toBeNull()
+  })
+})
+
+describe("computeGrandTotalPerGuest", () => {
+  const range = (low: number, high: number) =>
+    ({ low: { grandTotalCents: low }, high: { grandTotalCents: high } }) as Parameters<typeof computeGrandTotalPerGuest>[0]
+
+  it("divides each end of the total by its own guest count", () => {
+    // Fixed costs spread over fewer guests cost more per head
+    expect(computeGrandTotalPerGuest(range(1_000_000, 1_100_000), { min: 100, max: 120 })).toEqual({
+      lowCents: 10_000,
+      highCents: 9_167,
+    })
+  })
+
+  it("is null without a guest count", () => {
+    expect(computeGrandTotalPerGuest(range(1000, 1000), null)).toBeNull()
+    expect(computeGrandTotalPerGuest(range(1000, 1000), { min: 0, max: 0 })).toBeNull()
   })
 })

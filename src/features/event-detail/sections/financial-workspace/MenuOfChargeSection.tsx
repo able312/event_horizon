@@ -356,16 +356,22 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
                       handleDropToCategory(section.category)
                     }}
                   >
-                    <tr>
+                    <tr className={`transition-colors ${isDropTarget ? "bg-orange-50 text-orange-700" : "text-muted-foreground"}`}>
                       <th
                         scope="rowgroup"
-                        colSpan={5}
-                        className={`px-1.5 pb-1 pt-3 text-left text-xs font-semibold uppercase tracking-wide transition-colors ${
-                          isDropTarget ? "bg-orange-50 text-orange-700" : "text-muted-foreground"
-                        }`}
+                        colSpan={3}
+                        className="px-1.5 pb-1 pt-3 text-left text-xs font-semibold uppercase tracking-wide"
                       >
                         {section.label}
                       </th>
+                      <td className="px-1.5 pb-1 pt-3 text-right text-xs font-medium">
+                        {section.items.length > 0 ? (
+                          <span aria-label={`${section.label} subtotal`}>
+                            {toCurrency(computeMenuSubtotalCents(section.items))}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td />
                     </tr>
                     {section.items.length === 0 ? (
                       <tr className={SECTION_TABLE_BODY_ROW_CLASS}>

@@ -1,6 +1,7 @@
 import React from "react"
 
 import { SegmentedControl } from "~/features/contacts/components/SegmentedControl"
+import ProposalDetailsButton from "~/features/event-detail/sections/financial-workspace/ProposalDetailsButton"
 import type { EventResource } from "~/features/event-detail/types"
 import type { PreviewTypeId } from "~/features/preview/lib/previewTypes"
 import { useFinancialView, type FinancialView } from "../hooks/useFinancialView"
@@ -40,7 +41,10 @@ const FinancialsWorkspace: React.FC<FinancialsWorkspaceProps> = ({ eventResource
           value={view}
           onChange={setView}
         />
-        <GeneratePreviewButton label={generate.label} onClick={() => openPreview(generate.previewType)} />
+        <div className="flex flex-wrap items-center gap-2">
+          {view === "estimate" ? <ProposalDetailsButton event={eventResource.event} /> : null}
+          <GeneratePreviewButton label={generate.label} onClick={() => openPreview(generate.previewType)} />
+        </div>
       </div>
       {view === "estimate" ? (
         <FinancialWorkspaceSection eventResource={eventResource} onSelectWorkspaceNode={onSelectWorkspaceNode} />

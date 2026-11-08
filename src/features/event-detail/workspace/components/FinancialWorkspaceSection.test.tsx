@@ -23,10 +23,6 @@ vi.mock("~/hooks/useBeverageSection", () => ({
   useBeverageSection: hooksMock.useBeverageSection,
 }))
 
-vi.mock("~/features/event-detail/sections/financial-workspace/EstimateProposalSection", () => ({
-  default: () => <div>Proposal Details</div>,
-}))
-
 vi.mock("~/features/event-detail/sections/financial-workspace/MenuOfChargeSection", () => ({
   default: (props: unknown) => {
     menuPropsMock(props)
@@ -76,11 +72,8 @@ describe("FinancialWorkspaceSection", () => {
     expect(screen.getByText("Quoting for 80–120 guests")).toBeTruthy()
     expect(screen.getByText("Menu Of Charges Table")).toBeTruthy()
     expect(screen.getByText("Menu Of Charges Table").parentElement?.className).toContain("min-w-0")
-    // The charges come first; proposal details are mostly set once, so they sit below them
-    expect(
-      screen.getByText("Menu Of Charges Table").compareDocumentPosition(screen.getByText("Proposal Details")) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
+    // Proposal details moved to a dialog opened from the Financials header
+    expect(screen.queryByText("Proposal Details")).toBeNull()
 
     expect(screen.getByText("$145.00")).toBeTruthy()
     expect(screen.getByText("$6.30")).toBeTruthy()
@@ -89,6 +82,8 @@ describe("FinancialWorkspaceSection", () => {
 
     expect(screen.getByText("Subtotal")).toBeTruthy()
     expect(screen.getByText("Grand Total")).toBeTruthy()
+    // Nothing here is priced per person, so $170.15 is spread over 120 guests ($1.42) to 80 ($2.13)
+    expect(screen.getByText("$1.42 – $2.13 per guest")).toBeTruthy()
     // Payments belong to the invoice section
     expect(screen.queryByText("Balance Remaining")).toBeNull()
 

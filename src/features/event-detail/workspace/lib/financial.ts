@@ -280,6 +280,21 @@ export function computeEstimateSummaryRange(params: {
   }
 }
 
+/**
+ * The grand total per guest at each end of the guest count: the low total over the fewest
+ * guests and the high total over the most. Null without a guest count to divide by.
+ */
+export function computeGrandTotalPerGuest(
+  range: EstimateSummaryRange,
+  guests: GuestCountRange | null,
+): { lowCents: number; highCents: number } | null {
+  if (!guests || guests.min <= 0 || guests.max <= 0) return null
+  return {
+    lowCents: Math.round(range.low.grandTotalCents / guests.min),
+    highCents: Math.round(range.high.grandTotalCents / guests.max),
+  }
+}
+
 export function toCurrency(cents: number): string {
   return new Intl.NumberFormat("en-CA", {
     style: "currency",
