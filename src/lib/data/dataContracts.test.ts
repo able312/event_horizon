@@ -7,6 +7,8 @@ import * as timeblocks from "./timeblocks"
 import * as beverage from "./beverageItems"
 import * as food from "./foodItems"
 import * as cart from "./cartDetails"
+import * as estimate from "./estimateDetails"
+import * as venue from "./venueSettings"
 import * as tournament from "./tournamentDetails"
 import * as contacts from "./contacts"
 import * as touchpoints from "./touchpoints"
@@ -59,11 +61,18 @@ const contracts: Contract[] = [
   { name: "timeblocks.getAllTimelineBlocks", kind: "source", call: () => timeblocks.getAllTimelineBlocks(eventId), args: { eventId, timeZone: desktopTimeZone() } },
   { name: "timeblocks.create", kind: "mutation", call: () => timeblocks.createTimeblock({ eventId, sectionType: "note", title: "Note" }), args: { eventId, sectionType: "note", title: "Note" } },
   { name: "timeblocks.update", kind: "mutation", call: () => timeblocks.updateTimeblock(id, { details: "New", assignedTo: undefined }), args: { id, updates: { details: "New" } } },
+  { name: "timeblocks.update", kind: "mutation", call: () => timeblocks.updateTimeblock(id, { isAddOn: true, packagePricePerPersonCents: 4500 }), args: { id, updates: { isAddOn: true, packagePricePerPersonCents: 4500 } } },
+  { name: "timeblocks.update", kind: "mutation", call: () => timeblocks.updateTimeblock(id, { isAddOn: false, packagePricePerPersonCents: null }), args: { id, updates: { isAddOn: false, packagePricePerPersonCents: null } } },
   { name: "timeblocks.inspectConversion", kind: "query", call: () => timeblocks.inspectTimeblockConversion({ timeblockId, toType: "food" }), args: { timeblockId, toType: "food" } },
   { name: "timeblocks.convertSectionType", kind: "mutation", call: () => timeblocks.convertTimeblockSectionType({ timeblockId, toType: "note", confirmDestructive: true }), args: { timeblockId, toType: "note", confirmDestructive: true } },
   { name: "timeblocks.remove", kind: "mutation", call: () => timeblocks.deleteTimeblock(id), args: { id } },
   { name: "cartDetails.ensureByEventId", kind: "mutation", call: () => cart.getOrCreateCartDetailsByEventId(eventId), args: { eventId } },
   { name: "cartDetails.update", kind: "mutation", call: () => cart.updateCartDetails(id, { time: "12:00", eventId }), args: { id, updates: { time: "12:00" } } },
+  { name: "estimateDetails.ensureByEventId", kind: "mutation", call: () => estimate.getOrCreateEstimateDetailsByEventId(eventId), args: { eventId } },
+  { name: "estimateDetails.update", kind: "mutation", call: () => estimate.updateEstimateDetails(id, { terms: null, depositKind: "percent", depositPercent: 25, eventId } as Parameters<typeof estimate.updateEstimateDetails>[1]), args: { id, updates: { terms: null, depositKind: "percent", depositPercent: 25 } } },
+  { name: "venueSettings.get", kind: "source", call: () => venue.getVenueSettings(), args: {} },
+  { name: "venueSettings.setDefaultEstimateTerms", kind: "mutation", call: () => venue.setDefaultEstimateTerms("Net 30"), args: { terms: "Net 30" } },
+  { name: "venueSettings.setDefaultEstimateTerms", kind: "mutation", call: () => venue.setDefaultEstimateTerms(null), args: { terms: null } },
   { name: "tournamentDetails.ensureByEventId", kind: "mutation", call: () => tournament.getOrCreateTournamentDetailsByEventId(eventId), args: { eventId } },
   { name: "tournamentDetails.update", kind: "mutation", call: () => tournament.updateTournamentDetails(id, { notes: "New", eventId }), args: { id, updates: { notes: "New" } } },
   { name: "beverageItems.getByEventId", kind: "source", call: () => beverage.getBeverageSectionWithItems(eventId), args: { eventId } },
@@ -74,6 +83,11 @@ const contracts: Contract[] = [
   { name: "beverageItems.update", kind: "mutation", call: () => beverage.updateBeverageItem(id, { serviceStyle: "Open Bar" }), args: { id, updates: { serviceStyle: "Open Bar" } } },
   { name: "beverageItems.create", kind: "mutation", call: () => beverage.createBeverageItem({ eventId, name: "Lager", type: "Beer", serviceStyle: "" as never }), args: { eventId, name: "Lager", type: "Beer", serviceStyle: null } },
   { name: "beverageItems.createAssignedToTimeblock", kind: "mutation", call: () => beverage.createBeverageItemAssignedToTimeblock({ eventId, timeblockId, name: "Lager", type: "Beer", serviceStyle: "" as never }), args: { eventId, timeblockId, name: "Lager", type: "Beer", serviceStyle: null } },
+  { name: "beverageItems.create", kind: "mutation", call: () => beverage.createBeverageItem({ eventId, name: "Lager", type: "Beer", pricingBasis: "per_person" }), args: { eventId, name: "Lager", type: "Beer", pricingBasis: "per_person" } },
+  { name: "beverageItems.update", kind: "mutation", call: () => beverage.updateBeverageItem(id, { pricingBasis: "per_person" }), args: { id, updates: { pricingBasis: "per_person" } } },
+  { name: "beverageItems.create", kind: "mutation", call: () => beverage.createBeverageItem({ eventId, name: "Lager", type: "Beer", isAddOn: true }), args: { eventId, name: "Lager", type: "Beer", isAddOn: true } },
+  { name: "beverageItems.createAssignedToTimeblock", kind: "mutation", call: () => beverage.createBeverageItemAssignedToTimeblock({ eventId, timeblockId, name: "Lager", type: "Beer", isAddOn: true }), args: { eventId, timeblockId, name: "Lager", type: "Beer", isAddOn: true } },
+  { name: "beverageItems.update", kind: "mutation", call: () => beverage.updateBeverageItem(id, { isAddOn: false }), args: { id, updates: { isAddOn: false } } },
   { name: "beverageItems.remove", kind: "mutation", call: () => beverage.deleteBeverageItem(id), args: { id } },
   { name: "beverageItems.setItemTimeblocks", kind: "mutation", call: () => beverage.setBeverageItemTimeblocks(id, [timeblockId]), args: { itemId: id, timeblockIds: [timeblockId] } },
   { name: "foodItems.getByEventId", kind: "source", call: () => food.getFoodSectionWithItems(eventId), args: { eventId } },
@@ -81,6 +95,10 @@ const contracts: Contract[] = [
   { name: "foodItems.update", kind: "mutation", call: () => food.updateFoodItem(id, { name: "New" }), args: { id, updates: { name: "New" } } },
   { name: "foodItems.update", kind: "mutation", call: () => food.updateFoodItem(id, { serviceStyle: "" as never }), args: { id, updates: { serviceStyle: null } } },
   { name: "foodItems.create", kind: "mutation", call: () => food.createFoodItem({ timeblockId, name: "Salad", serviceStyle: "" as never }), args: { timeblockId, name: "Salad", serviceStyle: null } },
+  { name: "foodItems.create", kind: "mutation", call: () => food.createFoodItem({ timeblockId, name: "Salad", pricingBasis: "per_person" }), args: { timeblockId, name: "Salad", pricingBasis: "per_person" } },
+  { name: "foodItems.update", kind: "mutation", call: () => food.updateFoodItem(id, { pricingBasis: "each" }), args: { id, updates: { pricingBasis: "each" } } },
+  { name: "foodItems.create", kind: "mutation", call: () => food.createFoodItem({ timeblockId, name: "Salad", isAddOn: true }), args: { timeblockId, name: "Salad", isAddOn: true } },
+  { name: "foodItems.update", kind: "mutation", call: () => food.updateFoodItem(id, { isAddOn: false }), args: { id, updates: { isAddOn: false } } },
   { name: "foodItems.remove", kind: "mutation", call: () => food.deleteFoodItem(id), args: { id } },
   { name: "contacts.getById", kind: "source", call: () => contacts.getContactById(id), args: { id } },
   { name: "contacts.search", kind: "source", call: () => contacts.searchContacts({ limit: 20, cursor: "cursor" }), args: { limit: 20, cursor: "cursor" } },

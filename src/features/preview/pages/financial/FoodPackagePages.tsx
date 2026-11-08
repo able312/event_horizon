@@ -32,8 +32,9 @@ export function renderFoodPackagePages(params: {
       <div>
         <h2 className="text-lg font-bold">Food Packages</h2>
         <p className="mb-4 mt-1 text-sm text-stone-600">
-          Food options to choose between. Per-person prices are each package&apos;s total divided by
-          the guest count.
+          Food options to choose between. Items priced per person are charged for every guest, so
+          package totals follow the guest count. Per-person prices are each package&apos;s total
+          divided by the guest count.
         </p>
       </div>
     </PreviewBlock>,

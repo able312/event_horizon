@@ -173,6 +173,23 @@ describe("useFoodSection optimistic cache", () => {
     })
   })
 
+  it("sends pricingBasis and isAddOn edits to the server", async () => {
+    vi.mocked(foodItemsIpc.getFoodSectionWithItems).mockResolvedValue([makeTimeblock()])
+    const updateItemMock = vi.mocked(foodItemsIpc.updateFoodItem)
+    updateItemMock.mockResolvedValue({ ...makeTimeblock().foodItems![0], pricingBasis: "per_person", isAddOn: true })
+
+    const { result, queryClient } = renderHookWithProviders(() => useFoodSection())
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    act(() => {
+      result.current.updateItem({ timeblockId: "tb-1", itemId: "food-1", updates: { pricingBasis: "per_person", isAddOn: true } })
+    })
+
+    await waitFor(() => expect(updateItemMock).toHaveBeenCalledWith("food-1", { pricingBasis: "per_person", isAddOn: true }))
+    const cached = queryClient.getQueryData<TimeblockWithItems[]>(["foodSection", "event-1"])
+    expect(cached?.[0].foodItems?.[0]).toMatchObject({ pricingBasis: "per_person", isAddOn: true })
+  })
+
   it("optimistic delete removes from foodItems, not items", async () => {
     const getSectionMock = vi.mocked(foodItemsIpc.getFoodSectionWithItems)
     const deleteItemMock = vi.mocked(foodItemsIpc.deleteFoodItem)

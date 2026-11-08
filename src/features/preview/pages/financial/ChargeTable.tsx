@@ -1,11 +1,5 @@
 import type { ReactNode } from "react"
 
-import { toCurrency } from "~/features/event-detail/workspace/lib/financial"
-import {
-  formatPreviewPrice,
-  formatPreviewQuantity,
-} from "~/features/preview/preferences/selectors"
-
 export function ChargeTable({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div>
@@ -20,25 +14,31 @@ export function ChargeTable({ title, children }: { title: string; children: Reac
   )
 }
 
+/** One printed charge line. Cells come preformatted (see formatChargeRowCells). */
 export function ChargeRow({
   name,
-  unitPriceCents,
+  cost,
   quantity,
-  totalCents,
+  total,
 }: {
   name: string
-  unitPriceCents: number | null | undefined
-  quantity: number | null | undefined
-  totalCents: number
+  cost: string
+  /** Null lets the cost run across the quantity column, for a per-person rate. */
+  quantity: string | null
+  total: string
 }) {
   return (
     <>
       <p className="col-span-3 font-bold">{name}</p>
-      <p className="col-span-1 text-end">{formatPreviewPrice(unitPriceCents, toCurrency)}</p>
-      <p className="col-span-1 text-end">{formatPreviewQuantity(quantity)}</p>
-      <p className="col-span-1 text-end">
-        {totalCents > 0 ? toCurrency(totalCents) : ""}
-      </p>
+      {quantity == null ? (
+        <p className="col-span-2 text-end">{cost}</p>
+      ) : (
+        <>
+          <p className="col-span-1 text-end">{cost}</p>
+          <p className="col-span-1 text-end">{quantity}</p>
+        </>
+      )}
+      <p className="col-span-1 text-end">{total}</p>
     </>
   )
 }

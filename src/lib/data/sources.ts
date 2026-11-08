@@ -50,6 +50,9 @@ export const sources = {
   cartDetails: {
     byEvent: (eventId: string) => liveSource(api.cartDetails.getByEventId, { eventId: toId<"events">(eventId) }),
   },
+  estimateDetails: {
+    byEvent: (eventId: string) => liveSource(api.estimateDetails.getByEventId, { eventId: toId<"events">(eventId) }),
+  },
   tournamentDetails: {
     byEvent: (eventId: string) => liveSource(api.tournamentDetails.getByEventId, { eventId: toId<"events">(eventId) }),
   },
@@ -92,6 +95,9 @@ export const sources = {
   },
   users: {
     all: () => liveSource(api.users.list, {}),
+  },
+  venueSettings: {
+    get: () => liveSource(api.venueSettings.get, {}),
   },
   vendorCategories: {
     all: (options?: { includeArchived?: boolean }) => liveSource(api.vendorCategories.getAll, {

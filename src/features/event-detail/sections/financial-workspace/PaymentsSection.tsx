@@ -32,15 +32,9 @@ function focusNextCell(rowId: string, currentCellIndex: number) {
 
 interface PaymentsSectionProps {
   className?: string
-  emptyStateMode?: "default" | "workspace"
-  onGenerateEstimate?: () => void
 }
 
-const PaymentsSection: React.FC<PaymentsSectionProps> = ({
-  className,
-  emptyStateMode = "default",
-  onGenerateEstimate,
-}) => {
+const PaymentsSection: React.FC<PaymentsSectionProps> = ({ className }) => {
   const {
     data: payments,
     isLoading,
@@ -138,23 +132,7 @@ const PaymentsSection: React.FC<PaymentsSectionProps> = ({
       {isLoading ? <p className="pt-4 text-sm text-muted-foreground">Loading payments...</p> : null}
 
       {!isLoading && rows.length === 0 ? (
-        emptyStateMode === "workspace" ? (
-          <div className="pt-4">
-            <p className="text-sm text-muted-foreground">No payments recorded yet.</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Would you like to create an estimate?
-            </p>
-            <button
-              type="button"
-              onClick={onGenerateEstimate}
-              className="mt-3 inline-flex items-center gap-1 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-            >
-              Generate Estimate
-            </button>
-          </div>
-        ) : (
-          <p className="pt-4 text-sm text-muted-foreground">No payments recorded yet.</p>
-        )
+        <p className="pt-4 text-sm text-muted-foreground">No payments recorded yet.</p>
       ) : null}
 
       {!isLoading && rows.length > 0 ? (

@@ -20,7 +20,7 @@ const EMPTY_ITEMS: BeverageItemWithAssignments[] = []
 type BeverageItemUpdates = Partial<
   Pick<
     BeverageItemWithAssignments,
-    "name" | "quantity" | "type" | "serviceStyle" | "includes" | "unitPriceCents"
+    "name" | "quantity" | "type" | "serviceStyle" | "includes" | "unitPriceCents" | "pricingBasis" | "isAddOn"
   >
 >
 
@@ -162,6 +162,8 @@ export function useBeverageSection() {
         serviceStyle: updates.serviceStyle,
         includes: updates.includes,
         unitPriceCents: updates.unitPriceCents,
+        pricingBasis: updates.pricingBasis,
+        isAddOn: updates.isAddOn,
       }),
     onMutate: async ({ itemId, updates }) => {
       await queryClient.cancelQueries({ queryKey })

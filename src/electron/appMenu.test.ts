@@ -192,7 +192,7 @@ describe("appMenu Generate visibility", () => {
     const timelineItem = submenu.find((item) => item.label === "Generate Timeline")
     const beoItem = submenu.find((item) => item.label === "Generate BEO")
     const foodBeoItem = submenu.find((item) => item.label === "Generate Food BEO")
-    const financialItem = submenu.find((item) => item.label === "Generate Financial Report")
+    const financialItem = submenu.find((item) => item.label === "Generate Estimate")
 
     if (!timelineItem?.click || !beoItem?.click || !foodBeoItem?.click || !financialItem?.click) {
       throw new Error("One or more Generate submenu items not found")

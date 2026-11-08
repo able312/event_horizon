@@ -3,11 +3,13 @@ import type {
   BEVERAGE_TYPES,
   CART_LAYOUTS,
   CHARGE_CATEGORIES,
+  DEPOSIT_KINDS,
   EVENT_REQUEST_STATUSES,
   EVENT_STATUSES,
   EVENT_TYPES,
   FOOD_SERVICE_STYLES,
   PLAY_FORMATS,
+  PRICING_BASES,
   START_FORMATS,
   TIMEBLOCK_SECTION_TYPES,
 } from "./enums.js"
@@ -178,6 +180,48 @@ export type CartDetails = {
 export type UpdateCartDetails = Partial<Omit<CartDetails, "id" | "createdAt" | "updatedAt">>
 
 // ============================================================================
+// Estimate Details
+// ============================================================================
+
+/** See DEPOSIT_KINDS. */
+export type DepositKind = (typeof DEPOSIT_KINDS)[number]
+
+/** Proposal details printed on the event's Estimate (one per event). */
+export type EstimateDetails = {
+  id: string
+  eventId: string
+  /** Printed at the top of the estimate */
+  introNote: string | null
+  /** YYYY-MM-DD */
+  validUntil: string | null
+  /** null uses the venue default terms (VenueSettings); a string, even "", is this event's own terms */
+  terms: string | null
+  depositKind: DepositKind
+  /** Used when depositKind is "amount" */
+  depositAmountCents: number | null
+  /** Used when depositKind is "percent"; 25 means 25% */
+  depositPercent: number | null
+  /** YYYY-MM-DD */
+  depositDueDate: string | null
+  depositNote: string | null
+  createdAt: string
+  updatedAt: string | null
+}
+export type UpdateEstimateDetails = Partial<Omit<EstimateDetails, "id" | "eventId" | "createdAt" | "updatedAt">>
+
+// ============================================================================
+// Venue Settings
+// ============================================================================
+
+/** Venue-wide settings (a single record; absent until someone saves a setting). */
+export type VenueSettings = {
+  id: string
+  defaultEstimateTerms: string | null
+  createdAt: string
+  updatedAt: string | null
+}
+
+// ============================================================================
 // Menu of Charge Items
 // ============================================================================
 
@@ -257,6 +301,18 @@ export type Timeblock = {
   assignedTo: string | null
   createdAt: string
   updatedAt: string | null
+  /** Food timeblocks: an optional add-on on the estimate, left out of its totals. Missing means false. */
+  isAddOn?: boolean
+  /**
+   * Food timeblocks: a per-person price that replaces the sum of the block's per-person
+   * items on the estimate. Missing or null means none.
+   */
+  packagePricePerPersonCents?: number | null
+  /**
+   * Food timeblocks with a package price: the final number of portions the invoice bills it
+   * for. Missing or null means not set yet; the estimate never uses it.
+   */
+  packageQuantity?: number | null
 }
 /** Allowlisted fields for ordinary timeblock patches from the renderer. */
 export type UpdateTimeblock = {
@@ -264,6 +320,11 @@ export type UpdateTimeblock = {
   time?: string | null
   details?: string | null
   assignedTo?: string | null
+  isAddOn?: boolean
+  /** Null clears it; otherwise a whole number of cents, 0 or more. */
+  packagePricePerPersonCents?: number | null
+  /** Null clears it; otherwise a whole number, 0 or more. */
+  packageQuantity?: number | null
 }
 
 // ============================================================================
@@ -271,6 +332,9 @@ export type UpdateTimeblock = {
 // ============================================================================
 
 export type FoodServiceStyle = (typeof FOOD_SERVICE_STYLES)[number]
+
+/** See PRICING_BASES. Missing on records saved before the field existed; read it with getPricingBasis. */
+export type PricingBasis = (typeof PRICING_BASES)[number]
 
 export type FoodItem = {
   id: string
@@ -283,6 +347,9 @@ export type FoodItem = {
   /** Kitchen and staff only. */
   internalNotes: string | null
   unitPriceCents: number | null
+  pricingBasis?: PricingBasis
+  /** An optional add-on on the estimate, left out of its totals until accepted. Missing means false. */
+  isAddOn?: boolean
 }
 
 // ============================================================================
@@ -301,4 +368,7 @@ export type BeverageItem = {
   serviceStyle: BeverageServiceStyle | null
   includes: string | null
   unitPriceCents: number | null
+  pricingBasis?: PricingBasis
+  /** An optional add-on on the estimate, left out of its totals until accepted. Missing means false. */
+  isAddOn?: boolean
 }

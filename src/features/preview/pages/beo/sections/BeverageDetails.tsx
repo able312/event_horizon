@@ -1,5 +1,6 @@
 import type { BeverageItem, BeverageItemType } from "~/definitions/database"
 import type { Timeblock } from "~/definitions/database"
+import { isAddOn } from "~/features/event-detail/workspace/lib/estimateAddOns"
 import { computeBillableLineTotalCents, toCurrency } from "~/features/event-detail/workspace/lib/financial"
 import {
   formatPreviewPrice,
@@ -84,7 +85,10 @@ export function BeverageTypeSectionList({
                   : "grid-cols-[minmax(0,2fr)_auto]"
               }`}
             >
-              <p className="font-semibold">{item.name}</p>
+              <p className="font-semibold">
+                {item.name}
+                {isAddOn(item) ? <span className="ml-1.5 text-[10px] font-normal uppercase tracking-wide text-stone-500">(add-on, not confirmed)</span> : null}
+              </p>
               <p className="text-end tabular-nums">{qty}</p>
               {showPricing ? (
                 <>

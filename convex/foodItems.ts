@@ -3,9 +3,12 @@ import { v } from "convex/values"
 import { internal } from "./_generated/api"
 import { internalMutation } from "./_generated/server"
 import { companyMutation, companyQuery } from "./lib/auth"
+import { backfillMissingFieldsBatch } from "./lib/backfill"
+import { DEFAULT_IS_ADD_ON, toTimeblockRecord } from "./lib/estimateFields"
 import { foodItemNotesPatch, getFoodItemRecords, migratedFoodItemNotes, newFoodItemNotes, toFoodItemRecord } from "./lib/foodItemNotes"
-import { assertUpdates, requireDocument, toRecord } from "./lib/records"
-import { foodServiceStyle, nullable } from "./lib/validators"
+import { backfillPricingBasisBatch, DEFAULT_PRICING_BASIS } from "./lib/pricingBasis"
+import { assertUpdates, requireDocument } from "./lib/records"
+import { foodServiceStyle, nullable, pricingBasis } from "./lib/validators"
 
 const editableFields = {
   name: v.optional(v.string()),
@@ -17,6 +20,10 @@ const editableFields = {
   // See lib/foodItemNotes.ts for when this can go.
   includes: v.optional(nullable(v.string())),
   unitPriceCents: v.optional(nullable(v.number())),
+  // Optional: older app builds don't send it; new items then get "each".
+  pricingBasis: v.optional(pricingBasis),
+  // Optional: older app builds don't send it; new items then aren't add-ons.
+  isAddOn: v.optional(v.boolean()),
 }
 
 // Public functions; every handler requires a company identity (lib/auth.ts).
@@ -32,6 +39,8 @@ export const create = companyMutation({
       serviceStyle: values.serviceStyle ?? null,
       ...newFoodItemNotes(values),
       unitPriceCents: values.unitPriceCents ?? null,
+      pricingBasis: values.pricingBasis ?? DEFAULT_PRICING_BASIS,
+      isAddOn: values.isAddOn ?? DEFAULT_IS_ADD_ON,
     })
     return toFoodItemRecord(await requireDocument(ctx, "foodItems", id))
   },
@@ -64,7 +73,7 @@ export const getByEventId = companyQuery({
     return Promise.all(timeblocks.map(async (timeblock) => {
       const items = await getFoodItemRecords(ctx, timeblock._id)
       // Keep both names while the existing food section expects `items`.
-      return { ...toRecord(timeblock), foodItems: items, items }
+      return { ...toTimeblockRecord(timeblock), foodItems: items, items }
     }))
   },
 })
@@ -100,5 +109,45 @@ export const migrateIncludesToClientNotes = internalMutation({
       await ctx.scheduler.runAfter(0, internal.foodItems.migrateIncludesToClientNotes, { cursor: batch.continueCursor, batchSize })
     }
     return { migrated, skipped, isDone: batch.isDone }
+  },
+})
+
+/**
+ * One-off migration for the pricing basis: sets `pricingBasis: "each"` on every food item
+ * saved before the field existed (missing already reads as "each", so nothing changes for
+ * the team). Items that have one are skipped, so running it twice is harmless. Batched like
+ * `migrateIncludesToClientNotes` above. Run once per deployment after deploying the schema change:
+ * `npx convex run --prod foodItems:backfillPricingBasis`
+ * The result covers the first batch only; later batches report in the deployment's logs.
+ */
+export const backfillPricingBasis = internalMutation({
+  args: { cursor: v.optional(v.union(v.string(), v.null())), batchSize: v.optional(v.number()) },
+  returns: v.object({ migrated: v.number(), skipped: v.number(), isDone: v.boolean() }),
+  handler: async (ctx, { cursor = null, batchSize = MIGRATION_BATCH_SIZE }) => {
+    const { continueCursor, ...result } = await backfillPricingBasisBatch(ctx, "foodItems", cursor, batchSize)
+    if (!result.isDone) {
+      await ctx.scheduler.runAfter(0, internal.foodItems.backfillPricingBasis, { cursor: continueCursor, batchSize })
+    }
+    return result
+  },
+})
+
+/**
+ * One-off migration for add-ons: sets `isAddOn: false` on every food item saved before the
+ * field existed (missing already reads as false). Items that have one are skipped, so running
+ * it twice is harmless. Batched like `backfillPricingBasis` above. Run once per deployment
+ * after deploying the schema change: `npx convex run --prod foodItems:backfillAddOn`
+ * The result covers the first batch only; later batches report in the deployment's logs.
+ */
+export const backfillAddOn = internalMutation({
+  args: { cursor: v.optional(v.union(v.string(), v.null())), batchSize: v.optional(v.number()) },
+  returns: v.object({ migrated: v.number(), skipped: v.number(), isDone: v.boolean() }),
+  handler: async (ctx, { cursor = null, batchSize = MIGRATION_BATCH_SIZE }) => {
+    const { continueCursor, ...result } = await backfillMissingFieldsBatch(
+      ctx, "foodItems", "backfillAddOn", { isAddOn: DEFAULT_IS_ADD_ON }, cursor, batchSize)
+    if (!result.isDone) {
+      await ctx.scheduler.runAfter(0, internal.foodItems.backfillAddOn, { cursor: continueCursor, batchSize })
+    }
+    return result
   },
 })

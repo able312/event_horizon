@@ -222,6 +222,23 @@ describe("useBeverageSection optimistic cache", () => {
     })
   })
 
+  it("sends pricingBasis and isAddOn edits to the server", async () => {
+    vi.mocked(beverageItemsIpc.getBeverageSectionWithItems).mockResolvedValue(makeSection())
+    const updateItemMock = vi.mocked(beverageItemsIpc.updateBeverageItem)
+    updateItemMock.mockResolvedValue({ ...makeSection().items[0], pricingBasis: "per_person", isAddOn: true })
+
+    const { result, queryClient } = renderHookWithProviders(() => useBeverageSection())
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    act(() => {
+      result.current.updateItem({ itemId: "bev-1", updates: { pricingBasis: "per_person", isAddOn: true } })
+    })
+
+    await waitFor(() => expect(updateItemMock).toHaveBeenCalledWith("bev-1", { pricingBasis: "per_person", isAddOn: true }))
+    const cached = queryClient.getQueryData<BeverageSectionPayload>(["beverageSection", "event-1"])
+    expect(cached?.items[0]).toMatchObject({ pricingBasis: "per_person", isAddOn: true })
+  })
+
   it("optimistic delete removes from items", async () => {
     const getSectionMock = vi.mocked(beverageItemsIpc.getBeverageSectionWithItems)
     const deleteItemMock = vi.mocked(beverageItemsIpc.deleteBeverageItem)

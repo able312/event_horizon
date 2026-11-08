@@ -1,14 +1,19 @@
 import { describe, expect, it } from "vitest"
 
-import type { BeverageItem, FoodItem, MenuOfChargeItem, Payment } from "~/definitions/database"
+import type { BeverageItem, FoodItem, MenuOfChargeItem } from "~/definitions/database"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
-import { computeFinancialSummaryAllSources } from "~/features/event-detail/workspace/lib/financial"
+import {
+  computeEstimateSummaryRange,
+  computeFinancialSummaryAllSources,
+} from "~/features/event-detail/workspace/lib/financial"
 
 import {
   buildFoodPackageEstimateRows,
   computeFoodChargeBreakdown,
   formatCurrencyRange,
   computeFoodPackageEstimate,
+  computeFoodPackageSubtotalCents,
+  formatGuestCountRange,
   resolveGuestCountRange,
   splitFoodPackageTimeblocks,
   summarizeFoodPackage,
@@ -45,8 +50,14 @@ function makeMenuItem(id: string, quantity: number, unitPriceCents: number): Men
   return { id, eventId: "e1", name: id, quantity, category: "Venue", includes: null, unitPriceCents, createdAt: "0" }
 }
 
-function makeBeverageItem(id: string, quantity: number, unitPriceCents: number): BeverageItem {
+function makeBeverageItem(
+  id: string,
+  quantity: number,
+  unitPriceCents: number,
+  pricingBasis?: BeverageItem["pricingBasis"],
+): BeverageItem {
   return {
+    pricingBasis,
     id,
     eventId: "e1",
     name: id,
@@ -56,10 +67,6 @@ function makeBeverageItem(id: string, quantity: number, unitPriceCents: number):
     includes: null,
     unitPriceCents,
   }
-}
-
-function makePayment(id: string, amountCents: number): Payment {
-  return { id, eventId: "e1", amountCents, date: "2026-11-01", recieptNumber: null, notes: null, createdAt: "0" }
 }
 
 // Package A: 80 × 2500 + 2 × 20000 = 240000
@@ -77,7 +84,6 @@ const lateSnack = makeTimeblock("snack", "Late snack", [{ id: "s1", name: "Pouti
 const foodTimeblocks = [packageA, lateSnack, packageB, packageC]
 const menuItems = [makeMenuItem("m1", 1, 50000)] // 50000
 const beverageItems = [makeBeverageItem("bev1", 20, 700)] // 14000
-const payments = [makePayment("p1", 30000)]
 
 describe("resolveGuestCountRange", () => {
   it("returns null when neither end is a usable count", () => {
@@ -99,6 +105,13 @@ describe("resolveGuestCountRange", () => {
   it("swaps a reversed range and floors fractional counts", () => {
     expect(resolveGuestCountRange({ minGuests: 150, maxGuests: 100 })).toEqual({ min: 100, max: 150 })
     expect(resolveGuestCountRange({ minGuests: 79.9, maxGuests: 100.6 })).toEqual({ min: 79, max: 100 })
+  })
+
+  it("uses the max alone once the count is final", () => {
+    expect(resolveGuestCountRange({ minGuests: 80, maxGuests: 110, guestCountFinal: 1 })).toEqual({ min: 110, max: 110 })
+    expect(resolveGuestCountRange({ minGuests: 80, maxGuests: 110, guestCountFinal: 0 })).toEqual({ min: 80, max: 110 })
+    // No max to be final about: fall back to the min
+    expect(resolveGuestCountRange({ minGuests: 80, maxGuests: null, guestCountFinal: 1 })).toEqual({ min: 80, max: 80 })
   })
 })
 
@@ -147,7 +160,10 @@ describe("summarizeFoodPackage", () => {
     expect(summary.timeblockId).toBe("pkg-x")
     expect(summary.title).toBe("Package X")
     // 240000: HST 31200, gratuity 43200, total 314400
-    expect(summary.totals).toEqual({ subtotalCents: 240000, hstCents: 31200, gratuityCents: 43200, totalCents: 314400 })
+    const whole = { subtotalCents: 240000, hstCents: 31200, gratuityCents: 43200, totalCents: 314400 }
+    expect(summary.totals).toEqual({ low: whole, high: whole })
+    expect(summary.eachSubtotalCents).toBe(240000)
+    expect(summary.perPersonRateCents).toBe(0)
     expect(summary.unpricedItemNames).toEqual(["Cake", "Water", "Mints", "Bread"])
     expect(summary.perPerson).toEqual({
       guests: { min: 80, max: 100 },
@@ -170,6 +186,63 @@ describe("summarizeFoodPackage", () => {
   it("has no per-person pricing without a guest count", () => {
     expect(summarizeFoodPackage(packageB, null).perPerson).toBeNull()
   })
+
+  it("prices per person by the package price, keeping fixed-price items like platters on top", () => {
+    const priced = {
+      ...makeTimeblock("pkg-p", "Package P", [
+        { id: "p1", name: "Wings platter", quantity: 4, unitPriceCents: 10000, pricingBasis: "each" }, // 40000
+        { id: "p2", name: "Salad", quantity: null, unitPriceCents: 800, pricingBasis: "per_person" },
+        { id: "p3", name: "Chicken", quantity: null, unitPriceCents: null, pricingBasis: "per_person" },
+      ]),
+      packagePricePerPersonCents: 4500,
+    }
+    const summary = summarizeFoodPackage(priced, { min: 25, max: 50 })
+
+    expect(summary.packagePricePerPersonCents).toBe(4500)
+    expect(summary.perPersonRateCents).toBe(4500)
+    expect(summary.eachSubtotalCents).toBe(40000)
+    // 40000 + 4500 × 25 = 152500; 40000 + 4500 × 50 = 265000
+    expect(summary.totals.low.subtotalCents).toBe(152500)
+    expect(summary.totals.high.subtotalCents).toBe(265000)
+    // The chicken has no price of its own, but the package price covers it.
+    expect(summary.unpricedItemNames).toEqual([])
+  })
+})
+
+describe("package price in the estimate totals", () => {
+  const priced = {
+    ...makeTimeblock("dinner", "Dinner", [
+      { id: "d1", name: "Wings platter", quantity: 4, unitPriceCents: 10000, pricingBasis: "each" },
+      { id: "d2", name: "Buffet", quantity: 50, unitPriceCents: 3000, pricingBasis: "per_person" },
+    ]),
+    packagePricePerPersonCents: 4500,
+  }
+
+  it("replaces per-person items with the package price × guests on the estimate", () => {
+    const range = computeEstimateSummaryRange({ menuItems: [], foodTimeblocks: [priced], beverageItems: [], guests: { min: 25, max: 50 } })
+    expect(range.low.foodSubtotalCents).toBe(40000 + 4500 * 25)
+    expect(range.high.foodSubtotalCents).toBe(40000 + 4500 * 50)
+  })
+
+  it("keeps only the fixed-price items without a guest count", () => {
+    const range = computeEstimateSummaryRange({ menuItems: [], foodTimeblocks: [priced], beverageItems: [], guests: null })
+    expect(range.low.foodSubtotalCents).toBe(40000)
+  })
+
+  it("bills the package price × its final quantity on the invoice, in place of the items it covers", () => {
+    const summary = computeFinancialSummaryAllSources({
+      menuItems: [],
+      foodTimeblocks: [{ ...priced, packageQuantity: 48 }],
+      beverageItems: [],
+    })
+    // Platters 2 × $100 + $45 × 48; the buffet's own 50 × $30 is not billed.
+    expect(summary.foodSubtotalCents).toBe(40000 + 4500 * 48)
+  })
+
+  it("bills nothing for a package price until its final quantity is set, never guessing", () => {
+    const summary = computeFinancialSummaryAllSources({ menuItems: [], foodTimeblocks: [priced], beverageItems: [] })
+    expect(summary.foodSubtotalCents).toBe(40000)
+  })
 })
 
 describe("splitFoodPackageTimeblocks", () => {
@@ -187,15 +260,14 @@ describe("splitFoodPackageTimeblocks", () => {
 })
 
 describe("computeFoodPackageEstimate", () => {
-  const base = { menuItems, foodTimeblocks, beverageItems, payments }
+  const base = { menuItems, foodTimeblocks, beverageItems }
   const packageTimeblockIds = ["pkg-c", "pkg-a", "pkg-b"]
 
   it("is the plain summary over all food when no packages are chosen, whatever the mode", () => {
     const plain = computeFinancialSummaryAllSources(base)
     // food 15000 + 240000 + 100000 + 160000 = 515000; charges 579000; gratuity round(529000 × 0.18) = 95220;
-    // HST round(579000 × 0.13) = 75270; grand 579000 + 75270 + 95220 = 749490; balance 719490
+    // HST round(579000 × 0.13) = 75270; grand 579000 + 75270 + 95220 = 749490
     expect(plain.grandTotalCents).toBe(749490)
-    expect(plain.balanceDueCents).toBe(719490)
 
     for (const mode of ["ignore", "average", "list"] as const) {
       for (const ids of [null, []]) {
@@ -210,7 +282,7 @@ describe("computeFoodPackageEstimate", () => {
   it("leaves package timeblocks out of the totals in ignore mode", () => {
     const estimate = computeFoodPackageEstimate({ ...base, packageTimeblockIds, mode: "ignore", guests: null })
     // menu 50000, food 15000, beverage 14000 -> charges 79000; gratuity round(29000 × 0.18) = 5220;
-    // HST round(79000 × 0.13) = 10270; charges total 89270; grand 94490; balance 94490 − 30000 = 64490
+    // HST round(79000 × 0.13) = 10270; charges total 89270; grand 94490
     expect(estimate.low).toEqual({
       menuSubtotalCents: 50000,
       foodSubtotalCents: 15000,
@@ -221,8 +293,8 @@ describe("computeFoodPackageEstimate", () => {
       hstCents: 10270,
       chargesTotalCents: 89270,
       grandTotalCents: 94490,
-      paidTotalCents: 30000,
-      balanceDueCents: 64490,
+      paidTotalCents: 0,
+      balanceDueCents: 94490,
     })
     expect(estimate.high).toEqual(estimate.low)
   })
@@ -230,10 +302,10 @@ describe("computeFoodPackageEstimate", () => {
   it("adds the average package subtotal as food in average mode", () => {
     const estimate = computeFoodPackageEstimate({ ...base, packageTimeblockIds, mode: "average", guests: null })
     // (240000 + 100000 + 160000) / 3 = 166666.67 -> 166667
-    expect(estimate.averageSubtotalCents).toBe(166667)
+    expect(estimate.averageSubtotalCents).toEqual({ low: 166667, high: 166667 })
     // food 15000 + 166667 = 181667; charges 50000 + 181667 + 14000 = 245667; gratuity base 195667;
     // gratuity round(35220.06) = 35220; HST round(31936.71) = 31937; charges total 277604;
-    // grand 312824; balance 282824
+    // grand 312824
     expect(estimate.low).toEqual({
       menuSubtotalCents: 50000,
       foodSubtotalCents: 181667,
@@ -244,8 +316,8 @@ describe("computeFoodPackageEstimate", () => {
       hstCents: 31937,
       chargesTotalCents: 277604,
       grandTotalCents: 312824,
-      paidTotalCents: 30000,
-      balanceDueCents: 282824,
+      paidTotalCents: 0,
+      balanceDueCents: 312824,
     })
     expect(estimate.high).toEqual(estimate.low)
   })
@@ -253,7 +325,7 @@ describe("computeFoodPackageEstimate", () => {
   it("ranges from the cheapest to the most expensive package in list mode", () => {
     const estimate = computeFoodPackageEstimate({ ...base, packageTimeblockIds, mode: "list", guests: null })
     // low with B (100000): food 115000; charges 179000; gratuity base 129000 -> 23220;
-    // HST 23270; charges total 202270; grand 225490; balance 195490
+    // HST 23270; charges total 202270; grand 225490
     expect(estimate.low).toEqual({
       menuSubtotalCents: 50000,
       foodSubtotalCents: 115000,
@@ -264,11 +336,11 @@ describe("computeFoodPackageEstimate", () => {
       hstCents: 23270,
       chargesTotalCents: 202270,
       grandTotalCents: 225490,
-      paidTotalCents: 30000,
-      balanceDueCents: 195490,
+      paidTotalCents: 0,
+      balanceDueCents: 225490,
     })
     // high with A (240000): food 255000; charges 319000; gratuity base 269000 -> 48420;
-    // HST 41470; charges total 360470; grand 408890; balance 378890
+    // HST 41470; charges total 360470; grand 408890
     expect(estimate.high).toEqual({
       menuSubtotalCents: 50000,
       foodSubtotalCents: 255000,
@@ -279,8 +351,8 @@ describe("computeFoodPackageEstimate", () => {
       hstCents: 41470,
       chargesTotalCents: 360470,
       grandTotalCents: 408890,
-      paidTotalCents: 30000,
-      balanceDueCents: 378890,
+      paidTotalCents: 0,
+      balanceDueCents: 408890,
     })
   })
 
@@ -294,7 +366,7 @@ describe("computeFoodPackageEstimate", () => {
 
     expect(estimate.mode).toBe("list")
     expect(estimate.packages.map((pkg) => pkg.timeblockId)).toEqual(["pkg-a", "pkg-b", "pkg-c"])
-    expect(estimate.packages.map((pkg) => pkg.totals.subtotalCents)).toEqual([240000, 100000, 160000])
+    expect(estimate.packages.map((pkg) => pkg.totals.low.subtotalCents)).toEqual([240000, 100000, 160000])
     // A: 2400 + 312 + 432 = 3144 at 100; 3000 + 390 + 540 = 3930 at 80
     expect(estimate.packages[0]?.perPerson?.atMaxGuests.totalCents).toBe(3144)
     expect(estimate.packages[0]?.perPerson?.atMinGuests.totalCents).toBe(3930)
@@ -330,7 +402,6 @@ describe("buildFoodPackageEstimateRows", () => {
       menuItems: [],
       foodTimeblocks,
       beverageItems: [],
-      payments: [],
       packageTimeblockIds: ids,
       mode,
       guests: null,
@@ -342,21 +413,169 @@ describe("buildFoodPackageEstimateRows", () => {
 
   it("points to the packages page, unpriced, in ignore mode", () => {
     expect(buildFoodPackageEstimateRows(estimateFor("ignore"))).toEqual([
-      { key: "food-packages-pointer", name: "Food packages (2): priced separately, see Food Packages", totalCents: 0 },
+      {
+        key: "food-packages-pointer",
+        name: "Food packages (2): priced separately, see Food Packages",
+        lowCents: 0,
+        highCents: 0,
+      },
     ])
   })
 
   it("adds one average row in average mode", () => {
     // (240000 + 100000) / 2
     expect(buildFoodPackageEstimateRows(estimateFor("average"))).toEqual([
-      { key: "food-packages-average", name: "Food package (average of 2)", totalCents: 170000 },
+      { key: "food-packages-average", name: "Food package (average of 2)", lowCents: 170000, highCents: 170000 },
     ])
   })
 
   it("adds one row per package in list mode", () => {
     expect(buildFoodPackageEstimateRows(estimateFor("list"))).toEqual([
-      { key: "food-package-pkg-a", name: "Food package option: Package A", totalCents: 240000 },
-      { key: "food-package-pkg-b", name: "Food package option: Package B", totalCents: 100000 },
+      { key: "food-package-pkg-a", name: "Food package option: Package A", lowCents: 240000, highCents: 240000 },
+      { key: "food-package-pkg-b", name: "Food package option: Package B", lowCents: 100000, highCents: 100000 },
     ])
+  })
+})
+
+describe("formatGuestCountRange", () => {
+  it("prints one count or a range", () => {
+    expect(formatGuestCountRange({ min: 80, max: 80 })).toBe("80 guests")
+    expect(formatGuestCountRange({ min: 80, max: 120 })).toBe("80–120 guests")
+  })
+})
+
+describe("per-person pricing", () => {
+  // Buffet: 4500 per person (its quantity is ignored); Cake: 1 × 20000 each
+  const buffetPackage = makeTimeblock("pkg-pp", "Buffet", [
+    { id: "pp1", name: "Buffet", quantity: 3, unitPriceCents: 4500, pricingBasis: "per_person" },
+    { id: "pp2", name: "Cake", quantity: 1, unitPriceCents: 20000, pricingBasis: "each" },
+    { id: "pp3", name: "Coffee", quantity: null, unitPriceCents: 300, pricingBasis: "per_person" },
+    { id: "pp4", name: "Tea", quantity: 5, unitPriceCents: null, pricingBasis: "per_person" },
+  ])
+
+  it("splits a package into each items and a per-guest rate, with totals across the guest range", () => {
+    const summary = summarizeFoodPackage(buffetPackage, { min: 80, max: 120 })
+    expect(summary.eachSubtotalCents).toBe(20000)
+    expect(summary.perPersonRateCents).toBe(4800)
+    // 20000 + 4800 × 80 = 404000; × 120 = 596000
+    expect(summary.totals.low.subtotalCents).toBe(404000)
+    expect(summary.totals.high.subtotalCents).toBe(596000)
+    // 404000 / 80 = 5050; 596000 / 120 = 4966.67
+    expect(summary.perPerson?.atMinGuests.subtotalCents).toBe(5050)
+    expect(summary.perPerson?.atMaxGuests.subtotalCents).toBe(4967)
+    // A per-person item needs only a price
+    expect(summary.unpricedItemNames).toEqual(["Tea"])
+  })
+
+  it("leaves per-person items out of a package's total without a guest count", () => {
+    const summary = summarizeFoodPackage(buffetPackage, null)
+    expect(summary.totals.low.subtotalCents).toBe(20000)
+    expect(summary.totals.high.subtotalCents).toBe(20000)
+    expect(summary.perPerson).toBeNull()
+    expect(computeFoodPackageSubtotalCents(summary, null)).toBe(20000)
+    expect(computeFoodPackageSubtotalCents(summary, 10)).toBe(68000)
+  })
+
+  // Certain food: Coffee 300 per person; bar 2000 per person; venue 50000
+  const coffee = makeTimeblock("coffee", "Coffee", [
+    { id: "c1", name: "Coffee", quantity: 1, unitPriceCents: 300, pricingBasis: "per_person" },
+  ])
+  // Each-only package: 50000. Per-person package: 4000 per guest.
+  const eachPackage = makeTimeblock("pkg-each", "Plated", [{ id: "e1", quantity: 1, unitPriceCents: 50000 }])
+  const perPersonPackage = makeTimeblock("pkg-pp", "Buffet", [
+    { id: "p1", quantity: null, unitPriceCents: 4000, pricingBasis: "per_person" },
+  ])
+  const ppBase = {
+    menuItems,
+    foodTimeblocks: [coffee, eachPackage, perPersonPackage],
+    beverageItems: [makeBeverageItem("bar", 0, 2000, "per_person")],
+  }
+  const ids = ["pkg-each", "pkg-pp"]
+
+  it("ranges the ordinary estimate over the guest count", () => {
+    const estimate = computeFoodPackageEstimate({
+      ...ppBase,
+      packageTimeblockIds: ids,
+      mode: "ignore",
+      guests: { min: 10, max: 20 },
+    })
+    expect(estimate.low.foodSubtotalCents).toBe(3000)
+    expect(estimate.high.foodSubtotalCents).toBe(6000)
+    expect(estimate.low.beverageSubtotalCents).toBe(20000)
+    expect(estimate.high.beverageSubtotalCents).toBe(40000)
+    expect(estimate.rangeNote).toBe("by guest count")
+    expect({ low: estimate.low, high: estimate.high }).toEqual(
+      computeEstimateSummaryRange({
+        menuItems,
+        foodTimeblocks: [coffee],
+        beverageItems: ppBase.beverageItems,
+        guests: { min: 10, max: 20 },
+      }),
+    )
+  })
+
+  it("takes the cheapest package at the fewest guests and the dearest at the most in list mode", () => {
+    const estimate = computeFoodPackageEstimate({
+      ...ppBase,
+      packageTimeblockIds: ids,
+      mode: "list",
+      guests: { min: 10, max: 20 },
+    })
+    // At 10: Plated 50000, Buffet 40000 -> 40000. At 20: Plated 50000, Buffet 80000 -> 80000.
+    expect(estimate.low.foodSubtotalCents).toBe(3000 + 40000)
+    expect(estimate.high.foodSubtotalCents).toBe(6000 + 80000)
+    expect(estimate.rangeNote).toBe("by package and guest count")
+    expect(buildFoodPackageEstimateRows(estimate)).toEqual([
+      { key: "food-package-pkg-each", name: "Food package option: Plated", lowCents: 50000, highCents: 50000 },
+      { key: "food-package-pkg-pp", name: "Food package option: Buffet", lowCents: 40000, highCents: 80000 },
+    ])
+  })
+
+  it("averages packages at each end of the guest range in average mode", () => {
+    const estimate = computeFoodPackageEstimate({
+      ...ppBase,
+      packageTimeblockIds: ids,
+      mode: "average",
+      guests: { min: 10, max: 20 },
+    })
+    expect(estimate.averageSubtotalCents).toEqual({ low: 45000, high: 65000 })
+    expect(estimate.low.foodSubtotalCents).toBe(3000 + 45000)
+    expect(estimate.high.foodSubtotalCents).toBe(6000 + 65000)
+    expect(buildFoodPackageEstimateRows(estimate)).toEqual([
+      { key: "food-packages-average", name: "Food package (average of 2)", lowCents: 45000, highCents: 65000 },
+    ])
+  })
+
+  it("names the package as the only reason for a range at a fixed guest count", () => {
+    const estimate = computeFoodPackageEstimate({
+      ...ppBase,
+      packageTimeblockIds: ids,
+      mode: "list",
+      guests: { min: 15, max: 15 },
+    })
+    // At 15: Plated 50000, Buffet 60000
+    expect(estimate.low.foodSubtotalCents).toBe(4500 + 50000)
+    expect(estimate.high.foodSubtotalCents).toBe(4500 + 60000)
+    expect(estimate.rangeNote).toBe("by package chosen")
+  })
+
+  it("leaves per-person lines out of every total without a guest count", () => {
+    const estimate = computeFoodPackageEstimate({ ...ppBase, packageTimeblockIds: ids, mode: "list", guests: null })
+    // Coffee and the bar drop out; Buffet is 0 without guests, Plated 50000
+    expect(estimate.low.foodSubtotalCents).toBe(0)
+    expect(estimate.high.foodSubtotalCents).toBe(50000)
+    expect(estimate.low.beverageSubtotalCents).toBe(0)
+    expect(estimate.rangeNote).toBe("by package chosen")
+  })
+
+  it("has no range note when the totals do not vary", () => {
+    const estimate = computeFoodPackageEstimate({
+      ...ppBase,
+      packageTimeblockIds: ids,
+      mode: "ignore",
+      guests: { min: 12, max: 12 },
+    })
+    expect(estimate.low).toEqual(estimate.high)
+    expect(estimate.rangeNote).toBeNull()
   })
 })

@@ -9,6 +9,7 @@ import {
 } from "~/features/preview/lib/previewTypes"
 import { BeoOptions } from "~/features/preview/panels/options/BeoOptions"
 import { FinancialOptions } from "~/features/preview/panels/options/FinancialOptions"
+import { InvoiceOptions } from "~/features/preview/panels/options/InvoiceOptions"
 import { FoodBeoOptions } from "~/features/preview/panels/options/FoodBeoOptions"
 import { TimelineOptions } from "~/features/preview/panels/options/TimelineOptions"
 import { PreviewOptionSection } from "~/features/preview/panels/PreviewOptionControls"
@@ -82,6 +83,7 @@ const PreviewPanelOrchestrator: React.FC = () => {
           {activeType === "beo-food" ? <FoodBeoOptions /> : null}
           {activeType === "timeline" ? <TimelineOptions /> : null}
           {activeType === "financial-report" ? <FinancialOptions /> : null}
+          {activeType === "invoice" ? <InvoiceOptions /> : null}
         </div>
       </Panel.Content>
     </>

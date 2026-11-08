@@ -5,6 +5,7 @@ import {
   ClipboardList,
   DollarSign,
   LayoutGrid,
+  ReceiptText,
   UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react"
@@ -14,6 +15,7 @@ const PREVIEW_TYPE_IDS = [
   "beo-food",
   "timeline",
   "financial-report",
+  "invoice",
   "cart-diagram",
 ] as const
 
@@ -45,8 +47,13 @@ const PREVIEW_TYPES: PreviewTypeDefinition[] = [
   },
   {
     id: "financial-report",
-    label: "Financial Report",
+    label: "Estimate",
     icon: DollarSign,
+  },
+  {
+    id: "invoice",
+    label: "Invoice",
+    icon: ReceiptText,
   },
   {
     id: "cart-diagram",
@@ -72,6 +79,16 @@ export function resolvePreviewType(searchParams: URLSearchParams): PreviewTypeId
 
 export function getPreviewTypeLabel(type: PreviewTypeId): string {
   return PREVIEW_TYPES.find((entry) => entry.id === type)?.label ?? type
+}
+
+/**
+ * Documents sent to clients (estimates and invoices) open the Save PDF dialog after printing,
+ * so there is a copy of what was sent. The user can still cancel the save.
+ */
+const SAVE_AFTER_PRINT_TYPES = new Set<PreviewTypeId>(["financial-report", "invoice"])
+
+export function savesPdfAfterPrint(type: PreviewTypeId): boolean {
+  return SAVE_AFTER_PRINT_TYPES.has(type)
 }
 
 export function getPreviewTypesForEvent(

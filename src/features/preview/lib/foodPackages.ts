@@ -1,14 +1,17 @@
-import type { BeverageItem, Event, MenuOfChargeItem, Payment } from "~/definitions/database"
+import type { BeverageItem, Event, MenuOfChargeItem } from "~/definitions/database"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import {
   GRATUITY_RATE,
   HST_RATE,
-  computeBillableLineTotalCents,
-  computeFinancialSummaryAllSources,
+  computeEstimateSummaryRange,
+  computeFoodTimeblockRates,
+  getPackagePricePerPersonCents,
+  isCoveredByPackagePrice,
   toCurrency,
-  type FinancialSummary,
+  type EstimateSummaryRange,
+  type GuestCountRange,
 } from "~/features/event-detail/workspace/lib/financial"
-import { isBillableLineItem } from "~/features/preview/preferences/selectors"
+import { isEstimateBillableLineItem } from "~/features/preview/preferences/selectors"
 
 // Food packages are ordinary food timeblocks that the financial preview presents as
 // alternatives the client chooses between. Nothing about them is stored: which
@@ -20,7 +23,8 @@ export const FOOD_PACKAGE_ESTIMATE_MODES = ["ignore", "average", "list"] as cons
  * How the main estimate treats package timeblocks:
  * - ignore: left out of the totals, with one unpriced line pointing to the packages page
  * - average: one line for the average package total, counted in the totals
- * - list: one line per package; the totals become a range from cheapest to dearest package
+ * - list: one line per package; the totals become a range from the cheapest package (at the
+ *   fewest guests) to the dearest (at the most)
  */
 export type FoodPackageEstimateMode = (typeof FOOD_PACKAGE_ESTIMATE_MODES)[number]
 
@@ -32,20 +36,20 @@ export const FOOD_PACKAGE_ESTIMATE_MODE_OPTIONS: Array<{ mode: FoodPackageEstima
   { mode: "list", label: "List each package" },
 ]
 
-export type GuestCountRange = {
-  /** Fewest guests; per-person prices are highest here. */
-  min: number
-  /** Most guests; per-person prices are lowest here. */
-  max: number
-}
+export type { GuestCountRange }
 
-/** The event's guest count as a range, or null when it has none. One known end stands for both. */
+/**
+ * The event's guest count as a range, or null when it has none. One known end stands for both.
+ * A count marked final (the guest count dialog's checkbox) is the max alone, as the event
+ * header shows it.
+ */
 export function resolveGuestCountRange(
-  event: Pick<Event, "minGuests" | "maxGuests"> | null | undefined,
+  event: (Pick<Event, "minGuests" | "maxGuests"> & Partial<Pick<Event, "guestCountFinal">>) | null | undefined,
 ): GuestCountRange | null {
   const min = toGuestCount(event?.minGuests)
   const max = toGuestCount(event?.maxGuests)
   if (min == null && max == null) return null
+  if (event?.guestCountFinal === 1 && max != null) return { min: max, max }
   const low = min ?? max ?? 0
   const high = max ?? min ?? 0
   return { min: Math.min(low, high), max: Math.max(low, high) }
@@ -55,6 +59,11 @@ function toGuestCount(value: number | null | undefined): number | null {
   if (value == null || !Number.isFinite(value)) return null
   const count = Math.floor(value)
   return count > 0 ? count : null
+}
+
+/** "80 guests", or "80–120 guests" for a range. */
+export function formatGuestCountRange(guests: GuestCountRange): string {
+  return guests.min === guests.max ? `${guests.max} guests` : `${guests.min}–${guests.max} guests`
 }
 
 export type ChargeBreakdown = {
@@ -93,12 +102,32 @@ export type PerPersonPricing = {
 export type FoodPackageSummary = {
   timeblockId: string
   title: string
-  /** The package's whole cost, from each item's quantity × price. */
-  totals: ChargeBreakdown
+  /** Quantity × price over the package's fixed-price ("each") items, e.g. platters. */
+  eachSubtotalCents: number
+  /**
+   * What each guest adds to the package subtotal: its package price when set, otherwise its
+   * per-person items' prices added up.
+   */
+  perPersonRateCents: number
+  /** The package price per person set on the timeblock; null when its items are priced individually. */
+  packagePricePerPersonCents: number | null
+  /**
+   * The whole package at the fewest guests (low) and the most (high). Equal without
+   * per-person items; without a guest count, per-person items are left out of both.
+   */
+  totals: { low: ChargeBreakdown; high: ChargeBreakdown }
   /** Package total ÷ guests; null when the event has no guest count. */
   perPerson: PerPersonPricing | null
   /** Items that add nothing to the total because they have no quantity or no price. */
   unpricedItemNames: string[]
+}
+
+/** A package's subtotal for this many guests: "each" items plus per-person prices × guests (none when null). */
+export function computeFoodPackageSubtotalCents(
+  pkg: Pick<FoodPackageSummary, "eachSubtotalCents" | "perPersonRateCents">,
+  guestCount: number | null,
+): number {
+  return pkg.eachSubtotalCents + (guestCount == null ? 0 : pkg.perPersonRateCents * guestCount)
 }
 
 export function summarizeFoodPackage(
@@ -106,20 +135,28 @@ export function summarizeFoodPackage(
   guests: GuestCountRange | null,
 ): FoodPackageSummary {
   const items = timeblock.foodItems ?? []
-  const subtotalCents = items.reduce((sum, item) => sum + computeBillableLineTotalCents(item), 0)
+  const rates = computeFoodTimeblockRates(timeblock)
+  const subtotalAt = (guestCount: number | null) => computeFoodPackageSubtotalCents(rates, guestCount)
 
   return {
     timeblockId: timeblock.id,
     title: timeblock.title,
-    totals: computeFoodChargeBreakdown(subtotalCents),
+    ...rates,
+    packagePricePerPersonCents: getPackagePricePerPersonCents(timeblock),
+    totals: {
+      low: computeFoodChargeBreakdown(subtotalAt(guests?.min ?? null)),
+      high: computeFoodChargeBreakdown(subtotalAt(guests?.max ?? null)),
+    },
     perPerson: guests
       ? {
           guests,
-          atMaxGuests: computeFoodChargeBreakdown(subtotalCents / guests.max),
-          atMinGuests: computeFoodChargeBreakdown(subtotalCents / guests.min),
+          atMaxGuests: computeFoodChargeBreakdown(subtotalAt(guests.max) / guests.max),
+          atMinGuests: computeFoodChargeBreakdown(subtotalAt(guests.min) / guests.min),
         }
       : null,
-    unpricedItemNames: items.filter((item) => !isBillableLineItem(item)).map((item) => item.name),
+    unpricedItemNames: items
+      .filter((item) => !isCoveredByPackagePrice(timeblock, item) && !isEstimateBillableLineItem(item))
+      .map((item) => item.name),
   }
 }
 
@@ -137,26 +174,24 @@ export function splitFoodPackageTimeblocks(
   }
 }
 
-export type FoodPackageEstimate = {
+export type FoodPackageEstimate = EstimateSummaryRange & {
   mode: FoodPackageEstimateMode
   packages: FoodPackageSummary[]
-  /** Average package subtotal, for the "average" line. */
-  averageSubtotalCents: number
-  /** Estimate totals with the cheapest package (or the only figure, outside "list"). */
-  low: FinancialSummary
-  /** Estimate totals with the most expensive package; equals low outside "list". */
-  high: FinancialSummary
+  /** Average package subtotal at the fewest (low) and the most (high) guests, for the "average" line. */
+  averageSubtotalCents: { low: number; high: number }
+  /** Why the totals are a range, for the Grand Total label; null when low and high match. */
+  rangeNote: string | null
 }
 
 /**
- * The estimate's totals with package timeblocks handled per `mode`. With no packages
- * it is the ordinary summary, so callers can use it unconditionally.
+ * The estimate's totals with package timeblocks handled per `mode`, as a range: low at the
+ * fewest guests, high at the most. In "list" mode low takes the cheapest package and high the
+ * dearest. With no packages it is the ordinary estimate, so callers can use it unconditionally.
  */
 export function computeFoodPackageEstimate(params: {
   menuItems: MenuOfChargeItem[] | undefined
   foodTimeblocks: TimeblockWithItems[] | undefined
   beverageItems: BeverageItem[] | undefined
-  payments: Payment[] | undefined
   /** Null or empty when food packages are off. */
   packageTimeblockIds: string[] | null
   mode: FoodPackageEstimateMode
@@ -164,36 +199,53 @@ export function computeFoodPackageEstimate(params: {
 }): FoodPackageEstimate {
   const { packages, certain } = splitFoodPackageTimeblocks(params.foodTimeblocks, params.packageTimeblockIds)
   const summaries = packages.map((tb) => summarizeFoodPackage(tb, params.guests))
-  const subtotals = summaries.map((pkg) => pkg.totals.subtotalCents)
-  const averageSubtotalCents =
-    subtotals.length > 0 ? Math.round(subtotals.reduce((sum, cents) => sum + cents, 0) / subtotals.length) : 0
+  const lowGuests = params.guests?.min ?? null
+  const highGuests = params.guests?.max ?? null
+  const subtotalsAt = (guestCount: number | null) =>
+    summaries.map((pkg) => computeFoodPackageSubtotalCents(pkg, guestCount))
+  const averageAt = (guestCount: number | null) => {
+    const subtotals = subtotalsAt(guestCount)
+    return subtotals.length > 0 ? Math.round(subtotals.reduce((sum, cents) => sum + cents, 0) / subtotals.length) : 0
+  }
+  const averageSubtotalCents = { low: averageAt(lowGuests), high: averageAt(highGuests) }
 
-  const summaryWith = (additionalFoodSubtotalCents: number) =>
-    computeFinancialSummaryAllSources({
+  const rangeWith = (additionalFoodSubtotalCents?: { low: number; high: number }) =>
+    computeEstimateSummaryRange({
       menuItems: params.menuItems,
       foodTimeblocks: certain,
       beverageItems: params.beverageItems,
-      payments: params.payments,
+      guests: params.guests,
       additionalFoodSubtotalCents,
     })
+  const certainRange = rangeWith()
+  const packagesCounted = summaries.length > 0 && params.mode !== "ignore"
 
-  if (summaries.length === 0 || params.mode === "ignore") {
-    const summary = summaryWith(0)
-    return { mode: params.mode, packages: summaries, averageSubtotalCents, low: summary, high: summary }
-  }
+  const range = !packagesCounted
+    ? certainRange
+    : params.mode === "average"
+      ? rangeWith(averageSubtotalCents)
+      : rangeWith({ low: Math.min(...subtotalsAt(lowGuests)), high: Math.max(...subtotalsAt(highGuests)) })
 
-  if (params.mode === "average") {
-    const summary = summaryWith(averageSubtotalCents)
-    return { mode: params.mode, packages: summaries, averageSubtotalCents, low: summary, high: summary }
-  }
+  const varies = range.low.grandTotalCents !== range.high.grandTotalCents
+  const byPackage = packagesCounted && params.mode === "list" && summaries.length > 1
+  const byGuests =
+    certainRange.low.grandTotalCents !== certainRange.high.grandTotalCents ||
+    (packagesCounted && lowGuests !== highGuests && summaries.some((pkg) => pkg.perPersonRateCents !== 0))
 
   return {
+    ...range,
     mode: params.mode,
     packages: summaries,
     averageSubtotalCents,
-    low: summaryWith(Math.min(...subtotals)),
-    high: summaryWith(Math.max(...subtotals)),
+    rangeNote: varies ? describeEstimateRange(byPackage, byGuests) : null,
   }
+}
+
+function describeEstimateRange(byPackage: boolean, byGuests: boolean): string {
+  if (byPackage && byGuests) return "by package and guest count"
+  if (byPackage) return "by package chosen"
+  if (byGuests) return "by guest count"
+  return "estimated range"
 }
 
 /** "$10.00", or "$8.00 – $10.00" when the two ends differ. */
@@ -206,8 +258,10 @@ export function formatCurrencyRange(lowCents: number, highCents: number): string
 export type FoodPackageEstimateRow = {
   key: string
   name: string
-  /** 0 for the unpriced "ignore" pointer line. */
-  totalCents: number
+  /** At the fewest guests; 0 for the unpriced "ignore" pointer line. */
+  lowCents: number
+  /** At the most guests; equals lowCents unless a package has per-person items. */
+  highCents: number
 }
 
 /** The Food & Beverage lines that stand for the packages in the main estimate. */
@@ -223,7 +277,8 @@ export function buildFoodPackageEstimateRows(
         {
           key: "food-packages-pointer",
           name: `Food packages (${packages.length}): priced separately, see Food Packages`,
-          totalCents: 0,
+          lowCents: 0,
+          highCents: 0,
         },
       ]
     case "average":
@@ -231,14 +286,16 @@ export function buildFoodPackageEstimateRows(
         {
           key: "food-packages-average",
           name: `Food package (average of ${packages.length})`,
-          totalCents: estimate.averageSubtotalCents,
+          lowCents: estimate.averageSubtotalCents.low,
+          highCents: estimate.averageSubtotalCents.high,
         },
       ]
     case "list":
       return packages.map((pkg) => ({
         key: `food-package-${pkg.timeblockId}`,
         name: `Food package option: ${pkg.title}`,
-        totalCents: pkg.totals.subtotalCents,
+        lowCents: pkg.totals.low.subtotalCents,
+        highCents: pkg.totals.high.subtotalCents,
       }))
   }
 }

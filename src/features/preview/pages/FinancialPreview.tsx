@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 
+import { splitEstimateAddOns } from "~/features/event-detail/workspace/lib/estimateAddOns"
 import { getVisibleBeverageTypeSections } from "~/features/event-detail/sections/food-beverage-workspaces/beverage/beverageTypeSections"
 import { getFinancialDocumentKindLabels } from "~/features/preview/lib/financialDocumentKinds"
 import {
@@ -13,8 +14,10 @@ import {
   beverageAppendixContinuationHeading,
   renderBeverageAppendixPages,
 } from "~/features/preview/pages/financial/BeverageAppendixPages"
+import { AddOnsTable } from "~/features/preview/pages/financial/AddOnsTable"
 import {
   buildChargeTableSpecs,
+  buildEstimateFoodRows,
   groupChargeItemsByCategory,
   renderChargeTableBlocks,
 } from "~/features/preview/pages/financial/chargeTables"
@@ -25,17 +28,27 @@ import {
   foodPackagesContinuationHeading,
   renderFoodPackagePages,
 } from "~/features/preview/pages/financial/FoodPackagePages"
-import { PaymentsTable } from "~/features/preview/pages/financial/PaymentsTable"
+import {
+  EstimateDeposit,
+  EstimateIntroNote,
+  renderEstimateTermsBlocks,
+} from "~/features/preview/pages/financial/ProposalBlocks"
+import {
+  formatDeposit,
+  formatProposalDate,
+  resolveEstimateTerms,
+} from "~/features/preview/lib/estimateProposal"
 import { combineQueryStates } from "~/features/preview/pagination/combineQueryStates"
 import { PreviewBlock, PreviewDocument } from "~/features/preview/pagination/PreviewDocument"
 import { usePreviewPreferences } from "~/features/preview/preferences/PreviewPreferencesContext"
-import { filterSelectedIds, isBillableLineItem } from "~/features/preview/preferences/selectors"
+import { filterSelectedIds, isEstimateBillableLineItem } from "~/features/preview/preferences/selectors"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
+import { useEstimateDetailsSection } from "~/hooks/useEstimateDetailsSection"
 import { useEvent } from "~/hooks/useEvent"
 import { usePrimaryClient } from "~/hooks/useEventContacts"
 import { useFoodSection } from "~/hooks/useFoodSection"
 import { useMenuOfChargeItemsSection } from "~/hooks/useMenuOfChargeSection"
-import { usePaymentsSection } from "~/hooks/usePaymentsSection"
+import { useVenueSettings } from "~/hooks/useVenueSettings"
 
 export default function FinancialPreview() {
   const eventQuery = useEvent()
@@ -44,18 +57,20 @@ export default function FinancialPreview() {
   const chargeQuery = useMenuOfChargeItemsSection()
   const chargeItems = chargeQuery.data
   const foodQuery = useFoodSection()
-  const food = foodQuery.data
   const beverageQuery = useBeverageSection()
-  const beverageItems = beverageQuery.items
-  const paymentsQuery = usePaymentsSection()
-  const payments = paymentsQuery.data ?? []
+  // Optional add-ons print in their own table and stay out of everything else, packages included.
+  const { foodTimeblocks: food, beverageItems, addOns } = splitEstimateAddOns(foodQuery.data, beverageQuery.items)
+  const estimateDetailsQuery = useEstimateDetailsSection()
+  const estimateDetails = estimateDetailsQuery.data
+  const venueSettingsQuery = useVenueSettings()
   const queries = combineQueryStates([
     eventQuery,
     clientQuery,
     chargeQuery,
     foodQuery,
     beverageQuery,
-    paymentsQuery,
+    estimateDetailsQuery,
+    venueSettingsQuery,
   ])
 
   const { state } = usePreviewPreferences()
@@ -65,7 +80,7 @@ export default function FinancialPreview() {
 
   // Food packages: chosen food timeblocks shown as alternatives. Until the one-time default
   // (all food timeblocks) is applied, treat them all as chosen, which is what it selects.
-  const availableFoodIds = (food ?? []).map((tb) => tb.id)
+  const availableFoodIds = food.map((tb) => tb.id)
   const packageTimeblockIds = prefs.showFoodPackages
     ? state.defaultsApplied.financialFoodPackages
       ? filterSelectedIds(prefs.foodPackageTimeblockIds, availableFoodIds)
@@ -75,24 +90,30 @@ export default function FinancialPreview() {
     food,
     packageTimeblockIds,
   )
+  const guests = resolveGuestCountRange(event)
   const packageEstimate = computeFoodPackageEstimate({
     menuItems: chargeItems,
     foodTimeblocks: food,
     beverageItems,
-    payments: paymentsQuery.data,
     packageTimeblockIds,
     mode: prefs.foodPackageEstimateMode,
-    guests: resolveGuestCountRange(event),
+    guests,
   })
 
   const chargeTables = buildChargeTableSpecs({
     chargeItemsByCategory,
-    billableFoodRows: certainFood.flatMap((timeblock) =>
-      (timeblock.foodItems ?? []).filter(isBillableLineItem),
-    ),
-    billableBeverageRows: beverageItems.filter(isBillableLineItem),
+    billableFoodRows: buildEstimateFoodRows(certainFood),
+    billableBeverageRows: beverageItems.filter(isEstimateBillableLineItem),
     foodPackageRows: buildFoodPackageEstimateRows(packageEstimate),
+    perPersonGuests: guests,
   })
+
+  const introNote = estimateDetails?.introNote?.trim() ?? ""
+  const deposit = formatDeposit(estimateDetails, {
+    lowCents: packageEstimate.low.grandTotalCents,
+    highCents: packageEstimate.high.grandTotalCents,
+  })
+  const terms = resolveEstimateTerms(estimateDetails, venueSettingsQuery.data?.defaultEstimateTerms)
 
   const showAppendix = prefs.showBeverageAppendix && beverageItems.length > 0
   const beverageSections = getVisibleBeverageTypeSections(beverageItems, {
@@ -104,7 +125,6 @@ export default function FinancialPreview() {
       dataError={queries.error}
       dataReady={
         queries.ready &&
-        state.defaultsApplied.financialPayments &&
         (!prefs.showFoodPackages || state.defaultsApplied.financialFoodPackages)
       }
       continuationHeadings={{
@@ -114,11 +134,18 @@ export default function FinancialPreview() {
     >
       <PreviewBlock id="financial-header" keepTogether>
         <FinancialHeader
-          labels={getFinancialDocumentKindLabels(prefs.documentKind)}
+          labels={getFinancialDocumentKindLabels("estimate")}
           client={clientQuery.data}
           eventStartDateTime={event?.startDateTime}
+          validUntil={formatProposalDate(estimateDetails?.validUntil)}
         />
       </PreviewBlock>
+
+      {introNote ? (
+        <PreviewBlock id="financial-intro">
+          <EstimateIntroNote note={introNote} />
+        </PreviewBlock>
+      ) : null}
 
       {renderChargeTableBlocks(chargeTables)}
 
@@ -127,15 +154,27 @@ export default function FinancialPreview() {
           low={packageEstimate.low}
           high={packageEstimate.high}
           showChargeBreakdown={prefs.showChargeBreakdown}
-          showPaymentStatus={prefs.showPaymentStatus && payments.length > 0}
+          rangeNote={packageEstimate.rangeNote}
         />
       </PreviewBlock>
 
-      {payments.length > 0 ? (
-        <PreviewBlock id="financial-payments" keepTogether className="mb-6">
-          <PaymentsTable payments={payments} />
+      {addOns.length > 0 ? (
+        <PreviewBlock id="financial-add-ons" keepTogether className="mb-6">
+          <AddOnsTable addOns={addOns} guests={guests} />
         </PreviewBlock>
       ) : null}
+
+      {deposit ? (
+        <PreviewBlock id="financial-deposit" keepTogether className="mb-6">
+          <EstimateDeposit
+            amount={deposit}
+            dueDate={formatProposalDate(estimateDetails?.depositDueDate)}
+            note={estimateDetails?.depositNote?.trim() || null}
+          />
+        </PreviewBlock>
+      ) : null}
+
+      {renderEstimateTermsBlocks(terms)}
 
       {packageEstimate.packages.length > 0
         ? renderFoodPackagePages({ packages: packageEstimate.packages, timeblocks: packageTimeblocks })

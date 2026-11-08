@@ -14,6 +14,7 @@ import type * as contactRoles from "../contactRoles.js";
 import type * as contacts from "../contacts.js";
 import type * as crons from "../crons.js";
 import type * as developmentSeed from "../developmentSeed.js";
+import type * as estimateDetails from "../estimateDetails.js";
 import type * as eventContacts from "../eventContacts.js";
 import type * as eventRequests from "../eventRequests.js";
 import type * as events from "../events.js";
@@ -23,12 +24,15 @@ import type * as holidays from "../holidays.js";
 import type * as http from "../http.js";
 import type * as lib_audit from "../lib/audit.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_backfill from "../lib/backfill.js";
 import type * as lib_contactOperations from "../lib/contactOperations.js";
 import type * as lib_contactValidators from "../lib/contactValidators.js";
+import type * as lib_estimateFields from "../lib/estimateFields.js";
 import type * as lib_eventRequestPayload from "../lib/eventRequestPayload.js";
 import type * as lib_foodItemNotes from "../lib/foodItemNotes.js";
 import type * as lib_googleCalendar from "../lib/googleCalendar.js";
 import type * as lib_holidayFeed from "../lib/holidayFeed.js";
+import type * as lib_pricingBasis from "../lib/pricingBasis.js";
 import type * as lib_records from "../lib/records.js";
 import type * as lib_testIdentity from "../lib/testIdentity.js";
 import type * as lib_users from "../lib/users.js";
@@ -40,6 +44,7 @@ import type * as touchpoints from "../touchpoints.js";
 import type * as tournamentDetails from "../tournamentDetails.js";
 import type * as users from "../users.js";
 import type * as vendorCategories from "../vendorCategories.js";
+import type * as venueSettings from "../venueSettings.js";
 
 import type {
   ApiFromModules,
@@ -54,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   contacts: typeof contacts;
   crons: typeof crons;
   developmentSeed: typeof developmentSeed;
+  estimateDetails: typeof estimateDetails;
   eventContacts: typeof eventContacts;
   eventRequests: typeof eventRequests;
   events: typeof events;
@@ -63,12 +69,15 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/audit": typeof lib_audit;
   "lib/auth": typeof lib_auth;
+  "lib/backfill": typeof lib_backfill;
   "lib/contactOperations": typeof lib_contactOperations;
   "lib/contactValidators": typeof lib_contactValidators;
+  "lib/estimateFields": typeof lib_estimateFields;
   "lib/eventRequestPayload": typeof lib_eventRequestPayload;
   "lib/foodItemNotes": typeof lib_foodItemNotes;
   "lib/googleCalendar": typeof lib_googleCalendar;
   "lib/holidayFeed": typeof lib_holidayFeed;
+  "lib/pricingBasis": typeof lib_pricingBasis;
   "lib/records": typeof lib_records;
   "lib/testIdentity": typeof lib_testIdentity;
   "lib/users": typeof lib_users;
@@ -80,6 +89,7 @@ declare const fullApi: ApiFromModules<{
   tournamentDetails: typeof tournamentDetails;
   users: typeof users;
   vendorCategories: typeof vendorCategories;
+  venueSettings: typeof venueSettings;
 }>;
 
 /**

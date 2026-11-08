@@ -5,7 +5,7 @@
 - Name: Event Horizon
 - What it does:
   - An in-house event ops tool to track all details about events we host at our venue.
-  - Event creation → multi-day phased status process → track event status, deposits, all details → generate PDFs (Estimate/BEO/Timeline) for staff access.
+  - Event creation → multi-day phased status process → track event status, deposits, all details → generate PDFs (Estimate/Invoice/BEO/Timeline) for staff access.
 - Primary user(s):
   - The venue team (5–6 people: 4 on Windows, 1 on macOS). Everyone with a company account sees and edits the same data.
 - Operating mode:
@@ -118,6 +118,7 @@ Security priorities:
   - Every write records who created and last edited the record (`convex/lib/audit.ts`).
   - Each mutation runs as one transaction, so multi-step writes belong in a single mutation.
   - `holidayCache` / `holidaySync` hold the shared Canadian holiday layer. Only internal functions write them (the weekly cron in `convex/crons.ts`, plus a one-time bootstrap); the calendar reads them through `holidays.forMonth`. See [HOLIDAYS.md](HOLIDAYS.md).
+  - `estimateDetails` holds one row per event of proposal details printed on the Estimate (intro note, valid-until date, terms, deposit); like `cartDetails`, it's created on first read with `ensureByEventId` and deleted with its event. `terms: null` means "use the venue default", which lives in `venueSettings`, a single venue-wide row that `venueSettings.get` returns as null until someone first saves a setting. Both are new tables, so no data migration was needed.
   - `eventRequests` holds website requests waiting for review. They aren't events until someone accepts one; `eventRequests.accept` creates the event and client contact and marks the request in one transaction.
 
 ### Renderer feature structure
@@ -149,7 +150,10 @@ Each environment has its own isolated database, so branch work can't touch share
 - Add to Google Calendar: the event header button creates or updates the event on the venue's shared Google Calendar through `googleCalendar.pushEvent` (replacing the old open-in-browser and paste-ID flow). It needs a start and end. The event's `calendarId` stores the Google iCalUID (or, for a single occurrence of a repeating Google event, that occurrence's event ID, since occurrences share the series' iCalUID); "Link existing event" still accepts a pasted ID or event link. Each push records a fingerprint of what was sent (`googleCalendarSyncs`); the live `googleCalendar.getSyncStatus` query compares it with the event as it is now, so the card highlights Update when the event has changes Google doesn't have and hides it once Google is up to date. Edits made in Google itself aren't detected. Disconnect clears the link and leaves the Google event in place; Remove from Google Calendar deletes it, then clears the link. Removing an event's date also deletes its linked Google event and clears the link (`googleCalendar.updateEvent`, which every date-clearing update goes through), so an undated lead doesn't stay on the shared calendar; once it has a date again it can be added again. Renderer code (the card, its actions and the event body builder Convex also uses) lives in `src/features/google-calendar/`. Setup: [GOOGLE_CALENDAR_SETUP.md](GOOGLE_CALENDAR_SETUP.md).
 - Attach/track details and their attached timeblocks data
 - See holidays while booking: the main month calendar flags dates in Google's public Canadian holiday calendar, with the names on hover/focus. Holidays are read-only and never become events. After deploying the feature, run the bootstrap once ([HOLIDAYS.md](HOLIDAYS.md)).
-- Generate PDFs (Estimate, BEO, Timeline)
+- Generate PDFs (Estimate, Invoice, BEO, Timeline). Printing an Estimate or Invoice also opens the Save PDF dialog afterwards, so the team keeps a copy of what was sent (`savesPdfAfterPrint` in `src/features/preview/lib/previewTypes.ts`); the user can cancel it.
+- Optional add-ons on the Estimate: any food or beverage item, or a whole food timeblock, can be ticked as an add-on in the Estimate section. Add-ons stay in planning, print on the estimate under "Optional Add-ons" with their own price, and are left out of the estimate totals, the food package options and the invoice until the add-on box is cleared (when the client accepts). The BEO marks them "add-on, not confirmed" (`src/features/event-detail/workspace/lib/estimateAddOns.ts`).
+- Package price per person: a food timeblock can carry a package price per person in the Estimate section. On the estimate it replaces the timeblock's per-person items (printed as "Included" on its package card) and is charged × guests; fixed-price items such as platters keep their own quantity × price, labelled "Fixed price, regardless of guest count". A priced package prints its set price instead of a per-head figure derived from the total. On the invoice, which never looks at the guest count, the package price is billed × the timeblock's final package quantity, entered in the Invoice section's Package Quantities card, in place of the per-person items it covers; fixed-price items still bill quantity × price. Until the quantity is set the invoice bills nothing for the package line and the Invoice section shows a "Needs a final quantity" warning, rather than guessing from the guest count or item prices. Without a package price, every item bills quantity × price as before (`computeFoodTimeblockRates` and `computeInvoiceFoodTimeblockSubtotalCents` in `src/features/event-detail/workspace/lib/financial.ts`).
+- Proposal details on the Estimate: the Estimate section's Proposal Details card edits the intro note, valid-until date, deposit (none, a fixed amount, or a % of the grand total, with a due date and note) and terms. Terms follow the venue default until edited for the event; "Save as venue default" updates the default for every event still following it (`src/features/preview/lib/estimateProposal.ts`).
 - Confirm persistence across restarts, and that edits appear live in a second signed-in window
 
 ## Quality Gates / How to Verify
@@ -185,6 +189,9 @@ Each environment has its own isolated database, so branch work can't touch share
 - When changing the Convex schema:
   - Production already holds data. Make changes that existing documents still satisfy (e.g. new fields optional), or migrate the data first, and confirm existing data survives.
   - `npx convex deploy` refuses a schema that existing documents don't match.
+  - Pending one-off migrations (run once per deployment after deploying; safe to run again):
+    - Food/beverage `pricingBasis` (missing means "each"): `npx convex run --prod foodItems:backfillPricingBasis` and `npx convex run --prod beverageItems:backfillPricingBasis`.
+    - Estimate add-ons and package prices (`isAddOn` missing means false; `packagePricePerPersonCents` and `packageQuantity` missing mean none): `npx convex run --prod foodItems:backfillAddOn`, `npx convex run --prod beverageItems:backfillAddOn` and `npx convex run --prod timeblocks:backfillEstimateFields`.
 
 ## Dependency Overrides
 

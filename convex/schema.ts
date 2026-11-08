@@ -9,6 +9,7 @@ import {
   chargeCategory,
   contactKind,
   contactRoleType,
+  depositKind,
   eventRequestStatus,
   eventStatus,
   eventType,
@@ -16,6 +17,7 @@ import {
   holidayEntry,
   nullable,
   playFormat,
+  pricingBasis,
   startFormat,
   timeblockSectionType,
 } from "./lib/validators"
@@ -97,6 +99,34 @@ export default defineSchema({
     ...audit,
   }).index("by_event", ["eventId"]),
 
+  // Proposal details printed on the event's Estimate; one row per event, created by
+  // estimateDetails.ensureByEventId. `terms: null` means "use the venue default".
+  estimateDetails: defineTable({
+    eventId: v.id("events"),
+    introNote: nullable(v.string()),
+    /** YYYY-MM-DD */
+    validUntil: nullable(v.string()),
+    terms: nullable(v.string()),
+    depositKind,
+    depositAmountCents: nullable(v.number()),
+    /** 0-100, e.g. 25 for 25% */
+    depositPercent: nullable(v.number()),
+    /** YYYY-MM-DD */
+    depositDueDate: nullable(v.string()),
+    depositNote: nullable(v.string()),
+    createdAt: v.string(),
+    updatedAt: nullable(v.string()),
+    ...audit,
+  }).index("by_event", ["eventId"]),
+
+  // Venue-wide settings: a singleton (at most one row), written by venueSettings.ts.
+  venueSettings: defineTable({
+    defaultEstimateTerms: nullable(v.string()),
+    createdAt: v.string(),
+    updatedAt: nullable(v.string()),
+    ...audit,
+  }),
+
   payments: defineTable({
     eventId: v.id("events"),
     amountCents: v.number(),
@@ -138,6 +168,11 @@ export default defineSchema({
     assignedTo: nullable(v.string()),
     createdAt: v.string(),
     updatedAt: nullable(v.string()),
+    // Optional estimate fields (lib/estimateFields.ts): missing means false / null.
+    // `timeblocks:backfillEstimateFields` fills them in.
+    isAddOn: v.optional(v.boolean()),
+    packagePricePerPersonCents: v.optional(nullable(v.number())),
+    packageQuantity: v.optional(nullable(v.number())),
     ...audit,
   }).index("by_event_section", ["eventId", "sectionType"]),
 
@@ -152,6 +187,11 @@ export default defineSchema({
     clientNotes: v.optional(nullable(v.string())),
     internalNotes: v.optional(nullable(v.string())),
     unitPriceCents: nullable(v.number()),
+    // Optional: items saved before the field existed have none and mean "each" (lib/pricingBasis.ts).
+    // `*:backfillPricingBasis` fills it in; it can become required once that has run everywhere.
+    pricingBasis: v.optional(pricingBasis),
+    // Optional: missing means false (lib/estimateFields.ts); `*:backfillAddOn` fills it in.
+    isAddOn: v.optional(v.boolean()),
     ...auditWithUpdatedAt,
   }).index("by_timeblock", ["timeblockId"]),
 
@@ -163,6 +203,11 @@ export default defineSchema({
     serviceStyle: nullable(beverageServiceStyle),
     includes: nullable(v.string()),
     unitPriceCents: nullable(v.number()),
+    // Optional: items saved before the field existed have none and mean "each" (lib/pricingBasis.ts).
+    // `*:backfillPricingBasis` fills it in; it can become required once that has run everywhere.
+    pricingBasis: v.optional(pricingBasis),
+    // Optional: missing means false (lib/estimateFields.ts); `*:backfillAddOn` fills it in.
+    isAddOn: v.optional(v.boolean()),
     ...auditWithUpdatedAt,
   }).index("by_event", ["eventId"]),
 

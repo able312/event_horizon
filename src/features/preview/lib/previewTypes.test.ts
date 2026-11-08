@@ -5,6 +5,7 @@ import {
   buildPreviewPath,
   getPreviewTypesForEvent,
   resolvePreviewType,
+  savesPdfAfterPrint,
 } from "./previewTypes"
 
 describe("resolvePreviewType", () => {
@@ -50,5 +51,18 @@ describe("buildPreviewPath", () => {
     expect(buildPreviewPath("evt_1", "cart-diagram")).toBe(
       "/preview/evt_1?type=cart-diagram",
     )
+  })
+})
+
+describe("savesPdfAfterPrint", () => {
+  it("opens the save dialog after printing documents sent to clients", () => {
+    expect(savesPdfAfterPrint("financial-report")).toBe(true)
+    expect(savesPdfAfterPrint("invoice")).toBe(true)
+  })
+
+  it("does not for internal documents", () => {
+    expect(savesPdfAfterPrint("beo")).toBe(false)
+    expect(savesPdfAfterPrint("timeline")).toBe(false)
+    expect(savesPdfAfterPrint("cart-diagram")).toBe(false)
   })
 })

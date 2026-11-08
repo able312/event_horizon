@@ -1,102 +1,98 @@
 import React from "react"
-import { useLocation, useNavigate } from "react-router"
 
+import EstimateProposalSection from "~/features/event-detail/sections/financial-workspace/EstimateProposalSection"
+import { splitEstimateAddOns } from "~/features/event-detail/workspace/lib/estimateAddOns"
 import MenuOfChargeSection from "~/features/event-detail/sections/financial-workspace/MenuOfChargeSection"
-import PaymentsSection from "~/features/event-detail/sections/financial-workspace/PaymentsSection"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
 import { useFoodSection } from "~/hooks/useFoodSection"
 import { useMenuOfChargeItemsSection } from "~/hooks/useMenuOfChargeSection"
-import { usePaymentsSection } from "~/hooks/usePaymentsSection"
-import { HST_RATE, GRATUITY_RATE, computeFinancialSummaryAllSources, toCurrency } from "~/features/event-detail/workspace/lib/financial"
-import { buildPreviewPath } from "~/features/preview/lib/previewTypes"
+import {
+  GRATUITY_RATE,
+  HST_RATE,
+  computeEstimateSummaryRange,
+  type FinancialSummary,
+} from "~/features/event-detail/workspace/lib/financial"
+import { useOpenPreview } from "../hooks/useOpenPreview"
+import type { EventResource } from "~/features/event-detail/types"
+import { formatCurrencyRange, resolveGuestCountRange } from "~/features/preview/lib/foodPackages"
+import EstimateGuestCountField from "./EstimateGuestCountField"
+import WorkspaceSummaryField from "./WorkspaceSummaryField"
+import { GeneratePreviewButton } from "./GeneratePreviewButton"
 
 interface FinancialWorkspaceSectionProps {
-  eventId: string
+  eventResource: EventResource
   onSelectWorkspaceNode: (nodeId: string) => void
 }
 
-const FinancialWorkspaceSection: React.FC<FinancialWorkspaceSectionProps> = ({ eventId, onSelectWorkspaceNode }) => {
-  const navigate = useNavigate()
-  const location = useLocation()
+const FinancialWorkspaceSection: React.FC<FinancialWorkspaceSectionProps> = ({ eventResource, onSelectWorkspaceNode }) => {
+  const { event, updateEvent } = eventResource
+  const openPreview = useOpenPreview(event?.id ?? "")
+  const guests = resolveGuestCountRange(event)
   const { data: menuItems } = useMenuOfChargeItemsSection()
   const {
     data: foodTimeblocks,
     updateItem: updateFoodItem,
+    updateTimeblock: updateFoodTimeblock,
   } = useFoodSection()
   const {
     items: beverageItems,
     updateItem: updateBeverageItem,
   } = useBeverageSection()
-  const { data: payments } = usePaymentsSection()
 
-  const summary = computeFinancialSummaryAllSources({
+  // Optional add-ons are offered separately and left out of the summary.
+  const counted = splitEstimateAddOns(foodTimeblocks, beverageItems)
+  const { low, high } = computeEstimateSummaryRange({
     menuItems,
-    foodTimeblocks,
-    beverageItems,
-    payments,
+    foodTimeblocks: counted.foodTimeblocks,
+    beverageItems: counted.beverageItems,
+    guests,
   })
-
-  const handleGenerateEstimate = () => {
-    if (!eventId) return
-    navigate(buildPreviewPath(eventId, "financial-report", `${location.pathname}${location.search}${location.hash}`))
-  }
+  const formatRange = (pick: (summary: FinancialSummary) => number) => formatCurrencyRange(pick(low), pick(high))
 
   return (
     <div className="space-y-4">
       <div className="rounded-xs border border-border bg-gradient-to-b from-muted/35 to-muted/10 p-3 shadow-sm">
-        <h3 className="text-sm font-semibold tracking-wide">Financial Summary</h3>
-        <div className="mt-2 grid grid-cols-1 gap-0.5 text-sm md:grid-cols-2 xl:grid-cols-5 bg-stone-200">
-          <SummaryField label="Subtotal" value={toCurrency(summary.chargesSubtotalCents)} />
-          <SummaryField label={`HST (${Math.round(HST_RATE * 100)}%)`} value={toCurrency(summary.hstCents)} />
-          <SummaryField
+        <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <h3 className="text-sm font-semibold tracking-wide">Estimate Summary</h3>
+            <EstimateGuestCountField event={event} updateEvent={updateEvent} />
+          </div>
+          <GeneratePreviewButton label="Generate Estimate" onClick={() => openPreview("financial-report")} />
+        </div>
+        <div className="mt-2 grid grid-cols-1 gap-0.5 text-sm md:grid-cols-2 xl:grid-cols-4 bg-stone-200">
+          <WorkspaceSummaryField label="Subtotal" value={formatRange((s) => s.chargesSubtotalCents)} />
+          <WorkspaceSummaryField label={`HST (${Math.round(HST_RATE * 100)}%)`} value={formatRange((s) => s.hstCents)} />
+          <WorkspaceSummaryField
             label={`Gratuity (${Math.round(GRATUITY_RATE * 100)}%)`}
-            value={toCurrency(summary.gratuityCents)}
+            value={formatRange((s) => s.gratuityCents)}
           />
-          <SummaryField label="Grand Total" value={toCurrency(summary.grandTotalCents)} />
-          <SummaryField label="Balance Remaining" value={toCurrency(summary.balanceDueCents)} emphasis />
+          <WorkspaceSummaryField label="Grand Total" value={formatRange((s) => s.grandTotalCents)} emphasis />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="min-w-0 rounded-xs border border-border bg-background p-3 shadow-sm">
-          <MenuOfChargeSection
-            emptyStateMode="workspace"
-            foodTimeblocks={foodTimeblocks ?? []}
-            beverageItems={beverageItems ?? []}
-            onNavigateToFood={() => onSelectWorkspaceNode("category:food")}
-            onNavigateToBeverage={() => onSelectWorkspaceNode("category:beverage")}
-            onUpdateFoodBillingItem={updateFoodItem}
-            onUpdateBeverageBillingItem={({ itemId, updates }) =>
-              updateBeverageItem({ itemId, updates })
-            }
-          />
-        </div>
+      <div className="min-w-0 rounded-xs border border-border bg-background p-3 shadow-sm">
+        <MenuOfChargeSection
+          emptyStateMode="workspace"
+          foodTimeblocks={foodTimeblocks ?? []}
+          beverageItems={beverageItems ?? []}
+          guests={guests}
+          onNavigateToFood={() => onSelectWorkspaceNode("category:food")}
+          onNavigateToBeverage={() => onSelectWorkspaceNode("category:beverage")}
+          onUpdateFoodBillingItem={updateFoodItem}
+          onUpdateFoodBillingTimeblock={({ timeblockId, updates }) => updateFoodTimeblock({ id: timeblockId, updates })}
+          onUpdateBeverageBillingItem={({ itemId, updates }) =>
+            updateBeverageItem({ itemId, updates })
+          }
+        />
+      </div>
 
-        <div className="min-w-0 rounded-xs border border-border bg-background p-3 shadow-sm">
-          <PaymentsSection
-            emptyStateMode="workspace"
-            onGenerateEstimate={handleGenerateEstimate}
-          />
-        </div>
+      <div className="rounded-xs border border-border bg-background p-3 shadow-sm">
+        <EstimateProposalSection
+          grandTotal={{ lowCents: low.grandTotalCents, highCents: high.grandTotalCents }}
+        />
       </div>
     </div>
   )
 }
-
-interface SummaryFieldProps {
-  label: string
-  value: string
-  emphasis?: boolean
-}
-
-const SummaryField: React.FC<SummaryFieldProps> = ({ label, value, emphasis = false }) => (
-  <div className={emphasis
-    ? " border-b-2 border-b-orange-500 bg-background px-3 py-2"
-    : "bg-background px-3 py-2"}
-  >
-    <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-    <p className={emphasis ? "text-base font-semibold text-foreground" : "text-sm font-medium"}>{value}</p>
-  </div>
-)
 
 export default FinancialWorkspaceSection

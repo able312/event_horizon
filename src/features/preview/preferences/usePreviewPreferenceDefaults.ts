@@ -1,5 +1,7 @@
 import { useEffect } from "react"
 
+import { isAddOn } from "~/features/event-detail/workspace/lib/estimateAddOns"
+
 import { useBeverageSection } from "~/hooks/useBeverageSection"
 import { useFoodSection } from "~/hooks/useFoodSection"
 import { useNoteSection } from "~/hooks/useNoteSection"
@@ -64,19 +66,20 @@ export function usePreviewPreferenceDefaults() {
     if (state.defaultsApplied.financialFoodPackages) return
     if (!food) return
 
+    // Add-on timeblocks are offered separately, never as package options.
     dispatch({
       type: "financial/applyDefaultFoodPackageTimeblocks",
-      ids: food.map((tb) => tb.id),
+      ids: food.filter((tb) => !isAddOn(tb)).map((tb) => tb.id),
     })
   }, [dispatch, food, state.defaultsApplied.financialFoodPackages])
 
   useEffect(() => {
-    if (state.defaultsApplied.financialPayments) return
+    if (state.defaultsApplied.invoicePayments) return
     if (payments === undefined) return
 
     dispatch({
-      type: "financial/applyPaymentDefault",
+      type: "invoice/applyPaymentDefault",
       hasPayments: payments.length > 0,
     })
-  }, [dispatch, payments, state.defaultsApplied.financialPayments])
+  }, [dispatch, payments, state.defaultsApplied.invoicePayments])
 }
