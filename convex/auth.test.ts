@@ -36,8 +36,9 @@ async function registeredFunctions(): Promise<[string, RegisteredFunction][]> {
 }
 
 /**
- * Internal functions: run through the Convex CLI with admin access (the seed and
- * the one-off undated touchpoint backfill), by the
+ * Internal functions: run through the Convex CLI with admin access (the seeds,
+ * which also refuse to run unless EVENT_HORIZON_LOCAL_SEED is enabled, as it
+ * only is on local worktree deployments, and the one-off backfills), by the
  * secret-checked HTTP route in http.ts (website event requests), by the
  * holiday cron (crons.ts), or by googleCalendar.pushEvent / removeEvent /
  * updateEvent once they have checked the caller (recordPush and recordRemoval
@@ -48,6 +49,7 @@ const INTERNAL_FUNCTIONS = new Set([
   "./beverageItems.ts:backfillAddOn",
   "./beverageItems.ts:backfillPricingBasis",
   "./developmentSeed.ts:seed",
+  "./developmentSeed.ts:seedFinancial",
   "./eventRequests.ts:receive",
   "./foodItems.ts:backfillAddOn",
   "./foodItems.ts:backfillPricingBasis",
