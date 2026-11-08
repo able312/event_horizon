@@ -28,14 +28,16 @@ import {
   DropdownMenuTrigger,
 } from "~/components/atoms/dropdown-menu"
 import {
-  SECTION_TABLE_BODY_CELL_CLASS,
   SECTION_TABLE_BODY_ROW_CLASS,
   SECTION_TABLE_CLASS,
   SECTION_TABLE_CONTAINER_CLASS,
-  SECTION_TABLE_HEAD_CELL_CLASS_LEFT,
-  SECTION_TABLE_HEAD_CELL_CLASS_RIGHT,
   SECTION_TABLE_HEAD_ROW_CLASS,
 } from "../../../../components/event-detail/detail-sections/sections/tableStyles"
+import {
+  FINANCIAL_TABLE_BODY_CELL_CLASS,
+  FINANCIAL_TABLE_HEAD_CELL_LEFT_CLASS,
+  FINANCIAL_TABLE_HEAD_CELL_RIGHT_CLASS,
+} from "./financialTableStyles"
 import FinancialCard, { FINANCIAL_EMPTY_STATE_CLASS } from "./FinancialCard"
 import {
   BeveragePlanningBillingSection,
@@ -320,21 +322,21 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
           )
         ) : (
           <div className={SECTION_TABLE_CONTAINER_CLASS}>
-            <table className={`${SECTION_TABLE_CLASS} table-fixed min-w-[640px] tabular-nums`} data-charge-item="true">
+            <table className={`${SECTION_TABLE_CLASS} table-fixed min-w-[720px] tabular-nums`} data-charge-item="true">
               <colgroup>
                 <col />
-                <col className="w-20" />
-                <col className="w-28" />
-                <col className="w-32" />
-                <col className="w-20" />
+                <col className="w-24" />
+                <col className="w-36" />
+                <col className="w-40" />
+                <col className="w-24" />
               </colgroup>
               <thead>
                 <tr className={SECTION_TABLE_HEAD_ROW_CLASS}>
-                  <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Item</th>
-                  <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Qty</th>
-                  <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Unit Price ($)</th>
-                  <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Line Total</th>
-                  <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}><span className="sr-only">Actions</span></th>
+                  <th className={FINANCIAL_TABLE_HEAD_CELL_LEFT_CLASS}>Item</th>
+                  <th className={FINANCIAL_TABLE_HEAD_CELL_RIGHT_CLASS}>Qty</th>
+                  <th className={FINANCIAL_TABLE_HEAD_CELL_RIGHT_CLASS}>Unit Price ($)</th>
+                  <th className={FINANCIAL_TABLE_HEAD_CELL_RIGHT_CLASS}>Line Total</th>
+                  <th className={FINANCIAL_TABLE_HEAD_CELL_RIGHT_CLASS}><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
 
@@ -360,11 +362,11 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
                       <th
                         scope="rowgroup"
                         colSpan={3}
-                        className="px-1.5 pb-1 pt-3 text-left text-xs font-semibold uppercase tracking-wide"
+                        className="pb-1 pl-4 pr-3 pt-4 text-left text-xs font-semibold uppercase tracking-wide"
                       >
                         {section.label}
                       </th>
-                      <td className="px-1.5 pb-1 pt-3 text-right text-xs font-medium">
+                      <td className="px-3 pb-1 pt-4 text-right text-xs font-medium">
                         {section.items.length > 0 ? (
                           <span aria-label={`${section.label} subtotal`}>
                             {toCurrency(computeMenuSubtotalCents(section.items))}
@@ -375,7 +377,7 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
                     </tr>
                     {section.items.length === 0 ? (
                       <tr className={SECTION_TABLE_BODY_ROW_CLASS}>
-                        <td colSpan={5} className="px-1.5 py-2 text-xs text-muted-foreground">
+                        <td colSpan={5} className="px-4 py-2 text-xs text-muted-foreground">
                           Drop here to move to {section.label}.
                         </td>
                       </tr>
@@ -396,7 +398,7 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
                                   setDragOverCategoryKey(null)
                                 }}
                               >
-                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-middle`}>
+                                <td className={`${FINANCIAL_TABLE_BODY_CELL_CLASS} align-middle`}>
                                   <div className="flex items-center gap-1">
                                     <span className="cursor-grab text-muted-foreground" title="Drag to move category">
                                       <GripVertical size={14} />
@@ -419,7 +421,7 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
                                   </div>
                                 </td>
 
-                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-middle text-right`}>
+                                <td className={`${FINANCIAL_TABLE_BODY_CELL_CLASS} align-middle text-right`}>
                                   <input
                                     data-cell
                                     type="number"
@@ -433,11 +435,11 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
                                         focusNextCell(item.id, 1)
                                       }
                                     }}
-                                    className="ml-auto block h-7 w-14 border-0 border-b border-border bg-transparent px-1 text-right text-xs focus:border-primary focus:outline-none"
+                                    className="ml-auto block h-7 w-16 border-0 border-b border-border bg-transparent px-1 text-right text-xs focus:border-primary focus:outline-none"
                                   />
                                 </td>
 
-                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-middle text-right`}>
+                                <td className={`${FINANCIAL_TABLE_BODY_CELL_CLASS} align-middle text-right`}>
                                   <input
                                     data-cell
                                     type="text"
@@ -469,15 +471,15 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
                                         focusNextCell(item.id, 2)
                                       }
                                     }}
-                                    className="ml-auto block h-7 w-20 border-0 border-b border-border bg-transparent px-1 text-right text-xs focus:border-primary focus:outline-none"
+                                    className="ml-auto block h-7 w-24 border-0 border-b border-border bg-transparent px-1 text-right text-xs focus:border-primary focus:outline-none"
                                   />
                                 </td>
 
-                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-middle text-right font-medium`}>
+                                <td className={`${FINANCIAL_TABLE_BODY_CELL_CLASS} align-middle text-right font-medium`}>
                                   {toCurrency(lineTotalCents)}
                                 </td>
 
-                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-middle`}>
+                                <td className={`${FINANCIAL_TABLE_BODY_CELL_CLASS} align-middle`}>
                                   <div className="flex items-center justify-end gap-2">
                                     <button
                                       type="button"
@@ -501,7 +503,7 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
 
                               {isExpanded ? (
                                 <tr className="border-b border-border/60 bg-muted/30">
-                                  <td colSpan={5} className="px-1.5 py-1.5">
+                                  <td colSpan={5} className="px-4 py-2">
                                     <label className="mb-1 block text-xs uppercase tracking-wide text-muted-foreground">Notes</label>
                                     <textarea
                                       defaultValue={item.includes ?? ""}

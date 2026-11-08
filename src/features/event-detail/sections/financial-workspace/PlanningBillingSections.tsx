@@ -17,14 +17,16 @@ import {
 } from "~/features/event-detail/workspace/lib/financial"
 import { formatCurrencyRange, type GuestCountRange } from "~/features/preview/lib/foodPackages"
 import {
-  SECTION_TABLE_BODY_CELL_CLASS,
   SECTION_TABLE_BODY_ROW_CLASS,
   SECTION_TABLE_CLASS,
   SECTION_TABLE_CONTAINER_CLASS,
-  SECTION_TABLE_HEAD_CELL_CLASS_LEFT,
-  SECTION_TABLE_HEAD_CELL_CLASS_RIGHT,
   SECTION_TABLE_HEAD_ROW_CLASS,
 } from "../../../../components/event-detail/detail-sections/sections/tableStyles"
+import {
+  FINANCIAL_TABLE_BODY_CELL_CLASS,
+  FINANCIAL_TABLE_HEAD_CELL_LEFT_CLASS,
+  FINANCIAL_TABLE_HEAD_CELL_RIGHT_CLASS,
+} from "./financialTableStyles"
 import FinancialCard, { FINANCIAL_EMPTY_STATE_CLASS } from "./FinancialCard"
 import { computeEstimateLineTotal, sumEstimatePlanning, type CentsRange } from "./estimateLineTotals"
 
@@ -50,7 +52,7 @@ const PRICING_BASIS_OPTIONS: Array<{ value: PricingBasis; label: string }> = [
   { value: "per_person", label: "Per person" },
 ]
 
-const PLANNING_BILLING_TABLE_CLASS = `${SECTION_TABLE_CLASS} table-fixed min-w-[700px] tabular-nums`
+const PLANNING_BILLING_TABLE_CLASS = `${SECTION_TABLE_CLASS} table-fixed min-w-[880px] tabular-nums`
 const CELL_INPUT_CLASS =
   "ml-auto block h-7 border-0 border-b border-border bg-transparent px-1 text-right text-xs focus:border-primary focus:outline-none"
 
@@ -115,7 +117,7 @@ const PlanningBillingCard: React.FC<{
         {renderPlanningCta(onNavigateToPlanning)}
       </div>
     ) : (
-      <div className="space-y-4">{children}</div>
+      <div className="space-y-6">{children}</div>
     )}
   </FinancialCard>
 )
@@ -129,7 +131,7 @@ const PlanningBillingGroup: React.FC<{
   children: React.ReactNode
 }> = ({ heading, isEmpty, onNavigateToPlanning, controls, children }) => (
   <div className="space-y-0.5">
-    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 bg-muted/25 px-2 py-1.5">
+    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border/70 bg-muted/25 px-4 py-2">
       <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{heading}</p>
         {isEmpty ? (
@@ -146,20 +148,20 @@ const PlanningBillingGroup: React.FC<{
         <table className={PLANNING_BILLING_TABLE_CLASS}>
           <colgroup>
             <col />
-            <col className="w-16" />
-            <col className="w-28" />
-            <col className="w-20" />
-            <col className="w-28" />
-            <col className="w-40" />
+            <col className="w-24" />
+            <col className="w-36" />
+            <col className="w-24" />
+            <col className="w-36" />
+            <col className="w-52" />
           </colgroup>
           <thead>
             <tr className={SECTION_TABLE_HEAD_ROW_CLASS}>
-              <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Item</th>
-              <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Add-on</th>
-              <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Pricing</th>
-              <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Qty</th>
-              <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Unit Price ($)</th>
-              <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Line Total</th>
+              <th className={FINANCIAL_TABLE_HEAD_CELL_LEFT_CLASS}>Item</th>
+              <th className={FINANCIAL_TABLE_HEAD_CELL_LEFT_CLASS}>Add-on</th>
+              <th className={FINANCIAL_TABLE_HEAD_CELL_LEFT_CLASS}>Pricing</th>
+              <th className={FINANCIAL_TABLE_HEAD_CELL_RIGHT_CLASS}>Qty</th>
+              <th className={FINANCIAL_TABLE_HEAD_CELL_RIGHT_CLASS}>Unit Price ($)</th>
+              <th className={FINANCIAL_TABLE_HEAD_CELL_RIGHT_CLASS}>Line Total</th>
             </tr>
           </thead>
           <tbody>{children}</tbody>
@@ -182,8 +184,8 @@ const EstimateBillingRow: React.FC<{
 
   return (
     <tr className={`${SECTION_TABLE_BODY_ROW_CLASS} ${status === "add-on-in-package-price" ? "bg-amber-50" : ""}`}>
-      <td className={`${SECTION_TABLE_BODY_CELL_CLASS} text-xs text-foreground`}>{item.name || "Untitled item"}</td>
-      <td className={SECTION_TABLE_BODY_CELL_CLASS}>
+      <td className={`${FINANCIAL_TABLE_BODY_CELL_CLASS} text-xs text-foreground`}>{item.name || "Untitled item"}</td>
+      <td className={FINANCIAL_TABLE_BODY_CELL_CLASS}>
         <input
           type="checkbox"
           checked={isAddOn(item)}
@@ -198,7 +200,7 @@ const EstimateBillingRow: React.FC<{
           aria-label={`${label} Add-on`}
         />
       </td>
-      <td className={SECTION_TABLE_BODY_CELL_CLASS}>
+      <td className={FINANCIAL_TABLE_BODY_CELL_CLASS}>
         <select
           value={pricingBasis}
           onChange={(e) => onUpdate?.({ pricingBasis: e.target.value as PricingBasis })}
@@ -212,31 +214,31 @@ const EstimateBillingRow: React.FC<{
           ))}
         </select>
       </td>
-      <td className={`${SECTION_TABLE_BODY_CELL_CLASS} text-right`}>
+      <td className={`${FINANCIAL_TABLE_BODY_CELL_CLASS} text-right`}>
         <input
           type="number"
           min="0"
           defaultValue={item.quantity ?? 0}
           onBlur={(e) => onUpdate?.({ quantity: Math.max(0, Number(e.target.value) || 0) })}
-          className={`${CELL_INPUT_CLASS} w-14 ${isPerPerson ? "text-muted-foreground" : ""}`}
+          className={`${CELL_INPUT_CLASS} w-16 ${isPerPerson ? "text-muted-foreground" : ""}`}
           title={isPerPerson ? "Not used on the estimate. The invoice bills quantity × price." : undefined}
           aria-label={`${label} Quantity`}
         />
         {isPerPerson ? <span className="block text-[10px] text-muted-foreground">invoice only</span> : null}
       </td>
-      <td className={`${SECTION_TABLE_BODY_CELL_CLASS} text-right`}>
+      <td className={`${FINANCIAL_TABLE_BODY_CELL_CLASS} text-right`}>
         <input
           type="text"
           inputMode="decimal"
           defaultValue={centsToDollars(item.unitPriceCents).toFixed(2)}
           onBlur={(e) => onUpdate?.({ unitPriceCents: Math.max(0, dollarsToCents(e.target.value)) })}
-          className={`${CELL_INPUT_CLASS} w-20 ${status === "in-package-price" ? "text-muted-foreground" : ""}`}
+          className={`${CELL_INPUT_CLASS} w-24 ${status === "in-package-price" ? "text-muted-foreground" : ""}`}
           title={status === "in-package-price" ? "Not used on the estimate: the package price covers this item." : undefined}
           aria-label={`${label} Unit Price`}
         />
         {isPerPerson ? <span className="block text-[10px] text-muted-foreground">per person</span> : null}
       </td>
-      <td className={`${SECTION_TABLE_BODY_CELL_CLASS} text-right text-xs font-medium`}>
+      <td className={`${FINANCIAL_TABLE_BODY_CELL_CLASS} text-right text-xs font-medium`}>
         {status === "in-package-price" ? (
           <span className="text-muted-foreground">{statusNote}</span>
         ) : (
@@ -265,7 +267,7 @@ const TimeblockBillingControls: React.FC<{
 }> = ({ timeblock, onUpdate }) => {
   const packagePrice = getPackagePricePerPersonCents(timeblock)
   return (
-    <div className="flex flex-wrap items-center gap-4 text-xs">
+    <div className="flex flex-wrap items-center gap-6 text-xs">
       <label className="inline-flex items-center gap-1.5">
         <span className="text-muted-foreground">Package price / person ($)</span>
         <input
