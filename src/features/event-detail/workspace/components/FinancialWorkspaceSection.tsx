@@ -70,6 +70,12 @@ const FinancialWorkspaceSection: React.FC<FinancialWorkspaceSectionProps> = ({ e
         </div>
       </div>
 
+      <div className="rounded-xs border border-border bg-background p-3 shadow-sm">
+        <EstimateProposalSection
+          grandTotal={{ lowCents: low.grandTotalCents, highCents: high.grandTotalCents }}
+        />
+      </div>
+
       <div className="min-w-0 rounded-xs border border-border bg-background p-3 shadow-sm">
         <MenuOfChargeSection
           emptyStateMode="workspace"
@@ -83,12 +89,6 @@ const FinancialWorkspaceSection: React.FC<FinancialWorkspaceSectionProps> = ({ e
           onUpdateBeverageBillingItem={({ itemId, updates }) =>
             updateBeverageItem({ itemId, updates })
           }
-        />
-      </div>
-
-      <div className="rounded-xs border border-border bg-background p-3 shadow-sm">
-        <EstimateProposalSection
-          grandTotal={{ lowCents: low.grandTotalCents, highCents: high.grandTotalCents }}
         />
       </div>
     </div>

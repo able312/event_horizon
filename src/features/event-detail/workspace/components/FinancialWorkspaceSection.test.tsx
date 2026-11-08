@@ -85,6 +85,11 @@ describe("FinancialWorkspaceSection", () => {
     expect(screen.getByText("Quoting for 80–120 guests")).toBeTruthy()
     expect(screen.getByText("Menu Of Charges Table")).toBeTruthy()
     expect(screen.getByText("Menu Of Charges Table").parentElement?.className).toContain("min-w-0")
+    // Proposal details sit between the summary and the line items, not below them
+    expect(
+      screen.getByText("Proposal Details").compareDocumentPosition(screen.getByText("Menu Of Charges Table")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
 
     expect(screen.getByText("$145.00")).toBeTruthy()
     expect(screen.getByText("$6.30")).toBeTruthy()

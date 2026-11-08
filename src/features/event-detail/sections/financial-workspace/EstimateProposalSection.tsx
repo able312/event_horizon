@@ -1,4 +1,5 @@
-import React, { useRef } from "react"
+import React, { useRef, useState } from "react"
+import { ChevronDown, ChevronRight } from "lucide-react"
 
 import type { DepositKind, EstimateDetails, UpdateEstimateDetails } from "~/definitions/database"
 import { centsToDollars, parseDollarsToCents } from "~/features/event-detail/workspace/lib/financial"
@@ -10,6 +11,7 @@ import {
 } from "~/features/preview/lib/estimateProposal"
 import { useEstimateDetailsSection } from "~/hooks/useEstimateDetailsSection"
 import { useVenueSettings } from "~/hooks/useVenueSettings"
+import { formatProposalDetailsRecap, isProposalDetailsEmpty } from "./proposalDetailsRecap"
 
 const LABEL_CLASS = "mb-1 block text-xs uppercase tracking-wide text-muted-foreground"
 const FIELD_CLASS =
@@ -189,6 +191,81 @@ const TermsField: React.FC<{
   )
 }
 
+const ProposalDetailsCard: React.FC<{
+  details: EstimateDetails
+  grandTotal: CentsRange
+  venueDefaultTerms: string | null
+  onUpdate: (updates: UpdateEstimateDetails) => void
+  onSaveVenueDefault: (terms: string | null) => void
+}> = ({ details, grandTotal, venueDefaultTerms, onUpdate, onSaveVenueDefault }) => {
+  // Decided once per event: an untouched card starts open so it gets filled in. It never
+  // collapses by itself, so typing (or a teammate's live edit) doesn't close it mid-edit.
+  const [open, setOpen] = useState(() => isProposalDetailsEmpty(details))
+
+  return (
+    <div className="space-y-4">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls="estimate-proposal-fields"
+        onClick={() => setOpen((value) => !value)}
+        className="flex w-full items-start gap-2 text-left"
+      >
+        <span className="mt-0.5 text-muted-foreground">
+          {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </span>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold tracking-wide">Proposal Details</span>
+          <span className="block text-xs text-muted-foreground">
+            {open ? "Printed on the estimate." : formatProposalDetailsRecap(details, venueDefaultTerms)}
+          </span>
+        </span>
+      </button>
+
+      {open ? (
+        <div id="estimate-proposal-fields" className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_12rem]">
+            <div>
+              <label htmlFor="estimate-intro" className={LABEL_CLASS}>Intro note</label>
+              <textarea
+                key={details.introNote ?? ""}
+                id="estimate-intro"
+                rows={3}
+                defaultValue={details.introNote ?? ""}
+                placeholder="Printed at the top, e.g. Thank you for considering us for your event…"
+                onBlur={(e) => {
+                  const introNote = textOrNull(e.target.value)
+                  if (introNote !== details.introNote) onUpdate({ introNote })
+                }}
+                className={FIELD_CLASS}
+              />
+            </div>
+            <div>
+              <label htmlFor="estimate-valid-until" className={LABEL_CLASS}>Valid until</label>
+              <input
+                id="estimate-valid-until"
+                type="date"
+                value={details.validUntil ?? ""}
+                onChange={(e) => onUpdate({ validUntil: e.target.value || null })}
+                className={FIELD_CLASS}
+              />
+            </div>
+          </div>
+
+          <DepositFields details={details} grandTotal={grandTotal} onUpdate={onUpdate} />
+
+          <TermsField
+            details={details}
+            venueDefaultTerms={venueDefaultTerms}
+            onUpdate={onUpdate}
+            onSaveVenueDefault={onSaveVenueDefault}
+          />
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 /** Proposal details printed on the estimate: intro, valid-until date, deposit and terms. */
 const EstimateProposalSection: React.FC<{ grandTotal: CentsRange }> = ({ grandTotal }) => {
   const { data: details, isError, updateEstimateDetails } = useEstimateDetailsSection()
@@ -197,52 +274,15 @@ const EstimateProposalSection: React.FC<{ grandTotal: CentsRange }> = ({ grandTo
   if (isError) return <p className="text-xs text-destructive">Proposal details failed to load.</p>
   if (!details) return <p className="text-xs text-muted-foreground">Loading proposal details…</p>
 
-  const update = (updates: UpdateEstimateDetails) => updateEstimateDetails({ id: details.id, updates })
-
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-sm font-semibold tracking-wide">Proposal Details</h3>
-        <p className="text-xs text-muted-foreground">Printed on the estimate.</p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_12rem]">
-        <div>
-          <label htmlFor="estimate-intro" className={LABEL_CLASS}>Intro note</label>
-          <textarea
-            key={details.introNote ?? ""}
-            id="estimate-intro"
-            rows={3}
-            defaultValue={details.introNote ?? ""}
-            placeholder="Printed at the top, e.g. Thank you for considering us for your event…"
-            onBlur={(e) => {
-              const introNote = textOrNull(e.target.value)
-              if (introNote !== details.introNote) update({ introNote })
-            }}
-            className={FIELD_CLASS}
-          />
-        </div>
-        <div>
-          <label htmlFor="estimate-valid-until" className={LABEL_CLASS}>Valid until</label>
-          <input
-            id="estimate-valid-until"
-            type="date"
-            value={details.validUntil ?? ""}
-            onChange={(e) => update({ validUntil: e.target.value || null })}
-            className={FIELD_CLASS}
-          />
-        </div>
-      </div>
-
-      <DepositFields details={details} grandTotal={grandTotal} onUpdate={update} />
-
-      <TermsField
-        details={details}
-        venueDefaultTerms={venueSettings?.defaultEstimateTerms ?? null}
-        onUpdate={update}
-        onSaveVenueDefault={setDefaultEstimateTerms}
-      />
-    </div>
+    <ProposalDetailsCard
+      key={details.id}
+      details={details}
+      grandTotal={grandTotal}
+      venueDefaultTerms={venueSettings?.defaultEstimateTerms ?? null}
+      onUpdate={(updates) => updateEstimateDetails({ id: details.id, updates })}
+      onSaveVenueDefault={setDefaultEstimateTerms}
+    />
   )
 }
 
