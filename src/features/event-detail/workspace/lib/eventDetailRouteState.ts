@@ -69,6 +69,8 @@ function normalizeSection(value: unknown): WorkspaceCategoryId | null {
   if (value === "notes" || value === "setup" || value === "system" || value === "note" || value === "timeblock") {
     return null
   }
+  // Invoice briefly had its own section; it now lives under Financials.
+  if (value === "invoice") return "financial"
   return isWorkspaceCategoryId(value) ? value : null
 }
 

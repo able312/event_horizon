@@ -40,7 +40,6 @@ describe("navPolicy", () => {
       "beverage",
       "tournament",
       "financial",
-      "invoice",
     ])
     expect(isWorkspaceCategoryId("notes")).toBe(false)
     expect(isWorkspaceCategoryId("setup")).toBe(false)

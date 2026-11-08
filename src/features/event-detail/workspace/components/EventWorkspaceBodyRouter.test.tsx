@@ -45,10 +45,10 @@ vi.mock("~/components/event-detail/detail-sections/sections/GolfCartsSection", (
   default: () => golfCartsSectionMock(),
 }))
 
-vi.mock("./FinancialWorkspaceSection", () => ({
+vi.mock("./FinancialsWorkspace", () => ({
   default: (props: unknown) => {
     financialWorkspaceSectionMock(props)
-    return <div data-testid="financial-workspace-section" />
+    return <div data-testid="financials-workspace" />
   },
 }))
 
@@ -159,13 +159,13 @@ describe("EventWorkspaceBodyRouter", () => {
       selectedNode: {
         id: "category:financial",
         groupId: "categories",
-        label: "Estimate",
+        label: "Financials",
         nodeType: "financial",
         sourceRef: { kind: "financial", view: "overview" },
       },
     })
 
-    expect(screen.getByTestId("financial-workspace-section")).toBeTruthy()
+    expect(screen.getByTestId("financials-workspace")).toBeTruthy()
   })
 
   it("renders note and setup timeblocks with the focused timeblock workspace", () => {

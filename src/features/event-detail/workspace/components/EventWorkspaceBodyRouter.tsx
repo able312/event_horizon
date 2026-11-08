@@ -1,8 +1,7 @@
 import OverviewWorkspaceSection from "../../sections/event-overview/OverviewWorkspaceSection"
 import TournamentDetailsSection from "~/components/event-detail/detail-sections/sections/TournamentDetailsSection"
 import GolfCartsSection from "~/components/event-detail/detail-sections/sections/GolfCartsSection"
-import FinancialWorkspaceSection from "./FinancialWorkspaceSection"
-import InvoiceWorkspaceSection from "./InvoiceWorkspaceSection"
+import FinancialsWorkspace from "./FinancialsWorkspace"
 import FoodWorkspaceSection from "~/features/event-detail/sections/food-beverage-workspaces/FoodWorkspaceSection"
 import BeverageWorkspaceSection from "~/features/event-detail/sections/food-beverage-workspaces/BeverageWorkspaceSection"
 import FocusedTimeblockWorkspace from "../../sections/FocusedTimeblockWorkspace"
@@ -59,16 +58,10 @@ function renderCategoryWorkspace(
     case "financial":
       return (
         <div className={`${scrollContainerClassName} p-4 pt-8 space-y-6`}>
-          <FinancialWorkspaceSection
+          <FinancialsWorkspace
             eventResource={eventResource}
             onSelectWorkspaceNode={onSelectNode}
           />
-        </div>
-      )
-    case "invoice":
-      return (
-        <div className={`${scrollContainerClassName} p-4 pt-8 space-y-6`}>
-          <InvoiceWorkspaceSection eventId={eventResource.event?.id ?? ""} />
         </div>
       )
     default: {

@@ -68,7 +68,6 @@ describe("buildWorkspaceNav", () => {
       "category:beverage",
       "category:tournament",
       "category:financial",
-      "category:invoice",
     ])
     expect(nav.categories.some((n) => n.id === "category:notes")).toBe(false)
     expect(nav.categories.some((n) => n.id === "category:setup")).toBe(false)

@@ -7,7 +7,6 @@ export type WorkspaceCategoryId =
   | "beverage"
   | "tournament"
   | "financial"
-  | "invoice"
 
 export type WorkspaceNodeType = "timeblock" | "category" | "financial" | "system"
 

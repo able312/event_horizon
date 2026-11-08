@@ -89,7 +89,7 @@ function buildNavModel(overrides?: Partial<WorkspaceNavModel>): WorkspaceNavMode
         id: "category:financial",
         groupId: "categories",
         nodeType: "financial",
-        label: "Estimate",
+        label: "Financials",
         sourceRef: { kind: "financial", view: "overview" },
       },
     ],
@@ -226,6 +226,19 @@ describe("eventDetailRouteState", () => {
         navModel,
       }),
     ).toBe("/events/evt_1/overview")
+  })
+
+  it("redirects the old invoice section to Financials", () => {
+    const navModel = buildNavModel()
+
+    expect(
+      getCanonicalEventDetailPath({
+        eventId: "evt_1",
+        params: { id: "evt_1", section: "invoice" },
+        searchParams: new URLSearchParams(),
+        navModel,
+      }),
+    ).toBe("/events/evt_1/financial")
   })
 
   it("keeps unknown focused timeblock ids on the focused route for body-level not-found handling", () => {

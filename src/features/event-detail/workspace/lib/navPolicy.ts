@@ -4,7 +4,6 @@ import {
   Wine,
   Trophy,
   CircleDollarSign,
-  ReceiptText,
   type LucideIcon,
 } from "lucide-react"
 
@@ -51,15 +50,9 @@ export const WORKSPACE_CATEGORIES = [
   },
   {
     id: "financial",
-    label: "Estimate",
+    label: "Financials",
     slug: "financial",
     icon: CircleDollarSign,
-  },
-  {
-    id: "invoice",
-    label: "Invoice",
-    slug: "invoice",
-    icon: ReceiptText,
   },
 ] as const satisfies readonly WorkspaceCategoryDefinition[]
 
