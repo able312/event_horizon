@@ -65,8 +65,16 @@ describe("MenuOfChargeSection", () => {
     expect(screen.getAllByText("Food & Beverage")[0]).toBeTruthy()
     expect(screen.getByText("Food")).toBeTruthy()
     expect(screen.getByText("Beverage")).toBeTruthy()
-    expect(screen.getAllByText("From Planning")).toHaveLength(2)
-    expect(screen.getAllByText(/These items are organized in planning\. Set how each is priced here/)).toHaveLength(2)
+    expect(screen.getByText(/Items come from Food Planning\./)).toBeTruthy()
+    expect(screen.getByText(/Items come from Beverage Planning\./)).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Open Food Planning" })).toBeTruthy()
+    // Empty manual categories stay hidden until an item is dragged, when they become drop targets
+    expect(screen.queryByText("Venue")).toBeNull()
+    fireEvent.dragStart(screen.getByDisplayValue("Hosted Bar Package").closest("tr")!)
+    expect(screen.getByText("Venue")).toBeTruthy()
+    expect(screen.getByText("Drop here to move to Venue.")).toBeTruthy()
+    fireEvent.dragEnd(screen.getByDisplayValue("Hosted Bar Package").closest("tr")!)
+    expect(screen.queryByText("Venue")).toBeNull()
     expect(screen.getByText("Dinner")).toBeTruthy()
     expect(screen.getAllByText("Wine").length).toBeGreaterThan(0)
 
@@ -130,7 +138,7 @@ describe("MenuOfChargeSection", () => {
     expect(foodCard?.className).toContain("shadow-sm")
     expect(beverageCard?.className).toContain("shadow-sm")
 
-    expect(screen.getByText("Charges Subtotal: $59.00")).toBeTruthy()
+    expect(screen.getByText("Other Charges Subtotal: $25.00")).toBeTruthy()
   })
 
   it("renders workspace empty state alongside planning-owned empty states", async () => {
@@ -202,7 +210,6 @@ describe("MenuOfChargeSection", () => {
     expect(screen.getByText("$3,600.00 – $5,400.00")).toBeTruthy()
     expect(screen.getByText("$300.00")).toBeTruthy()
     expect(screen.getByText("Food Subtotal: $3,900.00 – $5,700.00")).toBeTruthy()
-    expect(screen.getByText("Charges Subtotal: $3,900.00 – $5,700.00")).toBeTruthy()
 
     fireEvent.change(screen.getAllByLabelText("Food Pricing")[1], { target: { value: "per_person" } })
     expect(updateFoodBillingItem).toHaveBeenCalledWith({

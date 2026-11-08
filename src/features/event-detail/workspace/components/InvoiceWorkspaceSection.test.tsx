@@ -8,23 +8,18 @@ const hooksMock = vi.hoisted(() => ({
   useFoodSection: vi.fn(),
   useBeverageSection: vi.fn(),
   usePaymentsSection: vi.fn(),
+  useEstimateDetailsSection: vi.fn(),
 }))
-const navigateMock = vi.hoisted(() => vi.fn())
 
-vi.mock("react-router", async () => {
-  const actual = await vi.importActual<typeof import("react-router")>("react-router")
-  return {
-    ...actual,
-    useNavigate: () => navigateMock,
-    useLocation: () => ({ pathname: "/events/event-1/invoice", search: "", hash: "" }),
-  }
-})
 
 vi.mock("~/hooks/useMenuOfChargeSection", () => ({
   useMenuOfChargeItemsSection: hooksMock.useMenuOfChargeItemsSection,
 }))
 vi.mock("~/hooks/usePaymentsSection", () => ({
   usePaymentsSection: hooksMock.usePaymentsSection,
+}))
+vi.mock("~/hooks/useEstimateDetailsSection", () => ({
+  useEstimateDetailsSection: hooksMock.useEstimateDetailsSection,
 }))
 vi.mock("~/hooks/useFoodSection", () => ({
   useFoodSection: hooksMock.useFoodSection,
@@ -42,7 +37,7 @@ afterEach(() => {
 })
 
 describe("InvoiceWorkspaceSection", () => {
-  it("shows the balance after payments, the payments editor and the invoice link", () => {
+  it("shows the balance after payments, how much is paid, the deposit status and the payments editor", () => {
     hooksMock.useMenuOfChargeItemsSection.mockReturnValue({
       data: [{ id: "c1", quantity: 2, unitPriceCents: 5000 }],
     })
@@ -53,17 +48,20 @@ describe("InvoiceWorkspaceSection", () => {
     hooksMock.usePaymentsSection.mockReturnValue({
       data: [{ id: "p1", amountCents: 2500 }],
     })
+    hooksMock.useEstimateDetailsSection.mockReturnValue({
+      data: { depositKind: "percent", depositPercent: 25, depositAmountCents: null, depositDueDate: null },
+    })
 
-    render(<InvoiceWorkspaceSection eventId="event-1" />)
+    render(<InvoiceWorkspaceSection />)
 
     // Charges 12000; HST 1560; gratuity on food 360; grand 13920; paid 2500; balance 11420
     expect(screen.getByText("$139.20")).toBeTruthy()
     expect(screen.getByText("$25.00")).toBeTruthy()
     expect(screen.getByText("$114.20")).toBeTruthy()
     expect(screen.getByText("Payments Table")).toBeTruthy()
-
-    screen.getByRole("button", { name: "Generate Invoice" }).click()
-    expect(navigateMock).toHaveBeenCalledWith("/preview/event-1?type=invoice&returnTo=%2Fevents%2Fevent-1%2Finvoice")
+    // 2500 of 13920 paid; the 25% deposit (3480) is not covered yet
+    expect(screen.getByText("18% paid")).toBeTruthy()
+    expect(screen.getByText(/Deposit \$34\.80: \$9\.80 still owed/)).toBeTruthy()
   })
 
   it("bills a package price × its final quantity and asks for the quantity until it is set", () => {
@@ -82,8 +80,9 @@ describe("InvoiceWorkspaceSection", () => {
     hooksMock.useFoodSection.mockReturnValue({ data: [dinner], updateTimeblock })
     hooksMock.useBeverageSection.mockReturnValue({ items: [] })
     hooksMock.usePaymentsSection.mockReturnValue({ data: [] })
+    hooksMock.useEstimateDetailsSection.mockReturnValue({ data: undefined })
 
-    const { rerender } = render(<InvoiceWorkspaceSection eventId="event-1" />)
+    const { rerender } = render(<InvoiceWorkspaceSection />)
 
     // Only the wings until the quantity is set: 20000 + HST 2600 + gratuity 3600
     expect(screen.getByRole("alert").textContent).toContain("Needs a final quantity before invoicing: Dinner")
@@ -95,7 +94,7 @@ describe("InvoiceWorkspaceSection", () => {
     expect(updateTimeblock).toHaveBeenCalledWith({ id: "dinner", updates: { packageQuantity: 48 } })
 
     hooksMock.useFoodSection.mockReturnValue({ data: [{ ...dinner, packageQuantity: 48 }], updateTimeblock })
-    rerender(<InvoiceWorkspaceSection eventId="event-1" />)
+    rerender(<InvoiceWorkspaceSection />)
     // 4500 × 48 = 216000 + 20000 = 236000; HST 30680; gratuity 42480; grand 309160
     expect(screen.queryByRole("alert")).toBeNull()
     expect(screen.getByText("$2,160.00")).toBeTruthy()

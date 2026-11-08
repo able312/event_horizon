@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react"
 import { ChevronDown, ChevronRight, GripVertical, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
+import { Button } from "~/components/atoms/button"
+
 import type {
   BeverageItem,
   ChargeCategory,
@@ -18,7 +20,7 @@ import {
   dollarsToCents,
   toCurrency,
 } from "~/features/event-detail/workspace/lib/financial"
-import { formatCurrencyRange, type GuestCountRange } from "~/features/preview/lib/foodPackages"
+import type { GuestCountRange } from "~/features/preview/lib/foodPackages"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,7 +36,7 @@ import {
   SECTION_TABLE_HEAD_CELL_CLASS_RIGHT,
   SECTION_TABLE_HEAD_ROW_CLASS,
 } from "../../../../components/event-detail/detail-sections/sections/tableStyles"
-import { sumEstimatePlanning } from "./estimateLineTotals"
+import FinancialCard, { FINANCIAL_EMPTY_STATE_CLASS } from "./FinancialCard"
 import {
   BeveragePlanningBillingSection,
   FoodPlanningBillingSection,
@@ -179,12 +181,6 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
 
   const items = useMemo(() => menuOfChargeItems ?? [], [menuOfChargeItems])
   const menuSubtotalCents = computeMenuSubtotalCents(items)
-  const planningTotals = sumEstimatePlanning(foodTimeblocks, beverageItems, guests)
-  const planningSubtotal = {
-    lowCents: planningTotals.food.lowCents + planningTotals.beverage.lowCents,
-    highCents: planningTotals.food.highCents + planningTotals.beverage.highCents,
-  }
-  const hasPlanningContent = foodTimeblocks.length > 0 || beverageItems.length > 0
 
   const categorySections = useMemo<CategorySection[]>(() => {
     const buckets = new Map<string, MenuOfChargeItem[]>()
@@ -242,8 +238,48 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
     toast.success(`Moved to ${targetCategory ?? "Uncategorized"}`)
   }
 
-  const planningSections = (
-    <div className="space-y-6">
+  // Empty categories only appear while an item is being dragged, as drop targets.
+  const visibleSections = draggedItemId
+    ? categorySections
+    : categorySections.filter((section) => section.items.length > 0)
+
+  const addItemButton = (
+    <div className="flex items-stretch overflow-hidden rounded-xs border border-border">
+      <Button
+        type="button"
+        variant="ghost"
+        className="h-8 rounded-none border-r border-border px-2 text-sm"
+        onClick={handlePrimaryAdd}
+      >
+        <Plus className="size-3.5" />
+        Add Item
+      </Button>
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 rounded-none"
+            aria-label="Choose add category"
+          >
+            <ChevronDown className="size-3.5" />
+          </Button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent align="end">
+          {ITER_MENU_OF_CHARGE_CATEGORY.map((category) => (
+            <DropdownMenuItem key={category} onClick={() => handleCategoryAdd(category)}>
+              {category}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  )
+
+  return (
+    <div className={`space-y-4 ${className ?? ""}`}>
       <FoodPlanningBillingSection
         timeblocks={foodTimeblocks}
         guests={guests}
@@ -257,111 +293,87 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
         onNavigateToPlanning={onNavigateToBeverage}
         onUpdateItem={onUpdateBeverageBillingItem}
       />
-    </div>
-  )
 
-  return (
-    <section className={className}>
-      <div className="flex items-center justify-between border-b border-border pb-2">
-        <h3 className="text-sm font-semibold tracking-wide">Menu of Charges</h3>
-
-        <div className="inline-flex items-center">
-          <button
-            type="button"
-            onClick={handlePrimaryAdd}
-            className="inline-flex items-center gap-1 rounded-l-xs border border-r-0 border-orange-200 bg-orange-100 px-2 text-sm text-orange-700 hover:bg-orange-50"
-          >
-            <Plus size={14} />
-            Add Item
-          </button>
-
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <button
+      <FinancialCard
+        title="Other Charges"
+        description="Venue, service, golf and other charges added by hand. Drag a row to change its category."
+        actions={addItemButton}
+        footer={items.length > 0 ? `Other Charges Subtotal: ${toCurrency(menuSubtotalCents)}` : undefined}
+      >
+        {items.length === 0 ? (
+          emptyStateMode === "workspace" ? (
+            <div className={FINANCIAL_EMPTY_STATE_CLASS}>
+              <p>No charge items yet.</p>
+              <p className="mt-1">Add venue fees, staffing or anything else not planned in Food or Beverage.</p>
+              <Button
                 type="button"
-                aria-label="Choose add category"
-                className="inline-flex h-full min-h-[22px] items-center rounded-r-xs border border-orange-200 bg-orange-100 px-2 text-orange-700 hover:bg-orange-50"
-              >
-                <ChevronDown size={14} />
-              </button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end">
-              {ITER_MENU_OF_CHARGE_CATEGORY.map((category) => (
-                <DropdownMenuItem key={category} onClick={() => handleCategoryAdd(category)}>
-                  {category}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-      {items.length === 0 && !hasPlanningContent ? (
-        emptyStateMode === "workspace" ? (
-          <div className="space-y-6 pt-4">
-            <div>
-              <p className="text-sm text-muted-foreground">No charge items yet.</p>
-              <p className="mt-1 text-xs text-muted-foreground">Start your estimate by adding your first charge item.</p>
-              <button
-                type="button"
+                variant="outline"
+                className="mt-3 h-8 rounded-xs px-2 text-sm"
                 onClick={handlePrimaryAdd}
-                className="mt-3 inline-flex items-center gap-1 rounded-md bg-orange-500 text-orange-100 border border-orange-200 px-3 py-2 text-sm font-semibold transition-colors hover:bg-orange-50"
               >
-                <Plus size={14} />
+                <Plus className="size-3.5" />
                 Add First Charge Item
-              </button>
+              </Button>
             </div>
-            {planningSections}
-          </div>
-        ) : (
-          <div className="space-y-6 pt-4">
+          ) : (
             <p className="text-sm text-muted-foreground">No charge items yet. Add an item to begin.</p>
-            {planningSections}
-          </div>
-        )
-      ) : (
-        <div className="space-y-6 pt-3">
-          {categorySections.map((section) => {
-            const isDropTarget = dragOverCategoryKey === section.key
+          )
+        ) : (
+          <div className={SECTION_TABLE_CONTAINER_CLASS}>
+            <table className={`${SECTION_TABLE_CLASS} table-fixed min-w-[640px] tabular-nums`} data-charge-item="true">
+              <colgroup>
+                <col />
+                <col className="w-20" />
+                <col className="w-28" />
+                <col className="w-32" />
+                <col className="w-20" />
+              </colgroup>
+              <thead>
+                <tr className={SECTION_TABLE_HEAD_ROW_CLASS}>
+                  <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Item</th>
+                  <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Qty</th>
+                  <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Unit Price ($)</th>
+                  <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Line Total</th>
+                  <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}><span className="sr-only">Actions</span></th>
+                </tr>
+              </thead>
 
-            return (
-              <div key={section.key} className="space-y-2">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{section.label}</h4>
+              {visibleSections.map((section) => {
+                const isDropTarget = dragOverCategoryKey === section.key
 
-                <div
-                  className={`${SECTION_TABLE_CONTAINER_CLASS} transition-colors ${isDropTarget ? "ring-1 ring-primary/40" : ""}`}
-                  onDragOver={(event) => {
-                    event.preventDefault()
-                    setDragOverCategoryKey(section.key)
-                  }}
-                  onDragLeave={() => {
-                    if (dragOverCategoryKey === section.key) setDragOverCategoryKey(null)
-                  }}
-                  onDrop={(event) => {
-                    event.preventDefault()
-                    handleDropToCategory(section.category)
-                  }}
-                >
-                  <table className={`${SECTION_TABLE_CLASS} min-w-[640px]`} data-charge-item="true">
-                    <thead>
-                      <tr className={SECTION_TABLE_HEAD_ROW_CLASS}>
-                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Item</th>
-                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Qty</th>
-                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Unit Price ($)</th>
-                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Line Total</th>
-                        <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Actions</th>
+                return (
+                  <tbody
+                    key={section.key}
+                    onDragOver={(event) => {
+                      event.preventDefault()
+                      setDragOverCategoryKey(section.key)
+                    }}
+                    onDragLeave={() => {
+                      if (dragOverCategoryKey === section.key) setDragOverCategoryKey(null)
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault()
+                      handleDropToCategory(section.category)
+                    }}
+                  >
+                    <tr>
+                      <th
+                        scope="rowgroup"
+                        colSpan={5}
+                        className={`px-1.5 pb-1 pt-3 text-left text-xs font-semibold uppercase tracking-wide transition-colors ${
+                          isDropTarget ? "bg-orange-50 text-orange-700" : "text-muted-foreground"
+                        }`}
+                      >
+                        {section.label}
+                      </th>
+                    </tr>
+                    {section.items.length === 0 ? (
+                      <tr className={SECTION_TABLE_BODY_ROW_CLASS}>
+                        <td colSpan={5} className="px-1.5 py-2 text-xs text-muted-foreground">
+                          Drop here to move to {section.label}.
+                        </td>
                       </tr>
-                    </thead>
-
-                    <tbody>
-                      {section.items.length === 0 ? (
-                        <tr className={SECTION_TABLE_BODY_ROW_CLASS}>
-                          <td colSpan={5} className="px-1.5 py-3 text-xs text-muted-foreground">
-                            Drop items here or add a new item to this category.
-                          </td>
-                        </tr>
-                      ) : (
+                    ) : (
                         section.items.map((item) => {
                           const lineTotalCents = computeBillableLineTotalCents(item)
                           const isExpanded = Boolean(expandedRows[item.id])
@@ -378,7 +390,7 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
                                   setDragOverCategoryKey(null)
                                 }}
                               >
-                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-top`}>
+                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-middle`}>
                                   <div className="flex items-center gap-1">
                                     <span className="cursor-grab text-muted-foreground" title="Drag to move category">
                                       <GripVertical size={14} />
@@ -401,7 +413,7 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
                                   </div>
                                 </td>
 
-                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-top text-right`}>
+                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-middle text-right`}>
                                   <input
                                     data-cell
                                     type="number"
@@ -419,7 +431,7 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
                                   />
                                 </td>
 
-                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-top text-right`}>
+                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-middle text-right`}>
                                   <input
                                     data-cell
                                     type="text"
@@ -455,11 +467,11 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
                                   />
                                 </td>
 
-                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-top text-right font-medium`}>
+                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-middle text-right font-medium`}>
                                   {toCurrency(lineTotalCents)}
                                 </td>
 
-                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-top`}>
+                                <td className={`${SECTION_TABLE_BODY_CELL_CLASS} align-middle`}>
                                   <div className="flex items-center justify-end gap-2">
                                     <button
                                       type="button"
@@ -497,25 +509,15 @@ const MenuOfChargeSection: React.FC<MenuOfChargeSectionProps> = ({
                             </React.Fragment>
                           )
                         })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )
-          })}
-
-          {planningSections}
-
-          <div className="px-1.5 py-2 text-right text-xs font-medium text-foreground">
-            Charges Subtotal: {formatCurrencyRange(
-              menuSubtotalCents + planningSubtotal.lowCents,
-              menuSubtotalCents + planningSubtotal.highCents,
-            )}
+                    )}
+                  </tbody>
+                )
+              })}
+            </table>
           </div>
-        </div>
-      )}
-    </section>
+        )}
+      </FinancialCard>
+    </div>
   )
 }
 

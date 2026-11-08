@@ -57,7 +57,7 @@ function renderCategoryWorkspace(
       )
     case "financial":
       return (
-        <div className={`${scrollContainerClassName} p-4 pt-8 space-y-6`}>
+        <div className={`${scrollContainerClassName} p-4`}>
           <FinancialsWorkspace
             eventResource={eventResource}
             onSelectWorkspaceNode={onSelectNode}

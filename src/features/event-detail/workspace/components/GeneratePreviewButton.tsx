@@ -1,12 +1,12 @@
 import React from "react"
+import { FileText } from "lucide-react"
 
-/** The "Generate …" button in a workspace summary card's header. */
+import { Button } from "~/components/atoms/button"
+
+/** The "Generate …" button in the Financials header. */
 export const GeneratePreviewButton: React.FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-  >
+  <Button type="button" variant="outline" className="h-8 shrink-0 rounded-xs px-2 text-sm" onClick={onClick}>
+    <FileText className="size-3.5" />
     {label}
-  </button>
+  </Button>
 )

@@ -1,4 +1,7 @@
 import React, { useMemo } from "react"
+import { ArrowUpRight } from "lucide-react"
+
+import { Button } from "~/components/atoms/button"
 
 import type { BeverageItem, FoodItem, PricingBasis } from "~/definitions/database"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
@@ -22,6 +25,7 @@ import {
   SECTION_TABLE_HEAD_CELL_CLASS_RIGHT,
   SECTION_TABLE_HEAD_ROW_CLASS,
 } from "../../../../components/event-detail/detail-sections/sections/tableStyles"
+import FinancialCard, { FINANCIAL_EMPTY_STATE_CLASS } from "./FinancialCard"
 import { computeEstimateLineTotal, sumEstimatePlanning, type CentsRange } from "./estimateLineTotals"
 
 export type BillingItemUpdates = {
@@ -46,8 +50,7 @@ const PRICING_BASIS_OPTIONS: Array<{ value: PricingBasis; label: string }> = [
   { value: "per_person", label: "Per person" },
 ]
 
-const PLANNING_BILLING_CARD_CLASS = "rounded-xs border border-border bg-background p-3 shadow-sm"
-const PLANNING_BILLING_TABLE_CLASS = `${SECTION_TABLE_CLASS} table-fixed min-w-[700px]`
+const PLANNING_BILLING_TABLE_CLASS = `${SECTION_TABLE_CLASS} table-fixed min-w-[700px] tabular-nums`
 const CELL_INPUT_CLASS =
   "ml-auto block h-7 border-0 border-b border-border bg-transparent px-1 text-right text-xs focus:border-primary focus:outline-none"
 
@@ -69,7 +72,7 @@ function renderPlanningCta(onNavigateToPlanning?: () => void, prefix = "Start pl
     <button
       type="button"
       onClick={onNavigateToPlanning}
-      className="inline-flex items-center text-xs font-medium text-primary hover:underline"
+      className="inline-flex items-center text-xs font-medium text-foreground underline-offset-2 hover:text-orange-600 hover:underline"
     >
       {prefix}
     </button>
@@ -78,37 +81,43 @@ function renderPlanningCta(onNavigateToPlanning?: () => void, prefix = "Start pl
 
 const PlanningBillingCard: React.FC<{
   title: string
+  planningLabel: string
   isEmpty: boolean
   emptyLabel: string
   subtotal: CentsRange
   onNavigateToPlanning?: () => void
   children: React.ReactNode
-}> = ({ title, isEmpty, emptyLabel, subtotal, onNavigateToPlanning, children }) => (
-  <div className={`${PLANNING_BILLING_CARD_CLASS} space-y-2`}>
-    <div className="flex items-center gap-2">
-      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h4>
-      <span className="rounded-full border border-border bg-orange-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-orange-700">
-        From Planning
-      </span>
-    </div>
-    <p className="text-xs text-muted-foreground">
-      These items are organized in planning. Set how each is priced here: each (quantity × price) or per person
-      (price × guests). Tick Add-on to offer an item separately, left out of the total until the client accepts it.
-    </p>
-
+}> = ({ title, planningLabel, isEmpty, emptyLabel, subtotal, onNavigateToPlanning, children }) => (
+  <FinancialCard
+    title={title}
+    description={
+      <>
+        Items come from {planningLabel}. Price each one <em>Each</em> (qty × price) or <em>Per person</em> (price ×
+        guests). Add-ons stay out of the total until the client accepts them.
+      </>
+    }
+    actions={onNavigateToPlanning ? (
+      <Button
+        type="button"
+        variant="outline"
+        className="h-8 rounded-xs px-2 text-sm"
+        onClick={onNavigateToPlanning}
+      >
+        <ArrowUpRight className="size-3.5" />
+        Open {planningLabel}
+      </Button>
+    ) : null}
+    footer={`${title} Subtotal: ${formatCurrencyRange(subtotal.lowCents, subtotal.highCents)}`}
+  >
     {isEmpty ? (
-      <div className="rounded-xs border border-dashed border-border px-3 py-3 text-xs text-muted-foreground bg-red-50">
-        <span className="text-red-800">{emptyLabel} </span>
+      <div className={FINANCIAL_EMPTY_STATE_CLASS}>
+        <span>{emptyLabel} </span>
         {renderPlanningCta(onNavigateToPlanning)}
       </div>
     ) : (
-      <div className="space-y-3">{children}</div>
+      <div className="space-y-4">{children}</div>
     )}
-
-    <div className="px-1.5 pt-1 text-right text-xs font-medium text-foreground">
-      {title} Subtotal: {formatCurrencyRange(subtotal.lowCents, subtotal.highCents)}
-    </div>
-  </div>
+  </FinancialCard>
 )
 
 const PlanningBillingGroup: React.FC<{
@@ -121,25 +130,27 @@ const PlanningBillingGroup: React.FC<{
 }> = ({ heading, isEmpty, onNavigateToPlanning, controls, children }) => (
   <div className="space-y-0.5">
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 bg-muted/25 px-2 py-1.5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{heading}</p>
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{heading}</p>
+        {isEmpty ? (
+          <span className="text-xs text-muted-foreground">
+            No items yet. {renderPlanningCta(onNavigateToPlanning)}
+          </span>
+        ) : null}
+      </div>
       {controls}
     </div>
 
-    {isEmpty ? (
-      <div className="rounded-xs border border-dashed border-border px-3 py-3 text-xs text-muted-foreground bg-yellow-50">
-        <span>There are no items for this. </span>
-        {renderPlanningCta(onNavigateToPlanning)}
-      </div>
-    ) : (
+    {isEmpty ? null : (
       <div className={SECTION_TABLE_CONTAINER_CLASS}>
         <table className={PLANNING_BILLING_TABLE_CLASS}>
           <colgroup>
             <col />
             <col className="w-16" />
             <col className="w-28" />
-            <col className="w-16" />
+            <col className="w-20" />
             <col className="w-28" />
-            <col className="w-36" />
+            <col className="w-40" />
           </colgroup>
           <thead>
             <tr className={SECTION_TABLE_HEAD_ROW_CLASS}>
@@ -170,7 +181,7 @@ const EstimateBillingRow: React.FC<{
   const statusNote = status === "counted" ? null : ROW_STATUS_NOTE[status]
 
   return (
-    <tr className={`${SECTION_TABLE_BODY_ROW_CLASS} ${status === "add-on" ? "bg-sky-50/60" : ""} ${status === "add-on-in-package-price" ? "bg-amber-50" : ""}`}>
+    <tr className={`${SECTION_TABLE_BODY_ROW_CLASS} ${status === "add-on-in-package-price" ? "bg-amber-50" : ""}`}>
       <td className={`${SECTION_TABLE_BODY_CELL_CLASS} text-xs text-foreground`}>{item.name || "Untitled item"}</td>
       <td className={SECTION_TABLE_BODY_CELL_CLASS}>
         <input
@@ -211,6 +222,7 @@ const EstimateBillingRow: React.FC<{
           title={isPerPerson ? "Not used on the estimate. The invoice bills quantity × price." : undefined}
           aria-label={`${label} Quantity`}
         />
+        {isPerPerson ? <span className="block text-[10px] text-muted-foreground">invoice only</span> : null}
       </td>
       <td className={`${SECTION_TABLE_BODY_CELL_CLASS} text-right`}>
         <input
@@ -233,7 +245,10 @@ const EstimateBillingRow: React.FC<{
               {formatLineTotal(computeEstimateLineTotal(item, guests))}
             </span>
             {statusNote ? (
-              <span className={`block text-[10px] ${status === "add-on-in-package-price" ? "text-amber-700" : "text-sky-700"}`}>
+              <span className={status === "add-on-in-package-price"
+                ? "block text-[10px] text-amber-700"
+                : "mt-0.5 inline-block rounded-xs border border-border bg-muted/40 px-1 text-[10px] font-normal text-muted-foreground"}
+              >
                 {statusNote}
               </span>
             ) : null}
@@ -310,6 +325,7 @@ export const FoodPlanningBillingSection: React.FC<{
   return (
     <PlanningBillingCard
       title="Food"
+      planningLabel="Food Planning"
       isEmpty={timeblocks.length === 0}
       emptyLabel="No food timeblocks from planning yet."
       subtotal={subtotal}
@@ -354,13 +370,16 @@ export const BeveragePlanningBillingSection: React.FC<{
   onUpdateItem?: (payload: { itemId: string; updates: BillingItemUpdates }) => void
 }> = ({ items, guests, onNavigateToPlanning, onUpdateItem }) => {
   const typeSections = useMemo(
-    () => getVisibleBeverageTypeSections(items, { hideEmptySpecialOrders: true }),
+    // Empty drink types have nothing to price, so only types with items are listed.
+    () => getVisibleBeverageTypeSections(items, { hideEmptySpecialOrders: true })
+      .filter((section) => section.items.length > 0),
     [items],
   )
 
   return (
     <PlanningBillingCard
       title="Beverage"
+      planningLabel="Beverage Planning"
       isEmpty={items.length === 0}
       emptyLabel="No beverage items from planning yet."
       subtotal={sumEstimatePlanning([], items, guests).beverage}

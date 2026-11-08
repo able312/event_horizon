@@ -9,17 +9,8 @@ const hooksMock = vi.hoisted(() => ({
   useFoodSection: vi.fn(),
   useBeverageSection: vi.fn(),
 }))
-const navigateMock = vi.hoisted(() => vi.fn())
 const menuPropsMock = vi.hoisted(() => vi.fn())
 
-vi.mock("react-router", async () => {
-  const actual = await vi.importActual<typeof import("react-router")>("react-router")
-  return {
-    ...actual,
-    useNavigate: () => navigateMock,
-    useLocation: () => ({ pathname: "/events/event-1/financial", search: "?returnTo=%2Fcontacts%2Fcontact-1", hash: "" }),
-  }
-})
 
 vi.mock("~/hooks/useMenuOfChargeSection", () => ({
   useMenuOfChargeItemsSection: hooksMock.useMenuOfChargeItemsSection,
@@ -49,7 +40,7 @@ afterEach(() => {
 })
 
 describe("FinancialWorkspaceSection", () => {
-  it("renders all-source estimate totals, the billing editor and the estimate link", () => {
+  it("renders all-source estimate totals and the billing editor", () => {
     const updateFoodItem = vi.fn()
     const updateBeverageItem = vi.fn()
 
@@ -85,9 +76,9 @@ describe("FinancialWorkspaceSection", () => {
     expect(screen.getByText("Quoting for 80–120 guests")).toBeTruthy()
     expect(screen.getByText("Menu Of Charges Table")).toBeTruthy()
     expect(screen.getByText("Menu Of Charges Table").parentElement?.className).toContain("min-w-0")
-    // Proposal details sit between the summary and the line items, not below them
+    // The charges come first; proposal details are mostly set once, so they sit below them
     expect(
-      screen.getByText("Proposal Details").compareDocumentPosition(screen.getByText("Menu Of Charges Table")) &
+      screen.getByText("Menu Of Charges Table").compareDocumentPosition(screen.getByText("Proposal Details")) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
 
@@ -116,8 +107,5 @@ describe("FinancialWorkspaceSection", () => {
     expect(onSelectWorkspaceNode).toHaveBeenCalledWith("category:food")
     ;(menuPropsMock.mock.calls[0][0] as { onNavigateToBeverage: () => void }).onNavigateToBeverage()
     expect(onSelectWorkspaceNode).toHaveBeenCalledWith("category:beverage")
-
-    screen.getByRole("button", { name: "Generate Estimate" }).click()
-    expect(navigateMock).toHaveBeenCalledWith("/preview/event-1?type=financial-report&returnTo=%2Fevents%2Fevent-1%2Ffinancial%3FreturnTo%3D%252Fcontacts%252Fcontact-1")
   })
 })

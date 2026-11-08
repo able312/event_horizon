@@ -1,5 +1,7 @@
 import React, { useRef, useState } from "react"
-import { ChevronDown, ChevronRight } from "lucide-react"
+import { ChevronUp, Pencil } from "lucide-react"
+
+import { Button } from "~/components/atoms/button"
 
 import type { DepositKind, EstimateDetails, UpdateEstimateDetails } from "~/definitions/database"
 import { centsToDollars, parseDollarsToCents } from "~/features/event-detail/workspace/lib/financial"
@@ -11,6 +13,7 @@ import {
 } from "~/features/preview/lib/estimateProposal"
 import { useEstimateDetailsSection } from "~/hooks/useEstimateDetailsSection"
 import { useVenueSettings } from "~/hooks/useVenueSettings"
+import FinancialCard from "./FinancialCard"
 import { formatProposalDetailsRecap, isProposalDetailsEmpty } from "./proposalDetailsRecap"
 
 const LABEL_CLASS = "mb-1 block text-xs uppercase tracking-wide text-muted-foreground"
@@ -203,25 +206,23 @@ const ProposalDetailsCard: React.FC<{
   const [open, setOpen] = useState(() => isProposalDetailsEmpty(details))
 
   return (
-    <div className="space-y-4">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls="estimate-proposal-fields"
-        onClick={() => setOpen((value) => !value)}
-        className="flex w-full items-start gap-2 text-left"
-      >
-        <span className="mt-0.5 text-muted-foreground">
-          {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </span>
-        <span className="min-w-0">
-          <span className="block text-sm font-semibold tracking-wide">Proposal Details</span>
-          <span className="block text-xs text-muted-foreground">
-            {open ? "Printed on the estimate." : formatProposalDetailsRecap(details, venueDefaultTerms)}
-          </span>
-        </span>
-      </button>
-
+    <FinancialCard
+      title="Proposal Details"
+      description={open ? "Printed on the estimate." : formatProposalDetailsRecap(details, venueDefaultTerms)}
+      actions={
+        <Button
+          type="button"
+          variant="outline"
+          className="h-8 rounded-xs px-2 text-sm"
+          aria-expanded={open}
+          aria-controls="estimate-proposal-fields"
+          onClick={() => setOpen((value) => !value)}
+        >
+          {open ? <ChevronUp className="size-3.5" /> : <Pencil className="size-3.5" />}
+          {open ? "Done" : "Edit"}
+        </Button>
+      }
+    >
       {open ? (
         <div id="estimate-proposal-fields" className="space-y-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_12rem]">
@@ -262,7 +263,7 @@ const ProposalDetailsCard: React.FC<{
           />
         </div>
       ) : null}
-    </div>
+    </FinancialCard>
   )
 }
 
@@ -271,8 +272,10 @@ const EstimateProposalSection: React.FC<{ grandTotal: CentsRange }> = ({ grandTo
   const { data: details, isError, updateEstimateDetails } = useEstimateDetailsSection()
   const { data: venueSettings, setDefaultEstimateTerms } = useVenueSettings()
 
-  if (isError) return <p className="text-xs text-destructive">Proposal details failed to load.</p>
-  if (!details) return <p className="text-xs text-muted-foreground">Loading proposal details…</p>
+  if (isError) {
+    return <FinancialCard title="Proposal Details" description={<span className="text-destructive">Proposal details failed to load.</span>} />
+  }
+  if (!details) return <FinancialCard title="Proposal Details" description="Loading proposal details…" />
 
   return (
     <ProposalDetailsCard

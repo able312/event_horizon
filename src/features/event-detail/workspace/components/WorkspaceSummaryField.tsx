@@ -6,14 +6,16 @@ interface WorkspaceSummaryFieldProps {
   emphasis?: boolean
 }
 
-/** One labelled figure in a workspace summary card (estimate or invoice). */
+/** One labelled figure in a workspace summary (estimate or invoice). The emphasised one is the headline total. */
 const WorkspaceSummaryField: React.FC<WorkspaceSummaryFieldProps> = ({ label, value, emphasis = false }) => (
-  <div className={emphasis
-    ? " border-b-2 border-b-orange-500 bg-background px-3 py-2"
-    : "bg-background px-3 py-2"}
-  >
-    <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-    <p className={emphasis ? "text-base font-semibold text-foreground" : "text-sm font-medium"}>{value}</p>
+  <div className="min-w-0">
+    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+    <p className={emphasis
+      ? "text-lg font-semibold tabular-nums text-foreground"
+      : "text-sm font-medium tabular-nums text-foreground"}
+    >
+      {value}
+    </p>
   </div>
 )
 

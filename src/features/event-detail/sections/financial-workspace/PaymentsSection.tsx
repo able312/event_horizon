@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from "react"
 import { Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
+import { Button } from "~/components/atoms/button"
+
 import type { Payment } from "~/definitions/database"
 import { usePaymentsSection } from "~/hooks/usePaymentsSection"
 import {
@@ -20,6 +22,7 @@ import {
   SECTION_TABLE_HEAD_CELL_CLASS_RIGHT,
   SECTION_TABLE_HEAD_ROW_CLASS,
 } from "../../../../components/event-detail/detail-sections/sections/tableStyles"
+import FinancialCard, { FINANCIAL_EMPTY_STATE_CLASS } from "./FinancialCard"
 
 function focusNextCell(rowId: string, currentCellIndex: number) {
   const rowCells = document.querySelectorAll<HTMLElement>(`[data-payment-row-id="${rowId}"] [data-cell]`)
@@ -116,34 +119,33 @@ const PaymentsSection: React.FC<PaymentsSectionProps> = ({ className }) => {
   const paymentsTotalCents = computePaymentsTotalCents(rows)
 
   return (
-    <section className={className}>
-      <div className="flex items-center justify-between border-b border-border pb-2">
-        <h3 className="text-sm font-semibold tracking-wide">Payments</h3>
-        <button
-          type="button"
-          onClick={handleAddPayment}
-          className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-        >
-          <Plus size={14} />
+    <FinancialCard
+      className={className}
+      title="Payments"
+      description="Deposits and payments received for this event."
+      actions={
+        <Button type="button" variant="outline" className="h-8 rounded-xs px-2 text-sm" onClick={handleAddPayment}>
+          <Plus className="size-3.5" />
           Add Payment
-        </button>
-      </div>
-
-      {isLoading ? <p className="pt-4 text-sm text-muted-foreground">Loading payments...</p> : null}
+        </Button>
+      }
+      footer={!isLoading && rows.length > 0 ? `Payments Total: ${toCurrency(paymentsTotalCents)}` : undefined}
+    >
+      {isLoading ? <p className="text-xs text-muted-foreground">Loading payments…</p> : null}
 
       {!isLoading && rows.length === 0 ? (
-        <p className="pt-4 text-sm text-muted-foreground">No payments recorded yet.</p>
+        <div className={FINANCIAL_EMPTY_STATE_CLASS}>No payments recorded yet.</div>
       ) : null}
 
       {!isLoading && rows.length > 0 ? (
         <div className={SECTION_TABLE_CONTAINER_CLASS}>
-          <table className={`${SECTION_TABLE_CLASS} table-fixed`} data-payments-table="true">
+          <table className={`${SECTION_TABLE_CLASS} table-fixed tabular-nums`} data-payments-table="true">
             <colgroup>
-              <col className="w-30" />
-              <col className="w-22" />
-              <col className="w-22" />
+              <col className="w-36" />
+              <col className="w-28" />
+              <col className="w-28" />
               <col />
-              <col className="w-11" />
+              <col className="w-10" />
             </colgroup>
             <thead>
               <tr className={SECTION_TABLE_HEAD_ROW_CLASS}>
@@ -151,7 +153,7 @@ const PaymentsSection: React.FC<PaymentsSectionProps> = ({ className }) => {
                 <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Amount ($)</th>
                 <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Receipt #</th>
                 <th className={SECTION_TABLE_HEAD_CELL_CLASS_LEFT}>Notes</th>
-                <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}>Actions</th>
+                <th className={SECTION_TABLE_HEAD_CELL_CLASS_RIGHT}><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>
@@ -258,17 +260,10 @@ const PaymentsSection: React.FC<PaymentsSectionProps> = ({ className }) => {
                 </tr>
               ))}
             </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={5} className="px-1.5 py-2 text-right text-xs font-medium text-foreground">
-                  Payments Total: {toCurrency(paymentsTotalCents)}
-                </td>
-              </tr>
-            </tfoot>
           </table>
         </div>
       ) : null}
-    </section>
+    </FinancialCard>
   )
 }
 

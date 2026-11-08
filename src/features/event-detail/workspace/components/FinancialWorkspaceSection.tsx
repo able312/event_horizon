@@ -1,5 +1,6 @@
 import React from "react"
 
+import { FINANCIAL_CARD_CLASS } from "~/features/event-detail/sections/financial-workspace/FinancialCard"
 import EstimateProposalSection from "~/features/event-detail/sections/financial-workspace/EstimateProposalSection"
 import { splitEstimateAddOns } from "~/features/event-detail/workspace/lib/estimateAddOns"
 import MenuOfChargeSection from "~/features/event-detail/sections/financial-workspace/MenuOfChargeSection"
@@ -12,12 +13,10 @@ import {
   computeEstimateSummaryRange,
   type FinancialSummary,
 } from "~/features/event-detail/workspace/lib/financial"
-import { useOpenPreview } from "../hooks/useOpenPreview"
 import type { EventResource } from "~/features/event-detail/types"
 import { formatCurrencyRange, resolveGuestCountRange } from "~/features/preview/lib/foodPackages"
 import EstimateGuestCountField from "./EstimateGuestCountField"
 import WorkspaceSummaryField from "./WorkspaceSummaryField"
-import { GeneratePreviewButton } from "./GeneratePreviewButton"
 
 interface FinancialWorkspaceSectionProps {
   eventResource: EventResource
@@ -26,7 +25,6 @@ interface FinancialWorkspaceSectionProps {
 
 const FinancialWorkspaceSection: React.FC<FinancialWorkspaceSectionProps> = ({ eventResource, onSelectWorkspaceNode }) => {
   const { event, updateEvent } = eventResource
-  const openPreview = useOpenPreview(event?.id ?? "")
   const guests = resolveGuestCountRange(event)
   const { data: menuItems } = useMenuOfChargeItemsSection()
   const {
@@ -51,32 +49,28 @@ const FinancialWorkspaceSection: React.FC<FinancialWorkspaceSectionProps> = ({ e
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xs border border-border bg-gradient-to-b from-muted/35 to-muted/10 p-3 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <h3 className="text-sm font-semibold tracking-wide">Estimate Summary</h3>
-            <EstimateGuestCountField event={event} updateEvent={updateEvent} />
-          </div>
-          <GeneratePreviewButton label="Generate Estimate" onClick={() => openPreview("financial-report")} />
+      <section
+        aria-label="Estimate Summary"
+        className={`${FINANCIAL_CARD_CLASS} sticky top-0 z-10 flex flex-wrap items-center justify-between gap-x-6 gap-y-3`}
+      >
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold tracking-wide">Estimate Summary</h3>
+          <EstimateGuestCountField event={event} updateEvent={updateEvent} />
         </div>
-        <div className="mt-2 grid grid-cols-1 gap-0.5 text-sm md:grid-cols-2 xl:grid-cols-4 bg-stone-200">
+        <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
           <WorkspaceSummaryField label="Subtotal" value={formatRange((s) => s.chargesSubtotalCents)} />
           <WorkspaceSummaryField label={`HST (${Math.round(HST_RATE * 100)}%)`} value={formatRange((s) => s.hstCents)} />
           <WorkspaceSummaryField
             label={`Gratuity (${Math.round(GRATUITY_RATE * 100)}%)`}
             value={formatRange((s) => s.gratuityCents)}
           />
-          <WorkspaceSummaryField label="Grand Total" value={formatRange((s) => s.grandTotalCents)} emphasis />
+          <div className="border-l-2 border-orange-500 pl-3">
+            <WorkspaceSummaryField label="Grand Total" value={formatRange((s) => s.grandTotalCents)} emphasis />
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div className="rounded-xs border border-border bg-background p-3 shadow-sm">
-        <EstimateProposalSection
-          grandTotal={{ lowCents: low.grandTotalCents, highCents: high.grandTotalCents }}
-        />
-      </div>
-
-      <div className="min-w-0 rounded-xs border border-border bg-background p-3 shadow-sm">
+      <div className="min-w-0">
         <MenuOfChargeSection
           emptyStateMode="workspace"
           foodTimeblocks={foodTimeblocks ?? []}
@@ -91,6 +85,10 @@ const FinancialWorkspaceSection: React.FC<FinancialWorkspaceSectionProps> = ({ e
           }
         />
       </div>
+
+      <EstimateProposalSection
+        grandTotal={{ lowCents: low.grandTotalCents, highCents: high.grandTotalCents }}
+      />
     </div>
   )
 }

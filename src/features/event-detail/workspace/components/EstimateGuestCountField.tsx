@@ -28,10 +28,10 @@ const EstimateGuestCountField: React.FC<EstimateGuestCountFieldProps> = ({ event
         type="button"
         onClick={() => setDialogOpen(true)}
         disabled={!event}
-        className="inline-flex items-center gap-1.5 text-sm text-foreground hover:underline disabled:opacity-60"
+        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:underline disabled:opacity-60"
         aria-label="Edit guest count"
       >
-        <Users className="h-4 w-4 text-stone-600" />
+        <Users className="size-3.5" />
         {formatQuotingFor(event)}
       </button>
 
