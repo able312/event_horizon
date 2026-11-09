@@ -18,6 +18,8 @@ export const foodPackagesContinuationHeading = (
 export function renderFoodPackagePages(params: {
   packages: FoodPackageSummary[]
   timeblocks: TimeblockWithItems[]
+  showTotal: boolean
+  showPerPerson: boolean
 }): ReactNode[] {
   const timeblocksById = new Map(params.timeblocks.map((tb) => [tb.id, tb]))
 
@@ -34,7 +36,7 @@ export function renderFoodPackagePages(params: {
         <p className="mb-4 mt-1 text-sm text-stone-600">
           Food options to choose between. Items priced per person are charged for every guest, so
           package totals follow the guest count. Per-person prices are each package&apos;s total
-          divided by the guest count.
+          divided by the guest count, so fixed-price items cost each guest more when fewer attend.
         </p>
       </div>
     </PreviewBlock>,
@@ -48,7 +50,12 @@ export function renderFoodPackagePages(params: {
           keepTogether
           className="mb-6"
         >
-          <FoodPackageCard summary={pkg} timeblock={timeblock} />
+          <FoodPackageCard
+            summary={pkg}
+            timeblock={timeblock}
+            showTotal={params.showTotal}
+            showPerPerson={params.showPerPerson}
+          />
         </PreviewBlock>
       )
     }),

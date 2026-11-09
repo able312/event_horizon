@@ -3,14 +3,18 @@ import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-typ
 import {
   GRATUITY_RATE,
   HST_RATE,
-  computeEstimateSummaryRange,
+  computeFinancialSummaryAllSources,
   computeFoodTimeblockRates,
+  computePerGuestBreakdown,
   getPackagePricePerPersonCents,
   isCoveredByPackagePrice,
   toCurrency,
   type EstimateSummaryRange,
+  type FinancialSummary,
   type GuestCountRange,
+  type PerGuestBreakdown,
 } from "~/features/event-detail/workspace/lib/financial"
+import { computeAddOnSubtotal, type EstimateAddOn } from "~/features/event-detail/workspace/lib/estimateAddOns"
 import { isEstimateBillableLineItem } from "~/features/preview/preferences/selectors"
 
 // Food packages are ordinary food timeblocks that the financial preview presents as
@@ -181,12 +185,19 @@ export type FoodPackageEstimate = EstimateSummaryRange & {
   averageSubtotalCents: { low: number; high: number }
   /** Why the totals are a range, for the Grand Total label; null when low and high match. */
   rangeNote: string | null
+  /**
+   * One guest's share: low is the cheapest end spread over the most guests, high the dearest
+   * end over the fewest. Null without a guest count to divide by.
+   */
+  perGuest: { low: PerGuestBreakdown; high: PerGuestBreakdown; rangeNote: string | null } | null
 }
 
 /**
- * The estimate's totals with package timeblocks handled per `mode`, as a range: low at the
- * fewest guests, high at the most. In "list" mode low takes the cheapest package and high the
- * dearest. With no packages it is the ordinary estimate, so callers can use it unconditionally.
+ * The estimate's totals with package timeblocks handled per `mode`, as a range. The low end
+ * is the fewest guests, the cheapest package ("list" mode) and no add-ons; the high end is the
+ * most guests, the dearest package and every optional add-on. Per guest, the ends swap guest
+ * counts: fixed-price charges weigh most when shared by the fewest guests. With no packages
+ * or add-ons it is the ordinary estimate, so callers can use it unconditionally.
  */
 export function computeFoodPackageEstimate(params: {
   menuItems: MenuOfChargeItem[] | undefined
@@ -196,6 +207,8 @@ export function computeFoodPackageEstimate(params: {
   packageTimeblockIds: string[] | null
   mode: FoodPackageEstimateMode
   guests: GuestCountRange | null
+  /** Optional add-ons: left out of the low end, counted in the high end. */
+  addOns?: Array<Pick<EstimateAddOn, "fixedCents" | "perPersonRateCents">>
 }): FoodPackageEstimate {
   const { packages, certain } = splitFoodPackageTimeblocks(params.foodTimeblocks, params.packageTimeblockIds)
   const summaries = packages.map((tb) => summarizeFoodPackage(tb, params.guests))
@@ -208,44 +221,82 @@ export function computeFoodPackageEstimate(params: {
     return subtotals.length > 0 ? Math.round(subtotals.reduce((sum, cents) => sum + cents, 0) / subtotals.length) : 0
   }
   const averageSubtotalCents = { low: averageAt(lowGuests), high: averageAt(highGuests) }
+  const packagesCounted = summaries.length > 0 && params.mode !== "ignore"
+  const addOns = params.addOns ?? []
 
-  const rangeWith = (additionalFoodSubtotalCents?: { low: number; high: number }) =>
-    computeEstimateSummaryRange({
+  const packageSubtotalAt = (guestCount: number | null, end: EstimateEnd): number => {
+    if (!packagesCounted) return 0
+    if (params.mode === "average") return averageAt(guestCount)
+    const subtotals = subtotalsAt(guestCount)
+    return end === "low" ? Math.min(...subtotals) : Math.max(...subtotals)
+  }
+  const addOnsSubtotalAt = (guestCount: number | null): number =>
+    addOns.reduce(
+      (sum, addOn) =>
+        sum + computeAddOnSubtotal(addOn, guestCount == null ? null : { min: guestCount, max: guestCount }).lowCents,
+      0,
+    )
+
+  // Add-ons are food and beverage, so they carry gratuity like the food they are added to.
+  const summaryAt = (guestCount: number | null, end: EstimateEnd): FinancialSummary =>
+    computeFinancialSummaryAllSources({
       menuItems: params.menuItems,
       foodTimeblocks: certain,
       beverageItems: params.beverageItems,
-      guests: params.guests,
-      additionalFoodSubtotalCents,
+      additionalFoodSubtotalCents:
+        packageSubtotalAt(guestCount, end) + (end === "high" ? addOnsSubtotalAt(guestCount) : 0),
+      perPersonGuestCount: guestCount,
     })
-  const certainRange = rangeWith()
-  const packagesCounted = summaries.length > 0 && params.mode !== "ignore"
 
-  const range = !packagesCounted
-    ? certainRange
-    : params.mode === "average"
-      ? rangeWith(averageSubtotalCents)
-      : rangeWith({ low: Math.min(...subtotalsAt(lowGuests)), high: Math.max(...subtotalsAt(highGuests)) })
-
-  const varies = range.low.grandTotalCents !== range.high.grandTotalCents
+  const low = summaryAt(lowGuests, "low")
+  const high = summaryAt(highGuests, "high")
   const byPackage = packagesCounted && params.mode === "list" && summaries.length > 1
+  const byAddOns = addOnsSubtotalAt(highGuests) > 0
   const byGuests =
-    certainRange.low.grandTotalCents !== certainRange.high.grandTotalCents ||
-    (packagesCounted && lowGuests !== highGuests && summaries.some((pkg) => pkg.perPersonRateCents !== 0))
+    lowGuests !== highGuests && summaryAt(lowGuests, "low").grandTotalCents !== summaryAt(highGuests, "low").grandTotalCents
 
   return {
-    ...range,
+    low,
+    high,
     mode: params.mode,
     packages: summaries,
     averageSubtotalCents,
-    rangeNote: varies ? describeEstimateRange(byPackage, byGuests) : null,
+    rangeNote:
+      low.grandTotalCents !== high.grandTotalCents ? describeEstimateRange({ byPackage, byGuests, byAddOns }) : null,
+    perGuest: params.guests ? computePerGuestRange(params.guests, summaryAt, { byPackage, byAddOns }) : null,
   }
 }
 
-function describeEstimateRange(byPackage: boolean, byGuests: boolean): string {
-  if (byPackage && byGuests) return "by package and guest count"
-  if (byPackage) return "by package chosen"
-  if (byGuests) return "by guest count"
-  return "estimated range"
+type EstimateEnd = "low" | "high"
+
+function computePerGuestRange(
+  guests: GuestCountRange,
+  summaryAt: (guestCount: number, end: EstimateEnd) => FinancialSummary,
+  reasons: { byPackage: boolean; byAddOns: boolean },
+): NonNullable<FoodPackageEstimate["perGuest"]> {
+  const low = computePerGuestBreakdown(summaryAt(guests.max, "low"), guests.max)
+  const high = computePerGuestBreakdown(summaryAt(guests.min, "high"), guests.min)
+  // Per guest, the count only matters when fixed-price charges are shared across it.
+  const byGuests =
+    guests.min !== guests.max &&
+    computePerGuestBreakdown(summaryAt(guests.min, "low"), guests.min).totalCents !== low.totalCents
+  return {
+    low,
+    high,
+    rangeNote: low.totalCents !== high.totalCents ? describeEstimateRange({ ...reasons, byGuests }) : null,
+  }
+}
+
+/** e.g. "by guest count", "by package and guest count" or "by guest count and add-ons". */
+export function describeEstimateRange(reasons: { byPackage: boolean; byGuests: boolean; byAddOns: boolean }): string {
+  const parts = [
+    reasons.byPackage ? "package" : null,
+    reasons.byGuests ? "guest count" : null,
+    reasons.byAddOns ? "add-ons" : null,
+  ].filter((part): part is string => part != null)
+  if (parts.length === 0) return "estimated range"
+  if (parts.length === 1) return `by ${parts[0]}${parts[0] === "package" ? " chosen" : ""}`
+  return `by ${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`
 }
 
 /** "$10.00", or "$8.00 – $10.00" when the two ends differ. */
@@ -258,6 +309,8 @@ export function formatCurrencyRange(lowCents: number, highCents: number): string
 export type FoodPackageEstimateRow = {
   key: string
   name: string
+  /** A short line printed under the name. */
+  note?: string
   /** At the fewest guests; 0 for the unpriced "ignore" pointer line. */
   lowCents: number
   /** At the most guests; equals lowCents unless a package has per-person items. */
@@ -276,7 +329,8 @@ export function buildFoodPackageEstimateRows(
       return [
         {
           key: "food-packages-pointer",
-          name: `Food packages (${packages.length}): priced separately, see Food Packages`,
+          name: `Food packages (${packages.length})`,
+          note: "Priced separately, see Food Packages",
           lowCents: 0,
           highCents: 0,
         },

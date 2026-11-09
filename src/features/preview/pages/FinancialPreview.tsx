@@ -6,6 +6,7 @@ import { getFinancialDocumentKindLabels } from "~/features/preview/lib/financial
 import {
   buildFoodPackageEstimateRows,
   computeFoodPackageEstimate,
+  formatGuestCountRange,
   resolveGuestCountRange,
   splitFoodPackageTimeblocks,
 } from "~/features/preview/lib/foodPackages"
@@ -20,14 +21,16 @@ import {
   buildEstimateFoodRows,
   groupChargeItemsByCategory,
   renderChargeTableBlocks,
+  renderPerPersonTableBlocks,
 } from "~/features/preview/pages/financial/chargeTables"
 import { FinancialHeader } from "~/features/preview/pages/financial/FinancialHeader"
-import { FinancialTotals } from "~/features/preview/pages/financial/FinancialTotals"
+import { FinancialTotals, PerPersonTotals } from "~/features/preview/pages/financial/FinancialTotals"
 import {
   FOOD_PACKAGES_CONTINUATION_KEY,
   foodPackagesContinuationHeading,
   renderFoodPackagePages,
 } from "~/features/preview/pages/financial/FoodPackagePages"
+import { PricingSectionHeading } from "~/features/preview/pages/financial/PricingSectionHeading"
 import {
   EstimateDeposit,
   EstimateIntroNote,
@@ -58,7 +61,7 @@ export default function FinancialPreview() {
   const chargeItems = chargeQuery.data
   const foodQuery = useFoodSection()
   const beverageQuery = useBeverageSection()
-  // Optional add-ons print in their own table and stay out of everything else, packages included.
+  // Optional add-ons print in their own table and count only toward the high end of the totals.
   const { foodTimeblocks: food, beverageItems, addOns } = splitEstimateAddOns(foodQuery.data, beverageQuery.items)
   const estimateDetailsQuery = useEstimateDetailsSection()
   const estimateDetails = estimateDetailsQuery.data
@@ -98,6 +101,7 @@ export default function FinancialPreview() {
     packageTimeblockIds,
     mode: prefs.foodPackageEstimateMode,
     guests,
+    addOns,
   })
 
   const chargeTables = buildChargeTableSpecs({
@@ -107,6 +111,24 @@ export default function FinancialPreview() {
     foodPackageRows: buildFoodPackageEstimateRows(packageEstimate),
     perPersonGuests: guests,
   })
+
+  const showTotal = prefs.showTotalPricing
+  const showPerPerson = prefs.showPerPersonPricing
+  // Headings only matter once the per-person view is on: alone, or as the second of two sections.
+  const totalHeading = showPerPerson ? (
+    <PricingSectionHeading title="Event Total" description="Your estimate for the event as a whole." />
+  ) : null
+  const perPersonHeading = (
+    <PricingSectionHeading
+      title="Per Person"
+      description={
+        guests
+          ? `The same estimate divided by your guest count (${formatGuestCountRange(guests)}). Fixed-price items are shared among your guests, so they cost each guest less the more guests attend.`
+          : "The same estimate divided by your guest count."
+      }
+      spaced={showTotal}
+    />
+  )
 
   const introNote = estimateDetails?.introNote?.trim() ?? ""
   const deposit = formatDeposit(estimateDetails, {
@@ -147,20 +169,43 @@ export default function FinancialPreview() {
         </PreviewBlock>
       ) : null}
 
-      {renderChargeTableBlocks(chargeTables)}
+      {showTotal ? renderChargeTableBlocks(chargeTables, totalHeading) : null}
 
-      <PreviewBlock id="financial-totals" keepTogether className="mb-6">
-        <FinancialTotals
-          low={packageEstimate.low}
-          high={packageEstimate.high}
-          showChargeBreakdown={prefs.showChargeBreakdown}
-          rangeNote={packageEstimate.rangeNote}
-        />
-      </PreviewBlock>
+      {showTotal ? (
+        <PreviewBlock id="financial-totals" keepTogether className="mb-6">
+          {chargeTables.length === 0 ? totalHeading : null}
+          <FinancialTotals
+            low={packageEstimate.low}
+            high={packageEstimate.high}
+            showChargeBreakdown={prefs.showChargeBreakdown}
+            rangeNote={packageEstimate.rangeNote}
+          />
+        </PreviewBlock>
+      ) : null}
+
+      {showPerPerson && guests ? renderPerPersonTableBlocks(chargeTables, guests, perPersonHeading) : null}
+
+      {showPerPerson ? (
+        <PreviewBlock id="financial-per-person-totals" keepTogether className="mb-6">
+          {!guests || chargeTables.length === 0 ? perPersonHeading : null}
+          {packageEstimate.perGuest ? (
+            <PerPersonTotals
+              low={packageEstimate.perGuest.low}
+              high={packageEstimate.perGuest.high}
+              showChargeBreakdown={prefs.showChargeBreakdown}
+              rangeNote={packageEstimate.perGuest.rangeNote}
+            />
+          ) : (
+            <p className="text-sm italic text-stone-600">
+              Per-person pricing appears once the event has a guest count.
+            </p>
+          )}
+        </PreviewBlock>
+      ) : null}
 
       {addOns.length > 0 ? (
         <PreviewBlock id="financial-add-ons" keepTogether className="mb-6">
-          <AddOnsTable addOns={addOns} guests={guests} />
+          <AddOnsTable addOns={addOns} guests={guests} showTotal={showTotal} showPerPerson={showPerPerson} />
         </PreviewBlock>
       ) : null}
 
@@ -177,7 +222,12 @@ export default function FinancialPreview() {
       {renderEstimateTermsBlocks(terms)}
 
       {packageEstimate.packages.length > 0
-        ? renderFoodPackagePages({ packages: packageEstimate.packages, timeblocks: packageTimeblocks })
+        ? renderFoodPackagePages({
+            packages: packageEstimate.packages,
+            timeblocks: packageTimeblocks,
+            showTotal,
+            showPerPerson,
+          })
         : null}
 
       {showAppendix

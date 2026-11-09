@@ -11,6 +11,7 @@ import {
   computeEstimateSummaryRange,
   computeFinancialSummaryAllSources,
   computeGrandTotalPerGuest,
+  computePerGuestBreakdown,
   computeInvoiceFoodTimeblockSubtotalCents,
   dollarsToCents,
   fromDateInputValue,
@@ -308,5 +309,23 @@ describe("computeGrandTotalPerGuest", () => {
   it("is null without a guest count", () => {
     expect(computeGrandTotalPerGuest(range(1000, 1000), null)).toBeNull()
     expect(computeGrandTotalPerGuest(range(1000, 1000), { min: 0, max: 0 })).toBeNull()
+  })
+})
+
+describe("computePerGuestBreakdown", () => {
+  it("divides before rounding, with HST on the subtotal and gratuity on food and beverage", () => {
+    const summary = computeFinancialSummaryAllSources({
+      menuItems: [{ id: "venue", quantity: 1, unitPriceCents: 150000 }] as never,
+      foodTimeblocks: [],
+      beverageItems: [],
+      additionalFoodSubtotalCents: 38000,
+    })
+    // 188000 / 120 = 1566.67 -> 1567; HST 203.67 -> 204; gratuity 38000 / 120 × 0.18 = 57
+    expect(computePerGuestBreakdown(summary, 120)).toEqual({
+      subtotalCents: 1567,
+      hstCents: 204,
+      gratuityCents: 57,
+      totalCents: 1828,
+    })
   })
 })

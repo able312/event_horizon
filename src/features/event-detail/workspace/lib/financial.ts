@@ -295,6 +295,27 @@ export function computeGrandTotalPerGuest(
   }
 }
 
+export type PerGuestBreakdown = {
+  subtotalCents: number
+  hstCents: number
+  gratuityCents: number
+  /** subtotal + HST + gratuity, so the printed parts always add up. */
+  totalCents: number
+}
+
+/**
+ * One guest's share of an estimate summary: the subtotal and gratuity base divided by the
+ * guest count, with HST on the whole subtotal and gratuity on food and beverage, as on the
+ * totals. Divides before rounding so each part is rounded once.
+ */
+export function computePerGuestBreakdown(summary: FinancialSummary, guestCount: number): PerGuestBreakdown {
+  const subtotal = summary.chargesSubtotalCents / guestCount
+  const subtotalCents = Math.round(subtotal)
+  const hstCents = Math.round(subtotal * HST_RATE)
+  const gratuityCents = Math.round((summary.gratuityBaseCents / guestCount) * GRATUITY_RATE)
+  return { subtotalCents, hstCents, gratuityCents, totalCents: subtotalCents + hstCents + gratuityCents }
+}
+
 export function toCurrency(cents: number): string {
   return new Intl.NumberFormat("en-CA", {
     style: "currency",

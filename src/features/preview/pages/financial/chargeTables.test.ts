@@ -6,7 +6,9 @@ import {
   buildEstimateFoodRows,
   buildInvoiceFoodRows,
   formatChargeRowCells,
+  formatPerPersonLineCells,
   groupChargeItemsByCategory,
+  toChargeLine,
 } from "./chargeTables"
 
 const charge = (id: string, category: string | null) =>
@@ -77,19 +79,74 @@ describe("formatChargeRowCells", () => {
 
   it("prints a per-person rate across the guest range on the estimate", () => {
     expect(formatChargeRowCells(perPerson, { min: 80, max: 120 })).toEqual({
-      cost: "$45.00 per person × 80–120 guests",
-      quantity: null,
+      cost: "$45.00",
+      quantity: "80–120 guests",
       total: "$3,600.00 – $5,400.00",
     })
     expect(formatChargeRowCells(perPerson, { min: 80, max: 80 })).toEqual({
-      cost: "$45.00 per person × 80 guests",
-      quantity: null,
+      cost: "$45.00",
+      quantity: "80 guests",
       total: "$3,600.00",
     })
   })
 
   it("shows a per-person line with no dollar total when the event has no guest count", () => {
     expect(formatChargeRowCells(perPerson, null)).toEqual({ cost: "$45.00", quantity: "", total: "per person" })
+  })
+})
+
+describe("toChargeLine", () => {
+  const guests = { min: 100, max: 120 }
+
+  it("ranges a per-person line's total over the guest count", () => {
+    expect(toChargeLine({ id: "a", name: "Bar", quantity: null, unitPriceCents: 3200, pricingBasis: "per_person" }, guests))
+      .toMatchObject({ note: "Priced per person", totals: { lowCents: 320000, highCents: 384000 }, perPersonRateCents: 3200 })
+  })
+
+  it("keeps a fixed line's total, and has none when it adds nothing", () => {
+    expect(toChargeLine({ id: "a", name: "Fee", quantity: 1, unitPriceCents: 150000 }, guests))
+      .toMatchObject({ note: null, totals: { lowCents: 150000, highCents: 150000 }, perPersonRateCents: null })
+    expect(toChargeLine({ id: "a", name: "Fee", quantity: 0, unitPriceCents: 150000 }, guests).totals).toBeNull()
+  })
+
+  it("prices a per-person line as quantity × price on the invoice", () => {
+    expect(toChargeLine({ id: "a", name: "Bar", quantity: 90, unitPriceCents: 3200, pricingBasis: "per_person" }))
+      .toMatchObject({ totals: { lowCents: 288000, highCents: 288000 }, perPersonRateCents: null })
+  })
+})
+
+describe("formatPerPersonLineCells", () => {
+  const guests = { min: 100, max: 120 }
+  const line = (overrides: Partial<Parameters<typeof formatPerPersonLineCells>[0]>) => ({
+    key: "a",
+    name: "Line",
+    note: null,
+    cells: { cost: "", quantity: "", total: "" },
+    totals: null,
+    perPersonRateCents: null,
+    ...overrides,
+  })
+
+  it("quotes a per-person price as is", () => {
+    expect(formatPerPersonLineCells(line({ perPersonRateCents: 3200, totals: { lowCents: 320000, highCents: 384000 } }), guests))
+      .toEqual({ value: "$32.00", note: null })
+  })
+
+  it("shares a fixed price among the guests, as a range", () => {
+    expect(formatPerPersonLineCells(line({ totals: { lowCents: 150000, highCents: 150000 } }), guests))
+      .toEqual({ value: "$12.50 – $15.00", note: "$1,500.00 shared by 100–120 guests" })
+    expect(formatPerPersonLineCells(line({ totals: { lowCents: 150000, highCents: 150000 } }), { min: 100, max: 100 }))
+      .toEqual({ value: "$15.00", note: "$1,500.00 shared by 100 guests" })
+  })
+
+  it("divides a mixed line's low total by the fewest guests and its high by the most", () => {
+    // A package of $85 per person plus $380 of platters: 8880 / 100 and 10580 / 120.
+    expect(formatPerPersonLineCells(line({ note: "x", totals: { lowCents: 888000, highCents: 1058000 } }), guests))
+      .toEqual({ value: "$88.17 – $88.80", note: "x" })
+  })
+
+  it("keeps an unpriced line's note with no value", () => {
+    expect(formatPerPersonLineCells(line({ note: "See packages" }), guests)).toEqual({ value: "", note: "See packages" })
   })
 })
 

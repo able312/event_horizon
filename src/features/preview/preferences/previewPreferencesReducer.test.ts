@@ -32,6 +32,7 @@ const SIMPLE_CASES: SimpleCase[] = [
   { action: { type: "financial/setShowBeverageNotes", value: false }, key: "financial-report", expected: { showBeverageNotes: false } },
   { action: { type: "financial/setShowChargeBreakdown", value: false }, key: "financial-report", expected: { showChargeBreakdown: false } },
   { action: { type: "financial/setShowFoodPackages", value: true }, key: "financial-report", expected: { showFoodPackages: true } },
+  { action: { type: "financial/setShowPerPersonPricing", value: true }, key: "financial-report", expected: { showPerPersonPricing: true } },
   { action: { type: "invoice/setShowChargeBreakdown", value: false }, key: "invoice", expected: { showChargeBreakdown: false } },
   { action: { type: "invoice/setShowPaymentStatus", value: true }, key: "invoice", expected: { showPaymentStatus: true } },
 ]
@@ -144,6 +145,21 @@ describe("previewPreferencesReducer", () => {
     state = previewPreferencesReducer(state, { type: "timeline/setShowKitchenNotes", value: false })
     expect(state.timeline.showKitchenNotes).toBe(false)
     expect(state.timeline.showInternalNotes).toBe(true)
+  })
+
+  it("keeps at least one estimate pricing view on", () => {
+    let state = createInitialPreviewPreferences()
+    expect(state["financial-report"].showTotalPricing).toBe(true)
+    expect(state["financial-report"].showPerPersonPricing).toBe(false)
+
+    expect(previewPreferencesReducer(state, { type: "financial/setShowTotalPricing", value: false })).toBe(state)
+
+    state = previewPreferencesReducer(state, { type: "financial/setShowPerPersonPricing", value: true })
+    state = previewPreferencesReducer(state, { type: "financial/setShowTotalPricing", value: false })
+    expect(state["financial-report"].showTotalPricing).toBe(false)
+    expect(state["financial-report"].showPerPersonPricing).toBe(true)
+
+    expect(previewPreferencesReducer(state, { type: "financial/setShowPerPersonPricing", value: false })).toBe(state)
   })
 
   it("handles food package options, applying the default selection only once", () => {

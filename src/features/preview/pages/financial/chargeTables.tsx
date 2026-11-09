@@ -23,7 +23,7 @@ import {
   isEstimateBillableLineItem,
 } from "~/features/preview/preferences/selectors"
 import { PreviewBlock } from "~/features/preview/pagination/PreviewDocument"
-import { ChargeRow, ChargeTable } from "./ChargeTable"
+import { ChargeRow, ChargeTable, PerPersonChargeRow, PerPersonChargeTable } from "./ChargeTable"
 
 const CHARGE_CATEGORIES = ["Venue", "Golf", "Goods", "Service", "Food & Beverage"] as const
 
@@ -35,10 +35,24 @@ export type PricedRow = {
   pricingBasis?: PricingBasis | null
 }
 
+/** One printed charge line, ready to show as a total or as each guest's share. */
+export type ChargeLine = {
+  key: string
+  name: string
+  /** A short line under the name, e.g. "Priced per person". */
+  note: string | null
+  /** The cells of the Event Total table. */
+  cells: ChargeRowCells
+  /** The line's total at the fewest guests (low) and the most (high); null when it adds nothing. */
+  totals: { lowCents: number; highCents: number } | null
+  /** The price each guest pays, for a line priced per person; null otherwise. */
+  perPersonRateCents: number | null
+}
+
 export type ChargeTableSpec = {
   id: string
   title: string
-  rows: ReactNode
+  lines: ChargeLine[]
 }
 
 /** Groups menu-of-charge items by category; items without one go under "Other". */
@@ -65,20 +79,20 @@ export type ChargeRowCells = {
 
 /**
  * The printed cells of a priced line. With `perPersonGuests` given (the estimate), a priced
- * per-person line reads "$45.00 per person × 80–120 guests" with its total as a range, or,
- * without a guest count, shows "per person" in place of a total. Omitted (the invoice),
- * every line is quantity × price.
+ * per-person line reads "$45.00", "80–120 guests" with its total as a range, or, without a
+ * guest count, shows "per person" in place of a total. Omitted (the invoice), every line is
+ * quantity × price.
  */
 export function formatChargeRowCells(
   item: Omit<PricedRow, "id" | "name">,
   perPersonGuests?: GuestCountRange | null,
 ): ChargeRowCells {
   const priceCents = item.unitPriceCents ?? 0
-  if (perPersonGuests !== undefined && getPricingBasis(item) === "per_person" && priceCents > 0) {
+  if (isPricedPerPerson(item, perPersonGuests)) {
     if (!perPersonGuests) return { cost: toCurrency(priceCents), quantity: "", total: "per person" }
     return {
-      cost: `${toCurrency(priceCents)} per person × ${formatGuestCountRange(perPersonGuests)}`,
-      quantity: null,
+      cost: toCurrency(priceCents),
+      quantity: formatGuestCountRange(perPersonGuests),
       total: formatCurrencyRange(priceCents * perPersonGuests.min, priceCents * perPersonGuests.max),
     }
   }
@@ -137,14 +151,72 @@ export function buildInvoiceFoodRows(timeblocks: TimeblockWithItems[]): PricedRo
   })
 }
 
-function renderPricedRows(items: PricedRow[], perPersonGuests?: GuestCountRange | null): ReactNode {
-  return items.map((item) => (
-    <ChargeRow key={item.id} name={item.name} {...formatChargeRowCells(item, perPersonGuests)} />
-  ))
+/** Whether the estimate prices this line per guest (never on the invoice). */
+function isPricedPerPerson(item: Omit<PricedRow, "id" | "name">, perPersonGuests?: GuestCountRange | null): boolean {
+  return perPersonGuests !== undefined && getPricingBasis(item) === "per_person" && (item.unitPriceCents ?? 0) > 0
 }
 
-function formatPackageRowTotal(row: FoodPackageEstimateRow): string {
-  return row.lowCents > 0 || row.highCents > 0 ? formatCurrencyRange(row.lowCents, row.highCents) : ""
+/** A priced row as a charge line; pass `perPersonGuests` as for formatChargeRowCells. */
+export function toChargeLine(item: PricedRow, perPersonGuests?: GuestCountRange | null): ChargeLine {
+  const priceCents = item.unitPriceCents ?? 0
+  if (isPricedPerPerson(item, perPersonGuests)) {
+    return {
+      key: item.id,
+      name: item.name,
+      note: "Priced per person",
+      cells: formatChargeRowCells(item, perPersonGuests),
+      totals: perPersonGuests
+        ? { lowCents: priceCents * perPersonGuests.min, highCents: priceCents * perPersonGuests.max }
+        : null,
+      perPersonRateCents: priceCents,
+    }
+  }
+  const totalCents = computeBillableLineTotalCents(item)
+  return {
+    key: item.id,
+    name: item.name,
+    note: null,
+    cells: formatChargeRowCells(item),
+    totals: totalCents > 0 ? { lowCents: totalCents, highCents: totalCents } : null,
+    perPersonRateCents: null,
+  }
+}
+
+function toPackageChargeLine(row: FoodPackageEstimateRow): ChargeLine {
+  const priced = row.lowCents > 0 || row.highCents > 0
+  return {
+    key: row.key,
+    name: row.name,
+    note: row.note ?? null,
+    cells: { cost: "", quantity: "", total: priced ? formatCurrencyRange(row.lowCents, row.highCents) : "" },
+    totals: priced ? { lowCents: row.lowCents, highCents: row.highCents } : null,
+    perPersonRateCents: null,
+  }
+}
+
+export type PerPersonLineCells = {
+  /** Each guest's share, as a range when it depends on the guest count. */
+  value: string
+  /** Under the name: how a fixed price is shared, or the line's own note. */
+  note: string | null
+}
+
+/**
+ * A charge line as each guest's share. A per-person price is quoted as is. Anything else is
+ * its total divided by the guest count: the low total over the fewest guests and the high
+ * total over the most, so a fixed price reads as a range, e.g. "$12.50 – $15.00" for
+ * $1,500 shared by 100–120 guests.
+ */
+export function formatPerPersonLineCells(line: ChargeLine, guests: GuestCountRange): PerPersonLineCells {
+  if (line.perPersonRateCents != null) return { value: toCurrency(line.perPersonRateCents), note: null }
+  if (!line.totals) return { value: "", note: line.note }
+  const { lowCents, highCents } = line.totals
+  const value = formatCurrencyRange(Math.round(lowCents / guests.min), Math.round(highCents / guests.max))
+  const fixed = lowCents === highCents
+  return {
+    value,
+    note: fixed ? `${toCurrency(lowCents)} shared by ${formatGuestCountRange(guests)}` : line.note,
+  }
 }
 
 /**
@@ -178,16 +250,12 @@ export function buildChargeTableSpecs(params: {
       specs.push({
         id: "financial-table-food-beverage",
         title: "Food & Beverage",
-        rows: (
-          <>
-            {renderPricedRows(billableFoodRows, perPersonGuests)}
-            {foodPackageRows.map((row) => (
-              <ChargeRow key={row.key} name={row.name} cost="" quantity="" total={formatPackageRowTotal(row)} />
-            ))}
-            {renderPricedRows(billableBeverageRows, perPersonGuests)}
-            {renderPricedRows(foodBeverageChargeItems)}
-          </>
-        ),
+        lines: [
+          ...billableFoodRows.map((row) => toChargeLine(row, perPersonGuests)),
+          ...foodPackageRows.map(toPackageChargeLine),
+          ...billableBeverageRows.map((row) => toChargeLine(row, perPersonGuests)),
+          ...foodBeverageChargeItems.map((item) => toChargeLine(item)),
+        ],
       })
       continue
     }
@@ -198,7 +266,7 @@ export function buildChargeTableSpecs(params: {
     specs.push({
       id: `financial-table-${category.toLowerCase()}`,
       title: category,
-      rows: <>{renderPricedRows(items)}</>,
+      lines: items.map((item) => toChargeLine(item)),
     })
   }
 
@@ -207,7 +275,7 @@ export function buildChargeTableSpecs(params: {
     specs.push({
       id: "financial-table-other",
       title: "Other",
-      rows: <>{renderPricedRows(otherItems)}</>,
+      lines: otherItems.map((item) => toChargeLine(item)),
     })
   }
 
@@ -215,13 +283,37 @@ export function buildChargeTableSpecs(params: {
 }
 
 /**
- * One kept-together block per charge table. Returns PreviewBlocks (not a component) because
- * PreviewDocument paginates its direct blocks.
+ * One kept-together block per charge table, as totals. `leadIn` (a section heading) prints
+ * at the top of the first block so it never strands at the foot of a page. Returns
+ * PreviewBlocks (not a component) because PreviewDocument paginates its direct blocks.
  */
-export function renderChargeTableBlocks(specs: ChargeTableSpec[]): ReactNode[] {
-  return specs.map((table) => (
+export function renderChargeTableBlocks(specs: ChargeTableSpec[], leadIn?: ReactNode): ReactNode[] {
+  return specs.map((table, index) => (
     <PreviewBlock key={table.id} id={table.id} keepTogether className="mb-6">
-      <ChargeTable title={table.title}>{table.rows}</ChargeTable>
+      {index === 0 ? leadIn : null}
+      <ChargeTable title={table.title}>
+        {table.lines.map((line) => (
+          <ChargeRow key={line.key} name={line.name} note={line.note} {...line.cells} />
+        ))}
+      </ChargeTable>
+    </PreviewBlock>
+  ))
+}
+
+/** The same tables as each guest's share (see formatPerPersonLineCells), with their own block ids. */
+export function renderPerPersonTableBlocks(
+  specs: ChargeTableSpec[],
+  guests: GuestCountRange,
+  leadIn?: ReactNode,
+): ReactNode[] {
+  return specs.map((table, index) => (
+    <PreviewBlock key={`${table.id}-per-person`} id={`${table.id}-per-person`} keepTogether className="mb-6">
+      {index === 0 ? leadIn : null}
+      <PerPersonChargeTable title={table.title}>
+        {table.lines.map((line) => (
+          <PerPersonChargeRow key={line.key} name={line.name} {...formatPerPersonLineCells(line, guests)} />
+        ))}
+      </PerPersonChargeTable>
     </PreviewBlock>
   ))
 }

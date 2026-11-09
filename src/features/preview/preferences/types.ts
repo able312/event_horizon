@@ -50,6 +50,10 @@ export type FinancialPreferences = {
   showBeverageAppendix: boolean
   showBeverageNotes: boolean
   showChargeBreakdown: boolean
+  /** The estimate as a whole: line totals and the grand total. At least one pricing view is on. */
+  showTotalPricing: boolean
+  /** The estimate divided by the guest count, as its own section. */
+  showPerPersonPricing: boolean
   /** Present chosen food timeblocks as alternative packages, on their own page. */
   showFoodPackages: boolean
   foodPackageTimeblockIds: string[]
@@ -105,6 +109,8 @@ export type PreviewPreferencesAction =
   | { type: "financial/setShowBeverageAppendix"; value: boolean }
   | { type: "financial/setShowBeverageNotes"; value: boolean }
   | { type: "financial/setShowChargeBreakdown"; value: boolean }
+  | { type: "financial/setShowTotalPricing"; value: boolean }
+  | { type: "financial/setShowPerPersonPricing"; value: boolean }
   | { type: "financial/setShowFoodPackages"; value: boolean }
   | { type: "financial/setFoodPackageTimeblockSelected"; id: string; value: boolean }
   | { type: "financial/selectAllFoodPackageTimeblocks"; ids: string[] }
@@ -161,6 +167,8 @@ function createInitialFinancialPreferences(): FinancialPreferences {
     showBeverageAppendix: false,
     showBeverageNotes: false,
     showChargeBreakdown: true,
+    showTotalPricing: true,
+    showPerPersonPricing: false,
     showFoodPackages: false,
     foodPackageTimeblockIds: [],
     foodPackageEstimateMode: DEFAULT_FOOD_PACKAGE_ESTIMATE_MODE,

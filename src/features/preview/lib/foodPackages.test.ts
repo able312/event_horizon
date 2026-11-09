@@ -12,6 +12,7 @@ import {
   computeFoodChargeBreakdown,
   formatCurrencyRange,
   computeFoodPackageEstimate,
+  describeEstimateRange,
   computeFoodPackageSubtotalCents,
   formatGuestCountRange,
   resolveGuestCountRange,
@@ -415,7 +416,8 @@ describe("buildFoodPackageEstimateRows", () => {
     expect(buildFoodPackageEstimateRows(estimateFor("ignore"))).toEqual([
       {
         key: "food-packages-pointer",
-        name: "Food packages (2): priced separately, see Food Packages",
+        name: "Food packages (2)",
+        note: "Priced separately, see Food Packages",
         lowCents: 0,
         highCents: 0,
       },
@@ -568,6 +570,54 @@ describe("per-person pricing", () => {
     expect(estimate.rangeNote).toBe("by package chosen")
   })
 
+  it("counts add-ons in the high end only, at the most guests", () => {
+    const estimate = computeFoodPackageEstimate({
+      ...ppBase,
+      packageTimeblockIds: ids,
+      mode: "ignore",
+      guests: { min: 10, max: 20 },
+      addOns: [{ fixedCents: 45000, perPersonRateCents: 600 }],
+    })
+    expect(estimate.low.foodSubtotalCents).toBe(3000)
+    // 6000 coffee + 45000 + 600 × 20
+    expect(estimate.high.foodSubtotalCents).toBe(6000 + 45000 + 12000)
+    expect(estimate.rangeNote).toBe("by guest count and add-ons")
+  })
+
+  it("divides the cheapest end by the most guests and the dearest by the fewest, per guest", () => {
+    // Venue 50000, coffee 300 and bar 2000 per person; one $100 platter add-on.
+    const estimate = computeFoodPackageEstimate({
+      ...ppBase,
+      packageTimeblockIds: ids,
+      mode: "ignore",
+      guests: { min: 10, max: 20 },
+      addOns: [{ fixedCents: 10000, perPersonRateCents: 0 }],
+    })
+    // At 20 without add-ons: (50000 + 46000) / 20 = 4800; HST 624; gratuity on 2300 = 414.
+    expect(estimate.perGuest?.low).toEqual({ subtotalCents: 4800, hstCents: 624, gratuityCents: 414, totalCents: 5838 })
+    // At 10 with the add-on: (50000 + 23000 + 10000) / 10 = 8300; HST 1079; gratuity on 3300 = 594.
+    expect(estimate.perGuest?.high).toEqual({ subtotalCents: 8300, hstCents: 1079, gratuityCents: 594, totalCents: 9973 })
+    expect(estimate.perGuest?.rangeNote).toBe("by guest count and add-ons")
+  })
+
+  it("prices per guest as one figure when everything is per person", () => {
+    const estimate = computeFoodPackageEstimate({
+      menuItems: [],
+      foodTimeblocks: [coffee],
+      beverageItems: [],
+      packageTimeblockIds: null,
+      mode: "ignore",
+      guests: { min: 10, max: 20 },
+    })
+    expect(estimate.rangeNote).toBe("by guest count")
+    expect(estimate.perGuest?.low).toEqual(estimate.perGuest?.high)
+    expect(estimate.perGuest?.rangeNote).toBeNull()
+  })
+
+  it("has no per-guest pricing without a guest count", () => {
+    expect(computeFoodPackageEstimate({ ...ppBase, packageTimeblockIds: ids, mode: "list", guests: null }).perGuest).toBeNull()
+  })
+
   it("has no range note when the totals do not vary", () => {
     const estimate = computeFoodPackageEstimate({
       ...ppBase,
@@ -577,5 +627,14 @@ describe("per-person pricing", () => {
     })
     expect(estimate.low).toEqual(estimate.high)
     expect(estimate.rangeNote).toBeNull()
+  })
+})
+
+describe("describeEstimateRange", () => {
+  it("names each reason the estimate is a range", () => {
+    expect(describeEstimateRange({ byPackage: true, byGuests: false, byAddOns: false })).toBe("by package chosen")
+    expect(describeEstimateRange({ byPackage: false, byGuests: true, byAddOns: false })).toBe("by guest count")
+    expect(describeEstimateRange({ byPackage: true, byGuests: true, byAddOns: true })).toBe("by package, guest count and add-ons")
+    expect(describeEstimateRange({ byPackage: false, byGuests: false, byAddOns: false })).toBe("estimated range")
   })
 })

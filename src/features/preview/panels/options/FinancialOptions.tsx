@@ -15,7 +15,7 @@ import {
 import { useBeverageSection } from "~/hooks/useBeverageSection"
 import { useFoodSection } from "~/hooks/useFoodSection"
 
-/** Estimate options: what prints, and how food packages are estimated. */
+/** Estimate options: total and per-person pricing, what prints, and how food packages are estimated. */
 export function FinancialOptions() {
   const { state, dispatch } = usePreviewPreferences()
   const prefs = state["financial-report"]
@@ -31,6 +31,21 @@ export function FinancialOptions() {
 
   return (
     <>
+      <PreviewOptionSection title="Pricing">
+        <PreviewToggleRow
+          id="financial-total-pricing"
+          label="Event total"
+          checked={prefs.showTotalPricing}
+          onChange={(value) => dispatch({ type: "financial/setShowTotalPricing", value })}
+        />
+        <PreviewToggleRow
+          id="financial-per-person-pricing"
+          label="Per person"
+          checked={prefs.showPerPersonPricing}
+          onChange={(value) => dispatch({ type: "financial/setShowPerPersonPricing", value })}
+        />
+      </PreviewOptionSection>
+
       <PreviewOptionSection title="Options">
         {(beverageItems ?? []).some((item) => !isAddOn(item)) ? (
           <PreviewToggleRow

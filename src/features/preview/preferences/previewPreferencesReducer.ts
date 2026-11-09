@@ -108,6 +108,13 @@ export function previewPreferencesReducer(
       return withPreview(state, "financial-report", { showBeverageNotes: action.value })
     case "financial/setShowChargeBreakdown":
       return withPreview(state, "financial-report", { showChargeBreakdown: action.value })
+    // The estimate always shows one of its pricing views, so the last one can't be turned off.
+    case "financial/setShowTotalPricing":
+      if (!action.value && !state["financial-report"].showPerPersonPricing) return state
+      return withPreview(state, "financial-report", { showTotalPricing: action.value })
+    case "financial/setShowPerPersonPricing":
+      if (!action.value && !state["financial-report"].showTotalPricing) return state
+      return withPreview(state, "financial-report", { showPerPersonPricing: action.value })
     case "financial/setShowFoodPackages":
       return withPreview(state, "financial-report", { showFoodPackages: action.value })
     case "financial/setFoodPackageTimeblockSelected":

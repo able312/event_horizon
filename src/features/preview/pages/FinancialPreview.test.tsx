@@ -195,14 +195,16 @@ describe("FinancialPreview", () => {
       })
 
       expect(screen.getByText("Buffet")).toBeTruthy()
-      expect(screen.getByText("$45.00 per person × 80–120 guests")).toBeTruthy()
+      expect(screen.getByText("$45.00")).toBeTruthy()
+      expect(screen.getByText("80–120 guests")).toBeTruthy()
+      expect(screen.getByText("Priced per person")).toBeTruthy()
       expect(screen.getByText("$3,600.00 – $5,400.00")).toBeTruthy()
       // 370000 -> 370000 + 48100 + 66600 = 484700; 550000 -> 550000 + 71500 + 99000 = 720500
       expect(screen.getByText("Grand Total (by guest count)")).toBeTruthy()
       expect(screen.getByText("$4,847.00 – $7,205.00")).toBeTruthy()
     })
 
-    it("prints a package price as one per-person line and offers add-ons outside the total", async () => {
+    it("prints a package price as one per-person line and counts add-ons in the high end only", async () => {
       mockPerPersonEvent({ minGuests: 50, maxGuests: 50 })
       hooksMock.useFoodSection.mockReturnValue({
         data: [
@@ -227,19 +229,22 @@ describe("FinancialPreview", () => {
         expect(screen.getByText("Event Estimate")).toBeTruthy()
       })
       // Dinner at $45 × 50 = $2,250 plus the platters' $200; the buffet's own price is not used.
-      expect(screen.getByText("$45.00 per person × 50 guests")).toBeTruthy()
+      expect(screen.getByText("$45.00")).toBeTruthy()
+      expect(screen.getByText("50 guests")).toBeTruthy()
       expect(screen.getByText("$2,250.00")).toBeTruthy()
       expect(screen.queryByText("Buffet")).toBeNull()
       expect(screen.getByText("Wings platter")).toBeTruthy()
-      // Add-ons print in their own table, priced, and are not in the total.
+      // Add-ons print in their own table, priced, and count only toward the high end.
       expect(screen.getByText("Optional Add-ons")).toBeTruthy()
       expect(screen.getByText("Dessert station")).toBeTruthy()
       expect(screen.getByText("$8.00 per person")).toBeTruthy()
       expect(screen.getByText("$400.00")).toBeTruthy()
       expect(screen.getByText("Bar upgrade")).toBeTruthy()
       expect(screen.getByText("$600.00")).toBeTruthy()
-      // 245000 subtotal: HST 31850, gratuity 44100, total 320950
-      expect(screen.getByText("$3,209.50")).toBeTruthy()
+      // Low: 245000 subtotal, HST 31850, gratuity 44100 = 320950.
+      // High: + add-ons 40000 + 60000 = 345000, HST 44850, gratuity 62100 = 451950.
+      expect(screen.getByText("Grand Total (by add-ons)")).toBeTruthy()
+      expect(screen.getByText("$3,209.50 – $4,519.50")).toBeTruthy()
     })
 
     it("prints the proposal details, with a percentage deposit that follows the total range", async () => {
@@ -307,6 +312,102 @@ describe("FinancialPreview", () => {
     })
   })
 
+  describe("pricing views", () => {
+    function withPricing(showTotalPricing: boolean, showPerPersonPricing: boolean): PreviewPreferencesState {
+      const state = createInitialPreviewPreferences()
+      return {
+        ...state,
+        "financial-report": { ...state["financial-report"], showTotalPricing, showPerPersonPricing },
+      }
+    }
+
+    function mockBuffetEvent(guests: { minGuests: number | null; maxGuests: number | null }) {
+      hooksMock.useEvent.mockReturnValue({ data: { id: "event-1", startDateTime: "2026-06-01T16:00:00.000Z", ...guests } })
+      hooksMock.usePrimaryClient.mockReturnValue({ data: null })
+      hooksMock.useMenuOfChargeItemsSection.mockReturnValue({ data: [] })
+      hooksMock.useFoodSection.mockReturnValue({
+        data: [
+          {
+            id: "dinner",
+            title: "Dinner",
+            foodItems: [
+              { id: "d1", name: "Buffet", quantity: null, unitPriceCents: 4500, pricingBasis: "per_person" },
+              { id: "d2", name: "Cake", quantity: 1, unitPriceCents: 10000, pricingBasis: "each" },
+            ],
+          },
+        ],
+      })
+      hooksMock.useBeverageSection.mockReturnValue({ items: [] })
+    }
+
+    it("prints the event total and the per-person breakdown as two sections", async () => {
+      mockBuffetEvent({ minGuests: 80, maxGuests: 120 })
+      renderFinancial(withPricing(true, true))
+
+      await waitFor(() => {
+        expect(screen.getByText("Event Estimate")).toBeTruthy()
+      })
+
+      expect(screen.getByRole("heading", { name: "Event Total", hidden: true })).toBeTruthy()
+      expect(screen.getByRole("heading", { name: "Per Person", hidden: true })).toBeTruthy()
+      expect(screen.getByText("$4,847.00 – $7,205.00")).toBeTruthy()
+      // The cake's $100 shared by 120 guests ($0.83) up to 80 ($1.25).
+      expect(screen.getByText("$100.00 shared by 80–120 guests")).toBeTruthy()
+      expect(screen.getByText("$0.83 – $1.25")).toBeTruthy()
+      // At 120: 550000 / 120 = 4583, HST 596, gratuity 825 = 6004.
+      // At 80: 370000 / 80 = 4625, HST 601, gratuity 833 = 6059.
+      expect(screen.getByText("Per Person Total (by guest count)")).toBeTruthy()
+      expect(screen.getByText("$60.04 – $60.59")).toBeTruthy()
+    })
+
+    it("prints only the per-person section when the total is off", async () => {
+      mockBuffetEvent({ minGuests: 80, maxGuests: 120 })
+      renderFinancial(withPricing(false, true))
+
+      await waitFor(() => {
+        expect(screen.getByText("Event Estimate")).toBeTruthy()
+      })
+
+      expect(screen.queryByRole("heading", { name: "Event Total", hidden: true })).toBeNull()
+      expect(screen.queryByText(/^Grand Total/)).toBeNull()
+      expect(screen.getByRole("heading", { name: "Per Person", hidden: true })).toBeTruthy()
+      expect(screen.getByText("$60.04 – $60.59")).toBeTruthy()
+    })
+
+    it("prints one per-person price when everything is priced per person", async () => {
+      mockBuffetEvent({ minGuests: 80, maxGuests: 120 })
+      hooksMock.useFoodSection.mockReturnValue({
+        data: [
+          {
+            id: "dinner",
+            title: "Dinner",
+            foodItems: [{ id: "d1", name: "Buffet", quantity: null, unitPriceCents: 4500, pricingBasis: "per_person" }],
+          },
+        ],
+      })
+      renderFinancial(withPricing(false, true))
+
+      await waitFor(() => {
+        expect(screen.getByText("Event Estimate")).toBeTruthy()
+      })
+
+      // 4500 + HST 585 + gratuity 810
+      expect(screen.getByText("Per Person Total")).toBeTruthy()
+      expect(screen.getByText("$58.95")).toBeTruthy()
+    })
+
+    it("asks for a guest count before it can price per person", async () => {
+      mockBuffetEvent({ minGuests: null, maxGuests: null })
+      renderFinancial(withPricing(false, true))
+
+      await waitFor(() => {
+        expect(screen.getByText("Event Estimate")).toBeTruthy()
+      })
+
+      expect(screen.getByText("Per-person pricing appears once the event has a guest count.")).toBeTruthy()
+    })
+  })
+
   describe("food packages", () => {
     function mockPackageEvent() {
       hooksMock.useEvent.mockReturnValue({
@@ -324,12 +425,13 @@ describe("FinancialPreview", () => {
       hooksMock.useBeverageSection.mockReturnValue({ items: [] })
       }
 
-    function packageState(mode: FoodPackageEstimateMode): PreviewPreferencesState {
+    function packageState(mode: FoodPackageEstimateMode, showPerPersonPricing = false): PreviewPreferencesState {
       const state = createInitialPreviewPreferences()
       return {
         ...state,
         "financial-report": {
           ...state["financial-report"],
+          showPerPersonPricing,
           showFoodPackages: true,
           foodPackageTimeblockIds: ["pkg-a", "pkg-b"],
           foodPackageEstimateMode: mode,
@@ -363,22 +465,23 @@ describe("FinancialPreview", () => {
       expect(screen.getByText("$55.00 per person + fixed-price items")).toBeTruthy()
       expect(screen.getByText("Included")).toBeTruthy()
       expect(screen.getByText("Fixed price, regardless of guest count")).toBeTruthy()
-      // No per-head figure derived from the total for the priced package; Option B still has one.
-      expect(screen.getAllByText("Per person (10–20 guests)")).toHaveLength(1)
+      // The cards follow the estimate's pricing views: package totals only by default.
+      expect(screen.queryByText("Per person (10–20 guests)")).toBeNull()
       // Option A: 20000 + 5500 × 10 = 75000 up to 20000 + 5500 × 20 = 130000
       expect(screen.getAllByText("$750.00 – $1,300.00").length).toBeGreaterThan(0)
     })
 
     it("lists each package and shows the grand total as a range", async () => {
       mockPackageEvent()
-      renderFinancial(packageState("list"))
+      renderFinancial(packageState("list", true))
 
       await waitFor(() => {
         expect(screen.getByText("Food Packages")).toBeTruthy()
       })
 
-      expect(screen.getByText("Food package option: Option A")).toBeTruthy()
-      expect(screen.getByText("Food package option: Option B")).toBeTruthy()
+      // Once in the Event Total section and once in the Per Person section.
+      expect(screen.getAllByText("Food package option: Option A")).toHaveLength(2)
+      expect(screen.getAllByText("Food package option: Option B")).toHaveLength(2)
       // Lunch 10000 + A 40000 = 50000 -> 65500; with B 70000 -> 91700
       expect(screen.getByText("Grand Total (by package chosen)")).toBeTruthy()
       expect(screen.getByText("$655.00 – $917.00")).toBeTruthy()
@@ -395,7 +498,8 @@ describe("FinancialPreview", () => {
         expect(screen.getByText("Food Packages")).toBeTruthy()
       })
 
-      expect(screen.getByText("Food packages (2): priced separately, see Food Packages")).toBeTruthy()
+      expect(screen.getByText("Food packages (2)")).toBeTruthy()
+      expect(screen.getByText("Priced separately, see Food Packages")).toBeTruthy()
       expect(screen.queryByText("Food package option: Option A")).toBeNull()
       expect(screen.getByText("Grand Total")).toBeTruthy()
       // Lunch only: 10000 + 1300 + 1800
