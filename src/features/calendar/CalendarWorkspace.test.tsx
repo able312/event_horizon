@@ -13,6 +13,11 @@ const deleteDialogPropsMock = vi.fn()
 const pageOrchestratorPropsMock = vi.fn()
 const routeBlockingErrorPropsMock = vi.fn()
 
+// The footer's settings button navigates, and these tests render without a router
+vi.mock("~/components/layouts/SidebarFooter", () => ({
+  SidebarFooter: () => null,
+}))
+
 vi.mock("~/hooks/useEventsQueryState", () => ({
   useEventsQueryState: () => useEventsQueryStateMock(),
 }))

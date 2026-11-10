@@ -119,6 +119,7 @@ Security priorities:
   - Each mutation runs as one transaction, so multi-step writes belong in a single mutation.
   - `holidayCache` / `holidaySync` hold the shared Canadian holiday layer. Only internal functions write them (the weekly cron in `convex/crons.ts`, plus a one-time bootstrap); the calendar reads them through `holidays.forMonth`. See [HOLIDAYS.md](HOLIDAYS.md).
   - `estimateDetails` holds one row per event of proposal details printed on the Estimate (intro note, valid-until date, terms, deposit); like `cartDetails`, it's created on first read with `ensureByEventId` and deleted with its event. `terms: null` means "use the venue default", which lives in `venueSettings`, a single venue-wide row that `venueSettings.get` returns as null until someone first saves a setting. Both are new tables, so no data migration was needed.
+  - `users` holds each company account, upserted on sign-in from the Google identity. `preferredName` (optional; missing means "use the Google name") is the name the user set in Settings → Profile; sign-in refreshes `name` but never touches it, and `users.list` returns the preferred name for audit labels. `users.updateName` only changes the caller's own record. Optional field, so no data migration was needed.
   - `eventRequests` holds website requests waiting for review. They aren't events until someone accepts one; `eventRequests.accept` creates the event and client contact and marks the request in one transaction.
 
 ### Renderer feature structure

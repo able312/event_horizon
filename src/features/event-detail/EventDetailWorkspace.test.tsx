@@ -8,6 +8,11 @@ const useWorkspaceSelectionMock = vi.fn()
 const panelPropsMock = vi.fn()
 const bodyPropsMock = vi.fn()
 
+// The footer's settings button navigates, and these tests render without a router
+vi.mock("~/components/layouts/SidebarFooter", () => ({
+  SidebarFooter: () => null,
+}))
+
 vi.mock("./workspace/hooks/useEventWorkspaceData", () => ({
   useEventWorkspaceData: () => useEventWorkspaceDataMock(),
 }))

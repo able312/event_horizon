@@ -274,10 +274,14 @@ export default defineSchema({
 
   // Company accounts, upserted by users.store after each sign-in. Keyed by the
   // WorkOS user ID (the JWT subject) so email changes don't create duplicates.
+  // `name` follows the Google account on every sign-in; `preferredName` is the
+  // name the user set in Settings (missing means "use the Google name"), which
+  // sign-in never touches. Optional, so existing documents need no migration.
   users: defineTable({
     workosUserId: v.string(),
     email: v.string(),
     name: nullable(v.string()),
+    preferredName: v.optional(v.string()),
     createdAt: v.string(),
     updatedAt: v.string(),
   })
