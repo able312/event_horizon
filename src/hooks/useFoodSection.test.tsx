@@ -4,6 +4,7 @@ import { toast } from "sonner"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import * as foodItemsIpc from "~/lib/data/foodItems"
 import { renderHookWithProviders } from "~/test/renderHookWithProviders"
+import { foodMenuItemFields } from "~/lib/foodMenu/foodMenu"
 import { useFoodSection } from "./useFoodSection"
 
 vi.mock("react-router", async () => {
@@ -130,6 +131,35 @@ describe("useFoodSection optimistic cache", () => {
       const focused = queryClient.getQueryData<TimeblockWithItems>(["timeblock", "tb-1"])
       expect(focused?.foodItems?.map((item) => item.id)).toEqual(["food-1", "food-2"])
     })
+  })
+
+  it("creates an item from a saved food item with its notes, price and pricing basis", async () => {
+    const getSectionMock = vi.mocked(foodItemsIpc.getFoodSectionWithItems)
+    const createItemMock = vi.mocked(foodItemsIpc.createFoodItem)
+    getSectionMock.mockResolvedValue([makeTimeblock()])
+    createItemMock.mockReturnValue(createDeferred<never>().promise)
+
+    const { result, queryClient } = renderHookWithProviders(() => useFoodSection())
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    const newItem = foodMenuItemFields({
+      id: "saved-1", name: "Sliders", unitPriceCents: 450, pricingBasis: "per_person",
+      clientNotes: "Beef", internalNotes: "GF buns on request", categoryIds: ["mains"], createdAt: "created",
+    })
+    act(() => {
+      result.current.addItem({ timeblockId: "tb-1", newItem })
+    })
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData<TimeblockWithItems[]>(["foodSection", "event-1"])
+      expect(cached?.[0].foodItems?.find((item) => item.name === "Sliders")).toMatchObject({
+        name: "Sliders", clientNotes: "Beef", internalNotes: "GF buns on request", unitPriceCents: 450, pricingBasis: "per_person",
+      })
+    })
+    expect(createItemMock).toHaveBeenCalledWith(expect.objectContaining({
+      timeblockId: "tb-1", name: "Sliders", clientNotes: "Beef", internalNotes: "GF buns on request",
+      unitPriceCents: 450, pricingBasis: "per_person",
+    }))
   })
 
   it("optimistic update changes foodItems[n], not items", async () => {

@@ -3,6 +3,7 @@ import React from "react"
 import type { FoodItem } from "~/definitions/database"
 import { ITER_FOOD_SERVICE_STYLE } from "~/definitions/sections/section-constants"
 import { useFoodSection } from "~/hooks/useFoodSection"
+import { FoodAddItemButton } from "./food/FoodAddItemButton"
 import PlanningWorkspaceTimeblockList from "./PlanningWorkspaceTimeblocks/PlanningWorkspaceTimeblockList"
 
 const FoodWorkspaceSection: React.FC = () => {
@@ -35,6 +36,9 @@ const FoodWorkspaceSection: React.FC = () => {
       addItem={({ timeblockId }) => addItem({ timeblockId })}
       updateItem={updateItem}
       removeItem={removeItem}
+      addItemButton={(timeblockId) => (
+        <FoodAddItemButton label="Add Item" onAdd={(newItem) => addItem({ timeblockId, newItem })} />
+      )}
     />
   )
 }

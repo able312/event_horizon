@@ -27,6 +27,18 @@ export const SETTINGS_CATEGORIES = [
     label: "Profile",
     description: "How your name appears to the rest of the team.",
   },
+  {
+    id: "beverage-menu",
+    group: "venue",
+    label: "Beverage Menu",
+    description: "Saved beverages the team can add to any event, with their price, pricing and note filled in.",
+  },
+  {
+    id: "food-menu",
+    group: "venue",
+    label: "Food Menu",
+    description: "Saved food items, sorted into categories, that the team can add to any food timeblock with their cost, pricing and notes filled in.",
+  },
 ] as const satisfies readonly SettingsCategory[]
 
 export type SettingsCategoryId = (typeof SETTINGS_CATEGORIES)[number]["id"]

@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useMemo, useState } from "react"
 import { useParams } from "react-router"
-import { ChevronDown, EllipsisVertical, Info, Plus, Trash2 } from "lucide-react"
+import { EllipsisVertical, Info, Trash2 } from "lucide-react"
 
-import type { BeverageItemType } from "~/definitions/database"
+import type { BeverageItemType, BeverageTemplate } from "~/definitions/database"
 import type { BeverageItemWithAssignments } from "~/definitions/beverage/beverage-types"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import {
@@ -10,6 +10,8 @@ import {
   ITER_BEVERAGE_TYPE,
 } from "~/definitions/sections/section-constants"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
+import { usePendingRowFocus } from "~/hooks/usePendingRowFocus"
+import { beverageMenuItemFields } from "~/lib/beverageMenu/beverageMenu"
 import { getRecordRenderKey } from "~/lib/data/optimisticIds"
 import RouteBlockingError from "~/components/atoms/route-blocking-error"
 import { Button } from "~/components/atoms/button"
@@ -46,6 +48,7 @@ import {
 import TimeblockTypeConvertControl from "~/features/event-detail/sections/setup-notes-workspaces/TimeblockTypeConvertControl"
 import { PlanningTimeblockItemNoteRow } from "~/features/event-detail/sections/food-beverage-workspaces/PlanningWorkspaceTimeblocks/PlanningTimeblockItemNoteRow"
 import { getVisibleBeverageTypeSections } from "./beverage/beverageTypeSections"
+import { BeverageAddItemButton } from "./beverage/BeverageAddItemButton"
 
 interface BeverageEditorWorkspaceProps {
   timeblock: TimeblockWithItems
@@ -64,12 +67,6 @@ function queryBeverageItemNameInput(itemId: string): HTMLInputElement | null {
   return document.querySelector<HTMLInputElement>(
     `[data-beverage-item-id="${itemId}"] [data-cell="item"]`,
   )
-}
-
-function focusBeverageItemNameInput(itemId: string): void {
-  const nameInput = queryBeverageItemNameInput(itemId)
-  if (!nameInput || document.activeElement === nameInput) return
-  nameInput.focus()
 }
 
 const BeverageEditorWorkspace: React.FC<BeverageEditorWorkspaceProps> = ({
@@ -92,67 +89,34 @@ const BeverageEditorWorkspace: React.FC<BeverageEditorWorkspaceProps> = ({
     isMutating,
   } = useBeverageSection()
 
-  const [lastChosenType, setLastChosenType] = useState<BeverageItemType>("Beer")
   const [pendingDeleteItem, setPendingDeleteItem] = useState<BeverageItemWithAssignments | null>(null)
   const [expandedNoteItemIds, setExpandedNoteItemIds] = useState<ReadonlySet<string>>(() => new Set())
-  const pendingFocusItemIdRef = useRef<string | null>(null)
+  const focusNewItemName = usePendingRowFocus(queryBeverageItemNameInput, items)
 
   const typeSections = useMemo(
     () => getVisibleBeverageTypeSections(items, { hideEmptySpecialOrders: true }),
     [items],
   )
 
-  useLayoutEffect(() => {
-    const pendingId = pendingFocusItemIdRef.current
-    if (!pendingId) return
-    focusBeverageItemNameInput(pendingId)
-  }, [items])
-
-  useEffect(() => {
-    const clearPendingIfUserLeftNameInput = (event: FocusEvent) => {
-      const pendingId = pendingFocusItemIdRef.current
-      if (!pendingId) return
-
-      const target = event.target
-      if (!(target instanceof HTMLElement)) return
-      if (target === document.body || target === document.documentElement) return
-
-      const nameInput = queryBeverageItemNameInput(pendingId)
-      if (nameInput && target !== nameInput) {
-        pendingFocusItemIdRef.current = null
-      }
-    }
-
-    document.addEventListener("focusin", clearPendingIfUserLeftNameInput)
-    return () => document.removeEventListener("focusin", clearPendingIfUserLeftNameInput)
-  }, [])
-
-  const queuePendingNameFocus = useCallback(() => {
-    requestAnimationFrame(() => {
-      const pendingId = pendingFocusItemIdRef.current
-      if (!pendingId) return
-      focusBeverageItemNameInput(pendingId)
-
-      requestAnimationFrame(() => {
-        const stillPendingId = pendingFocusItemIdRef.current
-        if (!stillPendingId) return
-        focusBeverageItemNameInput(stillPendingId)
-      })
-    })
-  }, [])
-
   const handleAddItem = useCallback((type: BeverageItemType) => {
     const id = crypto.randomUUID()
-    setLastChosenType(type)
-    pendingFocusItemIdRef.current = id
+    focusNewItemName(id)
     addItemAssignedToTimeblock({
       id,
       type,
       timeblockId: timeblock.id,
       newItem: { name: "" },
     })
-    queuePendingNameFocus()
-  }, [addItemAssignedToTimeblock, queuePendingNameFocus, timeblock.id])
+  }, [addItemAssignedToTimeblock, focusNewItemName, timeblock.id])
+
+  const handleMenuAdd = useCallback((template: BeverageTemplate) => {
+    addItemAssignedToTimeblock({
+      id: crypto.randomUUID(),
+      type: template.type,
+      timeblockId: timeblock.id,
+      newItem: beverageMenuItemFields(template),
+    })
+  }, [addItemAssignedToTimeblock, timeblock.id])
 
   const toggleAssignment = useCallback((item: BeverageItemWithAssignments, checked: boolean) => {
     const nextIds = checked
@@ -236,41 +200,12 @@ const BeverageEditorWorkspace: React.FC<BeverageEditorWorkspaceProps> = ({
                 />
               ) : null}
 
-              <div className="inline-flex h-full items-stretch">
-                <Button
-                  type="button"
-                  variant="darkSecondary"
-                  className="h-full rounded-none border-x"
-                  disabled={disabled}
-                  onClick={() => handleAddItem(lastChosenType)}
-                >
-                  <Plus />
-                  Add Item
-                </Button>
-                <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="darkSecondary"
-                      aria-label="Choose beverage type"
-                      disabled={disabled}
-                      className="h-full rounded-none border-r border-stone-600 px-2 hover:bg-stone-600 hover:text-orange-400"
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    onCloseAutoFocus={(event) => event.preventDefault()}
-                  >
-                    {ITER_BEVERAGE_TYPE.map((type) => (
-                      <DropdownMenuItem key={type} onClick={() => handleAddItem(type)}>
-                        {type}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              <BeverageAddItemButton
+                variant="header"
+                disabled={disabled}
+                onAddBlank={handleAddItem}
+                onAddFromMenu={handleMenuAdd}
+              />
 
               <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>

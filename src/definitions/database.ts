@@ -386,3 +386,37 @@ export type BeverageItem = {
   /** An optional add-on on the estimate, left out of its totals until accepted. Missing means false. */
   isAddOn?: boolean
 }
+
+/** A saved beverage (Settings → Beverage Menu) that can be copied into any event's beverage list. */
+export type BeverageTemplate = {
+  id: string
+  name: string
+  type: BeverageItemType
+  unitPriceCents: number | null
+  pricingBasis: PricingBasis
+  /** Copied into the event item's note (`includes`). */
+  notes: string | null
+  createdAt: string
+}
+export type BeverageTemplateFields = Omit<BeverageTemplate, "id" | "createdAt">
+
+/** A category the team made up for saved food items ("Mains", "Wedding Menu", …). */
+export type FoodMenuCategory = {
+  id: string
+  name: string
+  createdAt: string
+}
+
+/** A saved food item (Settings → Food Menu) that can be copied into any food timeblock. */
+export type FoodTemplate = {
+  id: string
+  name: string
+  unitPriceCents: number | null
+  pricingBasis: PricingBasis
+  clientNotes: string | null
+  internalNotes: string | null
+  /** Tags from the venue's food menu categories; an item can sit in several. */
+  categoryIds: string[]
+  createdAt: string
+}
+export type FoodTemplateFields = Omit<FoodTemplate, "id" | "createdAt">

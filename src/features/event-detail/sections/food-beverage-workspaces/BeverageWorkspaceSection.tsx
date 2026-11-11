@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useMemo, useState } from "react"
 import { ChevronDown, Info, Plus, Trash2 } from "lucide-react"
 
-import type { BeverageItemType, Timeblock, UpdateTimeblock } from "~/definitions/database"
+import type { BeverageItemType, BeverageTemplate, Timeblock, UpdateTimeblock } from "~/definitions/database"
 import type { BeverageItemWithAssignments } from "~/definitions/beverage/beverage-types"
-import { ITER_BEVERAGE_TYPE } from "~/definitions/sections/section-constants"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
+import { usePendingRowFocus } from "~/hooks/usePendingRowFocus"
+import { beverageMenuItemFields } from "~/lib/beverageMenu/beverageMenu"
 import { getRecordRenderKey } from "~/lib/data/optimisticIds"
 import { Button } from "~/components/atoms/button"
 import {
@@ -26,6 +27,7 @@ import {
 } from "~/components/event-detail/detail-sections/sections/tableStyles"
 import { PlanningTimeblockItemNoteRow } from "./PlanningWorkspaceTimeblocks/PlanningTimeblockItemNoteRow"
 import { getVisibleBeverageTypeSections } from "./beverage/beverageTypeSections"
+import { BeverageAddItemButton } from "./beverage/BeverageAddItemButton"
 import { BeverageTimeblockHeaderTail } from "./beverage/BeverageTimeblockHeaderTail"
 import { BeverageTimeblockNoteRow } from "./beverage/BeverageTimeblockNoteRow"
 
@@ -37,12 +39,6 @@ function queryBeverageItemNameInput(itemId: string): HTMLInputElement | null {
   return document.querySelector<HTMLInputElement>(
     `[data-beverage-item-id="${itemId}"] [data-cell="item"]`,
   )
-}
-
-function focusBeverageItemNameInput(itemId: string): void {
-  const nameInput = queryBeverageItemNameInput(itemId)
-  if (!nameInput || document.activeElement === nameInput) return
-  nameInput.focus()
 }
 
 const BeverageWorkspaceSection: React.FC = () => {
@@ -59,67 +55,22 @@ const BeverageWorkspaceSection: React.FC = () => {
     setItemTimeblocks,
   } = useBeverageSection()
 
-  const [lastChosenType, setLastChosenType] = useState<BeverageItemType>("Beer")
   const [expandedNoteItemIds, setExpandedNoteItemIds] = useState<ReadonlySet<string>>(() => new Set())
-  const pendingFocusItemIdRef = useRef<string | null>(null)
+  const focusNewItemName = usePendingRowFocus(queryBeverageItemNameInput, items)
 
   const typeSections = useMemo(
     () => getVisibleBeverageTypeSections(items, { hideEmptySpecialOrders: true }),
     [items],
   )
 
-  useLayoutEffect(() => {
-    const pendingId = pendingFocusItemIdRef.current
-    if (!pendingId) return
-    focusBeverageItemNameInput(pendingId)
-  }, [items])
-
-  useEffect(() => {
-    const clearPendingIfUserLeftNameInput = (event: FocusEvent) => {
-      const pendingId = pendingFocusItemIdRef.current
-      if (!pendingId) return
-
-      const target = event.target
-      if (!(target instanceof HTMLElement)) return
-      if (target === document.body || target === document.documentElement) return
-
-      const nameInput = queryBeverageItemNameInput(pendingId)
-      if (nameInput && target !== nameInput) {
-        pendingFocusItemIdRef.current = null
-      }
-    }
-
-    document.addEventListener("focusin", clearPendingIfUserLeftNameInput)
-    return () => document.removeEventListener("focusin", clearPendingIfUserLeftNameInput)
-  }, [])
-
-  const queuePendingNameFocus = () => {
-    requestAnimationFrame(() => {
-      const pendingId = pendingFocusItemIdRef.current
-      if (!pendingId) return
-      focusBeverageItemNameInput(pendingId)
-
-      requestAnimationFrame(() => {
-        const stillPendingId = pendingFocusItemIdRef.current
-        if (!stillPendingId) return
-        focusBeverageItemNameInput(stillPendingId)
-      })
-    })
-  }
-
-  const handlePrimaryAdd = () => {
-    const id = crypto.randomUUID()
-    pendingFocusItemIdRef.current = id
-    addItem({ id, type: lastChosenType, newItem: { name: "" } })
-    queuePendingNameFocus()
-  }
-
   const handleTypeAdd = (type: BeverageItemType) => {
     const id = crypto.randomUUID()
-    setLastChosenType(type)
-    pendingFocusItemIdRef.current = id
+    focusNewItemName(id)
     addItem({ id, type, newItem: { name: "" } })
-    queuePendingNameFocus()
+  }
+
+  const handleMenuAdd = (template: BeverageTemplate) => {
+    addItem({ id: crypto.randomUUID(), type: template.type, newItem: beverageMenuItemFields(template) })
   }
 
   const toggleTimeblockAssignment = (item: BeverageItemWithAssignments, timeblockId: string, checked: boolean) => {
@@ -155,37 +106,7 @@ const BeverageWorkspaceSection: React.FC = () => {
         <div className="min-w-0 rounded-xs border border-border bg-background p-3 shadow-sm">
           <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
             <h4 className="text-sm font-semibold tracking-wide">Drinks</h4>
-            <div className="inline-flex items-center">
-              <button
-                type="button"
-                onClick={handlePrimaryAdd}
-                className="inline-flex items-center gap-1 rounded-l-xs border border-r-0 border-orange-200 bg-orange-100 px-2 text-sm text-orange-700 hover:bg-orange-50"
-              >
-                <Plus size={14} />
-                Add Item
-              </button>
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label="Choose beverage type"
-                    className="inline-flex h-full min-h-[22px] items-center rounded-r-xs border border-orange-200 bg-orange-100 px-2 text-orange-700 hover:bg-orange-50"
-                  >
-                    <ChevronDown size={14} />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  onCloseAutoFocus={(event) => event.preventDefault()}
-                >
-                  {ITER_BEVERAGE_TYPE.map((type) => (
-                    <DropdownMenuItem key={type} onClick={() => handleTypeAdd(type)}>
-                      {type}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            <BeverageAddItemButton onAddBlank={handleTypeAdd} onAddFromMenu={handleMenuAdd} />
           </div>
 
           <div className="space-y-4">

@@ -9,6 +9,7 @@
  */
 
 import type * as beverageItems from "../beverageItems.js";
+import type * as beverageTemplates from "../beverageTemplates.js";
 import type * as cartDetails from "../cartDetails.js";
 import type * as contactRoles from "../contactRoles.js";
 import type * as contacts from "../contacts.js";
@@ -19,6 +20,8 @@ import type * as eventContacts from "../eventContacts.js";
 import type * as eventRequests from "../eventRequests.js";
 import type * as events from "../events.js";
 import type * as foodItems from "../foodItems.js";
+import type * as foodMenuCategories from "../foodMenuCategories.js";
+import type * as foodTemplates from "../foodTemplates.js";
 import type * as googleCalendar from "../googleCalendar.js";
 import type * as holidays from "../holidays.js";
 import type * as http from "../http.js";
@@ -32,6 +35,7 @@ import type * as lib_eventRequestPayload from "../lib/eventRequestPayload.js";
 import type * as lib_foodItemNotes from "../lib/foodItemNotes.js";
 import type * as lib_googleCalendar from "../lib/googleCalendar.js";
 import type * as lib_holidayFeed from "../lib/holidayFeed.js";
+import type * as lib_menuTemplates from "../lib/menuTemplates.js";
 import type * as lib_pricingBasis from "../lib/pricingBasis.js";
 import type * as lib_records from "../lib/records.js";
 import type * as lib_testIdentity from "../lib/testIdentity.js";
@@ -54,6 +58,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   beverageItems: typeof beverageItems;
+  beverageTemplates: typeof beverageTemplates;
   cartDetails: typeof cartDetails;
   contactRoles: typeof contactRoles;
   contacts: typeof contacts;
@@ -64,6 +69,8 @@ declare const fullApi: ApiFromModules<{
   eventRequests: typeof eventRequests;
   events: typeof events;
   foodItems: typeof foodItems;
+  foodMenuCategories: typeof foodMenuCategories;
+  foodTemplates: typeof foodTemplates;
   googleCalendar: typeof googleCalendar;
   holidays: typeof holidays;
   http: typeof http;
@@ -77,6 +84,7 @@ declare const fullApi: ApiFromModules<{
   "lib/foodItemNotes": typeof lib_foodItemNotes;
   "lib/googleCalendar": typeof lib_googleCalendar;
   "lib/holidayFeed": typeof lib_holidayFeed;
+  "lib/menuTemplates": typeof lib_menuTemplates;
   "lib/pricingBasis": typeof lib_pricingBasis;
   "lib/records": typeof lib_records;
   "lib/testIdentity": typeof lib_testIdentity;

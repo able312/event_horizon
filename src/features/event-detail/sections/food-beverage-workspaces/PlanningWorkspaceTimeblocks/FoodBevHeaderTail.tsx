@@ -16,6 +16,8 @@ interface FoodBevHeaderTailProps<TItem extends WorkspaceItemBase> {
   addItem: () => void
   disabled?: boolean
   extraMenuItems?: ReactNode
+  /** Replaces the plain add button, e.g. with an "Add Item ▾" that also adds from the food menu. */
+  addItemButton?: ReactNode
 }
 
 function FoodBevHeaderTail<TItem extends WorkspaceItemBase>({
@@ -26,6 +28,7 @@ function FoodBevHeaderTail<TItem extends WorkspaceItemBase>({
   addItem,
   disabled = false,
   extraMenuItems,
+  addItemButton,
 }: FoodBevHeaderTailProps<TItem>) {
   const { addSetupInstruction } = useSetupInstructionSection()
 
@@ -49,16 +52,18 @@ function FoodBevHeaderTail<TItem extends WorkspaceItemBase>({
 
   return (
     <>
-      <Button
-        type="button"
-        variant="darkSecondary"
-        className="border-x h-full"
-        disabled={disabled}
-        onClick={addItem}
-      >
-        <Plus />
-        {addItemLabel}
-      </Button>
+      {addItemButton ?? (
+        <Button
+          type="button"
+          variant="darkSecondary"
+          className="border-x h-full"
+          disabled={disabled}
+          onClick={addItem}
+        >
+          <Plus />
+          {addItemLabel}
+        </Button>
+      )}
 
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>

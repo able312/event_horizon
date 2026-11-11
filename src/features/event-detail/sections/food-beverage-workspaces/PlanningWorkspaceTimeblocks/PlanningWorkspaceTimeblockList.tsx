@@ -1,3 +1,4 @@
+import type React from "react"
 import { Plus } from "lucide-react"
 
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
@@ -31,6 +32,8 @@ interface PlanningWorkspaceTimeblockListProps<TItem extends WorkspaceItemBase> {
   addItem: (payload: { timeblockId: string }) => void
   updateItem: (payload: { timeblockId: string; itemId: string; updates: Partial<TItem> }) => void
   removeItem: (payload: { timeblockId: string; itemId: string }) => void
+  /** Replaces each card header's plain add button (see FoodBevHeaderTail). */
+  addItemButton?: (timeblockId: string) => React.ReactNode
 }
 
 function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
@@ -50,6 +53,7 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
   addItem,
   updateItem,
   removeItem,
+  addItemButton,
 }: PlanningWorkspaceTimeblockListProps<TItem>) {
   if (isLoading) {
     return <div className="w-full text-sm text-muted-foreground">Loading...</div>
@@ -103,6 +107,7 @@ function PlanningWorkspaceTimeblockList<TItem extends WorkspaceItemBase>({
           addItem={addItem}
           updateItem={updateItem}
           removeItem={removeItem}
+          addItemButton={addItemButton}
         />
       ))}
     </div>

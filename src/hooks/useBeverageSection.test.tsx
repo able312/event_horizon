@@ -377,6 +377,36 @@ describe("useBeverageSection optimistic cache", () => {
     }))
   })
 
+  it("creates an item from a saved beverage with its note, price and pricing basis", async () => {
+    const getSectionMock = vi.mocked(beverageItemsIpc.getBeverageSectionWithItems)
+    const createItemMock = vi.mocked(beverageItemsIpc.createBeverageItem)
+    getSectionMock.mockResolvedValue(makeSection())
+    const deferredCreate = createDeferred<never>()
+    createItemMock.mockReturnValue(deferredCreate.promise)
+
+    const { result, queryClient } = renderHookWithProviders(() => useBeverageSection())
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    act(() => {
+      result.current.addItem({
+        id: "bev-menu",
+        type: "Wine",
+        newItem: { name: "Red Wine", includes: "House red", unitPriceCents: 900, pricingBasis: "per_person" },
+      })
+    })
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData<BeverageSectionPayload>(["beverageSection", "event-1"])
+      expect(cached?.items.find((item) => item.id === "bev-menu")).toMatchObject({
+        name: "Red Wine", includes: "House red", unitPriceCents: 900, pricingBasis: "per_person", quantity: null,
+      })
+    })
+    expect(createItemMock).toHaveBeenCalledWith({
+      id: "bev-menu", eventId: "event-1", type: "Wine",
+      name: "Red Wine", includes: "House red", unitPriceCents: 900, pricingBasis: "per_person",
+    })
+  })
+
   it("forwards serviceStyle and includes on item update", async () => {
     const getSectionMock = vi.mocked(beverageItemsIpc.getBeverageSectionWithItems)
     const updateItemMock = vi.mocked(beverageItemsIpc.updateBeverageItem)
