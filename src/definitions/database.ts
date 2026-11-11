@@ -399,3 +399,24 @@ export type BeverageTemplate = {
   createdAt: string
 }
 export type BeverageTemplateFields = Omit<BeverageTemplate, "id" | "createdAt">
+
+/** A category the team made up for saved food items ("Mains", "Wedding Menu", …). */
+export type FoodMenuCategory = {
+  id: string
+  name: string
+  createdAt: string
+}
+
+/** A saved food item (Settings → Food Menu) that can be copied into any food timeblock. */
+export type FoodTemplate = {
+  id: string
+  name: string
+  unitPriceCents: number | null
+  pricingBasis: PricingBasis
+  clientNotes: string | null
+  internalNotes: string | null
+  /** Tags from the venue's food menu categories; an item can sit in several. */
+  categoryIds: string[]
+  createdAt: string
+}
+export type FoodTemplateFields = Omit<FoodTemplate, "id" | "createdAt">

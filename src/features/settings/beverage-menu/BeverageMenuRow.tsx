@@ -1,20 +1,14 @@
-import { Info, Trash2 } from "lucide-react"
-
-import { Button } from "~/components/atoms/button"
 import {
   SECTION_TABLE_BODY_CELL_CLASS,
   SECTION_TABLE_BODY_ROW_CLASS,
 } from "~/components/event-detail/detail-sections/sections/tableStyles"
 import type { BeverageTemplate, BeverageTemplateFields, PricingBasis } from "~/definitions/database"
-import { PRICING_BASES } from "~/definitions/enums"
-import { PRICING_BASIS_LABELS } from "~/lib/beverageMenu/beverageMenu"
+import { ITER_PRICING_BASIS, PRICING_BASIS_LABELS } from "~/definitions/sections/section-constants"
 import { getRecordRenderKey } from "~/lib/data/optimisticIds"
 import { PlanningTimeblockItemNoteRow } from "~/features/event-detail/sections/food-beverage-workspaces/PlanningWorkspaceTimeblocks/PlanningTimeblockItemNoteRow"
 
-import { formatMenuPrice, parseMenuPrice } from "./beverageMenuPrice"
-
-const CELL_INPUT_CLASS =
-  "h-7 w-full min-w-0 border-0 border-b border-border bg-transparent px-1 text-xs focus:border-primary focus:outline-none"
+import { MenuRowActions } from "../components/MenuRowActions"
+import { formatMenuPrice, MENU_CELL_INPUT_CLASS as CELL_INPUT_CLASS, parseMenuPrice } from "../lib/menuPrice"
 
 type BeverageMenuRowProps = {
   template: BeverageTemplate
@@ -76,7 +70,7 @@ export const BeverageMenuRow: React.FC<BeverageMenuRowProps> = ({
             onChange={(e) => onUpdate({ pricingBasis: e.target.value as PricingBasis })}
             className={CELL_INPUT_CLASS}
           >
-            {PRICING_BASES.map((basis) => (
+            {ITER_PRICING_BASIS.map((basis) => (
               <option key={basis} value={basis}>
                 {PRICING_BASIS_LABELS[basis]}
               </option>
@@ -84,33 +78,13 @@ export const BeverageMenuRow: React.FC<BeverageMenuRowProps> = ({
           </select>
         </td>
         <td className={`${SECTION_TABLE_BODY_CELL_CLASS} text-right`}>
-          <div className="inline-flex items-center justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onToggleNotes}
-              aria-label={notesExpanded ? "Hide note" : "Show note"}
-              aria-pressed={notesExpanded}
-              className={`h-8 px-2 ${
-                notesExpanded || hasNotes
-                  ? "text-orange-600 hover:text-orange-700"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Info />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onRemove}
-              aria-label={`Delete ${label}`}
-              className="h-8 px-2 text-muted-foreground hover:text-destructive"
-            >
-              <Trash2 />
-            </Button>
-          </div>
+          <MenuRowActions
+            label={label}
+            hasNotes={hasNotes}
+            notesExpanded={notesExpanded}
+            onToggleNotes={onToggleNotes}
+            onRemove={onRemove}
+          />
         </td>
       </tr>
       {notesExpanded ? (

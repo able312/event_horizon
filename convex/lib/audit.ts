@@ -23,6 +23,8 @@ export const AUDITED_TABLES = [
   "foodItems",
   "beverageItems",
   "beverageTemplates",
+  "foodTemplates",
+  "foodMenuCategories",
   "contacts",
   "vendorCategories",
   "contactRoles",
@@ -41,6 +43,8 @@ export const STAMPED_UPDATED_AT_TABLES = [
   "foodItems",
   "beverageItems",
   "beverageTemplates",
+  "foodTemplates",
+  "foodMenuCategories",
   "vendorCategories",
   "contactRoles",
 ] as const satisfies readonly AuditedTable[]

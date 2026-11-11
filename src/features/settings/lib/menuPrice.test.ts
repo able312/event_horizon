@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { formatMenuPrice, parseMenuPrice } from "./beverageMenuPrice"
+import { formatMenuPrice, parseMenuPrice } from "./menuPrice"
 
 describe("parseMenuPrice", () => {
   it("reads dollars as cents, with or without a dollar sign", () => {

@@ -1,6 +1,7 @@
 import React, { useMemo } from "react"
 
 import type { BeverageItem, FoodItem, PricingBasis } from "~/definitions/database"
+import { ITER_PRICING_BASIS, PRICING_BASIS_LABELS } from "~/definitions/sections/section-constants"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import { getVisibleBeverageTypeSections } from "~/features/event-detail/sections/food-beverage-workspaces/beverage/beverageTypeSections"
 import { isAddOn } from "~/features/event-detail/workspace/lib/estimateAddOns"
@@ -40,11 +41,6 @@ type BillingItem = Pick<FoodItem, "id" | "name" | "quantity" | "unitPriceCents" 
 
 /** How a row counts toward the estimate, beyond its own pricing. */
 type RowStatus = "counted" | "add-on" | "in-add-on-timeblock" | "in-package-price" | "add-on-in-package-price"
-
-const PRICING_BASIS_OPTIONS: Array<{ value: PricingBasis; label: string }> = [
-  { value: "each", label: "Each" },
-  { value: "per_person", label: "Per person" },
-]
 
 const PLANNING_BILLING_CARD_CLASS = "rounded-xs border border-border bg-background p-3 shadow-sm"
 const PLANNING_BILLING_TABLE_CLASS = `${SECTION_TABLE_CLASS} table-fixed min-w-[700px]`
@@ -194,9 +190,9 @@ const EstimateBillingRow: React.FC<{
           className="h-7 w-full border-0 border-b border-border bg-transparent px-0.5 text-xs focus:border-primary focus:outline-none"
           aria-label={`${label} Pricing`}
         >
-          {PRICING_BASIS_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
+          {ITER_PRICING_BASIS.map((basis) => (
+            <option key={basis} value={basis}>
+              {PRICING_BASIS_LABELS[basis]}
             </option>
           ))}
         </select>

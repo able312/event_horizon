@@ -16,6 +16,10 @@ vi.mock("./beverage-menu/BeverageMenuSettings", () => ({
   BeverageMenuSettings: () => <div data-testid="beverage-menu-settings" />,
 }))
 
+vi.mock("./food-menu/FoodMenuSettings", () => ({
+  FoodMenuSettings: () => <div data-testid="food-menu-settings" />,
+}))
+
 function renderAt(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>

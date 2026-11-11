@@ -25,6 +25,8 @@ export interface PlanningWorkspaceTimeblockCardProps<TItem extends WorkspaceItem
   overviewNotePlaceholder?: string
   showOverviewNote?: boolean
   headerTail?: React.ReactNode
+  /** Replaces the header's plain add button (see FoodBevHeaderTail). */
+  addItemButton?: (timeblockId: string) => React.ReactNode
   disabled?: boolean
   updateTimeblock: (payload: { id: string; updates: UpdateTimeblock }) => void
   removeTimeblock: (id: string) => void
@@ -44,6 +46,7 @@ function PlanningWorkspaceTimeblockCard<TItem extends WorkspaceItemBase>({
   overviewNotePlaceholder = "Overview notes for this timeblock…",
   showOverviewNote = true,
   headerTail,
+  addItemButton,
   disabled = false,
   updateTimeblock,
   removeTimeblock,
@@ -74,6 +77,7 @@ function PlanningWorkspaceTimeblockCard<TItem extends WorkspaceItemBase>({
               disabled={disabled}
               deleteTimeblock={() => removeTimeblock(timeblock.id)}
               addItem={() => addItem({ timeblockId: timeblock.id })}
+              addItemButton={addItemButton?.(timeblock.id)}
             />
           )
         }

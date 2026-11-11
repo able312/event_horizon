@@ -10,6 +10,7 @@ import * as cart from "./cartDetails"
 import * as estimate from "./estimateDetails"
 import * as venue from "./venueSettings"
 import * as beverageTemplates from "./beverageTemplates"
+import * as foodTemplates from "./foodTemplates"
 import * as tournament from "./tournamentDetails"
 import * as contacts from "./contacts"
 import * as touchpoints from "./touchpoints"
@@ -75,6 +76,14 @@ const contracts: Contract[] = [
   { name: "beverageTemplates.create", kind: "mutation", call: () => beverageTemplates.createBeverageTemplate({ id: "client-1", name: "Gin", type: "Rails", unitPriceCents: 700, pricingBasis: "each", notes: null }), args: { name: "Gin", type: "Rails", unitPriceCents: 700, pricingBasis: "each", notes: null } },
   { name: "beverageTemplates.update", kind: "mutation", call: () => beverageTemplates.updateBeverageTemplate(id, { notes: "Neat", createdAt: "forged" } as Parameters<typeof beverageTemplates.updateBeverageTemplate>[1]), args: { id, updates: { notes: "Neat" } } },
   { name: "beverageTemplates.remove", kind: "mutation", call: () => beverageTemplates.deleteBeverageTemplate(id), args: { id } },
+  { name: "foodTemplates.list", kind: "source", call: () => foodTemplates.getFoodTemplates(), args: {} },
+  { name: "foodTemplates.create", kind: "mutation", call: () => foodTemplates.createFoodTemplate({ id: "client-2", name: "Sliders", unitPriceCents: 450, pricingBasis: "per_person", clientNotes: "Beef", internalNotes: null, categoryIds: ["cat-1"] }), args: { name: "Sliders", unitPriceCents: 450, pricingBasis: "per_person", clientNotes: "Beef", internalNotes: null, categoryIds: ["cat-1"] } },
+  { name: "foodTemplates.update", kind: "mutation", call: () => foodTemplates.updateFoodTemplate(id, { internalNotes: "GF", createdAt: "forged" } as Parameters<typeof foodTemplates.updateFoodTemplate>[1]), args: { id, updates: { internalNotes: "GF" } } },
+  { name: "foodTemplates.remove", kind: "mutation", call: () => foodTemplates.deleteFoodTemplate(id), args: { id } },
+  { name: "foodMenuCategories.list", kind: "source", call: () => foodTemplates.getFoodMenuCategories(), args: {} },
+  { name: "foodMenuCategories.create", kind: "mutation", call: () => foodTemplates.createFoodMenuCategory({ id: "client-3", name: "Mains" }), args: { name: "Mains" } },
+  { name: "foodMenuCategories.update", kind: "mutation", call: () => foodTemplates.updateFoodMenuCategory(id, { name: "Apps" }), args: { id, updates: { name: "Apps" } } },
+  { name: "foodMenuCategories.remove", kind: "mutation", call: () => foodTemplates.deleteFoodMenuCategory(id), args: { id } },
   { name: "venueSettings.get", kind: "source", call: () => venue.getVenueSettings(), args: {} },
   { name: "venueSettings.setDefaultEstimateTerms", kind: "mutation", call: () => venue.setDefaultEstimateTerms("Net 30"), args: { terms: "Net 30" } },
   { name: "venueSettings.setDefaultEstimateTerms", kind: "mutation", call: () => venue.setDefaultEstimateTerms(null), args: { terms: null } },

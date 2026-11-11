@@ -1,17 +1,18 @@
-import { useLayoutEffect, useRef, useState } from "react"
+import { useState } from "react"
 
 import RouteBlockingError from "~/components/atoms/route-blocking-error"
 import { Skeleton } from "~/components/atoms/skeleton"
 import type { BeverageItemType } from "~/definitions/database"
+import { BeverageAddItemButton } from "~/features/event-detail/sections/food-beverage-workspaces/beverage/BeverageAddItemButton"
 import { useBeverageTemplates } from "~/hooks/useBeverageTemplates"
+import { usePendingRowFocus } from "~/hooks/usePendingRowFocus"
 import { groupBeverageMenu } from "~/lib/beverageMenu/beverageMenu"
 
 import { SettingsSection } from "../components/SettingsSection"
-import { BeverageMenuAddButton } from "./BeverageMenuAddButton"
 import { BeverageMenuTypeTable } from "./BeverageMenuTypeTable"
 
-function focusTemplateNameInput(clientId: string): void {
-  document.querySelector<HTMLInputElement>(`[data-beverage-template-id="${clientId}"] [data-cell="name"]`)?.focus()
+function findTemplateNameInput(clientId: string): HTMLInputElement | null {
+  return document.querySelector<HTMLInputElement>(`[data-beverage-template-id="${clientId}"] [data-cell="name"]`)
 }
 
 /** Settings → Beverage Menu: the venue's saved beverages, ready to add to any event. */
@@ -19,19 +20,11 @@ export const BeverageMenuSettings: React.FC = () => {
   const { templates, isLoading, isError, isFetching, refetch, addTemplate, updateTemplate, removeTemplate } =
     useBeverageTemplates()
   const [expandedNoteIds, setExpandedNoteIds] = useState<ReadonlySet<string>>(() => new Set())
-  const pendingFocusIdRef = useRef<string | null>(null)
-
-  // Focus the name of a row just added, once it renders
-  useLayoutEffect(() => {
-    const pendingId = pendingFocusIdRef.current
-    if (!pendingId) return
-    focusTemplateNameInput(pendingId)
-    pendingFocusIdRef.current = null
-  }, [templates])
+  const focusNewTemplateName = usePendingRowFocus(findTemplateNameInput, templates)
 
   const handleAdd = (type: BeverageItemType) => {
     const id = crypto.randomUUID()
-    pendingFocusIdRef.current = id
+    focusNewTemplateName(id)
     addTemplate({ id, type })
   }
 
@@ -65,7 +58,7 @@ export const BeverageMenuSettings: React.FC = () => {
       description="Changes here apply to beverages added from now on. Events that already have an item keep their own copy."
     >
       <div className="flex justify-end">
-        <BeverageMenuAddButton onAdd={handleAdd} />
+        <BeverageAddItemButton onAddBlank={handleAdd} labelWithType />
       </div>
       <div className="space-y-4">
         {groupBeverageMenu(templates, { includeEmpty: true }).map((group) => (

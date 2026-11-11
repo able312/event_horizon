@@ -1,6 +1,7 @@
 import { v } from "convex/values"
 
 import { companyMutation, companyQuery } from "./lib/auth"
+import { assertMenuPrice } from "./lib/menuTemplates"
 import { assertUpdates, requireDocument, toRecord } from "./lib/records"
 import { beverageType, nullable, pricingBasis } from "./lib/validators"
 
@@ -17,13 +18,6 @@ const editableFields = {
   notes: v.optional(nullable(v.string())),
 }
 
-function assertPrice(unitPriceCents: number | null | undefined) {
-  if (unitPriceCents == null) return
-  if (!Number.isSafeInteger(unitPriceCents) || unitPriceCents < 0) {
-    throw new Error("Price must be a whole, non-negative number of cents")
-  }
-}
-
 /** Every saved beverage, oldest first; the client groups them by type. */
 export const list = companyQuery({
   args: {},
@@ -36,7 +30,7 @@ export const list = companyQuery({
 export const create = companyMutation({
   args: { ...editableFields, name: v.string(), type: beverageType },
   handler: async (ctx, values) => {
-    assertPrice(values.unitPriceCents)
+    assertMenuPrice(values.unitPriceCents)
     const id = await ctx.db.insert("beverageTemplates", {
       name: values.name,
       type: values.type,
@@ -53,7 +47,7 @@ export const update = companyMutation({
   args: { id: v.id("beverageTemplates"), updates: v.object(editableFields) },
   handler: async (ctx, { id, updates }) => {
     assertUpdates(updates)
-    assertPrice(updates.unitPriceCents)
+    assertMenuPrice(updates.unitPriceCents)
     await requireDocument(ctx, "beverageTemplates", id)
     await ctx.db.patch("beverageTemplates", id, updates)
     return toRecord(await requireDocument(ctx, "beverageTemplates", id))

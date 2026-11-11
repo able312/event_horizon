@@ -100,6 +100,12 @@ export const sources = {
   beverageTemplates: {
     list: () => liveSource(api.beverageTemplates.list, {}),
   },
+  foodTemplates: {
+    list: () => liveSource(api.foodTemplates.list, {}),
+  },
+  foodMenuCategories: {
+    list: () => liveSource(api.foodMenuCategories.list, {}),
+  },
   venueSettings: {
     get: () => liveSource(api.venueSettings.get, {}),
   },

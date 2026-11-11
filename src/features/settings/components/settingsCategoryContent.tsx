@@ -1,6 +1,7 @@
 import type { ComponentType } from "react"
 
 import { BeverageMenuSettings } from "../beverage-menu/BeverageMenuSettings"
+import { FoodMenuSettings } from "../food-menu/FoodMenuSettings"
 import { ProfileSettings } from "../profile/ProfileSettings"
 import type { SettingsCategoryId } from "../lib/settingsCategories"
 
@@ -8,4 +9,5 @@ import type { SettingsCategoryId } from "../lib/settingsCategories"
 export const SETTINGS_CATEGORY_CONTENT: Record<SettingsCategoryId, ComponentType> = {
   profile: ProfileSettings,
   "beverage-menu": BeverageMenuSettings,
+  "food-menu": FoodMenuSettings,
 }
