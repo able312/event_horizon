@@ -213,6 +213,42 @@ export default defineSchema({
     ...auditWithUpdatedAt,
   }).index("by_event", ["eventId"]),
 
+  // The venue's saved beverages (Settings → Beverage Menu). Adding one to an event copies its
+  // name, type, price, pricing basis and note into a new beverageItems row; the event's copy
+  // never changes when the saved one does. New table, so existing data needs no migration.
+  beverageTemplates: defineTable({
+    name: v.string(),
+    type: beverageType,
+    unitPriceCents: nullable(v.number()),
+    pricingBasis,
+    notes: nullable(v.string()),
+    createdAt: v.string(),
+    ...auditWithUpdatedAt,
+  }),
+
+  // The venue's saved food items (Settings → Food Menu). Adding one to a food timeblock copies
+  // its name, price, pricing basis and both notes into a new foodItems row; the event's copy
+  // never changes when the saved one does. `categoryIds` are tags from foodMenuCategories
+  // (an item can sit on several menus). New table, so existing data needs no migration.
+  foodTemplates: defineTable({
+    name: v.string(),
+    unitPriceCents: nullable(v.number()),
+    pricingBasis,
+    clientNotes: nullable(v.string()),
+    internalNotes: nullable(v.string()),
+    categoryIds: v.array(v.id("foodMenuCategories")),
+    createdAt: v.string(),
+    ...auditWithUpdatedAt,
+  }),
+
+  // Categories the team makes up for saved food items ("Mains", "Wedding Menu", …).
+  // Deleting one removes it from every saved item. New table, so no migration.
+  foodMenuCategories: defineTable({
+    name: v.string(),
+    createdAt: v.string(),
+    ...auditWithUpdatedAt,
+  }),
+
   beverageItemTimeblocks: defineTable({
     beverageItemId: v.id("beverageItems"),
     timeblockId: v.id("timeblocks"),

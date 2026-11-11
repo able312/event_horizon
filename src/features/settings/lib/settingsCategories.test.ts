@@ -15,6 +15,8 @@ describe("resolveSettingsCategory", () => {
 
   it("finds a category by its URL segment", () => {
     expect(resolveSettingsCategory("profile")?.label).toBe("Profile")
+    expect(resolveSettingsCategory("beverage-menu")?.label).toBe("Beverage Menu")
+    expect(resolveSettingsCategory("food-menu")?.label).toBe("Food Menu")
   })
 
   it("returns null for an unknown segment", () => {
@@ -25,8 +27,9 @@ describe("resolveSettingsCategory", () => {
 describe("groupSettingsCategories", () => {
   it("keeps group order and leaves out empty groups", () => {
     const groups = groupSettingsCategories()
-    expect(groups.map((group) => group.id)).toEqual(["personal"])
+    expect(groups.map((group) => group.id)).toEqual(["personal", "venue"])
     expect(groups[0].categories.map((category) => category.id)).toEqual(["profile"])
+    expect(groups[1].categories.map((category) => category.id)).toEqual(["beverage-menu", "food-menu"])
   })
 
   it("places categories under their group in list order", () => {

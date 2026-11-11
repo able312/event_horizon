@@ -4,6 +4,8 @@ import type { ContactRoleType } from "~/definitions/contacts"
 import type { EventSearchRequest } from "~/definitions/ipc"
 import type { TimeblockType } from "~/definitions/timeblocks/timeblocks-types"
 import * as beverageItemsApi from "./beverageItems"
+import * as beverageTemplatesApi from "./beverageTemplates"
+import * as foodTemplatesApi from "./foodTemplates"
 import * as cartDetailsApi from "./cartDetails"
 import * as contactRolesApi from "./contactRoles"
 import * as contactsApi from "./contacts"
@@ -440,6 +442,47 @@ export const venueSettingsQueries = {
     queryKey: venueSettingsKeys.get(),
     queryFn: () => venueSettingsApi.getVenueSettings(),
     ...liveMeta(sources.venueSettings.get()),
+  }),
+}
+
+// ============================================================================
+// Beverage menu (saved beverages)
+// ============================================================================
+
+export const beverageTemplateKeys = {
+  list: () => ["beverage-templates"] as const,
+}
+
+export const beverageTemplateQueries = {
+  /** Every saved beverage, oldest first, kept live. */
+  list: () => queryOptions({
+    queryKey: beverageTemplateKeys.list(),
+    queryFn: () => beverageTemplatesApi.getBeverageTemplates(),
+    ...liveMeta(sources.beverageTemplates.list()),
+  }),
+}
+
+// ============================================================================
+// Food menu (saved food items and their categories)
+// ============================================================================
+
+export const foodTemplateKeys = {
+  list: () => ["food-templates"] as const,
+  categories: () => ["food-menu-categories"] as const,
+}
+
+export const foodTemplateQueries = {
+  /** Every saved food item, oldest first, kept live. */
+  list: () => queryOptions({
+    queryKey: foodTemplateKeys.list(),
+    queryFn: () => foodTemplatesApi.getFoodTemplates(),
+    ...liveMeta(sources.foodTemplates.list()),
+  }),
+  /** The food menu's categories, oldest first, kept live. */
+  categories: () => queryOptions({
+    queryKey: foodTemplateKeys.categories(),
+    queryFn: () => foodTemplatesApi.getFoodMenuCategories(),
+    ...liveMeta(sources.foodMenuCategories.list()),
   }),
 }
 

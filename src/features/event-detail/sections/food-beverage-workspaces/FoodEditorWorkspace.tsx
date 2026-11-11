@@ -6,6 +6,7 @@ import { ITER_FOOD_SERVICE_STYLE } from "~/definitions/sections/section-constant
 import { useFoodSection } from "~/hooks/useFoodSection"
 import PlanningWorkspaceTimeblockCard from "~/features/event-detail/sections/food-beverage-workspaces/PlanningWorkspaceTimeblocks/PlanningWorkspaceTimeblockCard"
 import FoodBevHeaderTail from "~/features/event-detail/sections/food-beverage-workspaces/PlanningWorkspaceTimeblocks/FoodBevHeaderTail"
+import { FoodAddItemButton } from "~/features/event-detail/sections/food-beverage-workspaces/food/FoodAddItemButton"
 import TimeblockTypeConvertControl from "~/features/event-detail/sections/setup-notes-workspaces/TimeblockTypeConvertControl"
 
 interface FoodEditorWorkspaceProps {
@@ -70,6 +71,13 @@ const FoodEditorWorkspace: React.FC<FoodEditorWorkspaceProps> = ({
                 })
               }}
               addItem={() => addItem({ timeblockId: timeblock.id })}
+              addItemButton={
+                <FoodAddItemButton
+                  label="Add Item"
+                  disabled={isMutating}
+                  onAdd={(newItem) => addItem({ timeblockId: timeblock.id, newItem })}
+                />
+              }
             />
           </>
         }
