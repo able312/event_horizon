@@ -23,14 +23,17 @@ async function receiptFor(ctx: Pick<QueryCtx, "db">, userId: Id<"users">, notifi
     .unique()
 }
 
-/** The caller's notifications, newest first, without their own changes or the ones they dismissed. */
+/**
+ * The caller's notifications, newest first, without their own changes or the ones they
+ * dismissed. Scans until it has INBOX_LIMIT of those or runs out of retained ones, so a
+ * run of hidden notifications can't push older unread ones out of the Inbox and badge.
+ */
 async function inboxNotifications(ctx: Pick<QueryCtx, "db">, userId: Id<"users"> | null) {
-  const recent = await ctx.db.query("eventNotifications")
+  const recent = ctx.db.query("eventNotifications")
     .withIndex("by_updatedAt", q => q.gte("updatedAt", retentionCutoff()))
     .order("desc")
-    .take(INBOX_LIMIT * 2)
   const shown: Array<{ notification: Doc<"eventNotifications">; read: boolean }> = []
-  for (const notification of recent) {
+  for await (const notification of recent) {
     if (shown.length === INBOX_LIMIT) break
     if (notification.actorId === userId) continue
     const receipt = userId ? await receiptFor(ctx, userId, notification._id) : null

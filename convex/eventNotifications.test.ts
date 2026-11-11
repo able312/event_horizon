@@ -169,6 +169,37 @@ describe("event notifications", () => {
     expect(await t.run(ctx => ctx.db.query("eventNotificationReceipts").collect())).toEqual([])
   })
 
+  it("still shows older teammate updates behind many hidden notifications", async () => {
+    const { t, author, reader } = setup()
+    await author.mutation(api.events.create, { input: { title: "Older teammate event" } })
+    const [older] = await reader.query(api.eventNotifications.listForInbox, {})
+    await age(t, older!.id, 60)
+    // 250 newer notifications the reader never sees: their own changes and ones they dismissed
+    const eventId = older!.eventId
+    await t.run(async ctx => {
+      const at = new Date().toISOString()
+      const userId = async (workosUserId: string, email: string) =>
+        (await ctx.db.query("users").withIndex("by_workosUserId", q => q.eq("workosUserId", workosUserId)).unique())?._id
+          ?? await ctx.db.insert("users", { workosUserId, email, name: null, createdAt: at, updatedAt: at })
+      const readerId = await userId(companyIdentity.subject, companyIdentity.email)
+      const authorId = await userId(teammateIdentity.subject, teammateIdentity.email)
+      for (let i = 0; i < 250; i++) {
+        const own = i % 2 === 0
+        const id = await ctx.db.insert("eventNotifications", {
+          kind: "updated", eventId, eventTitle: `Hidden ${i}`, changes: [], actorId: own ? readerId : authorId, createdAt: at, updatedAt: at,
+        })
+        if (!own) await ctx.db.insert("eventNotificationReceipts", { notificationId: id, userId: readerId, state: "dismissed" })
+      }
+    })
+
+    const inbox = await reader.query(api.eventNotifications.listForInbox, {})
+    expect(inbox.map(n => n.eventTitle)).toEqual(["Older teammate event"])
+    expect(inbox[0]!.read).toBe(false)
+    // Mark all read reaches it too
+    await reader.mutation(api.eventNotifications.markAllRead, {})
+    expect((await reader.query(api.eventNotifications.listForInbox, {}))[0]!.read).toBe(true)
+  })
+
   it("requires a company account", async () => {
     const { t } = setup()
     await expect(t.query(api.eventNotifications.listForInbox, {})).rejects.toThrow("Sign in")
