@@ -34,6 +34,18 @@ describe("calendarSidePanelReducer", () => {
     expect(calendarSidePanelReducer(selected, { type: ACTIONS.OPEN_CALENDAR_VIEW }).selectedRequestId).toBeNull()
   })
 
+  it("opens one Inbox item at a time: a request or an event update", () => {
+    const update = calendarSidePanelReducer(initialCalendarSidePanelState, { type: ACTIONS.SELECT_NOTIFICATION, notificationId: "n-1" })
+    expect(update.selectedNotificationId).toBe("n-1")
+    const request = calendarSidePanelReducer(update, { type: ACTIONS.SELECT_REQUEST, requestId: "req-1" })
+    expect(request).toMatchObject({ selectedRequestId: "req-1", selectedNotificationId: null })
+    expect(calendarSidePanelReducer(request, { type: ACTIONS.SELECT_NOTIFICATION, notificationId: "n-2" })).toMatchObject({ selectedRequestId: null, selectedNotificationId: "n-2" })
+    // Clearing one selection leaves the other alone
+    expect(calendarSidePanelReducer(update, { type: ACTIONS.SELECT_REQUEST, requestId: null }).selectedNotificationId).toBe("n-1")
+    expect(calendarSidePanelReducer(update, { type: ACTIONS.TOGGLE_INBOX_VIEW }).selectedNotificationId).toBeNull()
+    expect(calendarSidePanelReducer(update, { type: ACTIONS.OPEN_CALENDAR_VIEW }).selectedNotificationId).toBeNull()
+  })
+
   it("ends a request review when leaving the Inbox, but keeps a plain create form", () => {
     const reviewing = calendarSidePanelReducer(initialCalendarSidePanelState, {
       type: ACTIONS.OPEN_REVIEW_REQUEST,

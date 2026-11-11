@@ -56,6 +56,15 @@ vi.mock("~/features/event-requests/hooks/useEventRequests", () => ({
   useEventRequests: () => ({ requests: pendingRequests, dismissRequest: dismissRequestMock }),
 }))
 
+vi.mock("~/features/event-notifications/hooks/useEventNotifications", () => ({
+  useEventNotifications: () => ({ notifications: [], markRead: vi.fn(), dismiss: vi.fn() }),
+}))
+const navigateMock = vi.fn()
+vi.mock("react-router", () => ({
+  useNavigate: () => navigateMock,
+  useLocation: () => ({ search: "?view=inbox" }),
+}))
+
 vi.mock("~/features/event-requests/components/RequestMiniCalendar", () => ({
   default: () => <div data-testid="request-mini-calendar" />,
 }))
@@ -332,7 +341,7 @@ describe("CalendarPageOrchestrator", () => {
 
     it("asks for a selection, and goes back to the calendar", () => {
       renderInbox()
-      expect(screen.getByText("Select a request to see what the client sent.")).toBeTruthy()
+      expect(screen.getByText("Select a request or an update to see the details.")).toBeTruthy()
       expect(screen.queryByRole("button", { name: "Review" })).toBeNull()
       expect(screen.queryByTestId("month-nav")).toBeNull()
 
@@ -368,7 +377,7 @@ describe("CalendarPageOrchestrator", () => {
 
     it("shows the Inbox over filters left in the URL, but shows results while searching", () => {
       renderInbox(true)
-      expect(screen.getByText("Select a request to see what the client sent.")).toBeTruthy()
+      expect(screen.getByText("Select a request or an update to see the details.")).toBeTruthy()
       expect(screen.queryByTestId("events-table-view")).toBeNull()
       cleanup()
 

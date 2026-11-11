@@ -1,9 +1,10 @@
 import { Search } from "lucide-react"
 import { useState, type ReactNode } from "react"
 
-import type { EventRequest } from "~/definitions/database"
+import type { EventNotification, EventRequest } from "~/definitions/database"
+import { InboxNotificationCard } from "~/features/inbox/components/InboxNotificationCard"
 import { InboxRequestCard } from "~/features/inbox/components/InboxRequestCard"
-import { filterInboxRequests } from "~/features/inbox/lib/inboxList"
+import { filterInboxNotifications, filterInboxRequests } from "~/features/inbox/lib/inboxList"
 import { InlineQueryError } from "~/features/contacts/components/InlineQueryError"
 
 type QueryStatus = { isLoading: boolean; isError: boolean; isFetching: boolean; refetch: () => Promise<unknown> }
@@ -13,21 +14,32 @@ type InboxPanelProps = {
   requestsQuery: QueryStatus
   selectedRequestId: string | null
   onSelectRequest: (request: EventRequest) => void
+  /** Teammates' event changes, newest first */
+  notifications: EventNotification[]
+  notificationsQuery: QueryStatus
+  selectedNotificationId: string | null
+  onSelectNotification: (notification: EventNotification) => void
+  onMarkAllNotificationsRead: () => void
 }
 
 type InboxSectionProps = {
   id: string
   title: string
   count: number
+  /** Shown at the right of the heading */
+  action?: ReactNode
   children: ReactNode
 }
 
-const InboxSection: React.FC<InboxSectionProps> = ({ id, title, count, children }) => (
+const InboxSection: React.FC<InboxSectionProps> = ({ id, title, count, action, children }) => (
   <section aria-labelledby={id} className="pb-2">
-    <h2 id={id} className="px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-stone-400">
-      {title}
-      {count > 0 ? ` (${count})` : ""}
-    </h2>
+    <div className="flex items-baseline justify-between gap-2 px-3 pt-3 pb-1">
+      <h2 id={id} className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">
+        {title}
+        {count > 0 ? ` (${count})` : ""}
+      </h2>
+      {action}
+    </div>
     {children}
   </section>
 )
@@ -36,15 +48,22 @@ const EmptyNote: React.FC<{ children: ReactNode }> = ({ children }) => (
   <p className="px-3 py-3 text-xs text-stone-500">{children}</p>
 )
 
-/** The Inbox sidebar: website requests waiting for review, with a search. */
+/** The Inbox sidebar: website requests waiting for review and teammates' event updates, with one search for both. */
 const InboxPanel: React.FC<InboxPanelProps> = ({
   requests,
   requestsQuery,
   selectedRequestId,
   onSelectRequest,
+  notifications,
+  notificationsQuery,
+  selectedNotificationId,
+  onSelectNotification,
+  onMarkAllNotificationsRead,
 }) => {
   const [query, setQuery] = useState("")
   const shownRequests = filterInboxRequests(requests, query)
+  const shownNotifications = filterInboxNotifications(notifications, query)
+  const unreadCount = notifications.filter((notification) => !notification.read).length
 
   return (
     <>
@@ -81,6 +100,43 @@ const InboxPanel: React.FC<InboxPanelProps> = ({
                 request={request}
                 selected={request.id === selectedRequestId}
                 onSelect={onSelectRequest}
+              />
+            ))}
+          </ul>
+        )}
+      </InboxSection>
+
+      <InboxSection
+        id="inbox-updates-heading"
+        title={unreadCount > 0 ? `Updates · ${unreadCount} new` : "Updates"}
+        count={0}
+        action={unreadCount > 0 ? (
+          <button
+            type="button"
+            onClick={onMarkAllNotificationsRead}
+            className="text-[11px] text-stone-400 transition-colors hover:text-stone-100"
+          >
+            Mark all read
+          </button>
+        ) : null}
+      >
+        {notificationsQuery.isError ? (
+          <InlineQueryError
+            message="Could not load event updates."
+            onRetry={() => void notificationsQuery.refetch()}
+            isRetrying={notificationsQuery.isFetching}
+            className="mx-3 my-1"
+          />
+        ) : notificationsQuery.isLoading ? null : shownNotifications.length === 0 ? (
+          <EmptyNote>{query.trim() ? "No matches." : "No updates from your team."}</EmptyNote>
+        ) : (
+          <ul className="divide-y divide-white/10">
+            {shownNotifications.map((notification) => (
+              <InboxNotificationCard
+                key={notification.id}
+                notification={notification}
+                selected={notification.id === selectedNotificationId}
+                onSelect={onSelectNotification}
               />
             ))}
           </ul>

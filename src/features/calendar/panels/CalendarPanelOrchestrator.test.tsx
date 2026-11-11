@@ -58,6 +58,10 @@ vi.mock("~/features/event-requests/hooks/useEventRequests", () => ({
   useEventRequests: () => ({ requests: [], requestsQuery: {} }),
 }))
 
+vi.mock("~/features/event-notifications/hooks/useEventNotifications", () => ({
+  useEventNotifications: () => ({ notifications: [], notificationsQuery: {}, unreadCount: 0, markAllRead: vi.fn() }),
+}))
+
 
 
 vi.mock("../state/useCalendarPanelState", () => ({

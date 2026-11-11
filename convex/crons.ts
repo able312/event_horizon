@@ -11,4 +11,11 @@ crons.weekly(
   internal.holidays.refresh,
 )
 
+// Inbox updates older than the retention window (src/lib/events/eventChangeNotifications.ts)
+crons.daily(
+  "prune old event notifications",
+  { hourUTC: 8, minuteUTC: 0 },
+  internal.eventNotifications.pruneOld,
+)
+
 export default crons

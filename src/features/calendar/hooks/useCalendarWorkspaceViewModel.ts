@@ -12,6 +12,7 @@ import { useHotkey } from "~/lib/hotKeys"
 import type { UseCalendarSearchControllerReturn } from "./useCalendarSearchController"
 import { ACTIONS } from "../state/calendarSidePanelReducer"
 import { useCalendarPanelState } from "../state/useCalendarPanelState"
+import { inboxReturnPath } from "../lib/inboxReturnPath"
 
 export function useCalendarWorkspaceViewModel(
   queryState: UseEventsQueryStateReturn,
@@ -81,12 +82,8 @@ export function useCalendarWorkspaceViewModel(
     async (event: NewEvent, client: AssignContactTarget | null) => {
       if (!ui.reviewingRequest || !client) return
       const createdEvent = await acceptRequest(ui.reviewingRequest.id, event, client)
-      const inboxParams = new URLSearchParams(location.search)
-      inboxParams.set("view", "inbox")
-      inboxParams.delete("search")
-      const returnTo = `/events?${inboxParams.toString()}`
       dispatch({ type: ACTIONS.SELECT_REQUEST, requestId: null })
-      navigate(buildEventDetailEntryPath(createdEvent.id, returnTo))
+      navigate(buildEventDetailEntryPath(createdEvent.id, inboxReturnPath(location.search)))
     },
     [acceptRequest, dispatch, location.search, navigate, ui.reviewingRequest],
   )

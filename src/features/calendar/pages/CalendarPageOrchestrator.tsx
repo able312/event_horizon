@@ -16,6 +16,9 @@ import type { Event } from "~/definitions/database"
 import { useCalendarPanelState } from "../state/useCalendarPanelState"
 import InboxBody from "~/features/inbox/InboxBody"
 import type { UseCalendarSearchControllerReturn } from "../hooks/useCalendarSearchController"
+import { useLocation, useNavigate } from "react-router"
+import { buildEventDetailEntryPath } from "~/features/event-detail/workspace/lib/eventDetailRouteState"
+import { inboxReturnPath } from "../lib/inboxReturnPath"
 
 
 interface CalendarPageOrchastratorProps {
@@ -35,6 +38,8 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
     const { state, setDate } = queryState
     const { isLoading } = eventsHook
     const { dispatch, ui } = useCalendarPanelState()
+    const navigate = useNavigate()
+    const location = useLocation()
     const { searchQuery } = searchController
     const { result: searchResult, isFetching: isSearchFetching, enabled: isSearchEnabled, invalidDateRange } = searchQuery
     const hasSearchQuery = Boolean(state.search && state.search.length > 0)
@@ -71,10 +76,13 @@ const CalendarPageOrchastrator: React.FC<CalendarPageOrchastratorProps> = ({
             {bodyView === "inbox" ? (
                 <InboxBody
                     selectedRequestId={ui.selectedRequestId}
+                    selectedNotificationId={ui.selectedNotificationId}
                     reviewingRequestId={ui.sidebarMode === "create" ? ui.reviewingRequest?.id ?? null : null}
                     onBack={() => dispatch({ type: "OPEN_CALENDAR_VIEW" })}
                     onReviewRequest={(request) => dispatch({ type: "OPEN_REVIEW_REQUEST", request })}
                     onDismissRequest={handleDismissRequest}
+                    onDismissNotification={() => dispatch({ type: "SELECT_NOTIFICATION", notificationId: null })}
+                    onOpenEvent={(eventId) => navigate(buildEventDetailEntryPath(eventId, inboxReturnPath(location.search)))}
                 />
             ) : (
                 <Body.Header>

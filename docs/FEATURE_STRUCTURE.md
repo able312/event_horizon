@@ -14,13 +14,25 @@ The page and panel orchestrators connect the Inbox to workspace navigation and t
 
 `src/features/inbox/` owns the Inbox experience:
 
-- `InboxBody.tsx`: selected content and actions, with callbacks for workspace navigation and review forms.
-- `components/`: sidebar search, request cards and body header.
-- `lib/inboxList.ts`: Inbox search and received-date formatting.
+- `InboxBody.tsx`: selected content and actions (a request or an event update; one at a time), with callbacks for workspace navigation and review forms.
+- `components/`: sidebar search, request and update cards, and body header.
+- `lib/inboxList.ts`: Inbox search for both item types and received-date formatting.
+- `hooks/useInboxDesktopAlerts.ts`: mounted once by `App`; runs each item type's desktop alerts and keeps the dock badge at pending requests plus unread updates.
 
-Inbox components receive selection and navigation callbacks instead of importing calendar panel state. Request-specific details and mutations come from `event-requests`.
+Inbox components receive selection and navigation callbacks instead of importing calendar panel state. Request-specific details and mutations come from `event-requests`; update-specific ones from `event-notifications`.
 
-To add another Inbox item type, compose its list section, selected content and actions here. Keep the new type's domain behavior in its own feature. The current Inbox only handles event requests; there is no generic notification model or registry yet.
+To add another Inbox item type, compose its list section, selected content and actions here, and add its alerts and badge count to `useInboxDesktopAlerts`. Keep the new type's domain behavior in its own feature.
+
+## Event notifications
+
+`src/features/event-notifications/` owns the Inbox's "Updates": teammates adding, deleting, or changing the name, date, type or status of an event.
+
+- `hooks/useEventNotifications.ts`: the signed-in user's updates, with optimistic read, mark all read, and dismiss with Undo.
+- `hooks/useEventNotificationAlerts.ts`: one desktop alert per batch of new unread updates; updates there at startup stay silent.
+- `lib/eventNotificationText.ts`: card summaries ("Moved to …", "Status → Confirmed") and the body's before/after rows.
+- `components/EventNotificationDetailView.tsx`: the selected update in the Inbox body.
+
+Which fields notify, and how one person's quick follow-up edits fold into their earlier notification, live in `src/lib/events/eventChangeNotifications.ts`, shared with Convex.
 
 ## Event requests
 
@@ -28,10 +40,9 @@ To add another Inbox item type, compose its list section, selected content and a
 
 - `components/`: request details and the requested-date availability calendar.
 - `hooks/useEventRequests.ts`: pending requests, acceptance, optimistic dismissal and Undo.
-- `hooks/useEventRequestNotifications.ts`: desktop alerts and pending-request badge updates; mounted once by `App` across routes.
+- `hooks/useEventRequestNotifications.ts`: desktop alerts for new requests; mounted through `useInboxDesktopAlerts`. Startup and repeat alerts are suppressed by `src/lib/notifications/newIdDetection.ts`, shared with event updates.
 - `lib/eventRequestPrefill.ts`: request presentation and conversion into create-form values.
 - `lib/requestCalendar.ts`: requested dates and booking rules.
-- `lib/newRequestDetection.ts`: session tracking that suppresses startup and repeat alerts.
 
 The availability calendar reuses calendar day markers, tooltips, date grouping and adjacent-month queries. The prefill adapter uses the create form's input type from `calendar/forms/createEventPrefill.ts`, a type-only module, so it does not depend on the form component. These are explicit dependencies on existing calendar functionality.
 

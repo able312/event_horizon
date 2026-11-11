@@ -3,6 +3,7 @@ import { getFunctionName } from "convex/server"
 import * as backend from "./backend"
 import * as events from "./events"
 import * as eventRequests from "./eventRequests"
+import * as eventNotifications from "./eventNotifications"
 import * as timeblocks from "./timeblocks"
 import * as beverage from "./beverageItems"
 import * as food from "./foodItems"
@@ -128,6 +129,7 @@ const contracts: Contract[] = [
   { name: "eventContacts.resolveRecipients", kind: "query", call: () => assignments.resolveEventRecipients(eventId, { eventContactIds: [id] }), args: { eventId, selection: { eventContactIds: [id] } } },
   { name: "contactRoles.listForContact", kind: "source", call: () => roles.getContactRoles(id), args: { contactId: id } },
   { name: "contactRoles.ensure", kind: "mutation", call: () => roles.ensureContactRole(id, "client"), args: { contactId: id, role: "client", vendorCategoryId: null } },
+  { name: "eventNotifications.listForInbox", kind: "source", call: () => eventNotifications.getInboxEventNotifications(), args: {} },
   { name: "users.list", kind: "source", call: () => users.getUsers(), args: {} },
   { name: "users.current", kind: "source", call: () => users.getCurrentUser(), args: {} },
   { name: "users.updateName", kind: "mutation", call: () => users.updateCurrentUserName("Sammy"), args: { name: "Sammy" } },
@@ -153,6 +155,10 @@ const contracts: Contract[] = [
     ["contacts.archive", () => contacts.archiveContact(id), { id }],
     ["eventRequests.dismiss", () => eventRequests.dismissEventRequest(id), { id }],
     ["eventRequests.restore", () => eventRequests.restoreEventRequest(id), { id }],
+    ["eventNotifications.markRead", () => eventNotifications.markEventNotificationRead(id), { id }],
+    ["eventNotifications.markAllRead", () => eventNotifications.markAllEventNotificationsRead(), {}],
+    ["eventNotifications.dismiss", () => eventNotifications.dismissEventNotification(id), { id }],
+    ["eventNotifications.restore", () => eventNotifications.restoreEventNotification(id), { id }],
     ["contacts.restore", () => contacts.restoreContact(id), { id }],
     ["contacts.remove", () => contacts.deleteContact(id), { id }],
     ["vendorCategories.archive", () => categories.archiveVendorCategory(id), { id }],

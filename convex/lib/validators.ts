@@ -17,6 +17,7 @@ import {
   START_FORMATS,
   TIMEBLOCK_SECTION_TYPES,
 } from "../../src/definitions/enums"
+import { EVENT_NOTIFICATION_KINDS, NOTIFIED_EVENT_FIELDS } from "../../src/lib/events/eventChangeNotifications"
 
 /** A validator accepting exactly the given string values. */
 function literalUnion<T extends string>(values: readonly [T, T, ...T[]]): Validator<T, "required", never> {
@@ -56,4 +57,13 @@ export const holidayEntry = v.object({
   title: v.string(),
   startDate: v.string(),
   endDate: v.string(),
+})
+
+export const eventNotificationKind = literalUnion(EVENT_NOTIFICATION_KINDS)
+export const notifiedEventField = literalUnion(NOTIFIED_EVENT_FIELDS)
+/** One changed event field (src/lib/events/eventChangeNotifications.ts). */
+export const eventFieldChange = v.object({
+  field: notifiedEventField,
+  from: nullable(v.string()),
+  to: nullable(v.string()),
 })

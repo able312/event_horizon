@@ -1,8 +1,9 @@
 import { ConvexError, v, type Infer } from "convex/values"
-import { companyMutation, companyQuery } from "./lib/auth"
+import { companyMutation, companyQuery, type CompanyMutationCtx } from "./lib/auth"
 import type { MutationCtx } from "./_generated/server"
 import { contactFields } from "./lib/contactValidators"
 import { assignContact, contactOperation } from "./lib/contactOperations"
+import { notifyEventCreated, notifyEventDeleted, notifyEventUpdated } from "./lib/eventNotifications"
 import { assertUpdates, requireDocument, toRecord } from "./lib/records"
 import { eventStatus, eventType, nullable, timeZone } from "./lib/validators"
 import { addUndatedEventTouchpoint } from "./touchpoints"
@@ -19,7 +20,8 @@ const fields = {
   clientNotes: v.optional(nullable(v.string())), internalNotes: v.optional(nullable(v.string())), isInternal: v.optional(nullable(v.number())),
 }
 type EventInput = Partial<Omit<import("./_generated/dataModel").Doc<"events">, "_id" | "_creationTime" | "createdAt" | "updatedAt">>
-async function insertEvent(ctx: MutationCtx, data: EventInput, createdAt = Date.now().toString()) {
+// Every new event notifies the team, including imported and accepted ones.
+async function insertEvent(ctx: CompanyMutationCtx, data: EventInput, createdAt = Date.now().toString()) {
   const startDateTime = data.startDateTime ?? null, endDateTime = data.endDateTime ?? null
   assertValidEventDateRange(startDateTime, endDateTime)
   assertStatusAllowedForDate(data.status ?? "new_lead", startDateTime)
@@ -29,7 +31,9 @@ async function insertEvent(ctx: MutationCtx, data: EventInput, createdAt = Date.
     driveFolderId: data.driveFolderId ?? null, calendarId: data.calendarId ?? null, clientNotes: data.clientNotes ?? null,
     internalNotes: data.internalNotes ?? null, isInternal: data.isInternal ?? 0, createdAt, updatedAt: null,
   })
-  return toRecord(await requireDocument(ctx, "events", id))
+  const event = toRecord(await requireDocument(ctx, "events", id))
+  await notifyEventCreated(ctx, event)
+  return event
 }
 function range(startFrom: string, startTo: string) {
   if (!startFrom || !startTo || Number.isNaN(Date.parse(startFrom)) || Number.isNaN(Date.parse(startTo)) || startFrom >= startTo) throw new Error("Invalid event start range")
@@ -67,7 +71,7 @@ export const eventClient = v.optional(nullable(primaryClient))
  * Creates an event and its primary client, plus a reminder touchpoint when it has no date.
  * Shared with accepting a website request (eventRequests.ts).
  */
-export async function createEventWithClient(ctx: MutationCtx, input: Infer<typeof eventInput>, client: Infer<typeof eventClient>, timeZone?: string) {
+export async function createEventWithClient(ctx: CompanyMutationCtx, input: Infer<typeof eventInput>, client: Infer<typeof eventClient>, timeZone?: string) {
   const event = await insertEvent(ctx, input)
   if (needsUndatedEventTouchpoint(null, event)) await addUndatedEventTouchpoint(ctx, event.id, timeZone)
   if (client) {
@@ -90,6 +94,7 @@ export const update = companyMutation({ args: { id: v.id("events"), updates: v.o
   await ctx.db.patch("events", id, { ...updates, updatedAt: Date.now().toString() })
   const updated = await requireDocument(ctx, "events", id)
   if (needsUndatedEventTouchpoint(current, updated)) await addUndatedEventTouchpoint(ctx, id, timeZone)
+  await notifyEventUpdated(ctx, toRecord(current), toRecord(updated))
   return toRecord(updated)
 } })
 export const importFromCalendar = companyMutation({ args: { rows: v.array(v.object({ calendarId: v.string(), title: v.string(), startDateTime: v.string(), endDateTime: v.string(), internalNotes: nullable(v.string()) })) }, handler: async (ctx, { rows }) => {
@@ -125,6 +130,7 @@ export const remove = companyMutation({ args: { id: v.id("events"), expectedCale
     for (const row of await ctx.db.query(table).withIndex("by_event", q => q.eq("eventId", id)).collect()) await ctx.db.delete(table, row._id)
   }
   await ctx.db.delete("events", id)
+  await notifyEventDeleted(ctx, toRecord(event))
   return true
 } })
 

@@ -14,6 +14,7 @@ import EditEventSidebarForm from "~/features/calendar/forms/EditEventSidebarForm
 import type { UseCalendarSearchControllerReturn } from "../hooks/useCalendarSearchController"
 import { useCalendarWorkspaceViewModel } from "../hooks/useCalendarWorkspaceViewModel"
 import { useEventRequests } from "~/features/event-requests/hooks/useEventRequests"
+import { useEventNotifications } from "~/features/event-notifications/hooks/useEventNotifications"
 import { eventRequestToPrefill } from "~/features/event-requests/lib/eventRequestPrefill"
 import InboxPanel from "~/features/inbox/components/InboxPanel"
 
@@ -33,6 +34,7 @@ const CalendarPanelOrchastrator: React.FC<CalendarPanelOrchastratorProps> = ({
     const { ui, dispatch } = useCalendarPanelState()
     const workspaceVm = useCalendarWorkspaceViewModel(queryState, eventsHook, searchController)
     const { requests, requestsQuery } = useEventRequests()
+    const { notifications, notificationsQuery, unreadCount, markAllRead } = useEventNotifications()
     const isInbox = ui.bodyMode === "inbox"
     const reviewPrefill = useMemo(
         () => ui.reviewingRequest ? eventRequestToPrefill(ui.reviewingRequest) : undefined,
@@ -54,7 +56,7 @@ const CalendarPanelOrchastrator: React.FC<CalendarPanelOrchastratorProps> = ({
                         onOpenCreate={ workspaceVm.panelActions.openCreatePanel }
                         onToggleInbox={workspaceVm.panelActions.toggleInboxView}
                         isInboxActive={isInbox}
-                        pendingRequestsCount={requests.length}
+                        inboxCount={requests.length + unreadCount}
                     />
                 </Panel.Header>
 
@@ -65,6 +67,11 @@ const CalendarPanelOrchastrator: React.FC<CalendarPanelOrchastratorProps> = ({
                             requestsQuery={requestsQuery}
                             selectedRequestId={ui.selectedRequestId}
                             onSelectRequest={(request) => dispatch({ type: ACTIONS.SELECT_REQUEST, requestId: request.id })}
+                            notifications={notifications}
+                            notificationsQuery={notificationsQuery}
+                            selectedNotificationId={ui.selectedNotificationId}
+                            onSelectNotification={(notification) => dispatch({ type: ACTIONS.SELECT_NOTIFICATION, notificationId: notification.id })}
+                            onMarkAllNotificationsRead={markAllRead}
                         />
                     ) : (
                         <CalendarDefaultPanel 
