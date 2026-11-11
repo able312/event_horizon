@@ -9,8 +9,8 @@ interface CalendarDefaultHeaderProps {
   onOpenCreate: () => void
   onToggleInbox: () => void
   isInboxActive?: boolean
-  /** Website requests waiting for review */
-  pendingRequestsCount?: number
+  /** Website requests waiting for review plus unread event updates */
+  inboxCount?: number
 }
 
 interface HeaderIconButtonProps {
@@ -58,7 +58,7 @@ const CalendarDefaultPanelHeader: React.FC<CalendarDefaultHeaderProps> = ({
   onOpenCreate,
   onToggleInbox,
   isInboxActive = false,
-  pendingRequestsCount = 0,
+  inboxCount = 0,
 }) => {
   const navigate = useNavigate()
   const modifier = modifierKeyLabel()
@@ -92,9 +92,9 @@ const CalendarDefaultPanelHeader: React.FC<CalendarDefaultHeaderProps> = ({
       >
         {/* Smaller icon so the count sits beside it at a readable size */}
         <Inbox className="size-4" />
-        {pendingRequestsCount > 0 ? (
+        {inboxCount > 0 ? (
           <span aria-hidden="true" className="text-xs font-semibold tabular-nums leading-none">
-            {pendingRequestsCount > 99 ? "99+" : pendingRequestsCount}
+            {inboxCount > 99 ? "99+" : inboxCount}
           </span>
         ) : null}
       </HeaderIconButton>

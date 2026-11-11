@@ -24,7 +24,7 @@ vi.mock("electron", () => ({
   },
 }))
 vi.mock("../services/authPlatform.js", () => ({ focusApp: mocks.focus }))
-import { registerEventRequestNotificationHandlers } from "./eventRequestNotificationHandler"
+import { eventUpdatesNotificationText, registerEventRequestNotificationHandlers } from "./eventRequestNotificationHandler"
 
 const rendererUrl = "http://localhost:42069/"
 function event(url = rendererUrl, topLevel = true) {
@@ -73,8 +73,24 @@ describe("event request notification IPC", () => {
       expect(() => count(event(), value)).toThrow("Invalid pending")
     }
     expect(() => count(event(), 1, 2)).toThrow("Invalid pending")
+    const updates = handler("event-notifications:notify-updates")
+    for (const value of [0, -1, 1.5, NaN, "2", null, { title: "spoofed" }]) {
+      expect(() => updates(event(), value)).toThrow("Invalid notification")
+    }
+    expect(() => updates(event(), 1, "arbitrary body")).toThrow("Invalid notification")
+    expect(() => updates(event("https://example.com/"), 1)).toThrow("Invalid notification")
     expect(mocks.show).not.toHaveBeenCalled()
     expect(mocks.badge).not.toHaveBeenCalled()
+  })
+  it("alerts for event updates with main-process wording, and opens the Inbox on click", () => {
+    registerEventRequestNotificationHandlers(rendererUrl, "darwin")
+    handler("event-notifications:notify-updates")(event(), 3)
+    expect(mocks.show).toHaveBeenCalledOnce()
+    const click = mocks.notificationOn.mock.calls.find(call => call[0] === "click")![1] as () => void
+    click()
+    expect(mocks.window.webContents.send).toHaveBeenCalledWith("navigate", "/events?view=inbox")
+    expect(eventUpdatesNotificationText(1).title).toBe("Event updated")
+    expect(eventUpdatesNotificationText(3).title).toBe("3 event updates")
   })
   it("updates and clears the macOS badge and unregisters handlers", () => {
     const cleanup = registerEventRequestNotificationHandlers(rendererUrl, "darwin")
@@ -83,7 +99,7 @@ describe("event request notification IPC", () => {
     handler("event-requests:set-pending-count")(event(), 0)
     expect(mocks.badge).toHaveBeenLastCalledWith("")
     cleanup()
-    expect(mocks.removeHandler).toHaveBeenCalledTimes(2)
+    expect(mocks.removeHandler).toHaveBeenCalledTimes(3)
     expect(mocks.off).toHaveBeenCalledWith("browser-window-focus", expect.any(Function))
     expect(mocks.off).toHaveBeenCalledWith("window-all-closed", expect.any(Function))
   })

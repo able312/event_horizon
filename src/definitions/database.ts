@@ -13,6 +13,7 @@ import type {
   START_FORMATS,
   TIMEBLOCK_SECTION_TYPES,
 } from "./enums.js"
+import type { EventFieldChange, EventNotificationKind } from "../lib/events/eventChangeNotifications.js"
 
 // Record shapes shared by the UI and the data layer. They are written out by hand
 // so they don't depend on a storage backend; the typed functions in src/lib/data
@@ -143,6 +144,30 @@ export type EventRequest = {
   eventId: string | null
   reviewedBy: string | null
   reviewedAt: string | null
+}
+
+// ============================================================================
+// Event notifications (Inbox "Updates")
+// ============================================================================
+
+/** A teammate added, changed or deleted an event. Read state is the signed-in user's own. */
+export type EventNotification = {
+  id: string
+  kind: EventNotificationKind
+  eventId: string
+  /** The event's name when the notification was last updated */
+  eventTitle: string
+  /** False once the event is deleted, so the Inbox doesn't offer to open it */
+  eventExists: boolean
+  /** For a new or deleted event, its details (from: null); for an update, what changed */
+  changes: EventFieldChange[]
+  /** Who made the change; null if their account is gone */
+  actorName: string | null
+  /** ISO datetime of the first change */
+  createdAt: string
+  /** ISO datetime of the latest change folded in */
+  updatedAt: string
+  read: boolean
 }
 
 // ============================================================================

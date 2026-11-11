@@ -9,6 +9,7 @@ import * as contactRolesApi from "./contactRoles"
 import * as contactsApi from "./contacts"
 import * as estimateDetailsApi from "./estimateDetails"
 import * as eventContactsApi from "./eventContacts"
+import * as eventNotificationsApi from "./eventNotifications"
 import * as eventRequestsApi from "./eventRequests"
 import * as eventsApi from "./events"
 import * as foodItemsApi from "./foodItems"
@@ -99,6 +100,22 @@ export const eventRequestQueries = {
     queryKey: eventRequestKeys.pending(),
     queryFn: () => eventRequestsApi.getPendingEventRequests(),
     ...liveMeta(sources.eventRequests.pending()),
+  }),
+}
+
+// ============================================================================
+// Event notifications (Inbox "Updates"; read state is the signed-in user's own)
+// ============================================================================
+
+export const eventNotificationKeys = {
+  inbox: () => ["eventNotifications", "inbox"] as const,
+}
+
+export const eventNotificationQueries = {
+  inbox: () => queryOptions({
+    queryKey: eventNotificationKeys.inbox(),
+    queryFn: () => eventNotificationsApi.getInboxEventNotifications(),
+    ...liveMeta(sources.eventNotifications.inbox()),
   }),
 }
 

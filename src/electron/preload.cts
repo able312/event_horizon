@@ -27,6 +27,7 @@ const authApi: AuthApi = {
 
 const eventRequestNotifications: EventRequestNotificationsApi = {
   notifyNewEventRequest: () => ipcRenderer.invoke("event-requests:notify-new"),
+  notifyEventUpdates: count => ipcRenderer.invoke("event-notifications:notify-updates", count),
   setPendingCount: count => ipcRenderer.invoke("event-requests:set-pending-count", count),
 }
 

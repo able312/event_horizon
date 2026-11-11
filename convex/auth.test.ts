@@ -39,7 +39,7 @@ async function registeredFunctions(): Promise<[string, RegisteredFunction][]> {
  * Internal functions: run through the Convex CLI with admin access (the seed and
  * the one-off undated touchpoint backfill), by the
  * secret-checked HTTP route in http.ts (website event requests), by the
- * holiday cron (crons.ts), or by googleCalendar.pushEvent / removeEvent /
+ * holiday and notification-pruning crons (crons.ts), or by googleCalendar.pushEvent / removeEvent /
  * updateEvent once they have checked the caller (recordPush and recordRemoval
  * check again, as companyInternalMutations, so their writes are stamped with
  * that caller).
@@ -48,6 +48,7 @@ const INTERNAL_FUNCTIONS = new Set([
   "./beverageItems.ts:backfillAddOn",
   "./beverageItems.ts:backfillPricingBasis",
   "./developmentSeed.ts:seed",
+  "./eventNotifications.ts:pruneOld",
   "./eventRequests.ts:receive",
   "./foodItems.ts:backfillAddOn",
   "./foodItems.ts:backfillPricingBasis",

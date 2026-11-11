@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 
-import type { EventRequest } from "~/definitions/database"
+import type { EventNotification, EventRequest } from "~/definitions/database"
 
-import { filterInboxRequests, formatReceivedAt } from "./inboxList"
+import { filterInboxNotifications, filterInboxRequests, formatReceivedAt } from "./inboxList"
 
 function request(overrides: Partial<EventRequest>): EventRequest {
   return {
@@ -49,5 +49,22 @@ describe("formatReceivedAt", () => {
 
   it("is blank for a bad timestamp", () => {
     expect(formatReceivedAt("not a date", now)).toBe("")
+  })
+})
+
+describe("filterInboxNotifications", () => {
+  const base: EventNotification = {
+    id: "n1", kind: "updated", eventId: "e1", eventTitle: "Smith Wedding", eventExists: true,
+    changes: [{ field: "status", from: "tentative", to: "confirmed" }], actorName: "Tess Mate",
+    createdAt: "2026-11-10T15:00:00.000Z", updatedAt: "2026-11-10T15:00:00.000Z", read: false,
+  }
+  const deleted: EventNotification = { ...base, id: "n2", kind: "deleted", eventTitle: "Golf Day", changes: [], actorName: "Sam" }
+
+  it("matches the event name, author, kind and what changed", () => {
+    expect(filterInboxNotifications([base, deleted], "")).toEqual([base, deleted])
+    expect(filterInboxNotifications([base, deleted], "smith")).toEqual([base])
+    expect(filterInboxNotifications([base, deleted], "tess")).toEqual([base])
+    expect(filterInboxNotifications([base, deleted], "deleted")).toEqual([deleted])
+    expect(filterInboxNotifications([base, deleted], "confirmed")).toEqual([base])
   })
 })

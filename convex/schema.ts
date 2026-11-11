@@ -10,6 +10,8 @@ import {
   contactKind,
   contactRoleType,
   depositKind,
+  eventFieldChange,
+  eventNotificationKind,
   eventRequestStatus,
   eventStatus,
   eventType,
@@ -320,6 +322,37 @@ export default defineSchema({
     .index("by_responseId", ["responseId"])
     // Inbox: pending requests
     .index("by_status", ["status", "submittedAt"]),
+
+  // Team notifications about events: one is added when someone adds an event, deletes
+  // one, or changes its name, date, type or status (lib/eventNotifications.ts, called
+  // from events.ts). The author's quick follow-up edits update their notification
+  // instead of adding more. Not audited: actorId records who made the change. Kept
+  // for 30 days (crons.ts). New tables, so no data migration was needed.
+  eventNotifications: defineTable({
+    kind: eventNotificationKind,
+    /** May point at a deleted event; the Inbox only offers to open events that still exist. */
+    eventId: v.id("events"),
+    /** The event's name when the notification was last updated, so it reads well after a delete. */
+    eventTitle: v.string(),
+    changes: v.array(eventFieldChange),
+    actorId: v.id("users"),
+    /** ISO; when the first change was made. */
+    createdAt: v.string(),
+    /** ISO; when a later change was last folded in. The Inbox sorts by it. */
+    updatedAt: v.string(),
+  })
+    .index("by_updatedAt", ["updatedAt"])
+    .index("by_event", ["eventId", "updatedAt"]),
+
+  // Each user's own state for a notification. No receipt means unread. Dismissed
+  // notifications leave that user's Inbox only.
+  eventNotificationReceipts: defineTable({
+    notificationId: v.id("eventNotifications"),
+    userId: v.id("users"),
+    state: v.union(v.literal("read"), v.literal("dismissed")),
+  })
+    .index("by_notification", ["notificationId"])
+    .index("by_user_notification", ["userId", "notificationId"]),
 
   // Shared holiday layer (convex/holidays.ts). Both tables hold one document per
   // source and are independent of every other table, so an empty deployment simply

@@ -49,13 +49,16 @@ async function loadPreload() {
 }
 
 describe("preload allowlist", () => {
-  it("exposes only the explicit event request notification operations", async () => {
+  it("exposes only the explicit Inbox notification operations", async () => {
     const { notificationsApi, ipcRenderer, api } = await loadPreload()
     await notificationsApi.notifyNewEventRequest()
+    await notificationsApi.notifyEventUpdates(2)
     await notificationsApi.setPendingCount(3)
     expect(ipcRenderer.invoke).toHaveBeenCalledWith("event-requests:notify-new")
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith("event-notifications:notify-updates", 2)
     expect(ipcRenderer.invoke).toHaveBeenCalledWith("event-requests:set-pending-count", 3)
     expect(() => api.ipcRenderer.invoke("event-requests:notify-new")).toThrow("Blocked IPC")
+    expect(() => api.ipcRenderer.invoke("event-notifications:notify-updates", 2)).toThrow("Blocked IPC")
     expect(() => api.ipcRenderer.invoke("event-requests:set-pending-count", 3)).toThrow("Blocked IPC")
   })
   it("exposes explicit updater operations without opening generic channels", async () => {

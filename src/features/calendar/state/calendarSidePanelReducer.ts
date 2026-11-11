@@ -14,6 +14,8 @@ export interface CalendarSidePanelState {
   reviewingRequest: EventRequest | null
   /** The website request shown in the Inbox body. */
   selectedRequestId: string | null
+  /** The event update shown in the Inbox body; only one Inbox item is open at a time. */
+  selectedNotificationId: string | null
   createDraftPreview: CalendarDraftPreview | null
   createFormVersion: number
   searchFocusVersion: number
@@ -27,6 +29,7 @@ export const ACTIONS = {
   OPEN_EDIT: "OPEN_EDIT",
   OPEN_REVIEW_REQUEST: "OPEN_REVIEW_REQUEST",
   SELECT_REQUEST: "SELECT_REQUEST",
+  SELECT_NOTIFICATION: "SELECT_NOTIFICATION",
   TOGGLE_INBOX_VIEW: "TOGGLE_INBOX_VIEW",
   OPEN_CALENDAR_VIEW: "OPEN_CALENDAR_VIEW",
   SET_CREATE_DRAFT_PREVIEW: "SET_CREATE_DRAFT_PREVIEW",
@@ -40,6 +43,7 @@ export type CalendarSidePanelAction =
   | { type: "OPEN_EDIT"; event: Event }
   | { type: "OPEN_REVIEW_REQUEST"; request: EventRequest }
   | { type: "SELECT_REQUEST"; requestId: string | null }
+  | { type: "SELECT_NOTIFICATION"; notificationId: string | null }
   | { type: "TOGGLE_INBOX_VIEW" }
   | { type: "OPEN_CALENDAR_VIEW" }
   | { type: "SET_CREATE_DRAFT_PREVIEW"; preview: CalendarDraftPreview | null }
@@ -52,6 +56,7 @@ export const initialCalendarSidePanelState: CalendarSidePanelState = {
   createPrefillIso: null,
   reviewingRequest: null,
   selectedRequestId: null,
+  selectedNotificationId: null,
   createDraftPreview: null,
   createFormVersion: 0,
   searchFocusVersion: 0,
@@ -121,6 +126,7 @@ export function calendarSidePanelReducer(
         createPrefillIso: null,
         reviewingRequest: action.request,
         selectedRequestId: action.request.id,
+        selectedNotificationId: null,
         createFormVersion: state.createFormVersion + 1,
       }
 
@@ -128,6 +134,14 @@ export function calendarSidePanelReducer(
       return {
         ...state,
         selectedRequestId: action.requestId,
+        selectedNotificationId: action.requestId ? null : state.selectedNotificationId,
+      }
+
+    case ACTIONS.SELECT_NOTIFICATION:
+      return {
+        ...state,
+        selectedNotificationId: action.notificationId,
+        selectedRequestId: action.notificationId ? null : state.selectedRequestId,
       }
 
     case ACTIONS.OPEN_EDIT:
@@ -146,6 +160,7 @@ export function calendarSidePanelReducer(
       return {
         ...state,
         selectedRequestId: null,
+        selectedNotificationId: null,
         ...(state.reviewingRequest && {
           sidebarMode: "default",
           reviewingRequest: null,

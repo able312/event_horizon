@@ -1,5 +1,6 @@
-import type { EventRequest } from "~/definitions/database"
+import type { EventNotification, EventRequest } from "~/definitions/database"
 import { EVENT_TYPE_LABELS } from "~/definitions/events/ui"
+import { EVENT_NOTIFICATION_KIND_LABELS, notificationSummary } from "~/features/event-notifications/lib/eventNotificationText"
 
 import { requestClientName, requestTitle } from "~/features/event-requests/lib/eventRequestPrefill"
 
@@ -33,11 +34,28 @@ export function filterInboxRequests(requests: EventRequest[], query: string): Ev
   )
 }
 
+/** Updates whose event name, author, kind or summary match the Inbox search. */
+export function filterInboxNotifications(notifications: EventNotification[], query: string): EventNotification[] {
+  const words = searchWords(query)
+  if (words.length === 0) return notifications
+  return notifications.filter((notification) =>
+    matchesWords(
+      [
+        notification.eventTitle,
+        notification.actorName,
+        EVENT_NOTIFICATION_KIND_LABELS[notification.kind],
+        notificationSummary(notification),
+      ],
+      words,
+    ),
+  )
+}
+
 function isSameLocalDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
 }
 
-/** When a request arrived, as short as it can be: "2:14 PM" today, "Yesterday", "Oct 3", or "Oct 3, 2025" in another year. */
+/** When a request arrived or an update was made, as short as it can be: "2:14 PM" today, "Yesterday", "Oct 3", or "Oct 3, 2025" in another year. */
 export function formatReceivedAt(iso: string, now: Date = new Date()): string {
   const received = new Date(iso)
   if (Number.isNaN(received.getTime())) return ""

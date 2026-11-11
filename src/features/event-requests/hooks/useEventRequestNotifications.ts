@@ -1,26 +1,21 @@
 import { useEffect, useRef } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { eventRequestQueries } from "~/lib/data/queries"
-import { detectNewRequestIds } from "~/features/event-requests/lib/newRequestDetection"
-import { notifyNewEventRequest, setPendingRequestCount } from "~/lib/ipc/eventRequestNotifications"
+import { detectNewIds } from "~/lib/notifications/newIdDetection"
+import { notifyNewEventRequest } from "~/lib/ipc/eventRequestNotifications"
 
-/** Mounted once in the signed-in app, across every route. */
+/** Desktop alerts for new website requests. Mounted once in the signed-in app (useInboxDesktopAlerts). */
 export function useEventRequestNotifications() {
   const query = useQuery(eventRequestQueries.pending())
   const seen = useRef<ReadonlySet<string> | null>(null)
 
   useEffect(() => {
-    // Loading/errors aren't an empty Inbox and must not reset the baseline or badge.
+    // Loading/errors aren't an empty Inbox and must not reset the baseline.
     if (!query.isSuccess) return
-    const detection = detectNewRequestIds(seen.current, query.data.map(request => request.id))
+    const detection = detectNewIds(seen.current, query.data.map(request => request.id))
     seen.current = detection.seen
-    void setPendingRequestCount(query.data.length).catch(error => console.error("Inbox badge:", error))
     if (detection.newIds.length > 0) {
       void notifyNewEventRequest().catch(error => console.error("Inbox notification:", error))
     }
   }, [query.data, query.isSuccess])
-
-  useEffect(() => () => {
-    void setPendingRequestCount(0).catch(error => console.error("Inbox badge:", error))
-  }, [])
 }

@@ -27,12 +27,12 @@ describe("CalendarDefaultPanelHeader", () => {
   })
 
   it("badges the Inbox with the pending request count, capped at 99+", () => {
-    const { rerender } = renderHeader({ pendingRequestsCount: 3 })
+    const { rerender } = renderHeader({ inboxCount: 3 })
     expect(screen.getByRole("button", { name: "Toggle inbox" }).textContent).toBe("3")
 
     rerender(
       <MemoryRouter>
-        <CalendarDefaultPanelHeader onOpenSearch={vi.fn()} onOpenCreate={vi.fn()} onToggleInbox={vi.fn()} pendingRequestsCount={120} />
+        <CalendarDefaultPanelHeader onOpenSearch={vi.fn()} onOpenCreate={vi.fn()} onToggleInbox={vi.fn()} inboxCount={120} />
       </MemoryRouter>,
     )
     expect(screen.getByRole("button", { name: "Toggle inbox" }).textContent).toBe("99+")

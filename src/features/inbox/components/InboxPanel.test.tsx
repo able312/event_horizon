@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import type { EventRequest } from "~/definitions/database"
+import type { EventNotification, EventRequest } from "~/definitions/database"
 
 import InboxPanel from "./InboxPanel"
 
@@ -11,6 +11,12 @@ const request = (id: string, eventName: string, firstName: string) =>
     email: `${firstName.toLowerCase()}@example.test`, phone: "555-0100", eventType: "wedding", preferredDate: null,
     guestCount: 80, details: null, extraAnswers: [],
   }) as unknown as EventRequest
+const update = (id: string, eventTitle: string, read: boolean) =>
+  ({
+    id, kind: "updated", eventId: `event-${id}`, eventTitle, eventExists: true,
+    changes: [{ field: "status", from: "tentative", to: "confirmed" }], actorName: "Tess",
+    createdAt: "2026-10-16T15:00:00.000Z", updatedAt: "2026-10-16T15:00:00.000Z", read,
+  }) satisfies EventNotification
 const okQuery = () => ({ isLoading: false, isError: false, isFetching: false, refetch: vi.fn() })
 
 function renderPanel(overrides: Partial<React.ComponentProps<typeof InboxPanel>> = {}) {
@@ -19,6 +25,11 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof InboxPanel>>
     requestsQuery: okQuery(),
     selectedRequestId: "req-2",
     onSelectRequest: vi.fn(),
+    notifications: [update("n-1", "Golf Day", false), update("n-2", "Gala", true)],
+    notificationsQuery: okQuery(),
+    selectedNotificationId: null,
+    onSelectNotification: vi.fn(),
+    onMarkAllNotificationsRead: vi.fn(),
     ...overrides,
   }
   render(<InboxPanel {...props} />)
@@ -48,12 +59,31 @@ describe("InboxPanel", () => {
     expect(screen.getByRole("button", { name: /Spring wedding/ })).toBeTruthy()
 
     fireEvent.change(screen.getByRole("textbox", { name: "Search inbox" }), { target: { value: "nobody" } })
-    expect(screen.getByText("No matches.")).toBeTruthy()
+    expect(screen.getAllByText("No matches.")).toHaveLength(2)
   })
 
   it("says when there is nothing waiting", () => {
-    renderPanel({ requests: [] })
+    renderPanel({ requests: [], notifications: [] })
     expect(screen.getByText("No new requests from the website.")).toBeTruthy()
+    expect(screen.getByText("No updates from your team.")).toBeTruthy()
+    expect(screen.queryByRole("button", { name: "Mark all read" })).toBeNull()
+  })
+
+  it("lists teammates' updates with the unread count, and opens or marks them read", () => {
+    const props = renderPanel()
+    expect(screen.getByRole("heading", { name: "Updates · 1 new" })).toBeTruthy()
+    expect(screen.getAllByLabelText("Unread")).toHaveLength(1)
+    fireEvent.click(screen.getByRole("button", { name: /Golf Day/ }))
+    expect(props.onSelectNotification).toHaveBeenCalledWith(props.notifications[0])
+    fireEvent.click(screen.getByRole("button", { name: "Mark all read" }))
+    expect(props.onMarkAllNotificationsRead).toHaveBeenCalledOnce()
+  })
+
+  it("searches updates along with requests", () => {
+    renderPanel()
+    fireEvent.change(screen.getByRole("textbox", { name: "Search inbox" }), { target: { value: "gala" } })
+    expect(screen.getByRole("button", { name: /Gala/ })).toBeTruthy()
+    expect(screen.queryByRole("button", { name: /Golf Day/ })).toBeNull()
   })
 
   it("shows a retryable error instead of an empty list when the query fails", () => {
