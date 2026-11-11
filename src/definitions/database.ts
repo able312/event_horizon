@@ -38,6 +38,20 @@ export type UserSummary = {
   email: string
 }
 
+/** The signed-in account's own record, as shown and edited in Settings → Profile. */
+export type CurrentUser = {
+  id: string
+  workosUserId: string
+  /** From Google; identifies the account and can't be edited in the app. */
+  email: string
+  /** The Google account name, refreshed on every sign-in. */
+  name: string | null
+  /** The name the user set in Settings; absent means they show under their Google name. */
+  preferredName?: string
+  createdAt: string
+  updatedAt: string
+}
+
 // ============================================================================
 // Events
 // ============================================================================

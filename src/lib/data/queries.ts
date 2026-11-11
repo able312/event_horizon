@@ -392,6 +392,7 @@ export const vendorCategoryQueries = {
 
 export const userKeys = {
   all: () => ["users"] as const,
+  current: () => ["users", "current"] as const,
 }
 
 export const userQueries = {
@@ -399,6 +400,12 @@ export const userQueries = {
     queryKey: userKeys.all(),
     queryFn: () => usersApi.getUsers(),
     ...liveMeta(sources.users.all()),
+  }),
+  /** The signed-in account (null until sign-in has stored it), kept live. */
+  current: () => queryOptions({
+    queryKey: userKeys.current(),
+    queryFn: () => usersApi.getCurrentUser(),
+    ...liveMeta(sources.users.current()),
   }),
 }
 

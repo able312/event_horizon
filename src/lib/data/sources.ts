@@ -95,6 +95,7 @@ export const sources = {
   },
   users: {
     all: () => liveSource(api.users.list, {}),
+    current: () => liveSource(api.users.current, {}),
   },
   venueSettings: {
     get: () => liveSource(api.venueSettings.get, {}),

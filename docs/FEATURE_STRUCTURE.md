@@ -35,6 +35,17 @@ To add another Inbox item type, compose its list section, selected content and a
 
 The availability calendar reuses calendar day markers, tooltips, date grouping and adjacent-month queries. The prefill adapter uses the create form's input type from `calendar/forms/createEventPrefill.ts`, a type-only module, so it does not depend on the form component. These are explicit dependencies on existing calendar functionality.
 
+## Settings
+
+`src/features/settings/` owns the Settings page at `/settings/:category` (opened from the gear in the sidebar footer, `components/SettingsButton.tsx`):
+
+- `lib/settingsCategories.ts`: the category list, its groups and URL resolution. "Personal" categories belong to the signed-in user; "Venue" categories are shared by the whole team.
+- `components/settingsCategoryContent.tsx`: maps each category ID to the component it renders. TypeScript requires an entry for every category.
+- `SettingsWorkspace.tsx`, `components/`: the page shell (category nav in the sidebar, the selected category in the body) and the shared `SettingsSection` card.
+- `profile/`: the Profile category. Users set the name the team sees (`users.preferredName`); email and sign-in come from their Google account and aren't editable. Name rules shared with Convex live in `src/lib/users/userName.ts`.
+
+Settings owns the page, the nav and how each category is laid out, not the domain behavior a setting controls. When a setting is read elsewhere (a GST number on the invoice, menu templates in the event's food and beverage sections), keep its data in `src/lib/data` and its domain logic with the feature that uses it, and give Settings a category component that edits it. For example, the venue's default estimate terms already live in `venueSettings`; a future Venue category would edit them alongside a GST number, while the estimate and invoice keep reading them through `useVenueSettings`. Larger editors (food and beverage templates) can live in their own feature folder and export the component Settings maps to.
+
 ## Backend and desktop boundaries
 
 Feature hooks continue to use `src/lib/data/eventRequests.ts` and shared query definitions. Desktop calls continue through `src/lib/ipc/eventRequestNotifications.ts`; IPC handlers stay in `src/electron/ipcRoutes/`. Convex functions and schema stay in `convex/`.

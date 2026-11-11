@@ -162,6 +162,46 @@ describe("users", () => {
     expect(await t.run((ctx) => ctx.db.query("users").collect())).toHaveLength(1)
   })
 
+  it("keeps a name set in Settings across sign-ins and shows it to the team", async () => {
+    const t = convexTest(schema, modules)
+    const asStaff = t.withIdentity({ ...companyIdentity, name: "Sam Staff" })
+    const id = await asStaff.mutation(api.users.store, {})
+
+    expect(await asStaff.mutation(api.users.updateName, { name: "  Sammy  " })).toMatchObject({ id, name: "Sam Staff", preferredName: "Sammy" })
+    // Signing in again refreshes the Google name but leaves the user's own name alone
+    await t.withIdentity({ ...companyIdentity, name: "Samuel Staff" }).mutation(api.users.store, {})
+    expect(await asStaff.query(api.users.current, {})).toMatchObject({ name: "Samuel Staff", preferredName: "Sammy" })
+    expect(await asStaff.query(api.users.list, {})).toEqual([{ id, name: "Sammy", email: "staff@westlinks.ca" }])
+  })
+
+  it("clears the user's own name when blank or equal to the Google name", async () => {
+    const t = convexTest(schema, modules)
+    const asStaff = t.withIdentity({ ...companyIdentity, name: "Sam Staff" })
+    await asStaff.mutation(api.users.updateName, { name: "Sammy" })
+
+    const cleared = await asStaff.mutation(api.users.updateName, { name: "   " })
+    expect(cleared).not.toHaveProperty("preferredName")
+    await asStaff.mutation(api.users.updateName, { name: "Sammy" })
+    expect(await asStaff.mutation(api.users.updateName, { name: "Sam Staff" })).not.toHaveProperty("preferredName")
+    expect(await asStaff.query(api.users.list, {})).toMatchObject([{ name: "Sam Staff" }])
+  })
+
+  it("rejects names that are too long", async () => {
+    const t = convexTest(schema, modules)
+    const asStaff = t.withIdentity(companyIdentity)
+    await expect(asStaff.mutation(api.users.updateName, { name: "a".repeat(81) })).rejects.toThrow()
+  })
+
+  it("only changes the caller's own record", async () => {
+    const t = convexTest(schema, modules)
+    const asOther = t.withIdentity({ ...companyIdentity, subject: "user_other", email: "other@westlinks.ca", name: "Olive Other" })
+    const otherId = await asOther.mutation(api.users.store, {})
+    await t.withIdentity({ ...companyIdentity, name: "Sam Staff" }).mutation(api.users.updateName, { name: "Sammy" })
+    const other = await t.run((ctx) => ctx.db.get("users", otherId))
+    expect(other).not.toHaveProperty("preferredName")
+    await expect(t.withIdentity({ subject: "user_x", email: "someone@gmail.com" }).mutation(api.users.updateName, { name: "X" })).rejects.toThrow(/Only @westlinks\.ca/)
+  })
+
   it("rejects non-company accounts", async () => {
     const t = convexTest(schema, modules)
     await expect(t.withIdentity({ subject: "user_x", email: "someone@gmail.com" }).mutation(api.users.store, {})).rejects.toThrow(/Only @westlinks\.ca/)
