@@ -12,9 +12,18 @@ describe("parseMenuPrice", () => {
     expect(parseMenuPrice("  ")).toBeNull()
   })
 
-  it("never goes negative and treats junk as zero", () => {
+  it("accepts thousands separators", () => {
+    expect(parseMenuPrice("1,200.50")).toBe(120050)
+    expect(parseMenuPrice("$1,200.50")).toBe(120050)
+  })
+
+  it("never goes negative", () => {
     expect(parseMenuPrice("-3")).toBe(0)
-    expect(parseMenuPrice("abc")).toBe(0)
+  })
+
+  it("reports unreadable text as undefined instead of zero", () => {
+    expect(parseMenuPrice("abc")).toBeUndefined()
+    expect(parseMenuPrice("12..5")).toBeUndefined()
   })
 })
 

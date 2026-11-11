@@ -1,9 +1,14 @@
-import { centsToDollars, dollarsToCents } from "~/features/event-detail/workspace/lib/financial"
+import { centsToDollars, parseDollarsToCents } from "~/features/event-detail/workspace/lib/financial"
 
-/** A price field's text as cents: blank means no price; anything else is rounded and kept non-negative. */
-export function parseMenuPrice(value: string): number | null {
+/**
+ * A price field's text as cents, accepting "$" and thousands commas ("$1,200.50"). Blank means
+ * no price (null); unreadable text gives undefined so the caller keeps the existing price rather
+ * than saving $0. Readable amounts are rounded and kept non-negative.
+ */
+export function parseMenuPrice(value: string): number | null | undefined {
   if (!value.trim()) return null
-  return Math.max(0, dollarsToCents(value.trim().replace(/^\$/, "")))
+  const cents = parseDollarsToCents(value)
+  return cents == null ? undefined : Math.max(0, cents)
 }
 
 export function formatMenuPrice(cents: number | null): string {

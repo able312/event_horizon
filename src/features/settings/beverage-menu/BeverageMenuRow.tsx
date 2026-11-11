@@ -57,8 +57,11 @@ export const BeverageMenuRow: React.FC<BeverageMenuRowProps> = ({
             aria-label={`${label} price`}
             onBlur={(e) => {
               const unitPriceCents = parseMenuPrice(e.target.value)
-              if (unitPriceCents !== template.unitPriceCents) onUpdate({ unitPriceCents })
-              else e.target.value = formatMenuPrice(unitPriceCents)
+              if (unitPriceCents !== undefined && unitPriceCents !== template.unitPriceCents) {
+                onUpdate({ unitPriceCents })
+              } else {
+                e.target.value = formatMenuPrice(template.unitPriceCents)
+              }
             }}
             className={`${CELL_INPUT_CLASS} text-right`}
           />
