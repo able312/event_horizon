@@ -24,6 +24,29 @@ type BeverageItemUpdates = Partial<
   >
 >
 
+/** Fields a new item can start with, e.g. copied from a saved beverage (beverageMenuItemFields). */
+export type NewBeverageItemFields = Partial<
+  Pick<BeverageItemWithAssignments, "name" | "includes" | "unitPriceCents" | "pricingBasis">
+>
+
+function newItemFields(newItem: NewBeverageItemFields | undefined) {
+  return {
+    name: newItem?.name || "",
+    includes: newItem?.includes ?? undefined,
+    unitPriceCents: newItem?.unitPriceCents ?? undefined,
+    pricingBasis: newItem?.pricingBasis,
+  }
+}
+
+function optimisticNewItemFields(newItem: NewBeverageItemFields | undefined) {
+  return {
+    name: newItem?.name || "",
+    includes: newItem?.includes ?? null,
+    unitPriceCents: newItem?.unitPriceCents ?? null,
+    ...(newItem?.pricingBasis ? { pricingBasis: newItem.pricingBasis } : {}),
+  }
+}
+
 export function useBeverageSection() {
   const { id: eventId } = useParams()
   const queryClient = useQueryClient()
@@ -44,11 +67,11 @@ export function useBeverageSection() {
   })
 
   const addItemMutation = useMutation({
-    mutationFn: ({ id, type, newItem }: { id?: string; type: BeverageItemType; newItem?: { name?: string } }) =>
+    mutationFn: ({ id, type, newItem }: { id?: string; type: BeverageItemType; newItem?: NewBeverageItemFields }) =>
       beverageItemsIpc.createBeverageItem({
         id,
         eventId: eventId!,
-        name: newItem?.name || "",
+        ...newItemFields(newItem),
         type,
       }),
     onMutate: async ({ id, type, newItem }) => {
@@ -59,12 +82,10 @@ export function useBeverageSection() {
       const optimisticItem: BeverageItemWithAssignments = {
         id: tempId,
         eventId: eventId!,
-        name: newItem?.name || "",
         quantity: null,
         type,
         serviceStyle: null,
-        includes: null,
-        unitPriceCents: null,
+        ...optimisticNewItemFields(newItem),
         assignedTimeblockIds: [],
       }
 
@@ -105,12 +126,12 @@ export function useBeverageSection() {
       id?: string
       type: BeverageItemType
       timeblockId: string
-      newItem?: { name?: string }
+      newItem?: NewBeverageItemFields
     }) =>
       beverageItemsIpc.createBeverageItemAssignedToTimeblock({
         id,
         eventId: eventId!,
-        name: newItem?.name || "",
+        ...newItemFields(newItem),
         type,
         timeblockId,
       }),
@@ -122,12 +143,10 @@ export function useBeverageSection() {
       const optimisticItem: BeverageItemWithAssignments = {
         id: tempId,
         eventId: eventId!,
-        name: newItem?.name || "",
         quantity: null,
         type,
         serviceStyle: null,
-        includes: null,
-        unitPriceCents: null,
+        ...optimisticNewItemFields(newItem),
         assignedTimeblockIds: [timeblockId],
       }
 

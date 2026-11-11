@@ -211,6 +211,19 @@ export default defineSchema({
     ...auditWithUpdatedAt,
   }).index("by_event", ["eventId"]),
 
+  // The venue's saved beverages (Settings → Beverage Menu). Adding one to an event copies its
+  // name, type, price, pricing basis and note into a new beverageItems row; the event's copy
+  // never changes when the saved one does. New table, so existing data needs no migration.
+  beverageTemplates: defineTable({
+    name: v.string(),
+    type: beverageType,
+    unitPriceCents: nullable(v.number()),
+    pricingBasis,
+    notes: nullable(v.string()),
+    createdAt: v.string(),
+    ...auditWithUpdatedAt,
+  }),
+
   beverageItemTimeblocks: defineTable({
     beverageItemId: v.id("beverageItems"),
     timeblockId: v.id("timeblocks"),

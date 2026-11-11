@@ -12,6 +12,10 @@ vi.mock("./profile/ProfileSettings", () => ({
   ProfileSettings: () => <div data-testid="profile-settings" />,
 }))
 
+vi.mock("./beverage-menu/BeverageMenuSettings", () => ({
+  BeverageMenuSettings: () => <div data-testid="beverage-menu-settings" />,
+}))
+
 function renderAt(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
@@ -35,5 +39,12 @@ describe("SettingsWorkspace", () => {
 
     expect(screen.getByTestId("profile-settings")).toBeTruthy()
     expect(screen.getByRole("heading", { level: 1, name: "Profile" })).toBeTruthy()
+  })
+
+  it("opens a venue category from its URL", () => {
+    renderAt("/settings/beverage-menu")
+
+    expect(screen.getByTestId("beverage-menu-settings")).toBeTruthy()
+    expect(screen.getByRole("link", { name: "Beverage Menu" }).getAttribute("aria-current")).toBe("page")
   })
 })

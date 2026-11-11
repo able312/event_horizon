@@ -97,6 +97,9 @@ export const sources = {
     all: () => liveSource(api.users.list, {}),
     current: () => liveSource(api.users.current, {}),
   },
+  beverageTemplates: {
+    list: () => liveSource(api.beverageTemplates.list, {}),
+  },
   venueSettings: {
     get: () => liveSource(api.venueSettings.get, {}),
   },

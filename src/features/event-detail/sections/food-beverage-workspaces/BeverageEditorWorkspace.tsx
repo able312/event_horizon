@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { useParams } from "react-router"
 import { ChevronDown, EllipsisVertical, Info, Plus, Trash2 } from "lucide-react"
 
-import type { BeverageItemType } from "~/definitions/database"
+import type { BeverageItemType, BeverageTemplate } from "~/definitions/database"
 import type { BeverageItemWithAssignments } from "~/definitions/beverage/beverage-types"
 import type { TimeblockWithItems } from "~/definitions/timeblocks/timeblocks-types"
 import {
@@ -10,6 +10,7 @@ import {
   ITER_BEVERAGE_TYPE,
 } from "~/definitions/sections/section-constants"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
+import { beverageMenuItemFields } from "~/lib/beverageMenu/beverageMenu"
 import { getRecordRenderKey } from "~/lib/data/optimisticIds"
 import RouteBlockingError from "~/components/atoms/route-blocking-error"
 import { Button } from "~/components/atoms/button"
@@ -46,6 +47,7 @@ import {
 import TimeblockTypeConvertControl from "~/features/event-detail/sections/setup-notes-workspaces/TimeblockTypeConvertControl"
 import { PlanningTimeblockItemNoteRow } from "~/features/event-detail/sections/food-beverage-workspaces/PlanningWorkspaceTimeblocks/PlanningTimeblockItemNoteRow"
 import { getVisibleBeverageTypeSections } from "./beverage/beverageTypeSections"
+import { BeverageAddItemMenuItems } from "./beverage/BeverageAddItemMenuItems"
 
 interface BeverageEditorWorkspaceProps {
   timeblock: TimeblockWithItems
@@ -154,6 +156,16 @@ const BeverageEditorWorkspace: React.FC<BeverageEditorWorkspaceProps> = ({
     queuePendingNameFocus()
   }, [addItemAssignedToTimeblock, queuePendingNameFocus, timeblock.id])
 
+  const handleMenuAdd = useCallback((template: BeverageTemplate) => {
+    setLastChosenType(template.type)
+    addItemAssignedToTimeblock({
+      id: crypto.randomUUID(),
+      type: template.type,
+      timeblockId: timeblock.id,
+      newItem: beverageMenuItemFields(template),
+    })
+  }, [addItemAssignedToTimeblock, timeblock.id])
+
   const toggleAssignment = useCallback((item: BeverageItemWithAssignments, checked: boolean) => {
     const nextIds = checked
       ? [...new Set([...item.assignedTimeblockIds, timeblock.id])]
@@ -252,7 +264,7 @@ const BeverageEditorWorkspace: React.FC<BeverageEditorWorkspaceProps> = ({
                     <Button
                       type="button"
                       variant="darkSecondary"
-                      aria-label="Choose beverage type"
+                      aria-label="Choose beverage type or saved beverage"
                       disabled={disabled}
                       className="h-full rounded-none border-r border-stone-600 px-2 hover:bg-stone-600 hover:text-orange-400"
                     >
@@ -263,11 +275,7 @@ const BeverageEditorWorkspace: React.FC<BeverageEditorWorkspaceProps> = ({
                     align="end"
                     onCloseAutoFocus={(event) => event.preventDefault()}
                   >
-                    {ITER_BEVERAGE_TYPE.map((type) => (
-                      <DropdownMenuItem key={type} onClick={() => handleAddItem(type)}>
-                        {type}
-                      </DropdownMenuItem>
-                    ))}
+                    <BeverageAddItemMenuItems onAddBlank={handleAddItem} onAddFromMenu={handleMenuAdd} />
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

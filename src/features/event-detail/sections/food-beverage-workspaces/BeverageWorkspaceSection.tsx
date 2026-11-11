@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { ChevronDown, Info, Plus, Trash2 } from "lucide-react"
 
-import type { BeverageItemType, Timeblock, UpdateTimeblock } from "~/definitions/database"
+import type { BeverageItemType, BeverageTemplate, Timeblock, UpdateTimeblock } from "~/definitions/database"
 import type { BeverageItemWithAssignments } from "~/definitions/beverage/beverage-types"
-import { ITER_BEVERAGE_TYPE } from "~/definitions/sections/section-constants"
 import { useBeverageSection } from "~/hooks/useBeverageSection"
+import { beverageMenuItemFields } from "~/lib/beverageMenu/beverageMenu"
 import { getRecordRenderKey } from "~/lib/data/optimisticIds"
 import { Button } from "~/components/atoms/button"
 import {
@@ -26,6 +26,7 @@ import {
 } from "~/components/event-detail/detail-sections/sections/tableStyles"
 import { PlanningTimeblockItemNoteRow } from "./PlanningWorkspaceTimeblocks/PlanningTimeblockItemNoteRow"
 import { getVisibleBeverageTypeSections } from "./beverage/beverageTypeSections"
+import { BeverageAddItemMenuItems } from "./beverage/BeverageAddItemMenuItems"
 import { BeverageTimeblockHeaderTail } from "./beverage/BeverageTimeblockHeaderTail"
 import { BeverageTimeblockNoteRow } from "./beverage/BeverageTimeblockNoteRow"
 
@@ -122,6 +123,11 @@ const BeverageWorkspaceSection: React.FC = () => {
     queuePendingNameFocus()
   }
 
+  const handleMenuAdd = (template: BeverageTemplate) => {
+    setLastChosenType(template.type)
+    addItem({ id: crypto.randomUUID(), type: template.type, newItem: beverageMenuItemFields(template) })
+  }
+
   const toggleTimeblockAssignment = (item: BeverageItemWithAssignments, timeblockId: string, checked: boolean) => {
     const nextIds = checked
       ? [...item.assignedTimeblockIds, timeblockId]
@@ -168,7 +174,7 @@ const BeverageWorkspaceSection: React.FC = () => {
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    aria-label="Choose beverage type"
+                    aria-label="Choose beverage type or saved beverage"
                     className="inline-flex h-full min-h-[22px] items-center rounded-r-xs border border-orange-200 bg-orange-100 px-2 text-orange-700 hover:bg-orange-50"
                   >
                     <ChevronDown size={14} />
@@ -178,11 +184,7 @@ const BeverageWorkspaceSection: React.FC = () => {
                   align="end"
                   onCloseAutoFocus={(event) => event.preventDefault()}
                 >
-                  {ITER_BEVERAGE_TYPE.map((type) => (
-                    <DropdownMenuItem key={type} onClick={() => handleTypeAdd(type)}>
-                      {type}
-                    </DropdownMenuItem>
-                  ))}
+                  <BeverageAddItemMenuItems onAddBlank={handleTypeAdd} onAddFromMenu={handleMenuAdd} />
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

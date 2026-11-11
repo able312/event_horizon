@@ -9,6 +9,7 @@
  */
 
 import type * as beverageItems from "../beverageItems.js";
+import type * as beverageTemplates from "../beverageTemplates.js";
 import type * as cartDetails from "../cartDetails.js";
 import type * as contactRoles from "../contactRoles.js";
 import type * as contacts from "../contacts.js";
@@ -54,6 +55,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   beverageItems: typeof beverageItems;
+  beverageTemplates: typeof beverageTemplates;
   cartDetails: typeof cartDetails;
   contactRoles: typeof contactRoles;
   contacts: typeof contacts;

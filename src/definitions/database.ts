@@ -386,3 +386,16 @@ export type BeverageItem = {
   /** An optional add-on on the estimate, left out of its totals until accepted. Missing means false. */
   isAddOn?: boolean
 }
+
+/** A saved beverage (Settings → Beverage Menu) that can be copied into any event's beverage list. */
+export type BeverageTemplate = {
+  id: string
+  name: string
+  type: BeverageItemType
+  unitPriceCents: number | null
+  pricingBasis: PricingBasis
+  /** Copied into the event item's note (`includes`). */
+  notes: string | null
+  createdAt: string
+}
+export type BeverageTemplateFields = Omit<BeverageTemplate, "id" | "createdAt">
