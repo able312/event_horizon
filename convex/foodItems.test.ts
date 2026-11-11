@@ -139,13 +139,13 @@ describe("food item pricing basis", () => {
     expect(await stored(item.id)).toMatchObject({ pricingBasis: "each" })
   })
 
-  it("stores \"each\" when an older build creates an item without one", async () => {
+  it("stores \"per_person\" when an item is created without one", async () => {
     const { t, food, stored } = await setup()
     const item = await t.mutation(api.foodItems.create, { timeblockId: food.id, name: "Platter", quantity: 2 })
-    expect(item).toMatchObject({ pricingBasis: "each" })
-    expect(await stored(item.id)).toMatchObject({ pricingBasis: "each" })
+    expect(item).toMatchObject({ pricingBasis: "per_person" })
+    expect(await stored(item.id)).toMatchObject({ pricingBasis: "per_person" })
     // Editing another field leaves it alone.
-    expect(await t.mutation(api.foodItems.update, { id: item.id, updates: { quantity: 3 } })).toMatchObject({ pricingBasis: "each" })
+    expect(await t.mutation(api.foodItems.update, { id: item.id, updates: { quantity: 3 } })).toMatchObject({ pricingBasis: "per_person" })
   })
 
   it("reads items stored without one as \"each\"", async () => {

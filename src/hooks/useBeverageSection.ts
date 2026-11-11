@@ -65,6 +65,7 @@ export function useBeverageSection() {
         serviceStyle: null,
         includes: null,
         unitPriceCents: null,
+        pricingBasis: "per_person",
         assignedTimeblockIds: [],
       }
 
@@ -128,6 +129,7 @@ export function useBeverageSection() {
         serviceStyle: null,
         includes: null,
         unitPriceCents: null,
+        pricingBasis: "per_person",
         assignedTimeblockIds: [timeblockId],
       }
 

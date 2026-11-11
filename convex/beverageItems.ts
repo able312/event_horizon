@@ -6,7 +6,7 @@ import { internalMutation, type QueryCtx } from "./_generated/server"
 import { companyMutation, companyQuery } from "./lib/auth"
 import { backfillMissingFieldsBatch } from "./lib/backfill"
 import { DEFAULT_IS_ADD_ON, toTimeblockRecord } from "./lib/estimateFields"
-import { backfillPricingBasisBatch, DEFAULT_PRICING_BASIS, toBeverageItemRecord } from "./lib/pricingBasis"
+import { backfillPricingBasisBatch, NEW_ITEM_PRICING_BASIS, toBeverageItemRecord } from "./lib/pricingBasis"
 import { assertUpdates, requireDocument } from "./lib/records"
 import { beverageServiceStyle, beverageType, nullable, pricingBasis } from "./lib/validators"
 
@@ -48,7 +48,7 @@ export const create = companyMutation({
       serviceStyle: values.serviceStyle ?? null,
       includes: values.includes ?? null,
       unitPriceCents: values.unitPriceCents ?? null,
-      pricingBasis: values.pricingBasis ?? DEFAULT_PRICING_BASIS,
+      pricingBasis: values.pricingBasis ?? NEW_ITEM_PRICING_BASIS,
       isAddOn: values.isAddOn ?? DEFAULT_IS_ADD_ON,
     })
     return toBeverageItemRecord(await requireDocument(ctx, "beverageItems", id))
@@ -66,7 +66,7 @@ export const createAssignedToTimeblock = companyMutation({
       serviceStyle: values.serviceStyle ?? null,
       includes: values.includes ?? null,
       unitPriceCents: values.unitPriceCents ?? null,
-      pricingBasis: values.pricingBasis ?? DEFAULT_PRICING_BASIS,
+      pricingBasis: values.pricingBasis ?? NEW_ITEM_PRICING_BASIS,
       isAddOn: values.isAddOn ?? DEFAULT_IS_ADD_ON,
     })
     await ctx.db.insert("beverageItemTimeblocks", { beverageItemId: id, timeblockId })

@@ -98,7 +98,7 @@ export function useFoodSection() {
         clientNotes: newItem?.clientNotes ?? null,
         internalNotes: newItem?.internalNotes ?? null,
         unitPriceCents: newItem?.unitPriceCents ?? null,
-        pricingBasis: newItem?.pricingBasis,
+        pricingBasis: newItem?.pricingBasis ?? "per_person",
         isAddOn: newItem?.isAddOn ?? false,
         timeblockId,
       }

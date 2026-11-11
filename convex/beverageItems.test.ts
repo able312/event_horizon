@@ -41,14 +41,14 @@ describe("beverage item pricing basis", () => {
     expect(assigned).toMatchObject({ pricingBasis: "per_person", assignedTimeblockIds: [bar.id] })
   })
 
-  it("stores \"each\" when an older build creates an item without one", async () => {
+  it("stores \"per_person\" when an item is created without one", async () => {
     const { t, eventId, bar, stored } = await setup()
     const item = await t.mutation(api.beverageItems.create, { eventId, name: "Keg", type: "Beer", quantity: 1 })
-    expect(item).toMatchObject({ pricingBasis: "each" })
-    expect(await stored(item.id)).toMatchObject({ pricingBasis: "each" })
+    expect(item).toMatchObject({ pricingBasis: "per_person" })
+    expect(await stored(item.id)).toMatchObject({ pricingBasis: "per_person" })
     const assigned = await t.mutation(api.beverageItems.createAssignedToTimeblock, { eventId, timeblockId: bar.id, name: "Cider", type: "Coolers" })
-    expect(await stored(assigned.id)).toMatchObject({ pricingBasis: "each" })
-    expect(await t.mutation(api.beverageItems.update, { id: item.id, updates: { quantity: 2 } })).toMatchObject({ pricingBasis: "each" })
+    expect(await stored(assigned.id)).toMatchObject({ pricingBasis: "per_person" })
+    expect(await t.mutation(api.beverageItems.update, { id: item.id, updates: { quantity: 2 } })).toMatchObject({ pricingBasis: "per_person" })
   })
 
   it("reads items stored without one as \"each\"", async () => {
