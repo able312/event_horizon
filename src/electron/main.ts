@@ -14,6 +14,7 @@ import { createWorkOSAuthClient, electronAuthPlatform, focusApp } from './servic
 import { registerAuthIpcHandlers } from './ipcRoutes/authHandler.js';
 import { registerEventRequestNotificationHandlers } from './ipcRoutes/eventRequestNotificationHandler.js';
 import { hideOnClose } from './windowClose.js';
+import { lockWindowToApp } from './windowSecurity.js';
 
 // Must match electron-builder.json so Windows associates toasts with the installed shortcut.
 if (process.platform === 'win32') app.setAppUserModelId('com.latenightcreation.event-horizon')
@@ -48,6 +49,7 @@ const createWindow = (initialRoute = "") => {
             preload: path.join(__dirname, 'preload.cjs'),
             contextIsolation: true,
             nodeIntegration: false,
+            sandbox: true,
             webSecurity: true,
         },
         titleBarStyle: 'hidden',
@@ -59,6 +61,7 @@ const createWindow = (initialRoute = "") => {
     });
 
     hideOnClose(mainWindow, process.platform, () => isQuitting)
+    lockWindowToApp(mainWindow.webContents, resolveRendererUrl())
     mainWindow.maximize()
 
     const rendererUrl = resolveRendererUrl() + (initialRoute ? `#${initialRoute}` : "")
