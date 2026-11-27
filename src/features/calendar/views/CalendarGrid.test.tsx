@@ -731,7 +731,8 @@ describe("CalendarGrid holidays", () => {
     const tooltip = await screen.findByRole("tooltip")
     // A click keeps the names open rather than toggling them shut.
     expect(markerFor(3)!.getAttribute("data-state")).not.toBe("closed")
-    fireEvent.click(tooltip.parentElement!)
+    // The tooltip role sits on the content itself (Radix Tooltip 1.4+), so click it directly.
+    fireEvent.click(tooltip)
 
     expect(onDayCellClick).not.toHaveBeenCalled()
     expect(navigateMock).not.toHaveBeenCalled()
